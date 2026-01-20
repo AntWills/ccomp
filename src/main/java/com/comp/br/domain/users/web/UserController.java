@@ -1,7 +1,7 @@
-package com.comp.br.modules.users.web;
+package com.comp.br.domain.users.web;
 
-import com.comp.br.modules.users.dto.UserRes;
-import com.comp.br.modules.users.persistence.UserModel;
+import com.comp.br.domain.users.dto.UserRes;
+import com.comp.br.domain.users.persistence.UserModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

@@ -1,4 +1,4 @@
-package com.comp.br.modules.users.dto;
+package com.comp.br.domain.users.dto;
 
 import jakarta.validation.constraints.NotBlank;
 

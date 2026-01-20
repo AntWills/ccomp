@@ -1,4 +1,4 @@
-package com.comp.br.modules.users.persistence;
+package com.comp.br.domain.users.persistence;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
