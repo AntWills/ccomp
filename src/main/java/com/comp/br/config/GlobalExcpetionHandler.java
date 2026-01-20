@@ -1,5 +1,6 @@
 package com.comp.br.config;
 
+import com.comp.br.shared.exceptions.ConflictException;
 import com.comp.br.shared.exceptions.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -46,5 +47,19 @@ public class GlobalExcpetionHandler {
         );
 
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handlerConflictException(ConflictException ex, WebRequest request){
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.CONFLICT.value(),
+                "Conflict Error",
+                request.getDescription(false).replace("uri=", ""),
+                List.of(ex.getMessage()),
+                null
+        );
+
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 }

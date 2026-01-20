@@ -25,4 +25,9 @@ public class UserModel {
 
     @Embedded
     private EmailAddress emailAddress;
+
+    public UserModel(String name, EmailAddress email){
+        this.name = name;
+        this.emailAddress = email;
+    }
 }
