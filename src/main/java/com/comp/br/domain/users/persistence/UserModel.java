@@ -1,5 +1,6 @@
 package com.comp.br.domain.users.persistence;
 
+import com.comp.br.module.email.EmailAddress;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,4 +22,7 @@ public class UserModel {
 
     @Column(nullable = false)
     private String name;
+
+    @Embedded
+    private EmailAddress emailAddress;
 }
