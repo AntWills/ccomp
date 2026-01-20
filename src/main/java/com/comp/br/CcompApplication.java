@@ -14,7 +14,7 @@ public class CcompApplication {
 	}
 
     @GetMapping
-    public String hello(){
-        return "Ola mundo";
+    public String ping(){
+        return "OK!";
     }
 }
