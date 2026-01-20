@@ -1,7 +1,9 @@
 package com.comp.br.domain.users.web;
 
+import com.comp.br.domain.users.dto.CreateUserReq;
 import com.comp.br.domain.users.dto.UserRes;
 import com.comp.br.domain.users.persistence.UserModel;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,8 +36,8 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<UserRes> create(){
-        var user = new UserModel(UUID.fromString("019bd7f5-9dc5-728e-b7bf-ff238a6f5e0f"), "Wills");
+    public ResponseEntity<UserRes> create(@Valid @RequestBody CreateUserReq req){
+        var user = new UserModel(UUID.randomUUID(), req.name());
         this.users.add(user);
 
         return ResponseEntity.ok(new UserRes(user.getId(), user.getName()));
