@@ -19,14 +19,8 @@ public class UserApplication {
     }
 
     public Optional<UserDTO> getById(UUID id){
-        var user = userModelRepository.findById(id);
-
-        return user.isPresent() ?
-                Optional.of(new UserDTO(
-                        user.get().getId(),
-                        user.get().getName(),
-                        user.get().getEmailAddress()))
-                : Optional.empty();
+        return userModelRepository.findById(id)
+                .map(userModel -> new UserDTO(userModel.getId(), userModel.getName(), userModel.getEmailAddress()));
     }
 
 

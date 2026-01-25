@@ -5,6 +5,7 @@ import com.ccomp.br.domain.auth.dto.AuthResponse;
 import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
 import com.ccomp.br.shared.exceptions.BadCredentialsException;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,7 @@ public class AuthController {
         this.authApplication = authApplication;
     }
 
+    @Transactional
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterUserDTO dto) {
         log.info("Iniciando o registro de um novo usuario.");
