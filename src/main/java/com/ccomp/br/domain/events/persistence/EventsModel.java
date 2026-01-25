@@ -1,12 +1,20 @@
-package com.ccomp.br.domain.events;
+package com.ccomp.br.domain.events.persistence;
 
-import com.ccomp.br.domain.users.persistence.UserModel;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Table(name = "tb_events")
 @Entity(name = "EventsModel")
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
 public class EventsModel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,7 +29,11 @@ public class EventsModel {
     @Column(name = "end_date")
     private LocalDate end;
 
-    @ManyToOne
     @JoinColumn(name = "owner_id", nullable = false)
-    private UserModel owner;
+    private UUID ownerId;
+
+    public EventsModel(String name, UUID ownerId) {
+        this.name = name;
+        this.ownerId = ownerId;
+    }
 }

@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 public class UserManagement {
@@ -30,8 +31,7 @@ public class UserManagement {
 
         String encryptedPassword = passwordEncoder.encode(dto.password());
 
-        UserModel user = new UserModel(dto.name(), encryptedPassword, dto.email());
-        userModelRepository.save(user);
+        UserModel user = userModelRepository.save(new UserModel(dto.name(), encryptedPassword, dto.email()));
 
         return new UserDTO(user.getId(), user.getName(), user.getEmailAddress());
     }
@@ -41,5 +41,10 @@ public class UserManagement {
                 .filter(userModel -> passwordEncoder.matches(password, userModel.getPassword()))
                 .map(userModel -> new UserDTO(userModel.getId(), userModel.getName(), userModel.getEmailAddress()))
                 .orElseThrow(() -> new BadCredentialsException("Email or password incorrect!"));
+    }
+
+    public Optional<UserDTO> findById(UUID id){
+        return userModelRepository.findById(id)
+                .map(userModel -> new UserDTO(userModel.getId(), userModel.getName(), userModel.getEmailAddress()));
     }
 }

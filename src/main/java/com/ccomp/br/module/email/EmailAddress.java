@@ -13,7 +13,7 @@ import java.util.Objects;
 public class EmailAddress {
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email address")
-    @Column(name = "email_adress", nullable = false, unique = true)
+    @Column(name = "email_address", nullable = false, unique = true)
     private String value;
 
     protected EmailAddress() {
