@@ -2,10 +2,13 @@ package com.ccomp.br.domain.auth.web;
 
 import com.ccomp.br.domain.auth.application.AuthApplication;
 import com.ccomp.br.domain.auth.dto.AuthResponse;
+import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
+import com.ccomp.br.shared.exceptions.BadCredentialsException;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,6 +31,11 @@ public class AuthController {
         log.info("Iniciando o registro de um novo usuario.");
         var res = authApplication.register(dto);
 
-        return ResponseEntity.ok(res);
+        return ResponseEntity.status(HttpStatus.CREATED).body(res);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequestDTO dto) {
+        return ResponseEntity.ok(authApplication.login(dto));
     }
 }

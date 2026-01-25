@@ -26,8 +26,12 @@ public class UserModel {
     @Embedded
     private EmailAddress emailAddress;
 
-    public UserModel(String name, EmailAddress email){
+    @Column(nullable = false)
+    private String password;
+
+    public UserModel(String name, String password, EmailAddress email){
         this.name = name;
+        this.password = password;
         this.emailAddress = email;
     }
 }

@@ -1,5 +1,6 @@
 package com.ccomp.br.config;
 
+import com.ccomp.br.shared.exceptions.BadCredentialsException;
 import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import org.springframework.http.HttpStatus;
@@ -61,5 +62,19 @@ public class GlobalExcpetionHandler {
         );
 
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handlerBadCredentialsException(BadCredentialsException ex, WebRequest request){
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Credentials",
+                request.getDescription(false).replace("uri=", ""),
+                List.of(ex.getMessage()),
+                null
+        );
+
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 }
