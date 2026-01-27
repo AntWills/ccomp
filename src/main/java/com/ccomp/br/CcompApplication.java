@@ -11,6 +11,14 @@ import org.springframework.web.bind.annotation.RestController;
 * - publica: openssl rsa -pubout -in private.key -out public.key
 * E colocar em resources.
  * */
+
+// - Criar um mapper, ou usar um, para centralizar as converções.
+// - Criar um refrest token em auth/.
+// - Criar usuarios admin e roles.
+// - Terminar as tabelas do banco.
+// - Integrar com email e whatsapp. Obs: Colocar a lógica nos modulos.
+// - Conectar a um banco postgree usando dados do .env.
+// - Paginação é necessario.
 @SpringBootApplication
 @RestController
 public class CcompApplication {
