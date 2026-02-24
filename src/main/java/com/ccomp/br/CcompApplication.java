@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 // - Integrar com email e whatsapp. Obs: Colocar a lógica nos modulos.
 // - Conectar a um banco postgree usando dados do .env.
 // - Paginação é necessario.
+
+// Executar via terminal:  ./mvnw spring-boot:run
+// Aessar swager: http://localhost:8080/swagger-ui/index.html
 @SpringBootApplication
 @RestController
 public class CcompApplication {

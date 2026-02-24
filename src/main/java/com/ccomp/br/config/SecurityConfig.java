@@ -41,10 +41,22 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // 1. Auth
                         .requestMatchers("/api/auth/**").permitAll()
+
+                        // 2. Documentação (Liberando as duas variações possíveis de path)
+//                        .requestMatchers("/v3/api-docs/**", "/v3/api-docs").permitAll()
+                        .requestMatchers("/api/v3/api-docs/**", "/api/v3/api-docs").permitAll()
+
+                        // 3. Interface do Swagger e recursos estáticos
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/webjars/**",
+                                "/favicon.ico"
+                        ).permitAll()
                         .anyRequest().authenticated()
-                )
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+                ).oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 
         return http.build();
     }
