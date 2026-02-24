@@ -27,7 +27,7 @@ public class UserEventsGatewa {
         return ResponseEntity.ok(eventsManagement.findAllByOwnerId(ownerId));
     }
 
-    @GetMapping("/me")
+    @GetMapping("/event")
     public ResponseEntity<List<EventResponse>> getMe(@AuthenticationPrincipal Jwt jwt) {
         UUID participantId = UUID.fromString(jwt.getSubject());
         return ResponseEntity.ok(eventsManagement.findAllSubscriptions(participantId));

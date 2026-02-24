@@ -9,12 +9,12 @@ import lombok.Setter;
 import java.util.UUID;
 
 @Table(name = "tb_enrollments")
-@Entity(name = "EnrollmentsModel")
+@Entity
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
-public class EnrollmentsModel {
+public class Enrollment {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
@@ -24,10 +24,10 @@ public class EnrollmentsModel {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "events_id", nullable = false)
-    private EventsModel eventsModel;
+    private Event event;
 
-    public EnrollmentsModel(UUID userId, EventsModel eventsModel){
+    public Enrollment(UUID userId, Event event){
         this.userId = userId;
-        this.eventsModel = eventsModel;
+        this.event = event;
     }
 }
