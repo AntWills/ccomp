@@ -1,4 +1,4 @@
-package com.ccomp.br.web;
+package com.ccomp.br.domain.users.web;
 
 import com.ccomp.br.domain.events.management.EventsManagement;
 import com.ccomp.br.shared.dto.EventResponse;
