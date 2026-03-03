@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.auth.dto;
 
-public record AuthResponse(
+public record SignInResponse(
     String accessToken,
-    Long expiresIn
+    String refreshToken
 ) {
 }

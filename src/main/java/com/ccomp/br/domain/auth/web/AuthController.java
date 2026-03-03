@@ -1,10 +1,11 @@
 package com.ccomp.br.domain.auth.web;
 
 import com.ccomp.br.domain.auth.application.AuthApplication;
-import com.ccomp.br.domain.auth.dto.AuthResponse;
+import com.ccomp.br.domain.auth.dto.RefreshTokenRequest;
+import com.ccomp.br.domain.auth.dto.RefreshTokenResponse;
+import com.ccomp.br.domain.auth.dto.SignInResponse;
 import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
-import com.ccomp.br.shared.exceptions.BadCredentialsException;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -35,12 +36,11 @@ public class AuthController {
     }
 
     @Transactional
-    @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterUserDTO dto) {
-        log.info("Iniciando o registro de um novo usuario.");
-        var res = authApplication.register(dto);
+    @PostMapping("/sign-up")
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterUserDTO dto) {
+        authApplication.signUp(dto);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(res);
+        return ResponseEntity.status(HttpStatus.CREATED).body("Conta criada com sucesso.");
     }
 
     @Operation(
@@ -51,7 +51,7 @@ public class AuthController {
                             description = "Login realizado com sucesso.",
                             content = @Content(
                                     mediaType = "application/json",
-                                    schema = @Schema(implementation = AuthResponse.class)
+                                    schema = @Schema(implementation = SignInResponse.class)
                             )
                     ),
                     @ApiResponse(
@@ -64,8 +64,21 @@ public class AuthController {
                     )
             }
     )
-    @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequestDTO dto) {
-        return ResponseEntity.ok(authApplication.login(dto));
+    @PostMapping("/sign-in")
+    public SignInResponse login(@Valid @RequestBody LoginRequestDTO dto) {
+        return authApplication.signIn(dto);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<RefreshTokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request){
+        return authApplication.refresh(request)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request){
+
+        return ResponseEntity.notFound().build();
     }
 }

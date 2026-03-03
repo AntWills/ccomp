@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Table(name = "tb_refresh_token")
 @Getter
@@ -18,7 +19,7 @@ public class RefreshToken {
     private Long id;
 
     @Column(name = "user_id", nullable = false)
-    private long userId;
+    private UUID userId;
 
     @Column(nullable = false, unique = true)
     private String token;
