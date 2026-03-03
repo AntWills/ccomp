@@ -66,18 +66,18 @@ public class GlobalExcpetionHandler {
     public ResponseEntity<ErrorResponse> handlerBadCredentialsException(BadCredentialsException ex, WebRequest request){
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
-                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.UNAUTHORIZED.value(),
                 "Bad Credentials",
                 request.getDescription(false).replace("uri=", ""),
                 List.of(ex.getMessage()),
                 null
         );
 
-        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
     }
 
     @ExceptionHandler(DomainException.class)
-    public ResponseEntity<ErrorResponse> handlerBadCredentialsException(DomainException ex, WebRequest request){
+    public ResponseEntity<ErrorResponse> handlerDomainException(DomainException ex, WebRequest request){
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.BAD_REQUEST.value(),

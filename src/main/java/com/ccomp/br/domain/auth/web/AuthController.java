@@ -5,7 +5,11 @@ import com.ccomp.br.domain.auth.dto.AuthResponse;
 import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
 import com.ccomp.br.shared.exceptions.BadCredentialsException;
+import com.ccomp.br.shared.exceptions.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -39,7 +43,27 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 
-    @Operation(summary = "Retorna o acess token junto com o tempo de expiração do mesmo.")
+    @Operation(
+            summary = "Retorna o access token junto com o tempo de expiração do mesmo.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Login realizado com sucesso.",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = AuthResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "Credenciais inválidas.",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
+                    )
+            }
+    )
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequestDTO dto) {
         return ResponseEntity.ok(authApplication.login(dto));
