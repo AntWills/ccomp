@@ -2,6 +2,7 @@ package com.ccomp.br.domain.events.management;
 
 import com.ccomp.br.domain.events.persistence.EnrollmentRepository;
 import com.ccomp.br.domain.events.persistence.EventRepository;
+import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.shared.dto.EventResponse;
 import org.springframework.stereotype.Component;
 
@@ -12,26 +13,23 @@ import java.util.UUID;
 public class EventsManagement {
     private final EventRepository eventRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final EventMapper eventMapper;
 
-    public EventsManagement(EventRepository eventRepository, EnrollmentRepository enrollmentRepository) {
+    public EventsManagement(EventRepository eventRepository, EnrollmentRepository enrollmentRepository, EventMapper eventMapper) {
         this.eventRepository = eventRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.eventMapper = eventMapper;
     }
 
     public List<EventResponse> findAllByOwnerId(UUID ownerId){
         return eventRepository.findAllByOwnerId(ownerId)
-                .stream().map(eventsModel -> new EventResponse(eventsModel.getId(), eventsModel.getName(), eventsModel.getStart(), eventsModel.getEnd(), eventsModel.getOwnerId()))
+                .stream().map(eventMapper::eventToEventResponse)
                 .toList();
     }
 
     public List<EventResponse> findAllSubscriptions(UUID participantId) {
         return enrollmentRepository.findAllByUserIdWithEvent(participantId)
-                .stream().map(enrollmentsModel -> new EventResponse(
-                        enrollmentsModel.getEvent().getId(),
-                        enrollmentsModel.getEvent().getName(),
-                        enrollmentsModel.getEvent().getStart(),
-                        enrollmentsModel.getEvent().getEnd(),
-                        enrollmentsModel.getEvent().getOwnerId()
-                )).toList();
+                .stream().map(enrollmentsModel -> eventMapper.eventToEventResponse(enrollmentsModel.getEvent())
+                ).toList();
     }
 }

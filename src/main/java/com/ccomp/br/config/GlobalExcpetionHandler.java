@@ -1,9 +1,6 @@
 package com.ccomp.br.config;
 
-import com.ccomp.br.shared.exceptions.BadCredentialsException;
-import com.ccomp.br.shared.exceptions.ConflictException;
-import com.ccomp.br.shared.exceptions.DomainException;
-import com.ccomp.br.shared.exceptions.ErrorResponse;
+import com.ccomp.br.shared.exceptions.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -91,5 +88,20 @@ public class GlobalExcpetionHandler {
         );
 
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handlerAccessDeniedException(AccessDeniedException ex, WebRequest request){
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.FORBIDDEN.value(),
+                "FORBIDDEN",
+                request.getDescription(false).replace("uri=", ""),
+                List.of(ex.getMessage()),
+                null
+        );
+
+        return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
     }
 }

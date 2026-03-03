@@ -1,12 +1,10 @@
 package com.ccomp.br.domain.events.persistence;
 
+import com.ccomp.br.shared.exceptions.DomainException;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -17,6 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Getter
 @Setter
+@Builder
 public class Event {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,16 +28,47 @@ public class Event {
     private Set<Enrollment> enrollments = new HashSet<>();
 
     @Column(name = "start_date")
-    private LocalDate start;
+    private LocalDateTime startDate;
 
     @Column(name = "end_date")
-    private LocalDate end;
+    private LocalDateTime endDate;
 
-    @JoinColumn(name = "owner_id", nullable = false)
+    @Column(name = "owner_id", nullable = false)
     private UUID ownerId;
 
     public Event(String name, UUID ownerId) {
         this.name = name;
         this.ownerId = ownerId;
+    }
+
+    private void verifyDate() {
+        if (startDate == null || endDate == null) return;
+
+        if (startDate.isAfter(endDate)) throw new DomainException("The event cannot start after the event ends.");
+    }
+
+    public boolean isOpen() {
+        if (startDate == null || endDate == null) return false;
+
+        LocalDateTime now = LocalDateTime.now();
+        return now.isAfter(startDate) && now.isBefore(endDate);
+    }
+
+    public boolean isClosed() {
+        return !this.isOpen();
+    }
+
+    public boolean isOwner(UUID userId){
+        return ownerId.equals(userId);
+    }
+
+    public void setStart(LocalDateTime start) {
+        this.startDate = start;
+        verifyDate();
+    }
+
+    public void setEnd(LocalDateTime end) {
+        this.endDate = end;
+        verifyDate();
     }
 }

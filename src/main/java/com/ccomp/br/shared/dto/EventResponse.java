@@ -1,13 +1,14 @@
 package com.ccomp.br.shared.dto;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record EventResponse(
         Long id,
         String name,
-        LocalDate startDate,
-        LocalDate endDate,
+        LocalDateTime startDate,
+        LocalDateTime endDate,
         UUID ownerId
 ) {
 }

@@ -1,10 +1,12 @@
 package com.ccomp.br.domain.events.application;
 
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
+import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.shared.dto.EventResponse;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.users.management.UserManagement;
+import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.UserNotFaundException;
 import org.springframework.stereotype.Service;
 
@@ -15,10 +17,12 @@ import java.util.UUID;
 public class EventsApplication {
     private final EventRepository eventRepository;
     private final UserManagement userManagement;
+    private final EventMapper mapper;
 
-    public EventsApplication(EventRepository eventRepository, UserManagement userManagement) {
+    public EventsApplication(EventRepository eventRepository, UserManagement userManagement, EventMapper mapper) {
         this.eventRepository = eventRepository;
         this.userManagement = userManagement;
+        this.mapper = mapper;
     }
 
     public EventResponse create(UUID id, CreateEventRequestDTO dto){
@@ -31,19 +35,19 @@ public class EventsApplication {
         
         var savedEvent = eventRepository.save(new Event(dto.name(), id));
 
-        return new EventResponse(savedEvent.getId(), savedEvent.getName(), savedEvent.getStart(), savedEvent.getEnd(), savedEvent.getOwnerId());
+        return mapper.eventToEventResponse(savedEvent);
     }
 
-    public Optional<EventResponse> getById(Long eventId, UUID ownerId){
+    public Optional<EventResponse> getById(Long eventId, UUID userId) {
         return eventRepository.findById(eventId)
-                .filter(event -> event.getOwnerId().equals(ownerId))
-                .map(event ->
-                        new EventResponse(
-                                event.getId(),
-                                event.getName(),
-                                event.getStart(),
-                                event.getEnd(),
-                                event.getOwnerId()
-                        ));
+                .map(event -> {
+                    boolean allowed =
+                            event.isOpen()
+                                    || Optional.ofNullable(userId).filter(event::isOwner).isPresent();
+
+                    if (allowed) return mapper.eventToEventResponse(event);
+
+                    throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+                });
     }
 }
