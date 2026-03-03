@@ -43,7 +43,7 @@ public class AuthApplication {
     }
 
     @Async(AsyncConfig.VIRTUAL_TASK_EXECUTOR)
-    public void logoutI(RefreshTokenRequest request){
+    public void logout(RefreshTokenRequest request){
         jwtService.deleteRefreshToken(request);
     }
 }

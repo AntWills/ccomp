@@ -17,6 +17,7 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,6 +36,37 @@ public class AuthController {
         this.authApplication = authApplication;
     }
 
+    @Operation(
+            summary = "Cria uma nova conta de usuário",
+            description = "Registra um novo usuário no sistema. " +
+                    "O e-mail deve ser único e a senha deve atender aos critérios mínimos de segurança.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "201",
+                            description = "Conta criada com sucesso",
+                            content = @Content(
+                                    mediaType = MediaType.TEXT_PLAIN_VALUE,
+                                    schema = @Schema(type = "string", example = "Conta criada com sucesso.")
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Dados inválidos, campos obrigatórios ausentes.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "409",
+                            description = "Conflito - e-mail já está em uso",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
+                    )
+            }
+    )
     @Transactional
     @PostMapping("/sign-up")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterUserDTO dto) {
@@ -50,7 +82,7 @@ public class AuthController {
                             responseCode = "200",
                             description = "Login realizado com sucesso.",
                             content = @Content(
-                                    mediaType = "application/json",
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = SignInResponse.class)
                             )
                     ),
@@ -58,7 +90,7 @@ public class AuthController {
                             responseCode = "401",
                             description = "Credenciais inválidas.",
                             content = @Content(
-                                    mediaType = "application/json",
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = ErrorResponse.class)
                             )
                     )
@@ -69,6 +101,30 @@ public class AuthController {
         return authApplication.signIn(dto);
     }
 
+    @Operation(
+            summary = "Renova o access token utilizando um refresh token válido",
+            description = "Recebe um refresh token e retorna um novo access token (e opcionalmente novo refresh token).",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Tokens renovados com sucesso",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = RefreshTokenResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Requisição inválida ou refresh token mal formatado",
+                            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "Refresh token inválido, expirado ou revogado",
+                            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    )
+            }
+    )
     @PostMapping("/refresh")
     public ResponseEntity<RefreshTokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request){
         return authApplication.refresh(request)
@@ -76,6 +132,23 @@ public class AuthController {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
 
+    @Operation(
+            summary = "Realiza logout / invalidação do refresh token",
+            description = "Marca o refresh token informado como inválido/revogado, " +
+                    "impedindo sua utilização futura. " +
+                    "(O access token continua válido até expirar)",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "204",
+                            description = "Logout realizado com sucesso (token invalidado)"
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Requisição inválida ou refresh token ausente/mal formatado",
+                            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    )
+            }
+    )
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request){
 
