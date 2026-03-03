@@ -94,7 +94,7 @@ class EventsControllerTest {
     void getById() throws Exception {
         log.info("===== INÍCIO TESTE: Buscar evento =====");
 
-        var result = mockMvc.perform(get("/api/events/4")
+        var result = mockMvc.perform(get("/api/events/40")
                         .contentType(MediaType.APPLICATION_JSON)
 //                        .header("Authorization", "Bearer " + jwt)
                 )

@@ -93,6 +93,7 @@ public class EventsController {
     public ResponseEntity<EventResponse> getById(@PathVariable Long eventId, @AuthenticationPrincipal Jwt jwt) {
         UUID userId = jwt == null ? null : UUID.fromString(jwt.getSubject());
 
-        return eventsApplication.getById(eventId, userId).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        return eventsApplication.getById(eventId, userId).map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 }

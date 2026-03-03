@@ -2,6 +2,7 @@ package com.ccomp.br.domain.users.management;
 
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
+import com.ccomp.br.domain.users.util.UserMapper;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -18,11 +19,13 @@ import java.util.UUID;
 public class UserManagement {
     private final UserModelRepository userModelRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
 
     @Autowired
-    public UserManagement(UserModelRepository userModelRepository, PasswordEncoder passwordEncoder){
+    public UserManagement(UserModelRepository userModelRepository, PasswordEncoder passwordEncoder, UserMapper userMapper){
         this.userModelRepository = userModelRepository;
         this.passwordEncoder = passwordEncoder;
+        this.userMapper = userMapper;
     }
 
     public UserDTO register(RegisterUserDTO dto){
@@ -33,18 +36,18 @@ public class UserManagement {
 
         UserModel user = userModelRepository.save(new UserModel(dto.name(), encryptedPassword, dto.email()));
 
-        return new UserDTO(user.getId(), user.getName(), user.getEmailAddress());
+        return userMapper.userToDto(user);
     }
 
     public UserDTO login(EmailAddress emailAddress, String password) {
         return userModelRepository.findByEmailAddress(emailAddress)
                 .filter(userModel -> passwordEncoder.matches(password, userModel.getPassword()))
-                .map(userModel -> new UserDTO(userModel.getId(), userModel.getName(), userModel.getEmailAddress()))
+                .map(userMapper::userToDto)
                 .orElseThrow(() -> new BadCredentialsException("Email or password incorrect!"));
     }
 
     public Optional<UserDTO> findById(UUID id){
         return userModelRepository.findById(id)
-                .map(userModel -> new UserDTO(userModel.getId(), userModel.getName(), userModel.getEmailAddress()));
+                .map(userMapper::userToDto);
     }
 }
