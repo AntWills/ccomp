@@ -39,7 +39,7 @@ public class UserManagement {
         return userMapper.userToDto(user);
     }
 
-    public UserDTO login(EmailAddress emailAddress, String password) {
+    public UserDTO validateCredentials(EmailAddress emailAddress, String password) {
         return userModelRepository.findByEmailAddress(emailAddress)
                 .filter(userModel -> passwordEncoder.matches(password, userModel.getPassword()))
                 .map(userMapper::userToDto)
