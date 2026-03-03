@@ -1,0 +1,32 @@
+package com.ccomp.br.domain.auth.persistence;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.Instant;
+
+@Table(name = "tb_refresh_token")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Builder
+public class RefreshToken {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "user_id", nullable = false)
+    private long userId;
+
+    @Column(nullable = false, unique = true)
+    private String token;
+
+    @Column(name = "expiry_date", nullable = false)
+    private Instant expiryDate;
+
+    public boolean isTokenExpired(){
+        return expiryDate.isBefore(Instant.now());
+    }
+}
