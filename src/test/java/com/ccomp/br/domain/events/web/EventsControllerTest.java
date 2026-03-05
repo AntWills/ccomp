@@ -53,12 +53,12 @@ class EventsControllerTest {
         jwt = jwtService.getAccessToken(userId);
     }
 
-    @Test
-    @DisplayName("Fazer login e recuperar dados do usuario")
-    @Sql(scripts = {
-            "/sql/insert-users-test.sql"
-    }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    void create() throws Exception {
+        @Test
+        @DisplayName("Fazer login e recuperar dados do usuario")
+        @Sql(scripts = {
+                "/sql/insert-users-test.sql"
+        }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+        void create() throws Exception {
         log.info("===== INÍCIO TESTE: criar evento =====");
 
         var eventDto = new CreateEventRequestDTO("Evento Teste 1", null, null);

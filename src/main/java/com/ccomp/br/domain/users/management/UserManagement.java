@@ -28,15 +28,13 @@ public class UserManagement {
         this.userMapper = userMapper;
     }
 
-    public UserDTO register(RegisterUserDTO dto){
+    public void register(RegisterUserDTO dto){
         var exist = userModelRepository.findByEmailAddress(dto.email());
         if(exist.isPresent()) throw new ConflictException("Exist email!");
 
         String encryptedPassword = passwordEncoder.encode(dto.password());
 
-        UserModel user = userModelRepository.save(new UserModel(dto.name(), encryptedPassword, dto.email()));
-
-        return userMapper.userToDto(user);
+        userModelRepository.save(new UserModel(dto.name(), encryptedPassword, dto.email()));
     }
 
     public UserDTO validateCredentials(EmailAddress emailAddress, String password) {

@@ -12,7 +12,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +22,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @Tag(name = "Autenticação", description = "Operações relacionadas ao registro da conta, login e token de acesso.")
 @RestController
@@ -67,12 +68,13 @@ public class AuthController {
                     )
             }
     )
-    @Transactional
     @PostMapping("/sign-up")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterUserDTO dto) {
         authApplication.signUp(dto);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body("Conta criada com sucesso.");
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                Map.of("message", "Conta criada com sucesso.")
+        );
     }
 
     @Operation(
@@ -151,7 +153,7 @@ public class AuthController {
     )
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request){
-
-        return ResponseEntity.notFound().build();
+        authApplication.logout(request);
+        return ResponseEntity.noContent().build();
     }
 }

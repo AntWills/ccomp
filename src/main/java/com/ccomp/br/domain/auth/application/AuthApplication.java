@@ -7,6 +7,7 @@ import com.ccomp.br.domain.auth.dto.SignInResponse;
 import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
 import com.ccomp.br.domain.users.management.UserManagement;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ public class AuthApplication {
         this.jwtService = jwtService;
     }
 
+    @Transactional
     public void signUp(RegisterUserDTO dto) {
         userManagement.register(dto);
     }
@@ -43,6 +45,7 @@ public class AuthApplication {
     }
 
     @Async(AsyncConfig.VIRTUAL_TASK_EXECUTOR)
+    @Transactional
     public void logout(RefreshTokenRequest request){
         jwtService.deleteRefreshToken(request);
     }
