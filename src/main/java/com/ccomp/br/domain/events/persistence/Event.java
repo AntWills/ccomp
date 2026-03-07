@@ -1,5 +1,7 @@
 package com.ccomp.br.domain.events.persistence;
 
+import com.ccomp.br.domain.events.persistence.activities.EventActivity;
+import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.enrollments.Enrollment;
 import com.ccomp.br.shared.exceptions.DomainException;
 import jakarta.persistence.*;
@@ -7,6 +9,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -27,6 +30,12 @@ public class Event {
 
     @OneToMany(mappedBy = "event")
     private Set<Enrollment> enrollments = new HashSet<>();
+
+    @OneToMany(mappedBy = "event")
+    private Set<EventEditor> editors;
+
+    @OneToMany(mappedBy = "event")
+    private List<EventActivity> activities;
 
     @Column(name = "start_date")
     private LocalDateTime startDate;

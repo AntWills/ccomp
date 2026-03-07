@@ -1,6 +1,8 @@
 package com.ccomp.br.domain.events.web;
 
 import com.ccomp.br.domain.events.application.EventsApplication;
+import com.ccomp.br.domain.events.dto.CreateActivityRequest;
+import com.ccomp.br.domain.events.dto.ActivityDTO;
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
 import com.ccomp.br.shared.dto.EventResponse;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
@@ -16,7 +18,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Optional;
 import java.util.UUID;
 
 @Tag(name = "Gerir Eventos", description = "Operações relacionadas a criação, busca, atulização e deleção de eventos.")
@@ -95,5 +96,9 @@ public class EventsController {
 
         return eventsApplication.getById(eventId, userId).map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
+    public ResponseEntity<ActivityDTO> createActivity(@Valid @RequestBody CreateActivityRequest request, @AuthenticationPrincipal Jwt jwt){
+        return ResponseEntity.status(HttpStatus.CREATED).body(eventsApplication.createActivity(UUID.fromString(jwt.getSubject()), request));
     }
 }
