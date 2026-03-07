@@ -98,7 +98,17 @@ public class EventsController {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
+    @PostMapping("/activities")
     public ResponseEntity<ActivityDTO> createActivity(@Valid @RequestBody CreateActivityRequest request, @AuthenticationPrincipal Jwt jwt){
         return ResponseEntity.status(HttpStatus.CREATED).body(eventsApplication.createActivity(UUID.fromString(jwt.getSubject()), request));
+    }
+
+    @DeleteMapping("/activities/{id}")
+    public ResponseEntity<Void> deleteActivity(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        eventsApplication.deleteActivity(UUID.fromString(jwt.getSubject()), id);
+        return ResponseEntity.noContent().build();
     }
 }

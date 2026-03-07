@@ -78,4 +78,20 @@ public class EventsApplication {
 
         return activityMapper.eventActivityToActivityDTO(activitySaved);
     }
+
+    public void deleteActivity(UUID userId, Long activityId) {
+        EventActivity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Activity not found with id: " + activityId));
+
+        Event event = activity.getEvent();
+
+        boolean allowed =
+                event.isOwner(userId) ||
+                        activityRepository.existsByUserIdAndEvent(userId, event);
+
+        if(!allowed)
+            throw new AccessDeniedException("User is not allowed to delete this activity.");
+
+        activityRepository.deleteById(activityId);
+    }
 }
