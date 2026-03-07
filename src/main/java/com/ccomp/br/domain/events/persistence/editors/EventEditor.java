@@ -1,5 +1,6 @@
-package com.ccomp.br.domain.events.persistence;
+package com.ccomp.br.domain.events.persistence.editors;
 
+import com.ccomp.br.domain.events.persistence.Event;
 import jakarta.persistence.*;
 import lombok.*;
 

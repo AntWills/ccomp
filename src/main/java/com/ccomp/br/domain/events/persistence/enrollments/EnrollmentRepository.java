@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.events.persistence;
+package com.ccomp.br.domain.events.persistence.enrollments;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

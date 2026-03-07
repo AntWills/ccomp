@@ -1,5 +1,6 @@
-package com.ccomp.br.domain.events.persistence;
+package com.ccomp.br.domain.events.persistence.enrollments;
 
+import com.ccomp.br.domain.events.persistence.Event;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

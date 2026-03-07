@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.persistence;
 
+import com.ccomp.br.domain.events.persistence.enrollments.Enrollment;
 import com.ccomp.br.shared.exceptions.DomainException;
 import jakarta.persistence.*;
 import lombok.*;

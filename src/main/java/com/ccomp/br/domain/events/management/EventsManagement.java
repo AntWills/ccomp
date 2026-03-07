@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.events.management;
 
-import com.ccomp.br.domain.events.persistence.EnrollmentRepository;
+import com.ccomp.br.domain.events.persistence.enrollments.EnrollmentRepository;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.shared.dto.EventResponse;

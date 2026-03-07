@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.events.persistence;
+package com.ccomp.br.domain.events.persistence.editors;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
