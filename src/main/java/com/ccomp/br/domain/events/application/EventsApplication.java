@@ -5,12 +5,15 @@ import com.ccomp.br.domain.events.dto.CreateActivityRequest;
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
 import com.ccomp.br.domain.events.persistence.activities.EventActivity;
 import com.ccomp.br.domain.events.persistence.activities.EventActivityRepository;
+import com.ccomp.br.domain.events.persistence.editors.EventEditor;
+import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
 import com.ccomp.br.domain.events.util.ActivityMapper;
 import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.shared.dto.EventResponse;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.users.management.UserManagement;
+import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFaundException;
@@ -23,13 +26,15 @@ import java.util.UUID;
 public class EventsApplication {
     private final EventRepository eventRepository;
     private final EventActivityRepository activityRepository;
+    private final EventEditorRepository editorRepository;
     private final UserManagement userManagement;
     private final EventMapper eventMapper;
     private final ActivityMapper activityMapper;
 
-    public EventsApplication(EventRepository eventRepository, EventActivityRepository activityRepository, UserManagement userManagement, EventMapper eventMapper, ActivityMapper activityMapper) {
+    public EventsApplication(EventRepository eventRepository, EventActivityRepository activityRepository, EventEditorRepository editorRepository, UserManagement userManagement, EventMapper eventMapper, ActivityMapper activityMapper) {
         this.eventRepository = eventRepository;
         this.activityRepository = activityRepository;
+        this.editorRepository = editorRepository;
         this.userManagement = userManagement;
         this.eventMapper = eventMapper;
         this.activityMapper = activityMapper;
@@ -66,7 +71,7 @@ public class EventsApplication {
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         if(!event.isOwner(userId) && !activityRepository.existsByUserIdAndEvent(userId, event))
-            throw new AccessDeniedException("O usuario não tem acesso a este evento.");
+            throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         EventActivity activity = EventActivity.builder()
                 .event(event)
@@ -79,9 +84,44 @@ public class EventsApplication {
         return activityMapper.eventActivityToActivityDTO(activitySaved);
     }
 
+    public MessageResponse addEditor(Long eventId, UUID ownerId, UUID userId){
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        if(!event.isOwner(ownerId)) throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
+
+        if(editorRepository.existsByEventIdAndUserId(event.getId(), userId))
+            return new MessageResponse("O usuario já é editor deste evento");
+
+        if(!userManagement.userExists(userId))
+            throw new UserNotFaundException("O usuario não existe.");
+
+        editorRepository.save(EventEditor.builder()
+                        .event(event)
+                        .userId(userId)
+                        .build());
+
+        return new MessageResponse("Usuario adicionar como editor.");
+    }
+
+    public MessageResponse removeEditor(Long eventId, UUID ownerId, UUID userId){
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        if(!event.isOwner(ownerId))
+            throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
+
+        if(!editorRepository.existsByEventIdAndUserId(event.getId(), userId))
+            return new MessageResponse("O usuário não é editor deste evento.");
+
+        editorRepository.deleteByEventIdAndUserId(event.getId(), userId);
+
+        return new MessageResponse("Usuário removido como editor.");
+    }
+
     public void deleteActivity(UUID userId, Long activityId) {
         EventActivity activity = activityRepository.findById(activityId)
-                .orElseThrow(() -> new ResourceNotFoundException("Activity not found with id: " + activityId));
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não existe."));
 
         Event event = activity.getEvent();
 
