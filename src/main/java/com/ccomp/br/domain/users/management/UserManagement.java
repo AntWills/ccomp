@@ -48,4 +48,8 @@ public class UserManagement {
         return userModelRepository.findById(id)
                 .map(userMapper::userToDto);
     }
+
+    public boolean userExists(UUID id){
+        return userModelRepository.existsById(id);
+    }
 }
