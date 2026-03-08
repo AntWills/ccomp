@@ -5,6 +5,8 @@ import com.ccomp.br.domain.events.dto.CreateActivityRequest;
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
+import com.ccomp.br.domain.events.persistence.activities.EventActivity;
+import com.ccomp.br.domain.events.persistence.activities.EventActivityRepository;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +51,9 @@ class EventsControllerTest {
 
     @Autowired
     private EventEditorRepository editorRepository;
+
+    @Autowired
+    private EventActivityRepository activityRepository;
 
     @Autowired
     private JwtService jwtService;
@@ -207,6 +212,43 @@ class EventsControllerTest {
                         .content(requestJson)
                 )
                 .andExpect(status().isCreated())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andDo(result1 -> {
+                    String jsonResponse = result1.getResponse().getContentAsString();
+                    Object jsonObject = objectMapper.readValue(jsonResponse, Object.class);
+                    String prettyJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonObject);
+
+                    log.info("Resposta formatada:\n{}", prettyJson);
+                });
+
+        endTest();
+    }
+
+    @Test
+    @DisplayName("Remover atividade do evento.")
+    @Sql(scripts = {
+            "/sql/insert-users-test.sql",
+            "/sql/insert-events-test.sql"
+    }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void removeActivity() throws Exception {
+        log.info("===== INÍCIO TESTE: Remover Atividade =====");
+
+        String jwt = jwtService.getAccessToken(OWNER_ID);
+
+        Event event = eventRepository.findById(EVENT_ID).get();
+
+        EventActivity activity = activityRepository.save(EventActivity.builder()
+                        .title("Minha atividade1")
+                        .description("Com ou sem descrição?")
+                        .event(event)
+                .build());
+
+
+        var result = mockMvc.perform(delete("/api/events/activities/{id}", activity.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Bearer " + jwt)
+                )
+                .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andDo(result1 -> {
                     String jsonResponse = result1.getResponse().getContentAsString();

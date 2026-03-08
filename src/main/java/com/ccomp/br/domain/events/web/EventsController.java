@@ -125,11 +125,11 @@ public class EventsController {
     }
 
     @DeleteMapping("/activities/{id}")
-    public ResponseEntity<Void> deleteActivity(
+    public ResponseEntity<MessageResponse> deleteActivity(
             @PathVariable Long id,
             @AuthenticationPrincipal Jwt jwt
     ) {
         eventsApplication.deleteActivity(UUID.fromString(jwt.getSubject()), id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new MessageResponse("Atividade removida com sucesso."));
     }
 }
