@@ -117,9 +117,11 @@ public class EventsController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/activities")
-    public ResponseEntity<ActivityDTO> createActivity(@Valid @RequestBody CreateActivityRequest request, @AuthenticationPrincipal Jwt jwt){
-        return ResponseEntity.status(HttpStatus.CREATED).body(eventsApplication.createActivity(UUID.fromString(jwt.getSubject()), request));
+    @PostMapping("/{eventId}/activities")
+    public ResponseEntity<ActivityDTO> createActivity(
+            @PathVariable Long eventId,
+            @Valid @RequestBody CreateActivityRequest request, @AuthenticationPrincipal Jwt jwt){
+        return ResponseEntity.status(HttpStatus.CREATED).body(eventsApplication.createActivity(UUID.fromString(jwt.getSubject()), eventId, request));
     }
 
     @DeleteMapping("/activities/{id}")

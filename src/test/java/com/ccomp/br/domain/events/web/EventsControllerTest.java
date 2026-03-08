@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.web;
 
 import com.ccomp.br.domain.auth.application.JwtService;
+import com.ccomp.br.domain.events.dto.CreateActivityRequest;
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
@@ -173,6 +174,39 @@ class EventsControllerTest {
                         .header("Authorization", "Bearer " + jwt)
                 )
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andDo(result1 -> {
+                    String jsonResponse = result1.getResponse().getContentAsString();
+                    Object jsonObject = objectMapper.readValue(jsonResponse, Object.class);
+                    String prettyJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonObject);
+
+                    log.info("Resposta formatada:\n{}", prettyJson);
+                });
+
+        endTest();
+    }
+
+    @Test
+    @DisplayName("Adicionar atividade ao evento.")
+    @Sql(scripts = {
+            "/sql/insert-users-test.sql",
+            "/sql/insert-events-test.sql"
+    }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void addActivity() throws Exception {
+        log.info("===== INÍCIO TESTE: Adicionar Atividade =====");
+
+        String jwt = jwtService.getAccessToken(OWNER_ID);
+
+        CreateActivityRequest requestDto = new CreateActivityRequest("Minha atividade1", "Com ou sem descrição?");
+        String requestJson = objectMapper.writeValueAsString(requestDto);
+
+
+        var result = mockMvc.perform(post("/api/events/{eventId}/activities", EVENT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Bearer " + jwt)
+                        .content(requestJson)
+                )
+                .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andDo(result1 -> {
                     String jsonResponse = result1.getResponse().getContentAsString();

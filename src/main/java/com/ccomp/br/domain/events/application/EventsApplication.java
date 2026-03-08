@@ -72,8 +72,8 @@ public class EventsApplication {
 
     @Transactional
     public MessageResponse addEditor(Long eventId, UUID ownerId, UUID userId){
-        log.info("addEditor chamado | eventId={}, ownerId={}, userId={}",
-                eventId, ownerId, userId);
+//        log.info("addEditor chamado | eventId={}, ownerId={}, userId={}",
+//                eventId, ownerId, userId);
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -96,8 +96,8 @@ public class EventsApplication {
 
     @Transactional
     public MessageResponse removeEditor(Long eventId, UUID ownerId, UUID userId){
-        log.info("removerEditor chamado | eventId={}, ownerId={}, userId={}",
-                eventId, ownerId, userId);
+//        log.info("removerEditor chamado | eventId={}, ownerId={}, userId={}",
+//                eventId, ownerId, userId);
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -113,11 +113,11 @@ public class EventsApplication {
     }
 
     @Transactional
-    public ActivityDTO createActivity(UUID userId, CreateActivityRequest request){
-        Event event = eventRepository.findById(request.eventId())
+    public ActivityDTO createActivity(UUID userId, Long eventId, CreateActivityRequest request){
+        Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if(!event.isOwner(userId) || !editorRepository.existsByEventIdAndUserId(event.getId(), userId))
+        if(!event.isOwner(userId) && !editorRepository.existsByEventIdAndUserId(event.getId(), userId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         EventActivity activity = EventActivity.builder()
