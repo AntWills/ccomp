@@ -2,7 +2,10 @@ package com.ccomp.br.domain.events.web;
 
 import com.ccomp.br.domain.auth.application.JwtService;
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
+import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
+import com.ccomp.br.domain.events.persistence.editors.EventEditor;
+import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,11 +20,11 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -42,6 +45,9 @@ class EventsControllerTest {
 
     @Autowired
     private EventRepository eventRepository;
+
+    @Autowired
+    private EventEditorRepository editorRepository;
 
     @Autowired
     private JwtService jwtService;
@@ -130,6 +136,43 @@ class EventsControllerTest {
                         .header("Authorization", "Bearer " + jwt)
                 )
                 .andExpect(status().isCreated())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andDo(result1 -> {
+                    String jsonResponse = result1.getResponse().getContentAsString();
+                    Object jsonObject = objectMapper.readValue(jsonResponse, Object.class);
+                    String prettyJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonObject);
+
+                    log.info("Resposta formatada:\n{}", prettyJson);
+                });
+
+        endTest();
+    }
+
+    @Test
+    @DisplayName("Remover editor do evento.")
+    @Sql(scripts = {
+            "/sql/insert-users-test.sql",
+            "/sql/insert-events-test.sql"
+    }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void removeEditor() throws Exception {
+        log.info("===== INÍCIO TESTE: Remover Editor =====");
+
+        String editorId = "e5a1b9d5-7f4e-405e-b5d1-5e6f7a8b9c05"; // Fernanda
+        String jwt = jwtService.getAccessToken(OWNER_ID);
+        Event event = eventRepository.findById(EVENT_ID).get();
+
+        EventEditor editor = EventEditor.builder()
+                .event(event)
+                .userId(UUID.fromString(editorId))
+                .assignedAt(LocalDateTime.now())
+                .build();
+        editorRepository.save(editor);
+
+        var result = mockMvc.perform(delete("/api/events/{eventId}/editors/{userId}", EVENT_ID, editorId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Bearer " + jwt)
+                )
+                .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andDo(result1 -> {
                     String jsonResponse = result1.getResponse().getContentAsString();

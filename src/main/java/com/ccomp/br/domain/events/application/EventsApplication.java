@@ -17,6 +17,7 @@ import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFaundException;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -69,6 +70,7 @@ public class EventsApplication {
                 });
     }
 
+    @Transactional
     public MessageResponse addEditor(Long eventId, UUID ownerId, UUID userId){
         log.info("addEditor chamado | eventId={}, ownerId={}, userId={}",
                 eventId, ownerId, userId);
@@ -92,7 +94,10 @@ public class EventsApplication {
         return new MessageResponse("Usuario adicionar como editor.");
     }
 
+    @Transactional
     public MessageResponse removeEditor(Long eventId, UUID ownerId, UUID userId){
+        log.info("removerEditor chamado | eventId={}, ownerId={}, userId={}",
+                eventId, ownerId, userId);
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -107,6 +112,7 @@ public class EventsApplication {
         return new MessageResponse("Usuário removido como editor.");
     }
 
+    @Transactional
     public ActivityDTO createActivity(UUID userId, CreateActivityRequest request){
         Event event = eventRepository.findById(request.eventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
@@ -125,6 +131,7 @@ public class EventsApplication {
         return activityMapper.eventActivityToActivityDTO(activitySaved);
     }
 
+    @Transactional
     public void deleteActivity(UUID userId, Long activityId) {
         EventActivity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não existe."));
