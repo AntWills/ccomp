@@ -31,6 +31,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 //@WithMockUser
 @Slf4j
 class EventsControllerTest {
+    private Long EVENT_ID = 1L;
+    private UUID OWNER_ID = UUID.fromString("18b31f15-e2e8-4a8a-a1fc-4dc17d131ef1"); // Cleber
 
     @Autowired
     private MockMvc mockMvc;
@@ -82,7 +84,7 @@ class EventsControllerTest {
                     log.info("Resposta formatada:\n{}", prettyJson);
                 });
 
-        log.info("===== FIM TESTE =====");
+        endTest();
     }
 
     @Test
@@ -108,6 +110,39 @@ class EventsControllerTest {
                     log.info("Resposta formatada:\n{}", prettyJson);
                 });
 
+        endTest();
+    }
+
+    @Test
+    @DisplayName("Adicionar Editor ao evento.")
+    @Sql(scripts = {
+            "/sql/insert-users-test.sql",
+            "/sql/insert-events-test.sql"
+    }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void addEditor() throws Exception {
+        log.info("===== INÍCIO TESTE: Adicionar Editor =====");
+
+        String editorId = "e5a1b9d5-7f4e-405e-b5d1-5e6f7a8b9c05"; // Fernanda
+        String jwt = jwtService.getAccessToken(OWNER_ID);
+
+        var result = mockMvc.perform(post("/api/events/{eventId}/editors/{userId}", EVENT_ID, editorId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Bearer " + jwt)
+                )
+                .andExpect(status().isCreated())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andDo(result1 -> {
+                    String jsonResponse = result1.getResponse().getContentAsString();
+                    Object jsonObject = objectMapper.readValue(jsonResponse, Object.class);
+                    String prettyJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonObject);
+
+                    log.info("Resposta formatada:\n{}", prettyJson);
+                });
+
+        endTest();
+    }
+
+    private void endTest(){
         log.info("===== FIM TESTE =====");
     }
 }

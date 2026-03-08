@@ -6,5 +6,4 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.UUID;
 
 public interface EventActivityRepository extends JpaRepository<EventActivity, Long> {
-    boolean existsByUserIdAndEvent(UUID userId, Event event);
 }

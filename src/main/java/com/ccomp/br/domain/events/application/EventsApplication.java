@@ -17,12 +17,15 @@ import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFaundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@Slf4j
 public class EventsApplication {
     private final EventRepository eventRepository;
     private final EventActivityRepository activityRepository;
@@ -66,25 +69,9 @@ public class EventsApplication {
                 });
     }
 
-    public ActivityDTO createActivity(UUID userId, CreateActivityRequest request){
-        Event event = eventRepository.findById(request.eventId())
-                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-
-        if(!event.isOwner(userId) && !activityRepository.existsByUserIdAndEvent(userId, event))
-            throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
-
-        EventActivity activity = EventActivity.builder()
-                .event(event)
-                .title(request.title())
-                .description(request.description())
-                .build();
-
-        EventActivity activitySaved = activityRepository.save(activity);
-
-        return activityMapper.eventActivityToActivityDTO(activitySaved);
-    }
-
     public MessageResponse addEditor(Long eventId, UUID ownerId, UUID userId){
+        log.info("addEditor chamado | eventId={}, ownerId={}, userId={}",
+                eventId, ownerId, userId);
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -99,6 +86,7 @@ public class EventsApplication {
         editorRepository.save(EventEditor.builder()
                         .event(event)
                         .userId(userId)
+                        .assignedAt(LocalDateTime.now())
                         .build());
 
         return new MessageResponse("Usuario adicionar como editor.");
@@ -119,6 +107,24 @@ public class EventsApplication {
         return new MessageResponse("Usuário removido como editor.");
     }
 
+    public ActivityDTO createActivity(UUID userId, CreateActivityRequest request){
+        Event event = eventRepository.findById(request.eventId())
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        if(!event.isOwner(userId) || !editorRepository.existsByEventIdAndUserId(event.getId(), userId))
+            throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
+
+        EventActivity activity = EventActivity.builder()
+                .event(event)
+                .title(request.title())
+                .description(request.description())
+                .build();
+
+        EventActivity activitySaved = activityRepository.save(activity);
+
+        return activityMapper.eventActivityToActivityDTO(activitySaved);
+    }
+
     public void deleteActivity(UUID userId, Long activityId) {
         EventActivity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não existe."));
@@ -126,8 +132,8 @@ public class EventsApplication {
         Event event = activity.getEvent();
 
         boolean allowed =
-                event.isOwner(userId) ||
-                        activityRepository.existsByUserIdAndEvent(userId, event);
+                event.isOwner(userId)
+                        || editorRepository.existsByEventIdAndUserId(event.getId(), userId);
 
         if(!allowed)
             throw new AccessDeniedException("User is not allowed to delete this activity.");
