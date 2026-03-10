@@ -44,7 +44,7 @@ public class AuthApplication {
                 .map(RefreshTokenResponse::new);
     }
 
-    @Async(AsyncConfig.VIRTUAL_TASK_EXECUTOR)
+    @Async
     @Transactional
     public void logout(RefreshTokenRequest request){
         jwtService.deleteRefreshToken(request);
