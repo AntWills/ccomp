@@ -1,13 +1,14 @@
 package com.ccomp.br.domain.auth.application;
 
-import com.ccomp.br.config.AsyncConfig;
 import com.ccomp.br.domain.auth.dto.RefreshTokenRequest;
 import com.ccomp.br.domain.auth.dto.RefreshTokenResponse;
-import com.ccomp.br.domain.auth.dto.SignInResponse;
+import com.ccomp.br.domain.auth.dto.AccessTokenResponse;
 import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
+import com.ccomp.br.domain.auth.persistence.RefreshTokenRepository;
 import com.ccomp.br.domain.users.management.UserManagement;
 import com.ccomp.br.domain.users.security.UserDetailsImpl;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
+import com.ccomp.br.shared.exceptions.InvalidTokenException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -38,7 +39,7 @@ public class AuthApplication {
         userManagement.register(dto);
     }
 
-    public SignInResponse signIn(LoginRequestDTO dto) {
+    public AccessTokenResponse signIn(LoginRequestDTO dto) {
         var authToken = new UsernamePasswordAuthenticationToken(
                 dto.email().getValue(), dto.password()
         );
@@ -47,7 +48,7 @@ public class AuthApplication {
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-        return new SignInResponse(
+        return new AccessTokenResponse(
                 jwtService.getAccessToken(userDetails.getUser().getId()),
                 jwtService.getRefreshToken(userDetails.getUser().getId()).getToken());
     }

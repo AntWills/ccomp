@@ -3,12 +3,11 @@ package com.ccomp.br.domain.auth.web;
 import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
 import com.ccomp.br.domain.auth.dto.RefreshTokenRequest;
 import com.ccomp.br.domain.auth.dto.RefreshTokenResponse;
-import com.ccomp.br.domain.auth.dto.SignInResponse;
+import com.ccomp.br.domain.auth.dto.AccessTokenResponse;
 import com.ccomp.br.domain.auth.persistence.RefreshTokenRepository;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
-import com.ccomp.br.shared.dto.UserDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,7 +17,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import tools.jackson.databind.ObjectMapper;
@@ -53,7 +51,7 @@ class AuthControllerTest {
     private static final EmailAddress TEST_EMAIL = new EmailAddress("refreshlogout@test.com");
     private static final String TEST_PASSWORD = "SenhaForte123!";
 
-    private SignInResponse createUserAndLogin() throws Exception {
+    private AccessTokenResponse createUserAndLogin() throws Exception {
         RegisterUserDTO registerDTO = new RegisterUserDTO(TEST_NAME, TEST_EMAIL, TEST_PASSWORD);
         String registerJson = objectMapper.writeValueAsString(registerDTO);
 
@@ -72,7 +70,7 @@ class AuthControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
 
-        return objectMapper.readValue(loginResult.getResponse().getContentAsString(), SignInResponse.class);
+        return objectMapper.readValue(loginResult.getResponse().getContentAsString(), AccessTokenResponse.class);
     }
 
     @Test
@@ -155,7 +153,7 @@ class AuthControllerTest {
     void shouldRefreshTokenSuccessfully() throws Exception {
         log.info("===== INÍCIO TESTE: refresh token válido =====");
 
-        SignInResponse initialLogin = createUserAndLogin();
+        AccessTokenResponse initialLogin = createUserAndLogin();
         String originalRefreshToken = initialLogin.refreshToken();
 
         RefreshTokenRequest refreshRequest = new RefreshTokenRequest(originalRefreshToken);
@@ -188,7 +186,7 @@ class AuthControllerTest {
         log.info("===== INÍCIO TESTE: logout e invalidação de refresh =====");
 
         // 1. Cria usuário e faz login
-        SignInResponse loginResponse = createUserAndLogin();
+        AccessTokenResponse loginResponse = createUserAndLogin();
         String refreshToken = loginResponse.refreshToken();
 
         // Verifica que o refresh existe no banco

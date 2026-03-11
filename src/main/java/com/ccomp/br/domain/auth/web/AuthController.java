@@ -4,7 +4,7 @@ import com.ccomp.br.domain.auth.application.AuthApplication;
 import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
 import com.ccomp.br.domain.auth.dto.RefreshTokenRequest;
 import com.ccomp.br.domain.auth.dto.RefreshTokenResponse;
-import com.ccomp.br.domain.auth.dto.SignInResponse;
+import com.ccomp.br.domain.auth.dto.AccessTokenResponse;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -69,7 +69,7 @@ public class AuthController {
             }
     )
     @PostMapping("/sign-up")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterUserDTO dto) {
+    public ResponseEntity<?> signUp(@Valid @RequestBody RegisterUserDTO dto) {
         authApplication.signUp(dto);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
@@ -85,7 +85,7 @@ public class AuthController {
                             description = "Login realizado com sucesso.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = SignInResponse.class)
+                                    schema = @Schema(implementation = AccessTokenResponse.class)
                             )
                     ),
                     @ApiResponse(
@@ -99,7 +99,7 @@ public class AuthController {
             }
     )
     @PostMapping("/sign-in")
-    public SignInResponse login(@Valid @RequestBody LoginRequestDTO dto) {
+    public AccessTokenResponse login(@Valid @RequestBody LoginRequestDTO dto) {
         return authApplication.signIn(dto);
     }
 
@@ -128,7 +128,7 @@ public class AuthController {
             }
     )
     @PostMapping("/refresh")
-    public ResponseEntity<RefreshTokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<AccessTokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         return authApplication.refresh(request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
