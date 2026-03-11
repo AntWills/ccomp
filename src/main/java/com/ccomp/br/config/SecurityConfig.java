@@ -37,6 +37,23 @@ public class SecurityConfig {
     @Value("${jwt.public.key}")
     private RSAPublicKey publicKey;
 
+    private static final String[] PUBLIC_AUTH_ROUTES = {
+            "/api/auth/**"
+    };
+
+    private static final String[] PUBLIC_EVENT_ROUTES = {
+            "/api/events/{eventId:\\d+}"
+    };
+
+    private static final String[] SWAGGER_ROUTES = {
+            "/swagger-ui/**",
+            "/swagger-ui.html",
+            "/webjars/**",
+            "/favicon.ico",
+            "/api/v3/api-docs/**",
+            "/api/v3/api-docs"
+    };
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -44,20 +61,13 @@ public class SecurityConfig {
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // 1. Auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/events/{eventId:\\d+}").permitAll()
+                        .requestMatchers(PUBLIC_AUTH_ROUTES).permitAll()
+                        .requestMatchers(HttpMethod.GET, PUBLIC_EVENT_ROUTES).permitAll()
 
                         // 2. Documentação (Liberando as duas variações possíveis de path)
 //                        .requestMatchers("/v3/api-docs/**", "/v3/api-docs").permitAll()
-                        .requestMatchers("/api/v3/api-docs/**", "/api/v3/api-docs").permitAll()
+                        .requestMatchers(SWAGGER_ROUTES).permitAll()
 
-                        // 3. Interface do Swagger e recursos estáticos
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/webjars/**",
-                                "/favicon.ico"
-                        ).permitAll()
                         .anyRequest().authenticated()
                 ).oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 
