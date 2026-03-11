@@ -1,10 +1,10 @@
 package com.ccomp.br.domain.auth.web;
 
 import com.ccomp.br.domain.auth.application.AuthApplication;
+import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
 import com.ccomp.br.domain.auth.dto.RefreshTokenRequest;
 import com.ccomp.br.domain.auth.dto.RefreshTokenResponse;
 import com.ccomp.br.domain.auth.dto.SignInResponse;
-import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -128,7 +128,7 @@ public class AuthController {
             }
     )
     @PostMapping("/refresh")
-    public ResponseEntity<RefreshTokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request){
+    public ResponseEntity<RefreshTokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         return authApplication.refresh(request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
@@ -152,7 +152,7 @@ public class AuthController {
             }
     )
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request){
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
         authApplication.logout(request);
         return ResponseEntity.noContent().build();
     }

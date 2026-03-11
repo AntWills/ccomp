@@ -6,9 +6,13 @@ import com.ccomp.br.domain.auth.dto.RefreshTokenResponse;
 import com.ccomp.br.domain.auth.dto.SignInResponse;
 import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
 import com.ccomp.br.domain.users.management.UserManagement;
+import com.ccomp.br.domain.users.security.UserDetailsImpl;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,10 +24,13 @@ public class AuthApplication {
 //    private final
     private final JwtService jwtService;
 
+    private final AuthenticationManager authenticationManager;
+
     @Autowired
-    public AuthApplication(UserManagement userManagement, JwtService jwtService) {
+    public AuthApplication(UserManagement userManagement, JwtService jwtService, AuthenticationManager authenticationManager) {
         this.userManagement = userManagement;
         this.jwtService = jwtService;
+        this.authenticationManager = authenticationManager;
     }
 
     @Transactional
@@ -32,11 +39,17 @@ public class AuthApplication {
     }
 
     public SignInResponse signIn(LoginRequestDTO dto) {
-        var userDto = userManagement.validateCredentials(dto.email(), dto.password());
+        var authToken = new UsernamePasswordAuthenticationToken(
+                dto.email().getValue(), dto.password()
+        );
+
+        Authentication authentication = authenticationManager.authenticate(authToken);
+
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
         return new SignInResponse(
-                jwtService.getAccessToken(userDto.id()),
-                jwtService.getRefreshToken(userDto.id()).getToken());
+                jwtService.getAccessToken(userDetails.getUser().getId()),
+                jwtService.getRefreshToken(userDetails.getUser().getId()).getToken());
     }
 
     public Optional<RefreshTokenResponse> refresh(RefreshTokenRequest request){
