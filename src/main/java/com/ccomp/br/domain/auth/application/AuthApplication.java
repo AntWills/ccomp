@@ -7,10 +7,10 @@ import com.ccomp.br.domain.auth.dto.SignInResponse;
 import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
 import com.ccomp.br.domain.users.management.UserManagement;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 

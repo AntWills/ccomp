@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.users.management;
 
+import com.ccomp.br.domain.users.dto.UserCreatedEvent;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.domain.users.util.UserMapper;
@@ -9,25 +10,31 @@ import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.BadCredentialsException;
 import com.ccomp.br.shared.exceptions.ConflictException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
 
 @Component
 public class UserManagement {
+    private final ApplicationEventPublisher eventPublisher;
     private final UserModelRepository userModelRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
 
     @Autowired
-    public UserManagement(UserModelRepository userModelRepository, PasswordEncoder passwordEncoder, UserMapper userMapper){
+    public UserManagement(ApplicationEventPublisher eventPublisher, UserModelRepository userModelRepository, PasswordEncoder passwordEncoder, UserMapper userMapper){
+        this.eventPublisher = eventPublisher;
         this.userModelRepository = userModelRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
     }
 
+    @Transactional(propagation = Propagation.REQUIRED)
     public void register(RegisterUserDTO dto){
         var exist = userModelRepository.findByEmailAddress(dto.email());
         if(exist.isPresent()) throw new ConflictException("Exist email!");
@@ -35,6 +42,8 @@ public class UserManagement {
         String encryptedPassword = passwordEncoder.encode(dto.password());
 
         userModelRepository.save(new UserModel(dto.name(), encryptedPassword, dto.email()));
+
+        eventPublisher.publishEvent(new UserCreatedEvent(dto.name(), dto.email()));
     }
 
     public UserDTO validateCredentials(EmailAddress emailAddress, String password) {
