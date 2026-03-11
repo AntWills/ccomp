@@ -15,7 +15,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.password4j.Argon2Password4jPasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -56,22 +55,27 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
+        return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // 1. Auth
-                        .requestMatchers(PUBLIC_AUTH_ROUTES).permitAll()
-                        .requestMatchers(HttpMethod.GET, PUBLIC_EVENT_ROUTES).permitAll()
+                .authorizeHttpRequests(authorize -> {
+                            // 1. Auth
+                            authorize.requestMatchers(PUBLIC_AUTH_ROUTES).permitAll();
+                            authorize.requestMatchers(HttpMethod.GET, PUBLIC_EVENT_ROUTES).permitAll();
 
-                        // 2. Documentação (Liberando as duas variações possíveis de path)
-//                        .requestMatchers("/v3/api-docs/**", "/v3/api-docs").permitAll()
-                        .requestMatchers(SWAGGER_ROUTES).permitAll()
+                            // 2. Documentação
+                            authorize.requestMatchers(SWAGGER_ROUTES).permitAll();
 
-                        .anyRequest().authenticated()
-                ).oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+                            authorize.anyRequest().authenticated();
+                        }
 
-        return http.build();
+                )
+                .oauth2ResourceServer(
+                        oauth2 ->
+                                oauth2.jwt(Customizer.withDefaults())
+                ).build();
+
+
     }
 
     @Bean
