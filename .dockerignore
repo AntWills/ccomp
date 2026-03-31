@@ -1,0 +1,9 @@
+.git
+.idea
+.vscode
+target/
+*.iml
+*.class
+*.log
+docker-compose.yml
+.env
