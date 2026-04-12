@@ -34,4 +34,5 @@ build/
 
 ### Ccomp ###
 *.key
-.env
+.env.prod
+.env.dev

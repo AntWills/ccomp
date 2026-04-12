@@ -1,0 +1,4 @@
+services:
+  ccomp-backend:
+    env_file:
+      - .env.prod
