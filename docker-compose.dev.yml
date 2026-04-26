@@ -42,6 +42,19 @@ services:
       timeout: 5s
       retries: 5
 
+  minio-setup:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb --ignore-existing myminio/images;
+      /usr/bin/mc anonymous set public myminio/images;
+      exit 0;
+      "
+
 volumes:
   postgres-data:
   minio-data:
