@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.news.persistence;
 
 public record ContentBlock(
-        Integer order,
+        int order,
         String type,
         String content,
         String url,

@@ -2,7 +2,9 @@ package com.ccomp.br.domain.news.persistence;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
@@ -24,7 +26,6 @@ public class News {
     @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false)
     private String slug;
 
     private String summary;
@@ -32,8 +33,13 @@ public class News {
 
     private UUID authorId;
 
-    private LocalDateTime createAt;
-    private LocalDateTime updateAt;
+    @CreationTimestamp
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
