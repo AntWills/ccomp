@@ -31,6 +31,7 @@ public class News {
     private String summary;
     private String coverImageUrl;
 
+    @Column(nullable = false)
     private UUID authorId;
 
     @CreationTimestamp
