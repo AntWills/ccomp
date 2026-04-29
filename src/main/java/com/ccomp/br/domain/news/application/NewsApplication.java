@@ -26,8 +26,8 @@ public class NewsApplication {
 
     public News create(UUID authorId) {
         List<ContentBlock> blocks = List.of(
-                new ContentBlock(1, ContentBlockType.HEADING.toString(), "News headline", null, null, null, null),
-                new ContentBlock(2, ContentBlockType.PARAGRAPH.toString(), "text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text", null, null, null, null)
+                new ContentBlock(1L, ContentBlockType.HEADING.toString(), "News headline", null, null, null, null),
+                new ContentBlock(2L, ContentBlockType.PARAGRAPH.toString(), "text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text", null, null, null, null)
         );
 
         News newsNoSave = News.builder()
