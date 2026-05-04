@@ -38,6 +38,9 @@ public class News {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
+
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
@@ -45,4 +48,8 @@ public class News {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private List<ContentBlock> blocks;
+
+    public void publishNow() {
+        publishedAt = LocalDateTime.now();
+    }
 }

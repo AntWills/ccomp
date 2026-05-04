@@ -44,4 +44,16 @@ public class NewsController {
 
         return ResponseEntity.status(HttpStatus.OK).body(entity);
     }
+
+    @PostMapping("/{id}/publish")
+    public ResponseEntity<?> publish(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        newsApplication.publish(id, UUID.fromString(jwt.getSubject()));
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/home")
+    public ResponseEntity<?> getHomePage() {
+        return ResponseEntity.ok(newsApplication.getHomePage());
+    }
+
 }

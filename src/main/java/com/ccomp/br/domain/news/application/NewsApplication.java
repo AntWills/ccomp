@@ -9,6 +9,9 @@ import com.ccomp.br.domain.news.util.NewsMapper;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -57,5 +60,27 @@ public class NewsApplication {
 
     public Optional<News> getById(Long id) {
         return newsRepository.findById(id);
+    }
+
+    @Transactional
+    public void publish(Long id, UUID userId) {
+        News model = newsRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Notícia não encontrada."));
+
+        if(!userId.equals(model.getAuthorId())) throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+
+        model.publishNow();
+
+        newsRepository.save(model);
+    }
+
+    public List<News> getHomePage() {
+//        Pageable page = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "publishedAt"));
+
+        Pageable page = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "publishedAt"));
+
+//        return newsRepository.findAllByPublishedAtIsNotNull(page);
+
+        return newsRepository.findAllByPublishedAtLessThanEqual(LocalDateTime.now(), page);
     }
 }
