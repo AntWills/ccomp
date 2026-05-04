@@ -14,6 +14,7 @@ public record NewsUpdateDto(
         String title,
         String summary,
         String coverImageUrl,
+        Boolean featured,
         List<ContentBlock> blocks
 ) {
 }
