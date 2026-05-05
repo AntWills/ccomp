@@ -1,7 +1,6 @@
 package com.ccomp.br.domain.news.dto;
 
 import com.ccomp.br.domain.news.persistence.ContentBlock;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 

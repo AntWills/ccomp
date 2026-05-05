@@ -1,10 +1,13 @@
 package com.ccomp.br.domain.news.application;
 
+import com.ccomp.br.domain.news.dto.NewsFilter;
+import com.ccomp.br.domain.news.dto.NewsListItem;
 import com.ccomp.br.domain.news.dto.NewsUpdateDto;
 import com.ccomp.br.domain.news.enums.ContentBlockType;
 import com.ccomp.br.domain.news.persistence.ContentBlock;
 import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.domain.news.persistence.NewsRepository;
+import com.ccomp.br.domain.news.persistence.NewsSpecs;
 import com.ccomp.br.domain.news.util.NewsMapper;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
@@ -12,6 +15,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -74,13 +78,16 @@ public class NewsApplication {
         newsRepository.save(model);
     }
 
-    public List<News> getHomePage() {
-//        Pageable page = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "publishedAt"));
+    public List<NewsListItem> getNews(NewsFilter filter) {
+//        int limit = filter.limit() == null ? 10 : filter.limit();
 
-        Pageable page = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "publishedAt"));
+        Specification<News> spec = Specification.where(NewsSpecs.beforeCursor(filter.cursor()))
+                .and(NewsSpecs.isFeatured(filter.featured()));
 
-//        return newsRepository.findAllByPublishedAtIsNotNull(page);
-
-        return newsRepository.findAllByPublishedAtLessThanEqual(LocalDateTime.now(), page);
+        return newsRepository.findBy(spec, query -> query
+                .as(NewsListItem.class)
+                .limit(filter.limit())
+                .sortBy(Sort.by(Sort.Direction.DESC, "publishedAt"))
+                .all());
     }
 }

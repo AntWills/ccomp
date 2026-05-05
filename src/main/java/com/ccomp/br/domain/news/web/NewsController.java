@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.news.web;
 
 import com.ccomp.br.domain.news.application.NewsApplication;
+import com.ccomp.br.domain.news.dto.NewsFilter;
 import com.ccomp.br.domain.news.dto.NewsUpdateDto;
 import com.ccomp.br.domain.news.persistence.News;
 import jakarta.validation.Valid;
@@ -21,7 +22,7 @@ public class NewsController {
         this.newsApplication = newsApplication;
     }
 
-    @GetMapping
+    @GetMapping("/create")
     public ResponseEntity<?> create(@AuthenticationPrincipal Jwt jwt){
         News entity = newsApplication.create(UUID.fromString(jwt.getSubject()));
 
@@ -51,9 +52,18 @@ public class NewsController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/home")
-    public ResponseEntity<?> getHomePage() {
-        return ResponseEntity.ok(newsApplication.getHomePage());
+    @GetMapping
+    public ResponseEntity<?> getNews(@Valid NewsFilter filter) {
+        return ResponseEntity.ok(
+                newsApplication.getNews(filter)
+        );
     }
 
+//    @GetMapping("/home")
+//    public ResponseEntity<?> getHomePage() {
+//        return ResponseEntity.ok(newsApplication.getHomePage());
+//    }
+//
+//    @GetMapping("/top")
+//    public ResponseEntity<?> getTopNews() { return ResponseEntity.ok(newsApplication.getTopNews()); }
 }
