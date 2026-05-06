@@ -29,7 +29,7 @@ public class NewsController {
         return ResponseEntity.status(HttpStatus.CREATED).body(entity);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/admin/{id}")
     public ResponseEntity<?> getById(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         var response = newsApplication.getById(id);
 
@@ -37,6 +37,13 @@ public class NewsController {
             return ResponseEntity.status(HttpStatus.OK).body(response.get());
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/{slug}")
+    public ResponseEntity<?> getBySlug(@PathVariable String slug) {
+        return newsApplication.getBySlug(slug)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PatchMapping

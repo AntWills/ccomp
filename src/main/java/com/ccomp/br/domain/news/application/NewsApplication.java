@@ -9,16 +9,14 @@ import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.domain.news.persistence.NewsRepository;
 import com.ccomp.br.domain.news.persistence.NewsSpecs;
 import com.ccomp.br.domain.news.util.NewsMapper;
+import com.ccomp.br.domain.news.util.SlugUtils;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import jakarta.transaction.Transactional;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,6 +40,7 @@ public class NewsApplication {
 
         News newsNoSave = News.builder()
                 .title("News Title")
+                .slug(generateSlug("News Title"))
                 .authorId(authorId)
                 .blocks(blocks)
                 .build();
@@ -54,7 +53,14 @@ public class NewsApplication {
         News entity = newsRepository.findById(dto.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Notícia não encontrada."));
 
-        if(!userId.equals(entity.getAuthorId())) throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+        if(!userId.equals(entity.getAuthorId()))
+            throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+
+        if(dto.title() != null && !dto.title().equals(entity.getTitle())) {
+            String newSlug = generateSlug(dto.title());
+            entity.setSlug(newSlug);
+        }
+
         newsMapper.updateEntityFromDto(dto, entity);
 
         newsRepository.save(entity);
@@ -62,8 +68,22 @@ public class NewsApplication {
         return entity;
     }
 
+    private String generateSlug(String title) {
+        String base = SlugUtils.toSlug(title);
+
+        long count = newsRepository.countBySlugStartsWith(base);
+
+        if(count == 0) return base;
+
+        return base + "-" + count;
+    }
+
     public Optional<News> getById(Long id) {
         return newsRepository.findById(id);
+    }
+
+    public Optional<News> getBySlug(String slug) {
+        return newsRepository.findBySlug(slug);
     }
 
     @Transactional
