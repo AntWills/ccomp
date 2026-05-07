@@ -54,6 +54,11 @@ public class SecurityConfig {
             "/api/events/{eventId:\\d+}"
     };
 
+    private static final String[] PUBLIC_NEWS_ROUTES = {
+            "/api/news/{slug}",
+            "/api/news"
+    };
+
     private static final String[] SWAGGER_ROUTES = {
             "/swagger-ui/**",
             "/swagger-ui.html",
@@ -69,11 +74,13 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> {
-                            // 1. Auth
+                            // Auth
                             authorize.requestMatchers(PUBLIC_AUTH_ROUTES).permitAll();
+                            // Event
                             authorize.requestMatchers(HttpMethod.GET, PUBLIC_EVENT_ROUTES).permitAll();
-
-                            // 2. Documentação
+                            // News
+                            authorize.requestMatchers(HttpMethod.GET, PUBLIC_NEWS_ROUTES).permitAll();
+                            // Documentação
                             authorize.requestMatchers(SWAGGER_ROUTES).permitAll();
 
                             authorize.anyRequest().authenticated();
