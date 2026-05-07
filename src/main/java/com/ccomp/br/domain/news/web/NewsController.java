@@ -22,13 +22,22 @@ public class NewsController {
         this.newsApplication = newsApplication;
     }
 
-    @GetMapping("/create")
-    public ResponseEntity<?> create(@AuthenticationPrincipal Jwt jwt){
-        News entity = newsApplication.create(UUID.fromString(jwt.getSubject()));
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(entity);
+    // Rotas publicas
+    @GetMapping("/{slug}")
+    public ResponseEntity<?> getBySlug(@PathVariable String slug) {
+        return newsApplication.getBySlug(slug)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping
+    public ResponseEntity<?> getNews(@Valid NewsFilter filter) {
+        return ResponseEntity.ok(
+                newsApplication.getNews(filter)
+        );
+    }
+
+    // Rotas privadas
     @GetMapping("/admin/{id}")
     public ResponseEntity<?> getById(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         var response = newsApplication.getById(id);
@@ -39,11 +48,11 @@ public class NewsController {
         return ResponseEntity.notFound().build();
     }
 
-    @GetMapping("/{slug}")
-    public ResponseEntity<?> getBySlug(@PathVariable String slug) {
-        return newsApplication.getBySlug(slug)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @GetMapping("/create")
+    public ResponseEntity<?> create(@AuthenticationPrincipal Jwt jwt){
+        News entity = newsApplication.create(UUID.fromString(jwt.getSubject()));
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(entity);
     }
 
     @PatchMapping
@@ -58,19 +67,4 @@ public class NewsController {
         newsApplication.publish(id, UUID.fromString(jwt.getSubject()));
         return ResponseEntity.ok().build();
     }
-
-    @GetMapping
-    public ResponseEntity<?> getNews(@Valid NewsFilter filter) {
-        return ResponseEntity.ok(
-                newsApplication.getNews(filter)
-        );
-    }
-
-//    @GetMapping("/home")
-//    public ResponseEntity<?> getHomePage() {
-//        return ResponseEntity.ok(newsApplication.getHomePage());
-//    }
-//
-//    @GetMapping("/top")
-//    public ResponseEntity<?> getTopNews() { return ResponseEntity.ok(newsApplication.getTopNews()); }
 }

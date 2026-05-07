@@ -71,11 +71,14 @@ public class NewsApplication {
     private String generateSlug(String title) {
         String base = SlugUtils.toSlug(title);
 
-        long count = newsRepository.countBySlugStartsWith(base);
+        while (true) {
+            String suffix = UUID.randomUUID().toString().substring(0, 6);
+            String slug = base + "-" + suffix;
 
-        if(count == 0) return base;
-
-        return base + "-" + count;
+            if (newsRepository.findBySlug(slug).isEmpty()) {
+                return slug;
+            }
+        }
     }
 
     public Optional<News> getById(Long id) {
