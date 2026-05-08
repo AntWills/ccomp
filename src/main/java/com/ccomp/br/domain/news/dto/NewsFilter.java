@@ -7,12 +7,9 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDateTime;
 
 public record NewsFilter(
-        @Min(1) @Max(100)
-        Integer limit,
+        @Min(1) @Max(100) Integer limit,
         Boolean featured,
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-        LocalDateTime cursor
-) {
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime cursor) {
     public NewsFilter {
         if (limit == null) {
             limit = 10;
