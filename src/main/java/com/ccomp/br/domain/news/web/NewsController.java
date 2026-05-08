@@ -2,10 +2,19 @@ package com.ccomp.br.domain.news.web;
 
 import com.ccomp.br.domain.news.application.NewsApplication;
 import com.ccomp.br.domain.news.dto.NewsFilter;
+import com.ccomp.br.domain.news.dto.NewsListItem;
 import com.ccomp.br.domain.news.dto.NewsUpdateDto;
 import com.ccomp.br.domain.news.persistence.News;
+import com.ccomp.br.shared.exceptions.ErrorResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -13,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Tag(name = "Notícias", description = "Operações relacionadas ao gerenciamento de notícias.")
 @RestController
 @RequestMapping("/news")
 public class NewsController {
@@ -23,6 +33,21 @@ public class NewsController {
     }
 
     // Rotas publicas
+    @Operation(
+            summary = "Obtém uma notícia pelo slug",
+            description = "Retorna os detalhes completos de uma notícia específica através do seu slug amigável.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Notícia encontrada",
+                            content = @Content(schema = @Schema(implementation = News.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Notícia não encontrada"
+                    )
+            }
+    )
     @GetMapping("/{slug}")
     public ResponseEntity<?> getBySlug(@PathVariable String slug) {
         return newsApplication.getBySlug(slug)
@@ -30,6 +55,20 @@ public class NewsController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @Operation(
+            summary = "Lista notícias com filtros",
+            description = "Retorna uma lista paginada de notícias simplificadas, permitindo filtrar por destaque.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Lista de notícias recuperada com sucesso",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    array = @ArraySchema(schema = @Schema(implementation = NewsListItem.class))
+                            )
+                    )
+            }
+    )
     @GetMapping
     public ResponseEntity<?> getNews(@Valid NewsFilter filter) {
         return ResponseEntity.ok(
@@ -38,6 +77,25 @@ public class NewsController {
     }
 
     // Rotas privadas
+    @Operation(
+            summary = "Obtém uma notícia pelo ID (Admin)",
+            description = "Retorna os detalhes de uma notícia para fins administrativos. Requer autenticação.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Notícia encontrada",
+                            content = @Content(schema = @Schema(implementation = News.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Notícia não encontrada"
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "Não autorizado"
+                    )
+            }
+    )
     @GetMapping("/admin/{id}")
     public ResponseEntity<?> getById(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         var response = newsApplication.getById(id);
@@ -48,6 +106,21 @@ public class NewsController {
         return ResponseEntity.notFound().build();
     }
 
+    @Operation(
+            summary = "Cria um rascunho de notícia",
+            description = "Cria uma nova entrada de notícia vazia vinculada ao usuário autenticado.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "201",
+                            description = "Rascunho criado com sucesso",
+                            content = @Content(schema = @Schema(implementation = News.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "Não autorizado"
+                    )
+            }
+    )
     @GetMapping("/create")
     public ResponseEntity<?> create(@AuthenticationPrincipal Jwt jwt){
         News entity = newsApplication.create(UUID.fromString(jwt.getSubject()));
@@ -55,6 +128,30 @@ public class NewsController {
         return ResponseEntity.status(HttpStatus.CREATED).body(entity);
     }
 
+    @Operation(
+            summary = "Atualiza uma notícia",
+            description = "Atualiza os campos de uma notícia existente. Requer autenticação.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Notícia atualizada com sucesso",
+                            content = @Content(schema = @Schema(implementation = News.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Dados inválidos",
+                            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "Não autorizado"
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Notícia não encontrada"
+                    )
+            }
+    )
     @PatchMapping
     public ResponseEntity<?> update(@Valid @RequestBody NewsUpdateDto dto, @AuthenticationPrincipal Jwt jwt) {
         News entity = newsApplication.update(dto, UUID.fromString(jwt.getSubject()));
@@ -62,6 +159,24 @@ public class NewsController {
         return ResponseEntity.status(HttpStatus.OK).body(entity);
     }
 
+    @Operation(
+            summary = "Publica uma notícia",
+            description = "Define a data de publicação da notícia, tornando-a visível publicamente.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Notícia publicada com sucesso"
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "Não autorizado"
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Notícia não encontrada"
+                    )
+            }
+    )
     @PostMapping("/{id}/publish")
     public ResponseEntity<?> publish(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         newsApplication.publish(id, UUID.fromString(jwt.getSubject()));
