@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.users.application.listeners;
+package com.ccomp.br.domain.notification.listeners;
 
 import com.ccomp.br.domain.users.dto.UserCreatedEvent;
 import com.ccomp.br.module.email.EmailService;
