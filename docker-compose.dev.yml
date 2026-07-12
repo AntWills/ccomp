@@ -5,8 +5,14 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+      minio-setup:
+        condition: service_completed_successfully
       postgres-db:
         condition: service_healthy
+      keygen:
+        condition: service_completed_successfully
+    volumes:
+      - ./keys:/app/keys
 
   postgres-db:
     image: postgres:17-alpine
@@ -54,6 +60,21 @@ services:
       /usr/bin/mc anonymous set public myminio/images;
       exit 0;
       "
+  keygen:
+    image: alpine/openssl
+    volumes:
+      - ./keys:/keys
+    entrypoint: sh
+    command: >
+      -c "
+      if [ ! -f /keys/private.key ]; then
+        openssl genpkey -algorithm RSA -out /keys/private.key -pkeyopt rsa_keygen_bits:2048;
+        openssl rsa -pubout -in /keys/private.key -out /keys/public.key;
+        chmod 644 /keys/private.key /keys/public.key;
+        echo 'Chaves de dev geradas em ./keys';
+      else
+        echo 'Chaves já existem, pulando geração.';
+      fi"
 
 volumes:
   postgres-data:
