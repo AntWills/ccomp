@@ -28,7 +28,7 @@ import java.util.Map;
 @Tag(name = "Autenticação", description = "Operações relacionadas ao registro da conta, login e token de acesso.")
 @RestController
 @Slf4j
-@RequestMapping("/auth")
+@RequestMapping("api/auth")
 public class AuthController {
     private final AuthApplication authApplication;
 

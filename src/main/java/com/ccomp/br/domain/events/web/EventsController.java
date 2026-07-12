@@ -23,7 +23,7 @@ import java.util.UUID;
 
 @Tag(name = "Gerir Eventos", description = "Operações relacionadas a criação, busca, atulização e deleção de eventos.")
 @RestController
-@RequestMapping("/events")
+@RequestMapping("api/events")
 public class EventsController {
     private final EventsApplication eventsApplication;
 

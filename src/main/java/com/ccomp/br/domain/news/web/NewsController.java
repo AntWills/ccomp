@@ -24,7 +24,7 @@ import java.util.UUID;
 
 @Tag(name = "Notícias", description = "Operações relacionadas ao gerenciamento de notícias.")
 @RestController
-@RequestMapping("/news")
+@RequestMapping("api/news")
 public class NewsController {
     private final NewsApplication newsApplication;
 

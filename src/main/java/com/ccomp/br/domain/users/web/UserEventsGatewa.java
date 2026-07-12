@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("api//users")
 public class UserEventsGatewa {
     private final EventsManagement eventsManagement;
 
