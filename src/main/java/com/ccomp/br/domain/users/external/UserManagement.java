@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.users.management;
+package com.ccomp.br.domain.users.external;
 
 import com.ccomp.br.domain.users.dto.UserCreatedEvent;
 import com.ccomp.br.domain.users.persistence.UserModel;

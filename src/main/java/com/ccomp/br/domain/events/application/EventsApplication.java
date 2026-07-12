@@ -12,7 +12,7 @@ import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.shared.dto.EventResponse;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
-import com.ccomp.br.domain.users.management.UserManagement;
+import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
