@@ -18,8 +18,8 @@ Este repositório contém o **backend** do projeto, desenvolvido em
 - [Sobre o Projeto](#projeto-para-o-curso-de-ciência-da-computação)
 - [Como Executar](#como-executar)
     - [Via Docker Compose (Recomendado)](#via-docker-compose-recomendado)
-    - [Execução Local (IDE)](#execução-local-ide)
-- [Documentação da API (Swagger)](#documentação-da-api-swagger)
+    - [Execução Local (Shell)](#execução-local-shell)
+- [Documentação da API](#documentação-da-api-)
 
 ## Como Executar
 
@@ -67,11 +67,11 @@ Em seguida, suba os containers:
 docker compose -f docker-compose.dev.yml up
 ```
 
-### Execução Local (IDE)
+### Execução Local (Shell)
 
-Na situação em que deseja apenas executar a aplicação, recomenda-se
-configurar a IDE de sua preferencia para carregar o arquivo `.env.dev`
-ao rodar localmente com as alterações a seguir.
+Na situação em que deseja apenas executar a aplicação, é necessario
+alterar as seguintes informações do `.env.dev` ao rodar 
+localmente fora do docker.
 
 ```dotenv
 # Carrega as variaveis de sua pasta na raiz do projeto
@@ -91,8 +91,12 @@ não gerará as chaves criptográficas de forma autônoma. Será
 obrigatório criar o par de chaves pública e privada manualmente 
 na pasta `./keys`, usando o método de sua preferência, antes de 
 iniciar o projeto.
-- 
-## Documentação da API (Swagger)
+
+O perfil default `dev` vai ser usado e as configurações do
+`application.properties` serão usadas. A aplicação vai carregar
+o `.env.dev` na execução.
+
+## Documentação da API 
 
 Com a aplicação em execução, a documentação interativa (Swagger UI)
 fica disponível em:

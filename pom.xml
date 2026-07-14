@@ -9,7 +9,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.ccomp</groupId>
-	<artifactId>br</artifactId>
+	<artifactId>ccomp-backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>ccomp</name>
 	<description>Site do curso Ciencia da Computação do IFMA</description>
@@ -29,6 +29,17 @@
 	<properties>
 		<java.version>25</java.version>
 	</properties>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>me.paulschwarz</groupId>
+                <artifactId>spring-dotenv-bom</artifactId>
+                <version>5.1.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -128,6 +139,12 @@
             <artifactId>s3</artifactId>
             <version>2.47.4</version>
             <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>springboot4-dotenv</artifactId>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 
