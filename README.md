@@ -96,6 +96,11 @@ O perfil default `dev` vai ser usado e as configurações do
 `application.properties` serão usadas. A aplicação vai carregar
 o `.env.dev` na execução.
 
+Por fim, execute o comando no terminal na raiz do projeto:
+```shell
+./mvnw spring-boot:run 
+```
+
 ## Documentação da API 
 
 Com a aplicação em execução, a documentação interativa (Swagger UI)
