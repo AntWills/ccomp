@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -18,9 +19,15 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.password4j.Argon2Password4jPasswordEncoder;
 import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.security.interfaces.RSAPrivateKey;
@@ -39,6 +46,15 @@ public class SecurityConfig {
 
     @Value("${jwt.public.key}")
     private RSAPublicKey publicKey;
+
+    @Value("${swagger.security.enabled:true}")
+    private boolean swaggerSecurityEnabled;
+
+    @Value("${swagger.username}")
+    private String swaggerUsername;
+
+    @Value("${swagger.password}")
+    private String swaggerPassword;
 
     private static final String[] PUBLIC_AUTH_ROUTES = {
             "/api/auth/**"
@@ -62,7 +78,43 @@ public class SecurityConfig {
             "/v3/api-docs"
     };
 
+//    @Bean
+//    @Order(1)
+//    public SecurityFilterChain swaggerFilterChain(HttpSecurity http) throws Exception {
+//        http.securityMatcher(SWAGGER_ROUTES)
+//                .csrf(AbstractHttpConfigurer::disable)
+//                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+//
+//        if (swaggerSecurityEnabled) {
+//            // Cria um AuthenticationManager isolado, só para o Swagger.
+//            // NÃO usa o AuthenticationManagerBuilder compartilhado do HttpSecurity,
+//            // evitando conflito com o AuthenticationManager global usado no login.
+//            DaoAuthenticationProvider swaggerProvider = new DaoAuthenticationProvider(swaggerUserDetailsService());
+//            swaggerProvider.setPasswordEncoder(passwordEncoder());
+//
+//            AuthenticationManager swaggerAuthManager = new ProviderManager(swaggerProvider);
+//
+//            http.authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
+//                    .authenticationManager(swaggerAuthManager) // <- isolado, não é o bean global
+//                    .httpBasic(basic -> {});
+//        } else {
+//            http.authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll());
+//        }
+//
+//        return http.build();
+//    }
+
+//    @Bean
+//    public UserDetailsService swaggerUserDetailsService() {
+//        var user = User.withUsername(swaggerUsername)
+//                .password(passwordEncoder().encode(swaggerPassword))
+//                .roles("SWAGGER")
+//                .build();
+//        return new InMemoryUserDetailsManager(user);
+//    }
+
     @Bean
+//    @Order(2)
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
