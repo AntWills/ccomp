@@ -1,5 +1,8 @@
 package com.ccomp.br.config;
 
+import com.ccomp.br.domain.auth.application.JwtService;
+import com.ccomp.br.domain.auth.persistence.RefreshToken;
+import com.ccomp.br.domain.users.security.UserDetailsImpl;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
@@ -8,9 +11,12 @@ import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
+import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 
@@ -36,21 +42,10 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("CCOMP API")
                         .version(apiVersion)
-                        .description(apiDescription)
-                        .termsOfService(tosUri)
-                        .contact(new Contact()
-                                .name("Baeldung")
-                                .email("user-apis@baeldung.com")
-                                .url("https://www.baeldung.com"))
+                        .description("Por favor, faça login no Swagger para gerar seu token de testes.")
                         .license(new License()
                                 .name("Apache 2.0")
                                 .url("https://www.apache.org/licenses/LICENSE-2.0")))
-
-                .servers(List.of(
-                        new Server()
-                                .url(apiServerUrl)
-                                .description("Ambiente Ativo")
-                ))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName,
@@ -60,5 +55,33 @@ public class OpenApiConfig {
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
                                         .description("Insira diretamente o seu token JWT gerado (sem digitar a palavra 'Bearer ')")));
+    }
+
+    @Bean
+    public OpenApiCustomizer dynamicTokenOpenApiCustomizer(JwtService jwtService) {
+        return openApi -> {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+            // Evita NullPointerException e garante que o usuário está realmente logado no seu formato
+            if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof UserDetailsImpl userDetails)) {
+                return;
+            }
+
+            String accessToken = jwtService.getAccessToken(userDetails.getId());
+            // RefreshToken refreshToken = jwtService.getRefreshToken(userDetails.getId());
+
+            // Descrição ultra direta e limpa, sem rodeios
+            String dynamicDescription = """
+                ### Quick-Pass JWT
+                **Usuário:** %s
+                
+                ```text
+                %s
+                ```
+                _Copie e cole no botão **Authorize** (cadeado)._
+                """.formatted(auth.getName(), accessToken);
+
+            openApi.getInfo().setDescription(dynamicDescription);
+        };
     }
 }
