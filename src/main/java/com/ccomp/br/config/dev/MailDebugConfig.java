@@ -1,4 +1,4 @@
-package com.ccomp.br.config;
+package com.ccomp.br.config.dev;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;

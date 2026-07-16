@@ -1,9 +1,8 @@
-package com.ccomp.br.config;
+package com.ccomp.br.config.dev;
 
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.module.email.EmailAddress;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
