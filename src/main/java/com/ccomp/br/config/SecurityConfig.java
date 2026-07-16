@@ -41,20 +41,23 @@ import java.util.Base64;
 public class SecurityConfig {
     private final CustomAuthEntryPoint authEntryPoint;
 
+    @Value("${spring.profiles.active}")
+    private String profileActive;
+
     @Value("${jwt.private.key}")
     private RSAPrivateKey privateKey;
 
     @Value("${jwt.public.key}")
     private RSAPublicKey publicKey;
 
-    @Value("${swagger.security.enabled:true}")
-    private boolean swaggerSecurityEnabled;
-
-    @Value("${swagger.username}")
-    private String swaggerUsername;
-
-    @Value("${swagger.password}")
-    private String swaggerPassword;
+//    @Value("${swagger.security.enabled:true}")
+//    private boolean swaggerSecurityEnabled;
+//
+//    @Value("${swagger.username}")
+//    private String swaggerUsername;
+//
+//    @Value("${swagger.password}")
+//    private String swaggerPassword;
 
     private static final String[] PUBLIC_AUTH_ROUTES = {
             "/api/auth/**"
@@ -166,7 +169,8 @@ public class SecurityConfig {
 
     @PostConstruct
     public void checkKeys() {
-        log.info("Public key: {}",
+        if(profileActive.equals("dev"))
+            log.info("Public key: {}",
                 Base64.getEncoder().encodeToString(publicKey.getEncoded()).substring(0, 20));
     }
 }
