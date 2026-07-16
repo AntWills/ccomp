@@ -4,8 +4,9 @@ import com.ccomp.br.domain.auth.dto.RefreshTokenRequest;
 import com.ccomp.br.domain.auth.dto.RefreshTokenResponse;
 import com.ccomp.br.domain.auth.dto.AccessTokenResponse;
 import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
+import com.ccomp.br.domain.security.JwtService;
 import com.ccomp.br.domain.users.external.UserManagement;
-import com.ccomp.br.domain.users.security.UserDetailsImpl;
+import com.ccomp.br.domain.security.UserDetailsImpl;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
@@ -47,8 +48,8 @@ public class AuthApplication {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
         return new AccessTokenResponse(
-                jwtService.getAccessToken(userDetails.getUser().getId()),
-                jwtService.getRefreshToken(userDetails.getUser().getId()).getToken());
+                jwtService.getAccessToken(userDetails.getId()),
+                jwtService.getRefreshToken(userDetails.getId()).getToken());
     }
 
     public Optional<RefreshTokenResponse> refresh(RefreshTokenRequest request){

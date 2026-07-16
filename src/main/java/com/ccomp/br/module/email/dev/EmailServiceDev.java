@@ -1,5 +1,6 @@
-package com.ccomp.br.module.email;
+package com.ccomp.br.module.email.dev;
 
+import com.ccomp.br.module.email.EmailService;
 import com.ccomp.br.shared.dto.SendMailDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;

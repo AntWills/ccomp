@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.users.security;
+package com.ccomp.br.domain.security;
 
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;

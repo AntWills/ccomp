@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.users.security;
+package com.ccomp.br.domain.security;
 
 import com.ccomp.br.domain.users.persistence.UserModel;
 import lombok.NonNull;
@@ -18,8 +18,6 @@ public class UserDetailsImpl implements UserDetails {
         this.user = user;
     }
 
-    public UserModel getUser() { return user; }
-
     @Override
     @NonNull
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -35,7 +33,7 @@ public class UserDetailsImpl implements UserDetails {
     public String getUsername() { return user.getEmailAddress().getValue(); }
 
 
-    public @NonNull UUID getId() {return  user.getId(); }
+    public @NonNull UUID getId() { return user.getId(); }
 
     // Conta ativa, não expirada, credenciais válidas
     @Override public boolean isAccountNonExpired() { return true; }

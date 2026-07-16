@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.auth.application;
+package com.ccomp.br.domain.security;
 
 import com.ccomp.br.domain.auth.dto.RefreshTokenRequest;
 import com.ccomp.br.domain.auth.persistence.RefreshToken;
