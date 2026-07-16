@@ -1,24 +1,19 @@
 package com.ccomp.br.config;
 
-import com.ccomp.br.domain.auth.application.JwtService;
-import com.ccomp.br.domain.auth.persistence.RefreshToken;
-import com.ccomp.br.domain.users.security.UserDetailsImpl;
+import com.ccomp.br.domain.security.JwtService;
+import com.ccomp.br.domain.security.UserDetailsImpl;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
-import io.swagger.v3.oas.models.servers.Server;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-
-import java.util.List;
 
 @Configuration
 public class OpenApiConfig {

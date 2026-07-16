@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.users.security;
+package com.ccomp.br.domain.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

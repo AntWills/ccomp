@@ -1,6 +1,5 @@
-package com.ccomp.br.config;
+package com.ccomp.br.shared.exceptions;
 
-import com.ccomp.br.shared.exceptions.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
