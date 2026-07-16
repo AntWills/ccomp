@@ -10,4 +10,5 @@ public interface UserModelRepository extends JpaRepository<UserModel, UUID> {
     Optional<UserModel> findByEmailAddress(EmailAddress emailAddress);
 
     boolean existsById(UUID id);
+    boolean existsByEmailAddress(EmailAddress emailAddress);
 }

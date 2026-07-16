@@ -1,6 +1,7 @@
 package com.ccomp.br.config;
 
 import com.ccomp.br.domain.users.security.CustomAuthEntryPoint;
+import com.ccomp.br.domain.users.security.UserDetailsImpl;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -11,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
@@ -19,18 +21,19 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.password4j.Argon2Password4jPasswordEncoder;
-import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
-import org.springframework.security.oauth2.core.OAuth2TokenValidator;
-import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Base64;
 
 @Slf4j
@@ -39,6 +42,9 @@ import java.util.Base64;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final CustomAuthEntryPoint authEntryPoint;
+
+    @Value("${spring.profiles.active}")
+    private String profileActive;
 
     @Value("${jwt.private.key}")
     private RSAPrivateKey privateKey;
@@ -69,6 +75,25 @@ public class SecurityConfig {
     };
 
     @Bean
+    @Order(1)
+    public SecurityFilterChain swaggerFilterChain(HttpSecurity http, UserDetailsService userDetailsService) throws Exception {
+        DaoAuthenticationProvider swaggerProvider = new DaoAuthenticationProvider(userDetailsService);
+        swaggerProvider.setPasswordEncoder(this.passwordEncoder());
+        AuthenticationManager swaggerAuthManager = new ProviderManager(swaggerProvider);
+
+        http.securityMatcher(SWAGGER_ROUTES)
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
+                .authenticationManager(swaggerAuthManager)
+                .httpBasic(Customizer.withDefaults());
+
+
+        return http.build();
+    }
+
+    @Bean
+    @Order(2)
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -81,7 +106,7 @@ public class SecurityConfig {
                             // News
                             authorize.requestMatchers(HttpMethod.GET, PUBLIC_NEWS_ROUTES).permitAll();
                             // Documentação
-                            authorize.requestMatchers(SWAGGER_ROUTES).permitAll();
+//                            authorize.requestMatchers(SWAGGER_ROUTES).permitAll();
 
                             authorize.anyRequest().authenticated();
                         }
@@ -120,7 +145,8 @@ public class SecurityConfig {
 
     @PostConstruct
     public void checkKeys() {
-        log.info("Public key: {}",
+        if(profileActive.equals("dev"))
+            log.info("Public key: {}",
                 Base64.getEncoder().encodeToString(publicKey.getEncoded()).substring(0, 20));
     }
 }

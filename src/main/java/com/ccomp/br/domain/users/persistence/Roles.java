@@ -7,7 +7,7 @@ import lombok.*;
 import java.util.UUID;
 
 @Entity
-@Table
+@Table(name = "tb_roles")
 @Getter
 @Setter
 @Builder
