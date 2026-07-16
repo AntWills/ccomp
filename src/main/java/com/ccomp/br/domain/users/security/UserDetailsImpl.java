@@ -8,6 +8,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 public class UserDetailsImpl implements UserDetails {
 
@@ -32,6 +33,9 @@ public class UserDetailsImpl implements UserDetails {
     @Override
     @NonNull
     public String getUsername() { return user.getEmailAddress().getValue(); }
+
+
+    public @NonNull UUID getId() {return  user.getId(); }
 
     // Conta ativa, não expirada, credenciais válidas
     @Override public boolean isAccountNonExpired() { return true; }
