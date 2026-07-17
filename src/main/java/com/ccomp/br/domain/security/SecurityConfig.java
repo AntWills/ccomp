@@ -94,6 +94,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> {
+                            authorize.requestMatchers("/error").permitAll();
                             // Auth
                             authorize.requestMatchers(PUBLIC_AUTH_ROUTES).permitAll();
                             // Event

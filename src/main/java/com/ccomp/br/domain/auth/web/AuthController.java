@@ -48,8 +48,8 @@ public class AuthController {
                             responseCode = "201",
                             description = "Conta criada com sucesso",
                             content = @Content(
-                                    mediaType = MediaType.TEXT_PLAIN_VALUE,
-                                    schema = @Schema(type = "string", example = "Conta criada com sucesso.")
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(example = "{\"message\": \"Conta criada com sucesso.\"}")
                             )
                     ),
                     @ApiResponse(
