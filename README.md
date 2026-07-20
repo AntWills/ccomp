@@ -64,7 +64,7 @@ se encarrega de gerar as chaves públicas e privadas.
 Em seguida, suba os containers:
 
 ```shell
-docker compose -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml --profile all up --build
 ```
 
 ### Execução Local (Shell)
