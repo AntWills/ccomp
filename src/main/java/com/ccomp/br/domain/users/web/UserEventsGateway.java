@@ -81,7 +81,7 @@ public class UserEventsGateway {
                     )
             }
     )
-    @GetMapping("/subscriptions")
+    @GetMapping("/events-subscriptions")
     public ResponseEntity<List<EventResponse>> getMe(@AuthenticationPrincipal Jwt jwt) {
         UUID participantId = UUID.fromString(jwt.getSubject());
         return ResponseEntity.ok(eventsManagement.findAllSubscriptions(participantId));
