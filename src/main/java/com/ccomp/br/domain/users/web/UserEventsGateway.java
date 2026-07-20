@@ -13,11 +13,11 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api//users")
-public class UserEventsGatewa {
+@RequestMapping("api/users")
+public class UserEventsGateway {
     private final EventsManagement eventsManagement;
 
-    public UserEventsGatewa(EventsManagement eventsManagement) {
+    public UserEventsGateway(EventsManagement eventsManagement) {
         this.eventsManagement = eventsManagement;
     }
 
