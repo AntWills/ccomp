@@ -1,10 +1,7 @@
 package com.ccomp.br.domain.news.web;
 
 import com.ccomp.br.domain.news.application.NewsApplication;
-import com.ccomp.br.domain.news.dto.NewsFilter;
-import com.ccomp.br.domain.news.dto.NewsListItem;
-import com.ccomp.br.domain.news.dto.NewsPageResponse;
-import com.ccomp.br.domain.news.dto.NewsUpdateDto;
+import com.ccomp.br.domain.news.dto.*;
 import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -125,8 +122,8 @@ public class NewsController {
                     )
             }
     )
-    @GetMapping("/create")
-    public ResponseEntity<?> create(@AuthenticationPrincipal Jwt jwt){
+    @PostMapping("/create")
+    public ResponseEntity<?> create(@Valid @RequestBody CreateNewsRequest request, @AuthenticationPrincipal Jwt jwt){
         News entity = newsApplication.create(UUID.fromString(jwt.getSubject()));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(entity);
