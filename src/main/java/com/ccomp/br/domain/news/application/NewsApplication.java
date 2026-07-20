@@ -2,6 +2,7 @@ package com.ccomp.br.domain.news.application;
 
 import com.ccomp.br.domain.news.dto.NewsFilter;
 import com.ccomp.br.domain.news.dto.NewsListItem;
+import com.ccomp.br.domain.news.dto.NewsPageResponse;
 import com.ccomp.br.domain.news.dto.NewsUpdateDto;
 import com.ccomp.br.domain.news.enums.ContentBlockType;
 import com.ccomp.br.domain.news.persistence.ContentBlock;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -101,16 +103,22 @@ public class NewsApplication {
         newsRepository.save(model);
     }
 
-    public List<NewsListItem> getNews(NewsFilter filter) {
+    public NewsPageResponse getNews(NewsFilter filter) {
 //        int limit = filter.limit() == null ? 10 : filter.limit();
 
         Specification<News> spec = Specification.where(NewsSpecs.beforeCursor(filter.cursor()))
                 .and(NewsSpecs.isFeatured(filter.featured()));
 
-        return newsRepository.findBy(spec, query -> query
+        List<NewsListItem> results = newsRepository.findBy(spec, query -> query
                 .as(NewsListItem.class)
-                .limit(filter.limit())
+                .limit(filter.limit() + 1)
                 .sortBy(Sort.by(Sort.Direction.DESC, "publishedAt"))
                 .all());
+
+        boolean hasNext = results.size() > filter.limit();
+        List<NewsListItem> page = hasNext ? results.subList(0, filter.limit()) : results;
+        LocalDateTime nextCursor = hasNext ? page.getLast().publishedAt() : null;
+
+        return new NewsPageResponse(page, nextCursor, hasNext);
     }
 }

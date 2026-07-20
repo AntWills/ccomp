@@ -17,7 +17,7 @@ import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFaundException;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -44,19 +44,7 @@ public class EventsApplication {
         this.activityMapper = activityMapper;
     }
 
-    public EventResponse create(UUID id, CreateEventRequestDTO dto){
-        if(userManagement.findById(id).isEmpty()) throw new UserNotFaundException("Owner not found with ID: " + id);
-        
-        var eventsModel = new Event(dto.name(), id);
-
-        dto.getStartDate().ifPresent(eventsModel::setStart);
-        dto.getEndDate().ifPresent(eventsModel::setEnd);
-        
-        var savedEvent = eventRepository.save(new Event(dto.name(), id));
-
-        return eventMapper.eventToEventResponse(savedEvent);
-    }
-
+    @Transactional(readOnly = true)
     public Optional<EventResponse> getById(Long eventId, UUID userId) {
         return eventRepository.findById(eventId)
                 .map(event -> {
@@ -68,6 +56,20 @@ public class EventsApplication {
 
                     throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
                 });
+    }
+
+    @Transactional
+    public EventResponse create(UUID id, CreateEventRequestDTO dto){
+        if(userManagement.findById(id).isEmpty()) throw new UserNotFaundException("Owner not found with ID: " + id);
+
+        var eventsModel = new Event(dto.name(), id);
+
+        dto.getStartDate().ifPresent(eventsModel::setStart);
+        dto.getEndDate().ifPresent(eventsModel::setEnd);
+
+        var savedEvent = eventRepository.save(new Event(dto.name(), id));
+
+        return eventMapper.eventToEventResponse(savedEvent);
     }
 
     @Transactional

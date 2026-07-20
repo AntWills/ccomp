@@ -3,6 +3,7 @@ package com.ccomp.br.domain.news.web;
 import com.ccomp.br.domain.news.application.NewsApplication;
 import com.ccomp.br.domain.news.dto.NewsFilter;
 import com.ccomp.br.domain.news.dto.NewsListItem;
+import com.ccomp.br.domain.news.dto.NewsPageResponse;
 import com.ccomp.br.domain.news.dto.NewsUpdateDto;
 import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
@@ -66,7 +67,7 @@ public class NewsController {
                             description = "Lista de notícias recuperada com sucesso",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    array = @ArraySchema(schema = @Schema(implementation = NewsListItem.class))
+                                    array = @ArraySchema(schema = @Schema(implementation = NewsPageResponse.class))
                             )
                     )
             }
