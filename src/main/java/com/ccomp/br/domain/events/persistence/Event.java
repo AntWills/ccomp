@@ -5,6 +5,7 @@ import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.enrollments.Enrollment;
 import com.ccomp.br.shared.exceptions.DomainException;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -26,7 +27,7 @@ public class Event {
     private Long id;
 
     @Column(nullable = false)
-    private String name;
+    private String title;
 
     @OneToMany(mappedBy = "event")
     private Set<Enrollment> enrollments = new HashSet<>();
@@ -43,11 +44,15 @@ public class Event {
     @Column(name = "end_date")
     private LocalDateTime endDate;
 
+    @Size(max = 1000, message = "O máximo são 1000 letras.")
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     @Column(name = "owner_id", nullable = false)
     private UUID ownerId;
 
-    public Event(String name, UUID ownerId) {
-        this.name = name;
+    public Event(String title, UUID ownerId) {
+        this.title = title;
         this.ownerId = ownerId;
     }
 

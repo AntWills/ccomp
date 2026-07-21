@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public record EventResponse(
         Long id,
-        String name,
+        String title,
         LocalDateTime startDate,
         LocalDateTime endDate,
         UUID ownerId

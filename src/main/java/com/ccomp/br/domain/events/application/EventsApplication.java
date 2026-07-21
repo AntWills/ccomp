@@ -62,12 +62,12 @@ public class EventsApplication {
     public EventResponse create(UUID id, CreateEventRequestDTO dto){
         if(userManagement.findById(id).isEmpty()) throw new UserNotFaundException("Owner not found with ID: " + id);
 
-        var eventsModel = new Event(dto.name(), id);
+        var eventsModel = new Event(dto.title(), id);
 
-        dto.getStartDate().ifPresent(eventsModel::setStart);
-        dto.getEndDate().ifPresent(eventsModel::setEnd);
+        dto.optionalStartDate().ifPresent(eventsModel::setStart);
+        dto.optionalEndDate().ifPresent(eventsModel::setEnd);
 
-        var savedEvent = eventRepository.save(new Event(dto.name(), id));
+        var savedEvent = eventRepository.save(new Event(dto.title(), id));
 
         return eventMapper.eventToEventResponse(savedEvent);
     }
