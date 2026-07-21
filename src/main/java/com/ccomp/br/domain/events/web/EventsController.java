@@ -100,38 +100,4 @@ public class EventsController {
         return eventsApplication.getById(eventId, userId).map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
-
-    @PostMapping("/{eventId}/editors/{userId}")
-    public ResponseEntity<MessageResponse> addEditor(
-            @PathVariable Long eventId,
-            @PathVariable UUID userId,
-            @AuthenticationPrincipal Jwt jwt){
-        MessageResponse response = eventsApplication.addEditor(eventId, UUID.fromString(jwt.getSubject()), userId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    @DeleteMapping("{eventId}/editors/{userId}")
-    public ResponseEntity<MessageResponse> removeEditor(
-            @PathVariable Long eventId,
-            @PathVariable UUID userId,
-            @AuthenticationPrincipal Jwt jwt){
-        MessageResponse response = eventsApplication.removeEditor(eventId, UUID.fromString(jwt.getSubject()), userId);
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/{eventId}/activities")
-    public ResponseEntity<ActivityDTO> createActivity(
-            @PathVariable Long eventId,
-            @Valid @RequestBody CreateActivityRequest request, @AuthenticationPrincipal Jwt jwt){
-        return ResponseEntity.status(HttpStatus.CREATED).body(eventsApplication.createActivity(UUID.fromString(jwt.getSubject()), eventId, request));
-    }
-
-    @DeleteMapping("/activities/{id}")
-    public ResponseEntity<MessageResponse> deleteActivity(
-            @PathVariable Long id,
-            @AuthenticationPrincipal Jwt jwt
-    ) {
-        eventsApplication.deleteActivity(UUID.fromString(jwt.getSubject()), id);
-        return ResponseEntity.ok(new MessageResponse("Atividade removida com sucesso."));
-    }
 }
