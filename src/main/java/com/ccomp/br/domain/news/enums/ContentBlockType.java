@@ -7,11 +7,11 @@ public enum ContentBlockType {
 
     @Override
     public String toString() {
-        return name().toLowerCase();
+        return name();
     }
 
     @JsonValue
     public String toJson() {
-        return toString(); // garante "heading" no JSON da API
+        return toString();
     }
 }
