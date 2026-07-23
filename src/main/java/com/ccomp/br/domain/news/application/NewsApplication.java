@@ -13,10 +13,10 @@ import com.ccomp.br.domain.news.util.NewsMapper;
 import com.ccomp.br.domain.news.util.SlugUtils;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
-import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,11 +33,41 @@ public class NewsApplication {
         this.newsMapper = newsMapper;
     }
 
+    @Transactional(readOnly = true)
+    public NewsPageResponse getNews(NewsFilter filter) {
+//        int limit = filter.limit() == null ? 10 : filter.limit();
+
+        Specification<News> spec = Specification.where(NewsSpecs.beforeCursor(filter.cursor()))
+                .and(NewsSpecs.isFeatured(filter.featured()));
+
+        List<NewsListItem> results = newsRepository.findBy(spec, query -> query
+                .as(NewsListItem.class)
+                .limit(filter.limit() + 1)
+                .sortBy(Sort.by(Sort.Direction.DESC, "publishedAt"))
+                .all());
+
+        boolean hasNext = results.size() > filter.limit();
+        List<NewsListItem> page = hasNext ? results.subList(0, filter.limit()) : results;
+        LocalDateTime nextCursor = hasNext ? page.getLast().publishedAt() : null;
+
+        return new NewsPageResponse(page, nextCursor, hasNext);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<News> getById(Long id) {
+        return newsRepository.findById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<News> getBySlug(String slug) {
+        return newsRepository.findBySlug(slug);
+    }
+
     @Transactional
     public News create(UUID authorId) {
         List<ContentBlock> blocks = List.of(
-                new ContentBlock(1L, ContentBlockType.HEADING.toString(), "News headline", null, null, null, null),
-                new ContentBlock(2L, ContentBlockType.PARAGRAPH.toString(), "text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text", null, null, null, null)
+                new ContentBlock(1L, ContentBlockType.HEADING, "News headline", null, null, null, null),
+                new ContentBlock(2L, ContentBlockType.PARAGRAPH, "text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text", null, null, null, null)
         );
 
         News newsNoSave = News.builder()
@@ -51,12 +81,17 @@ public class NewsApplication {
     }
 
     @Transactional
-    public News update(NewsUpdateDto dto, UUID userId) {
-        News entity = newsRepository.findById(dto.id())
+    public News update(Long id, NewsUpdateDto dto, UUID userId) {
+        News entity = newsRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notícia não encontrada."));
 
         if(!userId.equals(entity.getAuthorId()))
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+
+        if(Optional.ofNullable(dto.title()).isPresent() && !dto.title().equals(entity.getTitle())) {
+            String newSlug = generateSlug(dto.title());
+            entity.setSlug(newSlug);
+        }
 
         if(dto.title() != null && !dto.title().equals(entity.getTitle())) {
             String newSlug = generateSlug(dto.title());
@@ -83,14 +118,6 @@ public class NewsApplication {
         }
     }
 
-    public Optional<News> getById(Long id) {
-        return newsRepository.findById(id);
-    }
-
-    public Optional<News> getBySlug(String slug) {
-        return newsRepository.findBySlug(slug);
-    }
-
     @Transactional
     public void publish(Long id, UUID userId) {
         News model = newsRepository.findById(id)
@@ -101,24 +128,5 @@ public class NewsApplication {
         model.publishNow();
 
         newsRepository.save(model);
-    }
-
-    public NewsPageResponse getNews(NewsFilter filter) {
-//        int limit = filter.limit() == null ? 10 : filter.limit();
-
-        Specification<News> spec = Specification.where(NewsSpecs.beforeCursor(filter.cursor()))
-                .and(NewsSpecs.isFeatured(filter.featured()));
-
-        List<NewsListItem> results = newsRepository.findBy(spec, query -> query
-                .as(NewsListItem.class)
-                .limit(filter.limit() + 1)
-                .sortBy(Sort.by(Sort.Direction.DESC, "publishedAt"))
-                .all());
-
-        boolean hasNext = results.size() > filter.limit();
-        List<NewsListItem> page = hasNext ? results.subList(0, filter.limit()) : results;
-        LocalDateTime nextCursor = hasNext ? page.getLast().publishedAt() : null;
-
-        return new NewsPageResponse(page, nextCursor, hasNext);
     }
 }
