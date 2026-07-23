@@ -26,14 +26,14 @@ public class EventSpecification {
         };
     }
 
-    public static Specification<Event> cursorAfter(LocalDateTime cursorStartDate, Long cursorId) {
+    public static Specification<Event> cursorBefore(LocalDateTime cursorStartDate, Long cursorId) {
         return (root, query, cb) -> {
             if (cursorStartDate == null || cursorId == null) return cb.conjunction();
             return cb.or(
-                    cb.greaterThan(root.get("startDate"), cursorStartDate),
+                    cb.lessThan(root.get("startDate"), cursorStartDate),
                     cb.and(
                             cb.equal(root.get("startDate"), cursorStartDate),
-                            cb.greaterThan(root.get("id"), cursorId)
+                            cb.lessThan(root.get("id"), cursorId)
                     )
             );
         };

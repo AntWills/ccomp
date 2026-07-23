@@ -5,6 +5,7 @@ import com.ccomp.br.domain.events.enums.EnumEventCategory;
 import java.time.LocalDateTime;
 
 public record EventListItem(
+        Long id,
         String title,
         String slug,
         EnumEventCategory category,

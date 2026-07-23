@@ -1,6 +1,9 @@
 package com.ccomp.br.domain.events.application;
 
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
+import com.ccomp.br.domain.events.dto.EventListItem;
+import com.ccomp.br.domain.events.dto.EventsFilterRequest;
+import com.ccomp.br.domain.events.persistence.EventSpecification;
 import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.domain.news.util.SlugUtils;
 import com.ccomp.br.shared.dto.EventResponse;
@@ -9,11 +12,16 @@ import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.UserNotFaundException;
+import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.DebugUtils;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,6 +39,7 @@ public class EventsServices {
         this.eventMapper = eventMapper;
     }
 
+    // ---- Queries ----
     @Transactional(readOnly = true)
     public Optional<EventResponse> getById(Long eventId, UUID userId) {
         return eventRepository.findById(eventId)
@@ -45,6 +54,34 @@ public class EventsServices {
                 });
     }
 
+    @Transactional(readOnly = true)
+    public CursorPage<EventListItem> searchEventsWithFilters(
+            EventsFilterRequest filter, LocalDateTime cursorStartDate, Long cursorId, int pageSize) {
+
+        Specification<Event> spec = Specification.where(EventSpecification.isOpen())
+                .and(EventSpecification.hasCategory(filter.eventCategory()))
+                .and(EventSpecification.cursorBefore(cursorStartDate, cursorId));
+
+        List<EventListItem> events = eventRepository.findBy(spec, query -> query
+                .as(EventListItem.class)
+                .sortBy(Sort.by(
+                        Sort.Order.desc("startDate"),
+                        Sort.Order.desc("id")   // tiebreaker precisa ter a MESMA direção do startDate
+                ))
+                .limit(pageSize + 1)
+                .all());
+
+        boolean hasNext = events.size() > pageSize;
+        List<EventListItem> page = hasNext ? events.subList(0, pageSize) : events;
+
+        EventListItem last = page.isEmpty() ? null : page.get(page.size() - 1);
+        LocalDateTime nextCursorDate = hasNext ? last.startDate() : null;
+        Long nextCursorId = hasNext ? last.id() : null;
+
+        return new CursorPage<>(page, nextCursorDate, nextCursorId, hasNext);
+    }
+
+    // ---- Commands ----
     @Transactional
     public EventResponse create(UUID ownerId, CreateEventRequestDTO dto){
         if(userManagement.findById(ownerId).isEmpty()) throw new UserNotFaundException("Owner not found with ID: " + ownerId);

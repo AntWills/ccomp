@@ -2,8 +2,11 @@ package com.ccomp.br.domain.events.web;
 
 import com.ccomp.br.domain.events.application.EventsServices;
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
+import com.ccomp.br.domain.events.dto.EventListItem;
+import com.ccomp.br.domain.events.dto.EventsFilterRequest;
 import com.ccomp.br.shared.dto.EventResponse;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
+import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -17,7 +20,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.format.annotation.DateTimeFormat;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Tag(name = "Gerir Eventos", description = "Operações relacionadas a criação, busca, atulização e deleção de eventos.")
@@ -103,5 +108,30 @@ public class EventsController {
 
         return eventsServices.getById(eventId, userId).map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
+    @Operation(
+            summary = "Busca e lista eventos com paginação",
+            description = "Retorna uma lista paginada de eventos abertos. Permite filtrar por categoria e utilizar paginação baseada em cursor.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Eventos retornados com sucesso",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = CursorPage.class)
+                            )
+                    )
+            }
+    )
+    @SecurityRequirements
+    @GetMapping
+    public ResponseEntity<CursorPage<EventListItem>> searchEvents(
+            @Valid EventsFilterRequest filter,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime cursorStartDate,
+            @RequestParam(required = false) Long cursorId,
+            @RequestParam(defaultValue = "10") int pageSize
+    ) {
+        return ResponseEntity.ok(eventsServices.searchEventsWithFilters(filter, cursorStartDate, cursorId, pageSize));
     }
 }

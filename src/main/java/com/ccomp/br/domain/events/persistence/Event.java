@@ -16,7 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Table(name = "tb_events", indexes = {
-        @Index(name = "idx_slug", columnList = "slug"),
+        @Index(name = "idx_events_slug", columnList = "slug"),
         @Index(name = "idx_category_start_id", columnList = "event_category, start_date, id")
 })
 @Entity
