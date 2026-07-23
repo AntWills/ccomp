@@ -15,7 +15,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-@Table(name = "tb_events")
+@Table(name = "tb_events", indexes = {
+        @Index(name = "idx_slug", columnList = "slug"),
+
+})
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
