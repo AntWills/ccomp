@@ -29,6 +29,9 @@ public class Event {
     @Column(nullable = false)
     private String title;
 
+    @Column(nullable = false, unique = true)
+    private String slug;
+
     @OneToMany(mappedBy = "event")
     private Set<Enrollment> enrollments = new HashSet<>();
 

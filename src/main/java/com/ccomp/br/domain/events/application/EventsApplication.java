@@ -9,6 +9,7 @@ import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
 import com.ccomp.br.domain.events.util.ActivityMapper;
 import com.ccomp.br.domain.events.util.EventMapper;
+import com.ccomp.br.domain.news.util.SlugUtils;
 import com.ccomp.br.shared.dto.EventResponse;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
@@ -59,17 +60,33 @@ public class EventsApplication {
     }
 
     @Transactional
-    public EventResponse create(UUID id, CreateEventRequestDTO dto){
-        if(userManagement.findById(id).isEmpty()) throw new UserNotFaundException("Owner not found with ID: " + id);
+    public EventResponse create(UUID ownerId, CreateEventRequestDTO dto){
+        if(userManagement.findById(ownerId).isEmpty()) throw new UserNotFaundException("Owner not found with ID: " + ownerId);
 
-        var eventsModel = new Event(dto.title(), id);
+        var eventModel = Event.builder()
+                .title(dto.title())
+                .slug(generateSlug(dto.title()))
+                .ownerId(ownerId).build();
 
-        dto.optionalStartDate().ifPresent(eventsModel::setStart);
-        dto.optionalEndDate().ifPresent(eventsModel::setEnd);
+        dto.optionalStartDate().ifPresent(eventModel::setStart);
+        dto.optionalEndDate().ifPresent(eventModel::setEnd);
 
-        var savedEvent = eventRepository.save(new Event(dto.title(), id));
+        var savedEvent = eventRepository.save(new Event(dto.title(), ownerId));
 
         return eventMapper.eventToEventResponse(savedEvent);
+    }
+
+    private String generateSlug(String title) {
+        String base = SlugUtils.toSlug(title);
+
+        while (true) {
+            String suffix = UUID.randomUUID().toString().substring(0, 6);
+            String slug = base + "-" + suffix;
+
+            if (eventRepository.findBySlug(slug).isEmpty()) {
+                return slug;
+            }
+        }
     }
 
     @Transactional
