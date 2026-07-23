@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.persistence;
 
+import com.ccomp.br.domain.events.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.persistence.activities.EventActivity;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.enrollments.Enrollment;
@@ -50,6 +51,10 @@ public class Event {
     @Size(max = 1000, message = "O máximo são 1000 letras.")
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "event_category", columnDefinition = "varchar(25)", nullable = false)
+    private EnumEventCategory eventCategory;
 
     @Column(name = "owner_id", nullable = false)
     private UUID ownerId;

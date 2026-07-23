@@ -9,6 +9,7 @@ import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.UserNotFaundException;
+import com.ccomp.br.shared.utils.DebugUtils;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -51,12 +52,15 @@ public class EventsServices {
         var eventModel = Event.builder()
                 .title(dto.title())
                 .slug(generateSlug(dto.title()))
+                .eventCategory(dto.eventCategory())
                 .ownerId(ownerId).build();
+
+        log.info("Salvando evento: {}", DebugUtils.printJson(eventModel));
 
         dto.optionalStartDate().ifPresent(eventModel::setStart);
         dto.optionalEndDate().ifPresent(eventModel::setEnd);
 
-        var savedEvent = eventRepository.save(new Event(dto.title(), ownerId));
+        var savedEvent = eventRepository.save(eventModel);
 
         return eventMapper.eventToEventResponse(savedEvent);
     }
