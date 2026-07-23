@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.web;
 
-import com.ccomp.br.domain.events.application.EventsApplication;
+import com.ccomp.br.domain.events.application.EditorServices;
+import com.ccomp.br.domain.events.application.EventsServices;
 import com.ccomp.br.shared.dto.MessageResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
@@ -15,10 +16,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("api/events")
 public class EditorsController {
-    private final EventsApplication eventsApplication;
+    private final EditorServices editorServices;
 
-    public EditorsController(EventsApplication eventsApplication) {
-        this.eventsApplication = eventsApplication;
+    public EditorsController(EditorServices editorServices) {
+        this.editorServices = editorServices;
     }
 
     @PostMapping("/{eventId}/editors/{userId}")
@@ -26,7 +27,7 @@ public class EditorsController {
             @PathVariable Long eventId,
             @PathVariable UUID userId,
             @AuthenticationPrincipal Jwt jwt){
-        MessageResponse response = eventsApplication.addEditor(eventId, UUID.fromString(jwt.getSubject()), userId);
+        MessageResponse response = editorServices.addEditor(eventId, UUID.fromString(jwt.getSubject()), userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -35,7 +36,7 @@ public class EditorsController {
             @PathVariable Long eventId,
             @PathVariable UUID userId,
             @AuthenticationPrincipal Jwt jwt){
-        MessageResponse response = eventsApplication.removeEditor(eventId, UUID.fromString(jwt.getSubject()), userId);
+        MessageResponse response = editorServices.removeEditor(eventId, UUID.fromString(jwt.getSubject()), userId);
         return ResponseEntity.ok(response);
     }
 }

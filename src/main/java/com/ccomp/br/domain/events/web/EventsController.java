@@ -1,11 +1,8 @@
 package com.ccomp.br.domain.events.web;
 
-import com.ccomp.br.domain.events.application.EventsApplication;
-import com.ccomp.br.domain.events.dto.CreateActivityRequest;
-import com.ccomp.br.domain.events.dto.ActivityDTO;
+import com.ccomp.br.domain.events.application.EventsServices;
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
 import com.ccomp.br.shared.dto.EventResponse;
-import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -26,15 +23,15 @@ import java.util.UUID;
 @RestController
 @RequestMapping("api/events")
 public class EventsController {
-    private final EventsApplication eventsApplication;
+    private final EventsServices eventsServices;
 
-    public EventsController(EventsApplication eventsApplication) {
-        this.eventsApplication = eventsApplication;
+    public EventsController(EventsServices eventsServices) {
+        this.eventsServices = eventsServices;
     }
 
     @PostMapping
     public ResponseEntity<EventResponse> create(@Valid @RequestBody CreateEventRequestDTO dto, @AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(eventsApplication.create(UUID.fromString(jwt.getSubject()), dto));
+        return ResponseEntity.status(HttpStatus.CREATED).body(eventsServices.create(UUID.fromString(jwt.getSubject()), dto));
     }
 
     @Operation(
@@ -97,7 +94,7 @@ public class EventsController {
     public ResponseEntity<EventResponse> getById(@PathVariable Long eventId, @AuthenticationPrincipal Jwt jwt) {
         UUID userId = jwt == null ? null : UUID.fromString(jwt.getSubject());
 
-        return eventsApplication.getById(eventId, userId).map(ResponseEntity::ok)
+        return eventsServices.getById(eventId, userId).map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 }
