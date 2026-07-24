@@ -93,7 +93,7 @@ public class EventsServices {
         var eventModel = Event.builder()
                 .title(dto.title())
                 .slug(generateSlug(dto.title()))
-                .eventCategory(dto.eventCategory())
+                .category(dto.category())
                 .ownerId(ownerId).build();
 
         log.info("Salvando evento: {}", DebugUtils.printJson(eventModel));

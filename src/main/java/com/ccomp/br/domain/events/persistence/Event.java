@@ -19,7 +19,7 @@ import java.util.UUID;
 
 @Table(name = "tb_events", indexes = {
         @Index(name = "idx_events_slug", columnList = "slug"),
-        @Index(name = "idx_category_start_id", columnList = "event_category, start_date, id")
+        @Index(name = "idx_category_start_id", columnList = "category, start_date, id")
 })
 @Entity
 @AllArgsConstructor
@@ -58,8 +58,8 @@ public class Event {
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "event_category", columnDefinition = "varchar(25)", nullable = false)
-    private EnumEventCategory eventCategory;
+    @Column(name = "category", columnDefinition = "varchar(25)", nullable = false)
+    private EnumEventCategory category;
 
     @Column(name = "owner_id", nullable = false)
     private UUID ownerId;

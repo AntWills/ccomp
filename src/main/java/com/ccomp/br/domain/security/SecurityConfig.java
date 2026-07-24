@@ -52,7 +52,8 @@ public class SecurityConfig {
     };
 
     private static final String[] PUBLIC_EVENT_ROUTES = {
-            "/api/events/{eventId:\\d+}"
+            "/api/events/{eventId:\\d+}",
+            "/api/events"
     };
 
     private static final String[] PUBLIC_NEWS_ROUTES = {
