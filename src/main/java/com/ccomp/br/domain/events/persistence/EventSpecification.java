@@ -16,7 +16,7 @@ public class EventSpecification {
     public static Specification<Event> hasCategory(EnumEventCategory category) {
         return (root, query, criteriaBuilder) -> category == null
                 ? criteriaBuilder.conjunction()
-                : criteriaBuilder.equal(root.get("eventCategory"), category);
+                : criteriaBuilder.equal(root.get("category"), category);
     }
 
     public static Specification<Event> afterDateTime(LocalDateTime dateTime) {

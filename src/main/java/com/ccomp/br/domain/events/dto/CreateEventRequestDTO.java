@@ -13,7 +13,7 @@ public record CreateEventRequestDTO(
         String title,
 
         @NotNull(message = "A categoria do evento é obrigatória.")
-        EnumEventCategory eventCategory,
+        EnumEventCategory category,
         LocalDateTime startDate,
         LocalDateTime endDate
 ) {
