@@ -71,4 +71,9 @@ public class EditorServices {
 
         return new MessageResponse("Usuário removido como editor.");
     }
+
+    @Transactional(readOnly = true)
+    boolean isEditor(Event event, UUID userId) {
+        return editorRepository.existsByEventIdAndUserId(event.getId(), userId);
+    }
 }

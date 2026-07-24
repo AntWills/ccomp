@@ -4,6 +4,8 @@ import com.ccomp.br.domain.events.application.EventsServices;
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
 import com.ccomp.br.domain.events.dto.EventListItem;
 import com.ccomp.br.domain.events.dto.EventsFilterRequest;
+import com.ccomp.br.domain.events.dto.UpdateEventRequest;
+import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.shared.dto.EventResponse;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -133,5 +135,10 @@ public class EventsController {
             @RequestParam(defaultValue = "10") int pageSize
     ) {
         return ResponseEntity.ok(eventsServices.searchEventsWithFilters(filter, cursorStartDate, cursorId, pageSize));
+    }
+
+    @PatchMapping
+    public ResponseEntity<EventListItem> updateEvent(@Valid @RequestBody UpdateEventRequest request, @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(eventsServices.update(request, UUID.fromString(jwt.getSubject())));
     }
 }

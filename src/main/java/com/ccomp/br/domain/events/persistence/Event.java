@@ -8,6 +8,8 @@ import com.ccomp.br.shared.exceptions.DomainException;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -61,6 +63,14 @@ public class Event {
 
     @Column(name = "owner_id", nullable = false)
     private UUID ownerId;
+
+    @CreationTimestamp
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     public Event(String title, UUID ownerId) {
         this.title = title;
