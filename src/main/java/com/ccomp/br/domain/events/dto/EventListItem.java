@@ -8,6 +8,7 @@ public record EventListItem(
         Long id,
         String title,
         String slug,
+        String description,
         EnumEventCategory category,
         LocalDateTime startDate,
         LocalDateTime endDate

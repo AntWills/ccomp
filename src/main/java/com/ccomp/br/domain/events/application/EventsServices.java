@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.application;
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
 import com.ccomp.br.domain.events.dto.EventListItem;
 import com.ccomp.br.domain.events.dto.EventsFilterRequest;
+import com.ccomp.br.domain.events.dto.UpdateEventRequest;
 import com.ccomp.br.domain.events.persistence.EventSpecification;
 import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.domain.news.util.SlugUtils;
@@ -11,6 +12,7 @@ import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
+import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFaundException;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.DebugUtils;
@@ -32,11 +34,13 @@ public class EventsServices {
     private final UserManagement userManagement;
     private final EventMapper eventMapper;
 
+    private final EditorServices editorServices;
 
-    public EventsServices(EventRepository eventRepository, UserManagement userManagement, EventMapper eventMapper) {
+    public EventsServices(EventRepository eventRepository, UserManagement userManagement, EventMapper eventMapper, EditorServices editorServices) {
         this.eventRepository = eventRepository;
         this.userManagement = userManagement;
         this.eventMapper = eventMapper;
+        this.editorServices = editorServices;
     }
 
     // ---- Queries ----
@@ -113,5 +117,24 @@ public class EventsServices {
                 return slug;
             }
         }
+    }
+
+    public EventListItem update(UpdateEventRequest request, UUID userId) {
+        Event event = eventRepository.findById(request.id())
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        if(!event.isOwner(userId) && !editorServices.isEditor(event, userId))
+            throw new AccessDeniedException("O usuario não tem permissão para alterar este recurso.");
+
+        request.optionalTitle().ifPresent(title -> {
+            event.setTitle(title);
+            event.setSlug(generateSlug(title));
+        });
+
+       eventMapper.updateEntityFromDto(request, event);
+
+       eventRepository.save(event);
+
+       return eventMapper.eventToEventListItem(event);
     }
 }
