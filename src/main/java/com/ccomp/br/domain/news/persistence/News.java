@@ -34,6 +34,10 @@ public class News {
     private String summary;
     private String coverImageUrl;
 
+    /**
+     * Indica se a notícia é uma manchete ou destaque principal.
+     * Se verdadeiro, costuma ser exibida em banners, carrosséis ou no topo da página inicial.
+     */
     @Builder.Default
     @Column(nullable = false)
     private Boolean featured = false;

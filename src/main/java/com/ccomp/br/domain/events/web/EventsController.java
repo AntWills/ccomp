@@ -1,16 +1,19 @@
 package com.ccomp.br.domain.events.web;
 
-import com.ccomp.br.domain.events.application.EventsApplication;
-import com.ccomp.br.domain.events.dto.CreateActivityRequest;
-import com.ccomp.br.domain.events.dto.ActivityDTO;
+import com.ccomp.br.domain.events.application.EventsServices;
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
+import com.ccomp.br.domain.events.dto.EventListItem;
+import com.ccomp.br.domain.events.dto.EventsFilterRequest;
+import com.ccomp.br.domain.events.dto.UpdateEventRequest;
+import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.shared.dto.EventResponse;
-import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
+import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -19,22 +22,30 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.format.annotation.DateTimeFormat;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Tag(name = "Gerir Eventos", description = "Operações relacionadas a criação, busca, atulização e deleção de eventos.")
 @RestController
 @RequestMapping("api/events")
 public class EventsController {
-    private final EventsApplication eventsApplication;
+    private final EventsServices eventsServices;
 
-    public EventsController(EventsApplication eventsApplication) {
-        this.eventsApplication = eventsApplication;
+    public EventsController(EventsServices eventsServices) {
+        this.eventsServices = eventsServices;
     }
 
+    @Operation(summary = "Cria um novo evento", description = "Cria um novo evento no sistema associado ao usuário autenticado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Evento criado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados do evento inválidos"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
+    })
     @PostMapping
     public ResponseEntity<EventResponse> create(@Valid @RequestBody CreateEventRequestDTO dto, @AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(eventsApplication.create(UUID.fromString(jwt.getSubject()), dto));
+        return ResponseEntity.status(HttpStatus.CREATED).body(eventsServices.create(UUID.fromString(jwt.getSubject()), dto));
     }
 
     @Operation(
@@ -97,41 +108,37 @@ public class EventsController {
     public ResponseEntity<EventResponse> getById(@PathVariable Long eventId, @AuthenticationPrincipal Jwt jwt) {
         UUID userId = jwt == null ? null : UUID.fromString(jwt.getSubject());
 
-        return eventsApplication.getById(eventId, userId).map(ResponseEntity::ok)
+        return eventsServices.getById(eventId, userId).map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
-    @PostMapping("/{eventId}/editors/{userId}")
-    public ResponseEntity<MessageResponse> addEditor(
-            @PathVariable Long eventId,
-            @PathVariable UUID userId,
-            @AuthenticationPrincipal Jwt jwt){
-        MessageResponse response = eventsApplication.addEditor(eventId, UUID.fromString(jwt.getSubject()), userId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    @DeleteMapping("{eventId}/editors/{userId}")
-    public ResponseEntity<MessageResponse> removeEditor(
-            @PathVariable Long eventId,
-            @PathVariable UUID userId,
-            @AuthenticationPrincipal Jwt jwt){
-        MessageResponse response = eventsApplication.removeEditor(eventId, UUID.fromString(jwt.getSubject()), userId);
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/{eventId}/activities")
-    public ResponseEntity<ActivityDTO> createActivity(
-            @PathVariable Long eventId,
-            @Valid @RequestBody CreateActivityRequest request, @AuthenticationPrincipal Jwt jwt){
-        return ResponseEntity.status(HttpStatus.CREATED).body(eventsApplication.createActivity(UUID.fromString(jwt.getSubject()), eventId, request));
-    }
-
-    @DeleteMapping("/activities/{id}")
-    public ResponseEntity<MessageResponse> deleteActivity(
-            @PathVariable Long id,
-            @AuthenticationPrincipal Jwt jwt
+    @Operation(
+            summary = "Busca e lista eventos com paginação",
+            description = "Retorna uma lista paginada de eventos abertos. Permite filtrar por categoria e utilizar paginação baseada em cursor.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Eventos retornados com sucesso",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = CursorPage.class)
+                            )
+                    )
+            }
+    )
+    @SecurityRequirements
+    @GetMapping
+    public ResponseEntity<CursorPage<EventListItem>> searchEvents(
+            @Valid EventsFilterRequest filter,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime cursorStartDate,
+            @RequestParam(required = false) Long cursorId,
+            @RequestParam(defaultValue = "10") int pageSize
     ) {
-        eventsApplication.deleteActivity(UUID.fromString(jwt.getSubject()), id);
-        return ResponseEntity.ok(new MessageResponse("Atividade removida com sucesso."));
+        return ResponseEntity.ok(eventsServices.searchEventsWithFilters(filter, cursorStartDate, cursorId, pageSize));
+    }
+
+    @PatchMapping
+    public ResponseEntity<EventListItem> updateEvent(@Valid @RequestBody UpdateEventRequest request, @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(eventsServices.update(request, UUID.fromString(jwt.getSubject())));
     }
 }

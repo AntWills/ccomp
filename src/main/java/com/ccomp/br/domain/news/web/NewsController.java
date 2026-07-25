@@ -1,9 +1,7 @@
 package com.ccomp.br.domain.news.web;
 
 import com.ccomp.br.domain.news.application.NewsApplication;
-import com.ccomp.br.domain.news.dto.NewsFilter;
-import com.ccomp.br.domain.news.dto.NewsListItem;
-import com.ccomp.br.domain.news.dto.NewsUpdateDto;
+import com.ccomp.br.domain.news.dto.*;
 import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -66,7 +64,7 @@ public class NewsController {
                             description = "Lista de notícias recuperada com sucesso",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    array = @ArraySchema(schema = @Schema(implementation = NewsListItem.class))
+                                    array = @ArraySchema(schema = @Schema(implementation = NewsPageResponse.class))
                             )
                     )
             }
@@ -82,7 +80,7 @@ public class NewsController {
     // Rotas privadas
     @Operation(
             summary = "Obtém uma notícia pelo ID (Admin)",
-            description = "Retorna os detalhes de uma notícia para fins administrativos. Requer autenticação.",
+            description = "Retorna os detalhes de uma notícia para fins administrativos.",
             responses = {
                     @ApiResponse(
                             responseCode = "200",
@@ -100,13 +98,11 @@ public class NewsController {
             }
     )
     @GetMapping("/admin/{id}")
+//    @PreAuthorize("hasRole('USER')") // Mudar para ADMIN depois
     public ResponseEntity<?> getById(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
-        var response = newsApplication.getById(id);
-
-        if(response.isPresent()) {
-            return ResponseEntity.status(HttpStatus.OK).body(response.get());
-        }
-        return ResponseEntity.notFound().build();
+        return newsApplication.getById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @Operation(
@@ -124,7 +120,7 @@ public class NewsController {
                     )
             }
     )
-    @GetMapping("/create")
+    @PostMapping("/create")
     public ResponseEntity<?> create(@AuthenticationPrincipal Jwt jwt){
         News entity = newsApplication.create(UUID.fromString(jwt.getSubject()));
 
@@ -132,8 +128,13 @@ public class NewsController {
     }
 
     @Operation(
-            summary = "Atualiza uma notícia",
-            description = "Atualiza os campos de uma notícia existente. Requer autenticação.",
+            summary = "Atualiza parcialmente uma notícia",
+            description = "Realiza a atualização parcial (PATCH) de uma notícia existente. " +
+                    "Apenas os campos enviados no corpo da requisição serão modificados, mantendo os demais inalterados. " +
+                    "Os campos permitidos na atualização incluem: título, resumo, imagem de capa, status de destaque e blocos de conteúdo. " +
+                    "A requisição deve ser enviada no formato JSON através do corpo da requisição (verifique o schema NewsUpdateDto para detalhes dos campos). " +
+                    "O ID da notícia alvo deve ser informado na URL. " +
+                    "Requer autenticação com um token JWT válido pertencente ao autor.",
             responses = {
                     @ApiResponse(
                             responseCode = "200",
@@ -155,9 +156,11 @@ public class NewsController {
                     )
             }
     )
-    @PatchMapping
-    public ResponseEntity<?> update(@Valid @RequestBody NewsUpdateDto dto, @AuthenticationPrincipal Jwt jwt) {
-        News entity = newsApplication.update(dto, UUID.fromString(jwt.getSubject()));
+    @PatchMapping("/{id}")
+    public ResponseEntity<?> update(@PathVariable Long id,
+                                    @Valid @RequestBody NewsUpdateDto dto,
+                                    @AuthenticationPrincipal Jwt jwt) {
+        News entity = newsApplication.update(id, dto, UUID.fromString(jwt.getSubject()));
 
         return ResponseEntity.status(HttpStatus.OK).body(entity);
     }

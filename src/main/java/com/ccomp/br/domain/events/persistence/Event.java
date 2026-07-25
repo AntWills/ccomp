@@ -1,11 +1,15 @@
 package com.ccomp.br.domain.events.persistence;
 
+import com.ccomp.br.domain.events.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.persistence.activities.EventActivity;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.enrollments.Enrollment;
 import com.ccomp.br.shared.exceptions.DomainException;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -13,7 +17,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-@Table(name = "tb_events")
+@Table(name = "tb_events", indexes = {
+        @Index(name = "idx_events_slug", columnList = "slug"),
+        @Index(name = "idx_category_start_id", columnList = "category, start_date, id")
+})
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
@@ -26,7 +33,10 @@ public class Event {
     private Long id;
 
     @Column(nullable = false)
-    private String name;
+    private String title;
+
+    @Column(nullable = false, unique = true)
+    private String slug;
 
     @OneToMany(mappedBy = "event")
     private Set<Enrollment> enrollments = new HashSet<>();
@@ -43,11 +53,27 @@ public class Event {
     @Column(name = "end_date")
     private LocalDateTime endDate;
 
+    @Size(max = 1000, message = "O máximo são 1000 letras.")
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", columnDefinition = "varchar(25)", nullable = false)
+    private EnumEventCategory category;
+
     @Column(name = "owner_id", nullable = false)
     private UUID ownerId;
 
-    public Event(String name, UUID ownerId) {
-        this.name = name;
+    @CreationTimestamp
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    public Event(String title, UUID ownerId) {
+        this.title = title;
         this.ownerId = ownerId;
     }
 
