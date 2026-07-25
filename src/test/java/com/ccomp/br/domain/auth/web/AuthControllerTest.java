@@ -4,7 +4,7 @@ import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
 import com.ccomp.br.domain.auth.dto.RefreshTokenRequest;
 import com.ccomp.br.domain.auth.dto.RefreshTokenResponse;
 import com.ccomp.br.domain.auth.dto.AccessTokenResponse;
-import com.ccomp.br.domain.auth.persistence.RefreshTokenRepository;
+import com.ccomp.br.domain.security.jwt.persistence.RefreshTokenRepository;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.RegisterUserDTO;

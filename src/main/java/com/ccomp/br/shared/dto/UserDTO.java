@@ -7,6 +7,7 @@ import java.util.UUID;
 public record UserDTO(
         UUID id,
         String name,
-        EmailAddress emailAddress
+        EmailAddress emailAddress,
+        String password
 ) {
 }

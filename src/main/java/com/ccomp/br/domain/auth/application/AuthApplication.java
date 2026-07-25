@@ -4,7 +4,7 @@ import com.ccomp.br.domain.auth.dto.RefreshTokenRequest;
 import com.ccomp.br.domain.auth.dto.RefreshTokenResponse;
 import com.ccomp.br.domain.auth.dto.AccessTokenResponse;
 import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
-import com.ccomp.br.domain.security.JwtService;
+import com.ccomp.br.domain.security.jwt.application.JwtService;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.domain.security.UserDetailsImpl;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
@@ -13,9 +13,11 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -47,8 +49,12 @@ public class AuthApplication {
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+
         return new AccessTokenResponse(
-                jwtService.getAccessToken(userDetails.getId()),
+                jwtService.getAccessToken(userDetails.getId(), roles),
                 jwtService.getRefreshToken(userDetails.getId()).getToken());
     }
 

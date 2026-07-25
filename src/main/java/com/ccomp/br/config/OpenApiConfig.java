@@ -1,6 +1,6 @@
 package com.ccomp.br.config;
 
-import com.ccomp.br.domain.security.JwtService;
+import com.ccomp.br.domain.security.jwt.application.JwtService;
 import com.ccomp.br.domain.security.UserDetailsImpl;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -13,7 +13,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.util.List;
 
 @Configuration
 public class OpenApiConfig {
@@ -62,7 +65,11 @@ public class OpenApiConfig {
                 return;
             }
 
-            String accessToken = jwtService.getAccessToken(userDetails.getId());
+            List<String> roles = userDetails.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .toList();
+
+            String accessToken = jwtService.getAccessToken(userDetails.getId(), roles);
             // RefreshToken refreshToken = jwtService.getRefreshToken(userDetails.getId());
 
             // Descrição ultra direta e limpa, sem rodeios

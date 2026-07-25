@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.security;
 
-import com.ccomp.br.domain.users.persistence.UserModel;
+import com.ccomp.br.domain.security.roles.enums.EnumRoles;
+import com.ccomp.br.shared.dto.UserDTO;
 import lombok.NonNull;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -12,28 +13,31 @@ import java.util.UUID;
 
 public class UserDetailsImpl implements UserDetails {
 
-    private final UserModel user;
+    private final UserDTO user;
+    private final List<EnumRoles> roles;
 
-    public UserDetailsImpl(UserModel user) {
+    public UserDetailsImpl(UserDTO user, List<EnumRoles> roles) {
         this.user = user;
+        this.roles = roles;
     }
 
     @Override
     @NonNull
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Por enquanto role fixa
-        return List.of(new SimpleGrantedAuthority("ROLE_USER"));
+        return roles.stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name()))
+                .toList();
     }
 
     @Override
-    public String getPassword() { return user.getPassword(); }
+    public String getPassword() { return user.password(); }
 
     @Override
     @NonNull
-    public String getUsername() { return user.getEmailAddress().getValue(); }
+    public String getUsername() { return user.emailAddress().getValue(); }
 
 
-    public @NonNull UUID getId() { return user.getId(); }
+    public @NonNull UUID getId() { return user.id(); }
 
     // Conta ativa, não expirada, credenciais válidas
     @Override public boolean isAccountNonExpired() { return true; }

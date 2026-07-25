@@ -1,6 +1,8 @@
 package com.ccomp.br.domain.users.external;
 
+import com.ccomp.br.domain.security.roles.application.RolesServices;
 import com.ccomp.br.domain.users.dto.UserCreatedEvent;
+import com.ccomp.br.domain.security.roles.enums.EnumRoles;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.domain.users.util.UserMapper;
@@ -22,13 +24,15 @@ import java.util.UUID;
 @Component
 public class UserManagement {
     private final ApplicationEventPublisher eventPublisher;
+    private final RolesServices rolesServices;
     private final UserModelRepository userModelRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
 
     @Autowired
-    public UserManagement(ApplicationEventPublisher eventPublisher, UserModelRepository userModelRepository, PasswordEncoder passwordEncoder, UserMapper userMapper){
+    public UserManagement(ApplicationEventPublisher eventPublisher, RolesServices rolesServices, UserModelRepository userModelRepository, PasswordEncoder passwordEncoder, UserMapper userMapper){
         this.eventPublisher = eventPublisher;
+        this.rolesServices = rolesServices;
         this.userModelRepository = userModelRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
@@ -41,7 +45,8 @@ public class UserManagement {
 
         String encryptedPassword = passwordEncoder.encode(dto.password());
 
-        userModelRepository.save(new UserModel(dto.name(), encryptedPassword, dto.email()));
+        UserModel userSaved = userModelRepository.save(new UserModel(dto.name(), encryptedPassword, dto.email()));
+        rolesServices.setRole(userSaved, EnumRoles.USER);
 
         eventPublisher.publishEvent(new UserCreatedEvent(dto.name(), dto.email()));
     }
@@ -55,6 +60,11 @@ public class UserManagement {
 
     public Optional<UserDTO> findById(UUID id){
         return userModelRepository.findById(id)
+                .map(userMapper::userToDto);
+    }
+
+    public Optional<UserDTO> findByEmailAddress(EmailAddress emailAddress){
+        return userModelRepository.findByEmailAddress(emailAddress)
                 .map(userMapper::userToDto);
     }
 

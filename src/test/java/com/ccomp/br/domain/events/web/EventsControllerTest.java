@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.events.web;
 
-import com.ccomp.br.domain.security.JwtService;
+import com.ccomp.br.domain.security.jwt.application.JwtService;
 import com.ccomp.br.domain.events.dto.CreateActivityRequest;
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
 import com.ccomp.br.domain.events.persistence.Event;
