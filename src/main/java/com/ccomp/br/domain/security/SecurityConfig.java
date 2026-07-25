@@ -15,6 +15,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -25,6 +26,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.password4j.Argon2Password4jPasswordEncoder;
 import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.security.interfaces.RSAPrivateKey;
@@ -34,6 +37,7 @@ import java.util.Base64;
 @Slf4j
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final CustomAuthEntryPoint authEntryPoint;
@@ -111,11 +115,27 @@ public class SecurityConfig {
                 )
                 .oauth2ResourceServer(
                         oauth2 -> {
-                            oauth2.jwt(jwt -> jwt.decoder(jwtDecoder()));
+                            oauth2.jwt(jwt -> jwt
+                                    .decoder(jwtDecoder())
+                                    .jwtAuthenticationConverter(jwtAuthenticationConverter())
+                            );
                             oauth2.authenticationEntryPoint(authEntryPoint);
                         }
 
                 ).build();
+    }
+
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
+        // Diz ao Spring para ler a claim "roles" em vez de "scope"
+        grantedAuthoritiesConverter.setAuthoritiesClaimName("roles");
+        // Como o valor já é "ROLE_USER", deixamos o prefixo vazio (para não virar "ROLE_ROLE_USER")
+        grantedAuthoritiesConverter.setAuthorityPrefix("");
+
+        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
+        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
+        return jwtAuthenticationConverter;
     }
 
     @Bean

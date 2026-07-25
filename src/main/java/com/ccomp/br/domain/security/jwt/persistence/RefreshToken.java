@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.auth.persistence;
+package com.ccomp.br.domain.security.jwt.persistence;
 
 import jakarta.persistence.*;
 import lombok.*;

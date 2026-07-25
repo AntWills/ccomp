@@ -1,8 +1,8 @@
 package com.ccomp.br.domain.users.external;
 
-import com.ccomp.br.domain.users.application.RolesServices;
+import com.ccomp.br.domain.security.roles.application.RolesServices;
 import com.ccomp.br.domain.users.dto.UserCreatedEvent;
-import com.ccomp.br.domain.users.entity.EnumRoles;
+import com.ccomp.br.domain.security.roles.enums.EnumRoles;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.domain.users.util.UserMapper;
@@ -60,6 +60,11 @@ public class UserManagement {
 
     public Optional<UserDTO> findById(UUID id){
         return userModelRepository.findById(id)
+                .map(userMapper::userToDto);
+    }
+
+    public Optional<UserDTO> findByEmailAddress(EmailAddress emailAddress){
+        return userModelRepository.findByEmailAddress(emailAddress)
                 .map(userMapper::userToDto);
     }
 

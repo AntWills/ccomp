@@ -1,11 +1,14 @@
-package com.ccomp.br.domain.users.application;
+package com.ccomp.br.domain.security.roles.application;
 
-import com.ccomp.br.domain.users.entity.EnumRoles;
-import com.ccomp.br.domain.users.persistence.Roles;
-import com.ccomp.br.domain.users.persistence.RolesRepository;
+import com.ccomp.br.domain.security.roles.enums.EnumRoles;
+import com.ccomp.br.domain.security.roles.persistence.Roles;
+import com.ccomp.br.domain.security.roles.persistence.RolesRepository;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
 
 @Component
 public class RolesServices {
@@ -23,5 +26,12 @@ public class RolesServices {
                 .build();
 
         rolesRepository.save(roles);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EnumRoles> loadRolesByUserID(UUID userId) {
+        return rolesRepository.findByUserId(userId).stream()
+                .map(Roles::getRole)
+                .toList();
     }
 }
