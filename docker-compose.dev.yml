@@ -7,6 +7,8 @@ services:
     env_file:
       - .env.dev
     depends_on:
+      grafana-lgtm:
+        condition: service_started
       minio:
         condition: service_healthy
       minio-setup:
@@ -83,6 +85,13 @@ services:
       else
         echo 'Chaves já existem, pulando geração.';
       fi"
+  grafana-lgtm:
+    image: 'grafana/otel-lgtm:latest'
+    profiles: [all, infra]
+    ports:
+      - '3000:3000' # UI
+      - '4317:4317'
+      - '4318:4318'
 
 volumes:
   postgres-data:
