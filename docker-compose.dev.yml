@@ -7,6 +7,8 @@ services:
     env_file:
       - .env.dev
     depends_on:
+      grafana-lgtm:
+        condition: service_started
       minio:
         condition: service_healthy
       minio-setup:

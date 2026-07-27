@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.web;
 
+import com.ccomp.br.domain.events.enums.EnumEventCategory;
 import com.ccomp.br.domain.security.jwt.application.JwtService;
 import com.ccomp.br.domain.events.dto.CreateActivityRequest;
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
@@ -9,6 +10,7 @@ import com.ccomp.br.domain.events.persistence.activities.EventActivity;
 import com.ccomp.br.domain.events.persistence.activities.EventActivityRepository;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
+import com.ccomp.br.domain.security.roles.application.RolesServices;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,6 +53,9 @@ class EventsControllerTest {
     private EventEditorRepository editorRepository;
 
     @Autowired
+    private RolesServices rolesServices;
+
+    @Autowired
     private EventActivityRepository activityRepository;
 
     @Autowired
@@ -62,7 +67,10 @@ class EventsControllerTest {
     void setUp(){
         UUID userId = UUID.fromString("18b31f15-e2e8-4a8a-a1fc-4dc17d131ef1");
 
-        jwt = jwtService.getAccessToken(userId);
+        jwt = jwtService.getAccessToken(userId, rolesServices.loadRolesByUserID(userId)
+                .stream()
+                .map(Enum::name)
+                .toList());
     }
 
         @Test
@@ -73,7 +81,7 @@ class EventsControllerTest {
         void create() throws Exception {
         log.info("===== INÍCIO TESTE: criar evento =====");
 
-        var eventDto = new CreateEventRequestDTO("Evento Teste 1", null, null);
+        var eventDto = new CreateEventRequestDTO("Evento Teste 1", EnumEventCategory.ACADEMIC_EDUCATIONAL, null, null);
 
         String requestBody = objectMapper.writeValueAsString(eventDto);
 
@@ -133,7 +141,10 @@ class EventsControllerTest {
         log.info("===== INÍCIO TESTE: Adicionar Editor =====");
 
         String editorId = "e5a1b9d5-7f4e-405e-b5d1-5e6f7a8b9c05"; // Fernanda
-        String jwt = jwtService.getAccessToken(OWNER_ID);
+        String jwt = jwtService.getAccessToken(OWNER_ID, rolesServices.loadRolesByUserID(OWNER_ID)
+                .stream()
+                .map(Enum::name)
+                .toList());
 
         var result = mockMvc.perform(post("/api/events/{eventId}/editors/{userId}", EVENT_ID, editorId)
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -162,7 +173,10 @@ class EventsControllerTest {
         log.info("===== INÍCIO TESTE: Remover Editor =====");
 
         String editorId = "e5a1b9d5-7f4e-405e-b5d1-5e6f7a8b9c05"; // Fernanda
-        String jwt = jwtService.getAccessToken(OWNER_ID);
+        String jwt = jwtService.getAccessToken(OWNER_ID, rolesServices.loadRolesByUserID(OWNER_ID)
+                .stream()
+                .map(Enum::name)
+                .toList());
         Event event = eventRepository.findById(EVENT_ID).get();
 
         EventEditor editor = EventEditor.builder()
@@ -198,7 +212,10 @@ class EventsControllerTest {
     void addActivity() throws Exception {
         log.info("===== INÍCIO TESTE: Adicionar Atividade =====");
 
-        String jwt = jwtService.getAccessToken(OWNER_ID);
+        String jwt = jwtService.getAccessToken(OWNER_ID, rolesServices.loadRolesByUserID(OWNER_ID)
+                .stream()
+                .map(Enum::name)
+                .toList());
 
         CreateActivityRequest requestDto = new CreateActivityRequest("Minha atividade1", "Com ou sem descrição?");
         String requestJson = objectMapper.writeValueAsString(requestDto);
@@ -231,7 +248,10 @@ class EventsControllerTest {
     void removeActivity() throws Exception {
         log.info("===== INÍCIO TESTE: Remover Atividade =====");
 
-        String jwt = jwtService.getAccessToken(OWNER_ID);
+        String jwt = jwtService.getAccessToken(OWNER_ID, rolesServices.loadRolesByUserID(OWNER_ID)
+                .stream()
+                .map(Enum::name)
+                .toList());
 
         Event event = eventRepository.findById(EVENT_ID).get();
 
