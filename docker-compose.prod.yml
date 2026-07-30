@@ -1,4 +1,82 @@
 services:
+  proxy:
+    build:
+      context: gateway
+    ports:
+      - "8080:8080"
+    profiles: [all]
+    depends_on:
+      - ccomp-backend
+
   ccomp-backend:
+    build: .
+    profiles: [all]
     env_file:
-      - .env.prod
+      - .env.dev
+    depends_on:
+      grafana-lgtm:
+        condition: service_started
+      minio:
+        condition: service_healthy
+      minio-setup:
+        condition: service_completed_successfully
+      postgres-db:
+        condition: service_healthy
+    volumes:
+      - ./keys:/app/keys
+
+  postgres-db:
+    image: postgres:17-alpine
+    profiles: [ all, infra ]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio
+    profiles: [ all, infra ]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_USER}
+      MINIO_ROOT_PASSWORD: ${STORAGE_PASSWORD}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio-setup:
+    image: minio/mc
+    profiles: [ all, infra ]
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
+      /usr/bin/mc mb --ignore-existing myminio/images;
+      /usr/bin/mc anonymous set public myminio/images;
+      exit 0;
+      "
+
+  grafana-lgtm:
+    image: 'grafana/otel-lgtm:latest'
+    profiles: [ all, infra ]
+
+
+volumes:
+  postgres-data:
+  minio-data:
