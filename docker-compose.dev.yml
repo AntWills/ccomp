@@ -1,8 +1,15 @@
 services:
-  ccomp-backend:
-    build: .
+  proxy:
+    build:
+      context: gateway
     ports:
       - "8080:8080"
+    profiles: [all]
+    depends_on:
+      - ccomp-backend
+
+  ccomp-backend:
+    build: .
     profiles: [all]
     env_file:
       - .env.dev
@@ -69,6 +76,7 @@ services:
       /usr/bin/mc anonymous set public myminio/images;
       exit 0;
       "
+
   keygen:
     image: alpine/openssl
     profiles: [all, infra]
@@ -85,6 +93,7 @@ services:
       else
         echo 'Chaves já existem, pulando geração.';
       fi"
+
   grafana-lgtm:
     image: 'grafana/otel-lgtm:latest'
     profiles: [all, infra]
