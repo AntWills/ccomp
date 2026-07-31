@@ -20,6 +20,7 @@ Este repositório contém o **backend** do projeto, desenvolvido em
     - [Via Docker Compose (Recomendado)](#via-docker-compose-recomendado)
     - [Execução Local (Shell)](#execução-local-shell)
 - [Documentação da API](#documentação-da-api-)
+- [Infraestrutura em Produção](#infraestrutura-em-produção)
 
 ## Como Executar
 
@@ -109,3 +110,19 @@ fica disponível em:
 ```
 http://localhost:8080/swagger-ui.html
 ```
+
+## Infraestrutura em Produção
+
+Em produção, apenas o backend (via proxy reverso) é exposto
+publicamente. Os demais serviços (banco de dados, storage,
+observabilidade) ficam acessíveis apenas na rede interna do
+host, com bind em `127.0.0.1`.
+
+Isso significa que, para acessar ferramentas administrativas
+(ex: Grafana) ou o banco de dados diretamente em produção, é
+necessário estabelecer um túnel SSH até o servidor:
+
+    ssh -L 3000:localhost:3000 usuario@<host> 
+
+Essa decisão reduz a superfície de ataque, evitando exposição
+direta de bancos de dados e painéis administrativos à internet.
