@@ -29,7 +29,6 @@ public class UserApplication {
                 .map(userMapper::userToDto);
     }
 
-
     public List<UserDTO> getAll(){
         return userModelRepository.findAll()
                 .stream()

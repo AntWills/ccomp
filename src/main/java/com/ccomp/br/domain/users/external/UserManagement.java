@@ -46,7 +46,7 @@ public class UserManagement {
         String encryptedPassword = passwordEncoder.encode(dto.password());
 
         UserModel userSaved = userModelRepository.save(new UserModel(dto.name(), encryptedPassword, dto.email()));
-        rolesServices.setRole(userSaved, EnumRoles.USER);
+        rolesServices.addRole(userSaved.getId(), EnumRoles.USER);
 
         eventPublisher.publishEvent(new UserCreatedEvent(dto.name(), dto.email()));
     }
