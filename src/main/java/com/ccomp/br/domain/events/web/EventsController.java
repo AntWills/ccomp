@@ -5,7 +5,6 @@ import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
 import com.ccomp.br.domain.events.dto.EventListItem;
 import com.ccomp.br.domain.events.dto.EventsFilterRequest;
 import com.ccomp.br.domain.events.dto.UpdateEventRequest;
-import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.shared.dto.EventResponse;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -130,11 +129,10 @@ public class EventsController {
     @GetMapping
     public ResponseEntity<CursorPage<EventListItem>> searchEvents(
             @Valid EventsFilterRequest filter,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime cursorStartDate,
-            @RequestParam(required = false) Long cursorId,
+            @RequestParam(required = false) String nextCursor,
             @RequestParam(defaultValue = "10") int pageSize
     ) {
-        return ResponseEntity.ok(eventsServices.searchEventsWithFilters(filter, cursorStartDate, cursorId, pageSize));
+        return ResponseEntity.ok(eventsServices.searchEventsWithFilters(filter, nextCursor, pageSize));
     }
 
     @PatchMapping

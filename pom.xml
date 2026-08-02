@@ -163,6 +163,14 @@
             <artifactId>opentelemetry-logback-appender-1.0</artifactId>
             <version>2.21.0-alpha</version>
         </dependency>
+
+        <!-- Source: https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jsr310 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>2.22.0</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
 	<build>
