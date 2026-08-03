@@ -4,6 +4,7 @@ import com.ccomp.br.domain.news.application.NewsApplication;
 import com.ccomp.br.domain.news.dto.*;
 import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
+import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -71,9 +72,12 @@ public class NewsController {
     )
     @SecurityRequirements
     @GetMapping
-    public ResponseEntity<?> getNews(@Valid NewsFilter filter) {
+    public ResponseEntity<CursorPage<NewsListItem>> searchNews(
+            @Valid NewsFilter filter,
+            @RequestParam(required = false) String nextCursor,
+            @RequestParam(defaultValue = "10") int pageSize) {
         return ResponseEntity.ok(
-                newsApplication.getNews(filter)
+                newsApplication.searchNewsWithFilters(filter, nextCursor, pageSize)
         );
     }
 

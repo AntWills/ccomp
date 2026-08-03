@@ -16,13 +16,13 @@ Este repositório contém o **backend** do projeto, desenvolvido em
 ## Sumário
 
 - [Sobre o Projeto](#projeto-para-o-curso-de-ciência-da-computação)
-- [Como Executar](#como-executar)
+- [Execução Local](#execução-local)
     - [Via Docker Compose (Recomendado)](#via-docker-compose-recomendado)
-    - [Execução Local (Shell)](#execução-local-shell)
+    - [Execução Local (Shell)](#via-shell)
 - [Documentação da API](#documentação-da-api-)
 - [Infraestrutura em Produção](#infraestrutura-em-produção)
 
-## Como Executar
+## Execução Local
 
 ### Via Docker Compose (Recomendado)
 
@@ -68,7 +68,7 @@ Em seguida, suba os containers:
 docker compose -f docker-compose.dev.yml --profile all up --build
 ```
 
-### Execução Local (Shell)
+### Via Shell
 
 Na situação em que deseja apenas executar a aplicação, é necessario
 alterar as seguintes informações do `.env.dev` ao rodar 
@@ -118,11 +118,45 @@ publicamente. Os demais serviços (banco de dados, storage,
 observabilidade) ficam acessíveis apenas na rede interna do
 host, com bind em `127.0.0.1`.
 
-Isso significa que, para acessar ferramentas administrativas
-(ex: Grafana) ou o banco de dados diretamente em produção, é
-necessário estabelecer um túnel SSH até o servidor:
+### Executando em produção
 
-    ssh -L 3000:localhost:3000 usuario@<host> 
+Antes do primeiro `up`, as chaves RSA usadas para assinatura dos
+JWTs precisam existir em `./keys`. Elas **não são geradas
+automaticamente** em produção. Sequencia de comandos para
+gerar as chaves:
 
-Essa decisão reduz a superfície de ataque, evitando exposição
-direta de bancos de dados e painéis administrativos à internet.
+```shell
+mkdir -p keys
+openssl genpkey -algorithm RSA -out keys/private.key -pkeyopt rsa_keygen_bits:2048
+openssl rsa -pubout -in keys/private.key -out keys/public.key
+chmod 600 keys/private.key
+chmod 644 keys/public.key
+```
+Também é necessário um arquivo `.env.prod` na raiz do projeto,
+com as credenciais de banco, storage e demais variáveis
+sensíveis.
+
+Com as chaves e o `.env.prod` criados, o ambiente é subido com:
+
+```shell
+docker compose --env-file .env.prod -f docker-compose.prod.yml --profile all up -d --build
+```
+
+O `--profile all` garante que todos os serviços sejam incluídos.
+
+### Acessando serviços internos localmente (túnel SSH)
+
+Para acessar ferramentas administrativas ou o
+banco de dados diretamente em produção, é necessário estabelecer
+um túnel SSH até o servidor, com cada um deles. Para o Grafana é:
+
+```shell
+ssh -L 3000:127.0.0.1:3000 usuario@<host>
+```
+
+O mesmo vale para o Postgres, permitindo conectar via
+ferramentas como o pgAdmin apontando para `127.0.0.1:5432`:
+
+```shell
+ssh -L 5432:127.0.0.1:5432 usuario@<host>
+```

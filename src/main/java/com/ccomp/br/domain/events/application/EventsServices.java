@@ -1,9 +1,6 @@
 package com.ccomp.br.domain.events.application;
 
-import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
-import com.ccomp.br.domain.events.dto.EventListItem;
-import com.ccomp.br.domain.events.dto.EventsFilterRequest;
-import com.ccomp.br.domain.events.dto.UpdateEventRequest;
+import com.ccomp.br.domain.events.dto.*;
 import com.ccomp.br.domain.events.persistence.EventSpecification;
 import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.domain.news.util.SlugUtils;
@@ -14,6 +11,7 @@ import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFaundException;
+import com.ccomp.br.shared.utils.CursorCodec;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.DebugUtils;
 import org.springframework.data.domain.Sort;
@@ -30,6 +28,7 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class EventsServices {
+    private final int MAX_PAGE_SIZE = 50;
     private final EventRepository eventRepository;
     private final UserManagement userManagement;
     private final EventMapper eventMapper;
@@ -60,29 +59,30 @@ public class EventsServices {
 
     @Transactional(readOnly = true)
     public CursorPage<EventListItem> searchEventsWithFilters(
-            EventsFilterRequest filter, LocalDateTime cursorStartDate, Long cursorId, int pageSize) {
+            EventsFilterRequest filter, String cursor, int pageSize) {
+        if(pageSize > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 
-        Specification<Event> spec = Specification.where(EventSpecification.isOpen())
-                .and(EventSpecification.hasCategory(filter.eventCategory()))
-                .and(EventSpecification.cursorBefore(cursorStartDate, cursorId));
+        Specification<Event> spec = EventSpecification.buildSpecByCursor(filter,
+                CursorCodec.decode(cursor, EventCursor.class).orElse(null));
 
+        int finalPageSize = pageSize;
         List<EventListItem> events = eventRepository.findBy(spec, query -> query
                 .as(EventListItem.class)
                 .sortBy(Sort.by(
                         Sort.Order.desc("startDate"),
                         Sort.Order.desc("id")   // tiebreaker precisa ter a MESMA direção do startDate
                 ))
-                .limit(pageSize + 1)
+                .limit(finalPageSize + 1)
                 .all());
 
         boolean hasNext = events.size() > pageSize;
         List<EventListItem> page = hasNext ? events.subList(0, pageSize) : events;
 
-        EventListItem last = page.isEmpty() ? null : page.get(page.size() - 1);
-        LocalDateTime nextCursorDate = hasNext ? last.startDate() : null;
-        Long nextCursorId = hasNext ? last.id() : null;
+        String nextCursor = hasNext
+                ? CursorCodec.encode(new EventCursor(page.getLast().startDate(), page.getLast().id()))
+                : null;
 
-        return new CursorPage<>(page, nextCursorDate, nextCursorId, hasNext);
+        return new CursorPage<>(page, nextCursor, null);
     }
 
     // ---- Commands ----

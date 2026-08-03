@@ -1,5 +1,7 @@
 package com.ccomp.br.domain.events.persistence;
 
+import com.ccomp.br.domain.events.dto.EventCursor;
+import com.ccomp.br.domain.events.dto.EventsFilterRequest;
 import com.ccomp.br.domain.events.enums.EnumEventCategory;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -14,9 +16,10 @@ public class EventSpecification {
     }
 
     public static Specification<Event> hasCategory(EnumEventCategory category) {
-        return (root, query, criteriaBuilder) -> category == null
-                ? criteriaBuilder.conjunction()
-                : criteriaBuilder.equal(root.get("category"), category);
+        return (root, query, criteriaBuilder) -> {
+            if(category == null) return criteriaBuilder.conjunction();
+            return criteriaBuilder.equal(root.get("category"), category);
+        };
     }
 
     public static Specification<Event> afterDateTime(LocalDateTime dateTime) {
@@ -37,5 +40,14 @@ public class EventSpecification {
                     )
             );
         };
+    }
+
+    public static Specification<Event> buildSpecByCursor(EventsFilterRequest filter, EventCursor cursor) {
+        return Specification.where(isOpen())
+                .and(hasCategory(
+                        filter.eventCategory()))
+                .and(cursorBefore(
+                        cursor != null ? cursor.startDate() : null,
+                        cursor != null ? cursor.id() : null));
     }
 }
