@@ -13,6 +13,8 @@ import com.ccomp.br.domain.news.util.NewsMapper;
 import com.ccomp.br.domain.news.util.SlugUtils;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
+import com.ccomp.br.shared.utils.CursorCodec;
+import com.ccomp.br.shared.utils.CursorPage;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -34,23 +36,24 @@ public class NewsApplication {
     }
 
     @Transactional(readOnly = true)
-    public NewsPageResponse getNews(NewsFilter filter) {
-//        int limit = filter.limit() == null ? 10 : filter.limit();
+    public CursorPage<NewsListItem> searchNewsWithFilters(NewsFilter filter, String cursor, int pageSize) {
+        if(pageSize > 50) pageSize = 50;
 
-        Specification<News> spec = Specification.where(NewsSpecs.beforeCursor(filter.cursor()))
-                .and(NewsSpecs.isFeatured(filter.featured()));
+        Specification<News> spec = NewsSpecs.buildSpecByCursor(filter,
+                CursorCodec.decode(cursor, LocalDateTime.class).orElse(null));
 
+        int finalPageSize = pageSize;
         List<NewsListItem> results = newsRepository.findBy(spec, query -> query
                 .as(NewsListItem.class)
-                .limit(filter.limit() + 1)
+                .limit(finalPageSize + 1)
                 .sortBy(Sort.by(Sort.Direction.DESC, "publishedAt"))
                 .all());
 
-        boolean hasNext = results.size() > filter.limit();
-        List<NewsListItem> page = hasNext ? results.subList(0, filter.limit()) : results;
-        LocalDateTime nextCursor = hasNext ? page.getLast().publishedAt() : null;
+        boolean hasNext = results.size() > finalPageSize;
+        List<NewsListItem> page = hasNext ? results.subList(0, finalPageSize) : results;
+        String nextCursor = hasNext ? CursorCodec.encode(page.getLast().publishedAt()) : null;
 
-        return new NewsPageResponse(page, nextCursor, hasNext);
+        return new CursorPage<>(page, nextCursor, null);
     }
 
     @Transactional(readOnly = true)

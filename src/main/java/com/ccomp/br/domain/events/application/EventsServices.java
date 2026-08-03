@@ -63,7 +63,7 @@ public class EventsServices {
         if(pageSize > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 
         Specification<Event> spec = EventSpecification.buildSpecByCursor(filter,
-                CursorCodec.decode(cursor, EventCursor.class).get());
+                CursorCodec.decode(cursor, EventCursor.class).orElse(null));
 
         int finalPageSize = pageSize;
         List<EventListItem> events = eventRepository.findBy(spec, query -> query
