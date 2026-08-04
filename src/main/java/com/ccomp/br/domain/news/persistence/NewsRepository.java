@@ -8,11 +8,14 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface NewsRepository extends JpaRepository<News, Long>, JpaSpecificationExecutor<News> {
 //    <T> List<T> findBy(Specification<News> spec,
 //                       Function<FluentQuery.FetchableFluentQuery<News>, List<T>> query);
 
+    boolean existsById(Long id);
+    boolean existsByIdAndAuthorId(Long id, UUID authorId);
     long countBySlugStartsWith(String slug);
 
     Optional<News> findBySlug(String slug);
