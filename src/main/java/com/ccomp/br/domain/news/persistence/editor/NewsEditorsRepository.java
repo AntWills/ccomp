@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public interface NewsEditorsRepository extends JpaRepository<NewsEditors, Long> {
     List<NewsEditors> findAllByNewsId(Long newsId);
+    List<NewsEditors> findAllByUserId(UUID userId);
 
     boolean existsByNewsIdAndUserId(Long newsId, UUID userId);
 

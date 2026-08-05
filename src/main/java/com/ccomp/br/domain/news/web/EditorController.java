@@ -1,6 +1,8 @@
 package com.ccomp.br.domain.news.web;
 
 import com.ccomp.br.domain.news.application.NewsEditorServices;
+import com.ccomp.br.domain.news.dto.UserNewsResponseDTO;
+import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -62,6 +64,18 @@ public class EditorController {
             @AuthenticationPrincipal Jwt jwt
     ) {
         return ResponseEntity.ok(newsEditorServices.listEditors(UUID.fromString(jwt.getSubject()), newsId));
+    }
+
+    @Operation(
+            summary = "Listar minhas notícias",
+            description = "Retorna as notícias onde o usuário logado é o autor principal ou figura como editor."
+    )
+    @GetMapping("/me")
+    public ResponseEntity<UserNewsResponseDTO> getMyNews(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+        return ResponseEntity.ok(newsEditorServices.listNewsForUser(userId));
     }
 
     @Operation(

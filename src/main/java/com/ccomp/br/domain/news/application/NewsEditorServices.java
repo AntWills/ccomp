@@ -1,5 +1,7 @@
 package com.ccomp.br.domain.news.application;
 
+import com.ccomp.br.domain.news.dto.UserNewsResponseDTO;
+import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.domain.news.persistence.NewsRepository;
 import com.ccomp.br.domain.news.persistence.editor.NewsEditors;
 import com.ccomp.br.domain.news.persistence.editor.NewsEditorsRepository;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -41,6 +44,18 @@ public class NewsEditorServices {
                         .stream()
                         .map(NewsEditors::getUserId)
                         .toList());
+    }
+
+    @Transactional(readOnly = true)
+    public UserNewsResponseDTO listNewsForUser(UUID userId) {
+        var newsIds = newsEditorsRepository.findAllByUserId(userId)
+                .stream()
+                .map(NewsEditors::getNewsId)
+                .toList();
+
+        var listNewsForAuthor =  newsRepository.findAllByAuthorId(userId);
+        var listNewsForEditor = newsRepository.findAllById(newsIds);
+        return new UserNewsResponseDTO(listNewsForAuthor, listNewsForEditor);
     }
 
     @Transactional

@@ -16,6 +16,7 @@ public interface NewsRepository extends JpaRepository<News, Long>, JpaSpecificat
 
     boolean existsById(Long id);
     boolean existsByIdAndAuthorId(Long id, UUID authorId);
+    List<News> findAllByAuthorId(UUID authorId);
     long countBySlugStartsWith(String slug);
 
     Optional<News> findBySlug(String slug);
