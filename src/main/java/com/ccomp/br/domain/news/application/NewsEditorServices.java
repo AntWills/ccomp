@@ -69,14 +69,14 @@ public class NewsEditorServices {
                 .orElseThrow(() -> new ResourceNotFoundException("Nóticia não existe."));
 
         if(!news.isAuthor(ownerId))
-            throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
+            throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         var user = userManagement.findByEmailAddress(userEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Nenhum usuário foi encontrado para o e-mail informado."));
 
         long removed = newsEditorsRepository.deleteByUserIdAndNewsId(user.id(), news.getId());
         if (removed == 0) {
-            throw new ResourceNotFoundException("Usuário não é editor desta notícia.");
+            throw new ResourceNotFoundException("O usuário informado não é editor desta notícia.");
         }
     }
 }
