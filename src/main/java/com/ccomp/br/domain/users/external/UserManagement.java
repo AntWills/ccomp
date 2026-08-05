@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -66,6 +67,13 @@ public class UserManagement {
     public Optional<UserDTO> findByEmailAddress(EmailAddress emailAddress){
         return userModelRepository.findByEmailAddress(emailAddress)
                 .map(userMapper::userToDto);
+    }
+
+    public List<UserDTO> findAllByIds(List<UUID> ids) {
+        return userModelRepository.findAllById(ids)
+                .stream()
+                .map(userMapper::userToDto)
+                .toList();
     }
 
     public boolean userExists(UUID id){
