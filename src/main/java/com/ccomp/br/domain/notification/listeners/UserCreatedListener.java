@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.notification.listeners;
 
-import com.ccomp.br.domain.users.dto.UserCreatedEvent;
+import com.ccomp.br.domain.users.external.dto.UserCreatedEvent;
 import com.ccomp.br.module.email.EmailService;
 import com.ccomp.br.shared.dto.SendMailDTO;
 import org.springframework.context.event.EventListener;
@@ -19,7 +19,7 @@ public class UserCreatedListener {
     @EventListener
     public void handler(UserCreatedEvent event){
         String subject = "Bem-vindo à CComp - Sua conta foi criada com sucesso";
-        String body =buildPlainTextWelcomeEmail(event.name());
+        String body = buildPlainTextWelcomeEmail(event.name());
 
         SendMailDTO dto = new SendMailDTO(
                 event.emailAddress(),

@@ -1,10 +1,7 @@
 package com.ccomp.br.domain.auth.web;
 
 import com.ccomp.br.domain.auth.application.AuthApplication;
-import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
-import com.ccomp.br.domain.auth.dto.RefreshTokenRequest;
-import com.ccomp.br.domain.auth.dto.RefreshTokenResponse;
-import com.ccomp.br.domain.auth.dto.AccessTokenResponse;
+import com.ccomp.br.domain.auth.dto.*;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -157,5 +154,11 @@ public class AuthController {
     public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
         authApplication.logout(request);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDTO dto) {
+        authApplication.requestPasswordReset(dto.email());
+        return ResponseEntity.noContent().build(); // sempre 204, mesmo se o e-mail não existir (evita enumeração de usuários)
     }
 }

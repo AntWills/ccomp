@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.users.external;
 
 import com.ccomp.br.domain.security.roles.application.RolesServices;
-import com.ccomp.br.domain.users.dto.UserCreatedEvent;
+import com.ccomp.br.domain.users.external.dto.UserCreatedEvent;
 import com.ccomp.br.domain.security.roles.enums.EnumRoles;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
