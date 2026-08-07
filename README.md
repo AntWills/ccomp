@@ -36,11 +36,12 @@ Crie um arquivo `.env.dev` na raiz do projeto com as variáveis abaixo:
 ```dotenv
 SPRING_PROFILES_ACTIVE=dev
 
-DB_URL=jdbc:postgresql://postgres-db:5432/ccomp-db
-DB_USER=user
-DB_PASS=password
-DB_DRIVER=org.postgresql.Driver
-DB_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+POSTGRES_URL=jdbc:postgresql://postgres-db:5432/ccomp-db
+POSTGRES_USER=user
+POSTGRES_PASSWORD=password
+POSTGRES_DB=ccomp-db
+POSTGRES_DRIVER=org.postgresql.Driver
+POSTGRES_DIALECT=org.hibernate.dialect.PostgreSQLDialect
 
 PUBLIC_KEY=file:/app/keys/public.key
 PRIVITE_KEY=file:/app/keys/private.key
