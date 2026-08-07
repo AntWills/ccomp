@@ -1,9 +1,6 @@
 package com.ccomp.br.domain.auth.application;
 
-import com.ccomp.br.domain.auth.dto.RefreshTokenRequest;
-import com.ccomp.br.domain.auth.dto.RefreshTokenResponse;
-import com.ccomp.br.domain.auth.dto.AccessTokenResponse;
-import com.ccomp.br.domain.auth.dto.LoginRequestDTO;
+import com.ccomp.br.domain.auth.dto.*;
 import com.ccomp.br.domain.auth.external.dto.PasswordResetRequestedEvent;
 import com.ccomp.br.domain.security.jwt.application.JwtService;
 import com.ccomp.br.domain.security.passwordreset.application.PasswordResetService;
@@ -12,6 +9,7 @@ import com.ccomp.br.domain.security.UserDetailsImpl;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
 import com.ccomp.br.shared.dto.UserDTO;
+import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
@@ -24,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class AuthApplication {
@@ -87,5 +86,12 @@ public class AuthApplication {
         String token = passwordResetService.issuePasswordResetToken(user.id());
 
         eventPublisher.publishEvent(new PasswordResetRequestedEvent(user.emailAddress(), token));
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequestDTO dto) {
+        UUID userId = passwordResetService.validateAndConsumeToken(dto.token())
+                .orElseThrow(() -> new ResourceNotFoundException("O link para redefinir sua senha é inválido ou expirou. Solicite um novo link e tente novamente."));
+        userManagement.updatePassword(userId, dto.password());
     }
 }

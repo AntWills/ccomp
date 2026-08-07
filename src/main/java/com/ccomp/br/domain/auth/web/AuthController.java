@@ -161,4 +161,10 @@ public class AuthController {
         authApplication.requestPasswordReset(dto.email());
         return ResponseEntity.noContent().build(); // sempre 204, mesmo se o e-mail não existir (evita enumeração de usuários)
     }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequestDTO dto) {
+        authApplication.resetPassword(dto);
+        return ResponseEntity.noContent().build();
+    }
 }
