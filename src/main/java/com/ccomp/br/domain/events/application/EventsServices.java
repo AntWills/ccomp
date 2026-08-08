@@ -10,7 +10,7 @@ import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
-import com.ccomp.br.shared.exceptions.UserNotFaundException;
+import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorCodec;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.DebugUtils;
@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -88,7 +87,7 @@ public class EventsServices {
     // ---- Commands ----
     @Transactional
     public EventResponse create(UUID ownerId, CreateEventRequestDTO dto){
-        if(userManagement.findById(ownerId).isEmpty()) throw new UserNotFaundException("Owner not found with ID: " + ownerId);
+        if(userManagement.findById(ownerId).isEmpty()) throw new UserNotFoundException("Owner not found with ID: " + ownerId);
 
         var eventModel = Event.builder()
                 .title(dto.title())

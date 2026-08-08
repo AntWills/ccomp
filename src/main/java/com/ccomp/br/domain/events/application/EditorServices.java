@@ -4,12 +4,11 @@ import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
-import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
-import com.ccomp.br.shared.exceptions.UserNotFaundException;
+import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +42,7 @@ public class EditorServices {
             return new MessageResponse("O usuario já é editor deste evento");
 
         if(!userManagement.userExists(userId))
-            throw new UserNotFaundException("O usuario não existe.");
+            throw new UserNotFoundException("O usuario não existe.");
 
         editorRepository.save(EventEditor.builder()
                 .event(event)

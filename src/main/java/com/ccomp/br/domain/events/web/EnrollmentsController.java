@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.events.web;
 
 import com.ccomp.br.domain.events.application.EnrollmentsServices;
-import com.ccomp.br.shared.exceptions.UserNotFaundException;
+import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -36,7 +36,7 @@ public class EnrollmentsController {
         UUID userId = Optional.ofNullable(jwt)
                 .map(Jwt::getSubject)
                 .map(UUID::fromString)
-                .orElseThrow(() -> new UserNotFaundException("O usuário precisa estar autenticado."));
+                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(enrollmentsServices.subscribe(userId, eventId));
@@ -53,7 +53,7 @@ public class EnrollmentsController {
         UUID userId = Optional.ofNullable(jwt)
                 .map(Jwt::getSubject)
                 .map(UUID::fromString)
-                .orElseThrow(() -> new UserNotFaundException("O usuário precisa estar autenticado."));
+                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(enrollmentsServices.unsubscribe(userId, eventId));

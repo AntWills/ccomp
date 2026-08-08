@@ -11,7 +11,7 @@ import com.ccomp.br.shared.dto.RegisterUserDTO;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.BadCredentialsException;
 import com.ccomp.br.shared.exceptions.ConflictException;
-import com.ccomp.br.shared.exceptions.UserNotFaundException;
+import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -62,7 +62,7 @@ public class UserManagement {
 
     public void updatePassword(UUID userId, String password) {
         UserModel user = userModelRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFaundException("Usuario não encontrado."));
+                .orElseThrow(() -> new UserNotFoundException("Usuario não encontrado."));
 
         String encryptedPassword = passwordEncoder.encode(password);
         user.setPassword(encryptedPassword);
