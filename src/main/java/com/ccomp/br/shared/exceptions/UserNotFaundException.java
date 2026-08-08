@@ -1,7 +1,9 @@
 package com.ccomp.br.shared.exceptions;
 
-public class UserNotFaundException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class UserNotFaundException extends ApiException {
     public UserNotFaundException(String message) {
-        super(message);
+        super(message, HttpStatus.NOT_FOUND, "User Not Found");
     }
 }

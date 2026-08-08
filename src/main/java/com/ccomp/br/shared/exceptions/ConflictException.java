@@ -1,7 +1,9 @@
 package com.ccomp.br.shared.exceptions;
 
-public class ConflictException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class ConflictException extends ApiException {
     public ConflictException(String message) {
-        super(message);
+        super(message, HttpStatus.CONFLICT, "Conflict Error");
     }
 }

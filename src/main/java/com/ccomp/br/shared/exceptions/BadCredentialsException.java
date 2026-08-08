@@ -1,7 +1,9 @@
 package com.ccomp.br.shared.exceptions;
 
-public class BadCredentialsException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class BadCredentialsException extends ApiException {
     public BadCredentialsException(String message) {
-        super(message);
+        super(message, HttpStatus.UNAUTHORIZED, "Bad Credentials");
     }
 }
