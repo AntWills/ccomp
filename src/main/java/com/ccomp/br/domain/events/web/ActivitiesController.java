@@ -4,7 +4,7 @@ import com.ccomp.br.domain.events.application.ActivitiesServices;
 import com.ccomp.br.domain.events.dto.ActivityDTO;
 import com.ccomp.br.domain.events.dto.CreateActivityRequest;
 import com.ccomp.br.shared.dto.MessageResponse;
-import com.ccomp.br.shared.exceptions.UserNotFaundException;
+import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -42,7 +42,7 @@ public class ActivitiesController {
         UUID userId = Optional.ofNullable(jwt)
                 .map(Jwt::getSubject)
                 .map(UUID::fromString)
-                .orElseThrow(() -> new UserNotFaundException("O usuário precisa estar autenticado."));
+                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(activitiesServices.createActivity(userId, eventId, request));
     }
@@ -61,7 +61,7 @@ public class ActivitiesController {
         UUID userId = Optional.ofNullable(jwt)
                 .map(Jwt::getSubject)
                 .map(UUID::fromString)
-                .orElseThrow(() -> new UserNotFaundException("O usuário precisa estar autenticado."));
+                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
 
         activitiesServices.deleteActivity(userId, id);
         return ResponseEntity.ok(new MessageResponse("Atividade removida com sucesso."));

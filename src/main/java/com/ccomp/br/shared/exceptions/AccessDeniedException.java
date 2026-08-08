@@ -1,7 +1,9 @@
 package com.ccomp.br.shared.exceptions;
 
-public class AccessDeniedException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class AccessDeniedException extends ApiException {
     public AccessDeniedException(String message) {
-        super(message);
+        super(message, HttpStatus.FORBIDDEN, "Forbidden");
     }
 }

@@ -15,16 +15,16 @@ public class ErrorResponse {
     private int status;
     private String error;
     private String route;
-    private List<String> mensages;
+    private List<String> messages;
     private Map<String, String> details; // Erros por campo
 
     public ErrorResponse(LocalDateTime timestamp, int status, String error, String route,
-                         List<String> mensages, Map<String, String> details) {
+                         List<String> messages, Map<String, String> details) {
         this.timestamp = timestamp;
         this.status = status;
         this.error = error;
         this.route = route;
-        this.mensages = mensages;
+        this.messages = messages;
         this.details = details != null ? details : new HashMap<>();
     }
 }

@@ -2,12 +2,15 @@ package com.ccomp.br.domain.security.passwordreset.application;
 
 import com.ccomp.br.domain.security.passwordreset.persistence.PasswordResetToken;
 import com.ccomp.br.domain.security.passwordreset.persistence.PasswordResetTokenRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class PasswordResetService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
@@ -19,6 +22,7 @@ public class PasswordResetService {
     @Transactional
     public String issuePasswordResetToken(UUID userId) {
         String token = TokenGenerator.generateToken();
+        log.info("Token: {}", token);
         String hash = TokenHasher.hash(token);
 
         passwordResetTokenRepository.save(
@@ -33,18 +37,17 @@ public class PasswordResetService {
     }
 
     @Transactional
-    public boolean validateAndConsumeToken(String token, UUID userId) {
+    public Optional<UUID> validateAndConsumeToken(String token) {
         String hash = TokenHasher.hash(token);
 
         var passwordResetToken = passwordResetTokenRepository.findById(hash);
 
-        boolean result = passwordResetToken
-                .filter(t -> t.getUserId().equals(userId))
+        Optional<UUID> userId = passwordResetToken
                 .filter(PasswordResetToken::isValid)
-                .isPresent();
+                .map(PasswordResetToken::getUserId);
 
         passwordResetToken.ifPresent(passwordResetTokenRepository::delete);
 
-        return result;
+        return userId;
     }
 }

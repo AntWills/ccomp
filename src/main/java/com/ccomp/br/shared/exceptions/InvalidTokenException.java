@@ -1,7 +1,9 @@
 package com.ccomp.br.shared.exceptions;
 
-public class InvalidTokenException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class InvalidTokenException extends ApiException {
     public InvalidTokenException(String message) {
-        super(message);
+        super(message, HttpStatus.UNAUTHORIZED, "Invalid Token");
     }
 }

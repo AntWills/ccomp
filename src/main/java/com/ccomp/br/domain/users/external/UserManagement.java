@@ -11,6 +11,7 @@ import com.ccomp.br.shared.dto.RegisterUserDTO;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.BadCredentialsException;
 import com.ccomp.br.shared.exceptions.ConflictException;
+import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -57,6 +58,15 @@ public class UserManagement {
                 .filter(userModel -> passwordEncoder.matches(password, userModel.getPassword()))
                 .map(userMapper::userToDto)
                 .orElseThrow(() -> new BadCredentialsException("Email or password incorrect!"));
+    }
+
+    public void updatePassword(UUID userId, String password) {
+        UserModel user = userModelRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuario não encontrado."));
+
+        String encryptedPassword = passwordEncoder.encode(password);
+        user.setPassword(encryptedPassword);
+        userModelRepository.save(user);
     }
 
     public Optional<UserDTO> findById(UUID id){

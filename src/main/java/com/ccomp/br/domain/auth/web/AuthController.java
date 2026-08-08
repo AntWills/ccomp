@@ -156,9 +156,60 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(
+            summary = "Solicita a redefinição de senha",
+            description = "Envia um e-mail com instruções e link contendo o token para redefinição de senha. " +
+                    "Sempre retorna HTTP 204 para evitar enumeração de usuários cadastrados.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "204",
+                            description = "Solicitação processada com sucesso (instruções enviadas se o e-mail existir)"
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Requisição inválida ou e-mail ausente/mal formatado",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
+                    )
+            }
+    )
     @PostMapping("/forgot-password")
     public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDTO dto) {
         authApplication.requestPasswordReset(dto.email());
         return ResponseEntity.noContent().build(); // sempre 204, mesmo se o e-mail não existir (evita enumeração de usuários)
+    }
+
+    @Operation(
+            summary = "Redefine a senha do usuário",
+            description = "Valida o token recebido e atualiza a senha do usuário caso o token seja válido e não tenha expirado.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "204",
+                            description = "Senha redefinida com sucesso"
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Requisição inválida, token ou senha ausentes",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Token de redefinição de senha é inválido ou expirou",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
+                    )
+            }
+    )
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequestDTO dto) {
+        authApplication.resetPassword(dto);
+        return ResponseEntity.noContent().build();
     }
 }

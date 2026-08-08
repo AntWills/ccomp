@@ -2,7 +2,7 @@ package com.ccomp.br.domain.news.dto;
 
 import java.time.LocalDateTime;
 
-public record NewsListItem(
+public record NewsItem(
                 Long id,
                 String title,
                 String summary,
