@@ -2,7 +2,6 @@ package com.ccomp.br.domain.news.web;
 
 import com.ccomp.br.domain.news.application.NewsApplication;
 import com.ccomp.br.domain.news.dto.*;
-import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +15,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -40,7 +40,7 @@ public class NewsController {
                     @ApiResponse(
                             responseCode = "200",
                             description = "Notícia encontrada",
-                            content = @Content(schema = @Schema(implementation = News.class))
+                            content = @Content(schema = @Schema(implementation = NewsResponse.class))
                     ),
                     @ApiResponse(
                             responseCode = "404",
@@ -72,7 +72,7 @@ public class NewsController {
     )
     @SecurityRequirements
     @GetMapping
-    public ResponseEntity<CursorPage<NewsListItem>> searchNews(
+    public ResponseEntity<CursorPage<NewsItem>> searchNews(
             @Valid NewsFilter filter,
             @RequestParam(required = false) String nextCursor,
             @RequestParam(defaultValue = "10") int pageSize) {
@@ -89,7 +89,7 @@ public class NewsController {
                     @ApiResponse(
                             responseCode = "200",
                             description = "Notícia encontrada",
-                            content = @Content(schema = @Schema(implementation = News.class))
+                            content = @Content(schema = @Schema(implementation = NewsResponse.class))
                     ),
                     @ApiResponse(
                             responseCode = "404",
@@ -102,7 +102,7 @@ public class NewsController {
             }
     )
     @GetMapping("/admin/{id}")
-//    @PreAuthorize("hasRole('USER')") // Mudar para ADMIN depois
+    @PreAuthorize("hasRole('ADMIN', 'STAFF')")
     public ResponseEntity<?> getById(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         return newsApplication.getById(id)
                 .map(ResponseEntity::ok)
@@ -110,13 +110,13 @@ public class NewsController {
     }
 
     @Operation(
-            summary = "Cria um rascunho de notícia",
+            summary = "Cria um template básico de notícia",
             description = "Cria uma nova entrada de notícia vazia vinculada ao usuário autenticado.",
             responses = {
                     @ApiResponse(
                             responseCode = "201",
                             description = "Rascunho criado com sucesso",
-                            content = @Content(schema = @Schema(implementation = News.class))
+                            content = @Content(schema = @Schema(implementation = NewsResponse.class))
                     ),
                     @ApiResponse(
                             responseCode = "401",
@@ -125,8 +125,9 @@ public class NewsController {
             }
     )
     @PostMapping("/create")
+    @PreAuthorize("hasRole('ADMIN', 'STAFF')")
     public ResponseEntity<?> create(@AuthenticationPrincipal Jwt jwt){
-        News entity = newsApplication.create(UUID.fromString(jwt.getSubject()));
+        NewsResponse entity = newsApplication.create(UUID.fromString(jwt.getSubject()));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(entity);
     }
@@ -143,7 +144,7 @@ public class NewsController {
                     @ApiResponse(
                             responseCode = "200",
                             description = "Notícia atualizada com sucesso",
-                            content = @Content(schema = @Schema(implementation = News.class))
+                            content = @Content(schema = @Schema(implementation = NewsResponse.class))
                     ),
                     @ApiResponse(
                             responseCode = "400",
@@ -164,7 +165,7 @@ public class NewsController {
     public ResponseEntity<?> update(@PathVariable Long id,
                                     @Valid @RequestBody NewsUpdateDto dto,
                                     @AuthenticationPrincipal Jwt jwt) {
-        News entity = newsApplication.update(id, dto, UUID.fromString(jwt.getSubject()));
+        NewsResponse entity = newsApplication.update(id, dto, UUID.fromString(jwt.getSubject()));
 
         return ResponseEntity.status(HttpStatus.OK).body(entity);
     }

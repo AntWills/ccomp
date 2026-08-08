@@ -1,8 +1,8 @@
 package com.ccomp.br.domain.news.application;
 
 import com.ccomp.br.domain.news.dto.NewsFilter;
-import com.ccomp.br.domain.news.dto.NewsListItem;
-import com.ccomp.br.domain.news.dto.NewsPageResponse;
+import com.ccomp.br.domain.news.dto.NewsItem;
+import com.ccomp.br.domain.news.dto.NewsResponse;
 import com.ccomp.br.domain.news.dto.NewsUpdateDto;
 import com.ccomp.br.domain.news.enums.ContentBlockType;
 import com.ccomp.br.domain.news.persistence.ContentBlock;
@@ -36,55 +36,59 @@ public class NewsApplication {
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<NewsListItem> searchNewsWithFilters(NewsFilter filter, String cursor, int pageSize) {
+    public CursorPage<NewsItem> searchNewsWithFilters(NewsFilter filter, String cursor, int pageSize) {
         if(pageSize > 50) pageSize = 50;
 
         Specification<News> spec = NewsSpecs.buildSpecByCursor(filter,
                 CursorCodec.decode(cursor, LocalDateTime.class).orElse(null));
 
         int finalPageSize = pageSize;
-        List<NewsListItem> results = newsRepository.findBy(spec, query -> query
-                .as(NewsListItem.class)
+        List<NewsItem> results = newsRepository.findBy(spec, query -> query
+                .as(NewsItem.class)
                 .limit(finalPageSize + 1)
                 .sortBy(Sort.by(Sort.Direction.DESC, "publishedAt"))
                 .all());
 
         boolean hasNext = results.size() > finalPageSize;
-        List<NewsListItem> page = hasNext ? results.subList(0, finalPageSize) : results;
+        List<NewsItem> page = hasNext ? results.subList(0, finalPageSize) : results;
         String nextCursor = hasNext ? CursorCodec.encode(page.getLast().publishedAt()) : null;
 
         return new CursorPage<>(page, nextCursor, null);
     }
 
     @Transactional(readOnly = true)
-    public Optional<News> getById(Long id) {
-        return newsRepository.findById(id);
+    public Optional<NewsResponse> getById(Long id) {
+        return newsRepository.findById(id)
+                .map(newsMapper::newsToNewsResponse);
     }
 
     @Transactional(readOnly = true)
-    public Optional<News> getBySlug(String slug) {
-        return newsRepository.findBySlug(slug);
+    public Optional<NewsResponse> getBySlug(String slug) {
+        return newsRepository.findBySlug(slug)
+                .map(newsMapper::newsToNewsResponse);
     }
 
     @Transactional
-    public News create(UUID authorId) {
-        List<ContentBlock> blocks = List.of(
-                new ContentBlock(1L, ContentBlockType.HEADING, "News headline", null, null, null, null),
-                new ContentBlock(2L, ContentBlockType.PARAGRAPH, "text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text", null, null, null, null)
-        );
+    public NewsResponse create(UUID authorId) {
+//        List<ContentBlock> blocks = List.of(
+//                new ContentBlock(1L, ContentBlockType.HEADING, "News headline", null, null, null, null),
+//                new ContentBlock(2L, ContentBlockType.PARAGRAPH, "text text text text text text text text text text text text text text text text text text text text text text text text text text text text text text", null, null, null, null)
+//        );
 
         News newsNoSave = News.builder()
                 .title("News Title")
                 .slug(generateSlug("News Title"))
                 .authorId(authorId)
-                .blocks(blocks)
+                .blocks(List.of())
+                .content("Default content")
                 .build();
 
-        return newsRepository.save(newsNoSave);
+        News newsSaved = newsRepository.save(newsNoSave);
+        return newsMapper.newsToNewsResponse(newsSaved);
     }
 
     @Transactional
-    public News update(Long id, NewsUpdateDto dto, UUID userId) {
+    public NewsResponse update(Long id, NewsUpdateDto dto, UUID userId) {
         News entity = newsRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notícia não encontrada."));
 
@@ -105,7 +109,7 @@ public class NewsApplication {
 
         newsRepository.save(entity);
 
-        return entity;
+        return newsMapper.newsToNewsResponse(entity);
     }
 
     private String generateSlug(String title) {

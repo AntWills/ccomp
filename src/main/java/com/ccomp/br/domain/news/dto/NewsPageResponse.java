@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record NewsPageResponse(
-        List<NewsListItem> items,
+        List<NewsItem> items,
         LocalDateTime nextCursor,
         boolean hasNext
 ) {

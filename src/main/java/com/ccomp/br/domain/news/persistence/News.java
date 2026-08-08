@@ -60,6 +60,9 @@ public class News {
     @Column(columnDefinition = "jsonb")
     private List<ContentBlock> blocks;
 
+    @Column(columnDefinition = "text")
+    private String content;
+
     public void publishNow() {
         publishedAt = LocalDateTime.now();
     }
