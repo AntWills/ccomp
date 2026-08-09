@@ -102,7 +102,7 @@ public class NewsController {
             }
     )
     @GetMapping("/admin/{id}")
-    @PreAuthorize("hasRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<?> getById(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         return newsApplication.getById(id)
                 .map(ResponseEntity::ok)
@@ -125,7 +125,7 @@ public class NewsController {
             }
     )
     @PostMapping("/create")
-    @PreAuthorize("hasRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<?> create(@AuthenticationPrincipal Jwt jwt){
         NewsResponse entity = newsApplication.create(UUID.fromString(jwt.getSubject()));
 
