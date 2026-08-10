@@ -1,5 +1,7 @@
 package com.ccomp.br.domain.storage.application;
 
+import com.ccomp.br.domain.storage.dto.UploadFileResponse;
+import com.ccomp.br.shared.exceptions.StorageException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +18,8 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +34,8 @@ public class StorageService {
     @Value("${storage.endpoint}")
     private String endpoint;
 
-    public String upload(MultipartFile file, String fileName) {
+    public UploadFileResponse upload(MultipartFile file) {
+        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
         try {
             s3Client.putObject(
                     PutObjectRequest.builder()
@@ -39,25 +44,23 @@ public class StorageService {
                             .contentType(file.getContentType())
                             .build(),
                     RequestBody.fromBytes(file.getBytes()));
-
-            return endpoint + "/" + bucket + "/" + fileName;
         } catch (IOException | SdkException e) {
-            log.error("Não foi possível enviar o arquivo {} para o bucket {}!", fileName, bucket);
-            log.error(e.getMessage());
-            return null;
+            log.error("Não foi possível enviar o arquivo [{}] para o bucket [{}]!", fileName, bucket, e);
+            throw new StorageException("Falha ao salvar arquivo no storage: " + e.getMessage());
         }
+        return new UploadFileResponse(endpoint + "/" + bucket + "/" + fileName, fileName);
     }
 
-    public Resource findByFileName(String fileName) {
+    public Optional<Resource> findByFileName(String fileName) {
         try {
             ResponseBytes<GetObjectResponse> response = s3Client.getObjectAsBytes(request ->
                     request.bucket(bucket).key(fileName));
 
-            return new ByteArrayResource(response.asByteArray());
+            return Optional.of(new ByteArrayResource(response.asByteArray()));
         } catch (SdkException e) {
-            log.error("Não foi possível encontrar o arquivo {} no bucket {}!", fileName, bucket);
+            log.error("Não foi possível encontrar o arquivo [{}] no bucket [{}]!", fileName, bucket);
             log.error(e.getMessage());
-            return null;
+            return Optional.empty();
         }
     }
 
@@ -69,7 +72,7 @@ public class StorageService {
                             .key(fileName)
                             .build());
         } catch (SdkException e) {
-            log.error("Não foi possível deletar o arquivo {} do bucket {}!", fileName, bucket);
+            log.error("Não foi possível deletar o arquivo [{}] do bucket [{}]!", fileName, bucket);
             log.error(e.getMessage());
         }
     }
