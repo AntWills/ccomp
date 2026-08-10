@@ -65,6 +65,7 @@ public class NewsApplication {
     @Transactional(readOnly = true)
     public Optional<NewsResponse> getBySlug(String slug) {
         return newsRepository.findBySlug(slug)
+                .filter(News::hasPublished)
                 .map(newsMapper::newsToNewsResponse);
     }
 
