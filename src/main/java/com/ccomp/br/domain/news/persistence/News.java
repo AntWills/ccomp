@@ -67,6 +67,10 @@ public class News {
         publishedAt = LocalDateTime.now();
     }
 
+    public boolean hasPublished() {
+        return publishedAt != null;
+    }
+
     public boolean isAuthor(UUID userId) {
         return userId.equals(authorId);
     }
