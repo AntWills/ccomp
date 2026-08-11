@@ -29,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @WithMockUser
 @Slf4j
-class UserControllerTest {
+class UserProfileControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
