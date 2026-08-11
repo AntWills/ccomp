@@ -71,7 +71,7 @@ public class NewsController {
             }
     )
     @SecurityRequirements
-    @GetMapping
+    @PostMapping("/search")
     public ResponseEntity<CursorPage<NewsItem>> searchNews(
             @Valid NewsFilter filter,
             @RequestParam(required = false) String nextCursor,

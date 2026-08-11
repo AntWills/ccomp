@@ -33,7 +33,7 @@ public class UserModel {
     @Column(name = "status_account", columnDefinition = "varchar(25)", nullable = false)
     private EnumUserStatusAccount statusAccount;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(nullable = false)

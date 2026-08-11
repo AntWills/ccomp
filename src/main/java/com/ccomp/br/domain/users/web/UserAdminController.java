@@ -1,18 +1,25 @@
 package com.ccomp.br.domain.users.web;
 
+import com.ccomp.br.domain.news.dto.NewsPageResponse;
 import com.ccomp.br.domain.users.application.AdminServices;
 import com.ccomp.br.domain.users.application.UserApplication;
 import com.ccomp.br.domain.users.dto.BlockAccountReq;
+import com.ccomp.br.domain.users.dto.UserSearchFilter;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
+import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -40,16 +47,19 @@ public class UserAdminController {
 
     @Operation(
             summary = "Listar todos os usuários",
-            description = "Retorna uma lista com todos os usuários cadastrados na aplicação. Requer permissão ADMIN."
+            description = "Retorna uma lista, junto com o cursor, de todos os usuários cadastrados na aplicação. Requer permissão ADMIN."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de usuários retornada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Requisição não autenticada"),
             @ApiResponse(responseCode = "403", description = "Acesso negado — Requer perfil ADMIN")
     })
-    @GetMapping("/all")
-    public ResponseEntity<List<UserDTO>> getAll() {
-        return ResponseEntity.ok(adminServices.getAll());
+    @PostMapping("/search")
+    public ResponseEntity<CursorPage<UserDTO>> getAll(
+            @Valid @RequestBody UserSearchFilter filter,
+            @RequestParam(required = false) String nextCursor,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return ResponseEntity.ok(adminServices.getAll(filter, nextCursor, pageSize));
     }
 
     @Operation(
