@@ -13,6 +13,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDateTime;
+
 @Slf4j
 @Configuration
 @Profile("dev")
@@ -30,6 +32,8 @@ public class DataInitializerDevConfig {
                         .emailAddress(emailAddress)
                         .password(encoder.encode("admin"))
                         .statusAccount(EnumUserStatusAccount.ACTIVE)
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
                         .build());
 
                 rolesServices.addRole(userSaved.getId(), EnumRoles.ADMIN);

@@ -5,6 +5,7 @@ import com.ccomp.br.module.email.EmailAddress;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Table(name = "tb_users")
@@ -31,6 +32,12 @@ public class UserModel {
     @Enumerated(EnumType.STRING)
     @Column(name = "status_account", columnDefinition = "varchar(25)", nullable = false)
     private EnumUserStatusAccount statusAccount;
+
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
 
     public UserModel(String name, String password, EmailAddress email){
         this.name = name;
