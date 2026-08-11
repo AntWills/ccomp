@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.users.external;
 
 import com.ccomp.br.domain.security.roles.application.RolesServices;
+import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.domain.users.external.dto.UserCreatedEvent;
 import com.ccomp.br.domain.security.roles.enums.EnumRoles;
 import com.ccomp.br.domain.users.persistence.UserModel;
@@ -47,7 +48,14 @@ public class UserManagement {
 
         String encryptedPassword = passwordEncoder.encode(dto.password());
 
-        UserModel userSaved = userModelRepository.save(new UserModel(dto.name(), encryptedPassword, dto.email()));
+        UserModel user = UserModel.builder()
+                .name(dto.name())
+                .emailAddress(dto.email())
+                .password(encryptedPassword)
+                .statusAccount(EnumUserStatusAccount.ACTIVE)
+                .build();
+
+        UserModel userSaved = userModelRepository.save(user);
         rolesServices.addRole(userSaved.getId(), EnumRoles.USER);
 
         eventPublisher.publishEvent(new UserCreatedEvent(dto.name(), dto.email()));

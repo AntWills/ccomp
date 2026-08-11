@@ -31,21 +31,6 @@ public class UserProfileController {
     }
 
     @Operation(
-            summary = "Listar todos os usuários",
-            description = "Retorna uma lista com todos os usuários cadastrados na aplicação. Requer permissão ADMIN."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Lista de usuários retornada com sucesso"),
-            @ApiResponse(responseCode = "401", description = "Requisição não autenticada"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado — Requer perfil ADMIN")
-    })
-    @GetMapping("/all")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<UserDTO>> getAll() {
-        return ResponseEntity.ok(userApplication.getAll());
-    }
-
-    @Operation(
             summary = "Obter dados do usuário logado",
             description = "Retorna os detalhes do perfil do usuário autenticado no momento através do Token JWT."
     )

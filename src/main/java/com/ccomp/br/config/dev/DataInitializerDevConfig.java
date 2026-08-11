@@ -2,6 +2,7 @@ package com.ccomp.br.config.dev;
 
 import com.ccomp.br.domain.security.roles.application.RolesServices;
 import com.ccomp.br.domain.security.roles.enums.EnumRoles;
+import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.module.email.EmailAddress;
@@ -28,6 +29,7 @@ public class DataInitializerDevConfig {
                         .name("admin")
                         .emailAddress(emailAddress)
                         .password(encoder.encode("admin"))
+                        .statusAccount(EnumUserStatusAccount.ACTIVE)
                         .build());
 
                 rolesServices.addRole(userSaved.getId(), EnumRoles.ADMIN);
