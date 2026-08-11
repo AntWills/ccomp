@@ -2,20 +2,22 @@ package com.ccomp.br.domain.users.web;
 
 import com.ccomp.br.domain.users.application.AdminServices;
 import com.ccomp.br.domain.users.application.UserApplication;
+import com.ccomp.br.domain.users.dto.BlockAccountReq;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -80,5 +82,24 @@ public class UserAdminController {
         return adminServices.getByEmail(email)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
+    @Operation(
+            summary = "Bloquei o usuário",
+            description = "O perfil do usuário será bloqueado, com todas as suas credenciais suspensas e impedido de fazer login."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Usuário bloqueado"),
+            @ApiResponse(responseCode = "401", description = "Requisição não autenticada / Token inválido"),
+            @ApiResponse(responseCode = "404", description = "Usuário autenticado não encontrado na base de dados")
+    })
+    @PostMapping("{userId}/block")
+    public ResponseEntity<?> getByEmail(
+            @PathVariable UUID userId,
+            @Valid @RequestBody BlockAccountReq req,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+        adminServices.blockUser(userId, req.reason(), UUID.fromString(jwt.getSubject()));
+
+        return ResponseEntity.ok().build();
     }
 }

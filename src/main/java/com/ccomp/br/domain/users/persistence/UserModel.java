@@ -37,4 +37,12 @@ public class UserModel {
         this.password = password;
         this.emailAddress = email;
     }
+
+    public void deactivate() {
+        this.statusAccount = EnumUserStatusAccount.DEACTIVATED;
+    }
+
+    public void block() {
+        this.statusAccount = EnumUserStatusAccount.BLOCKED;
+    }
 }

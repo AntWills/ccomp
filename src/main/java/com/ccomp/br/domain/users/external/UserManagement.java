@@ -61,11 +61,10 @@ public class UserManagement {
         eventPublisher.publishEvent(new UserCreatedEvent(dto.name(), dto.email()));
     }
 
-    public UserDTO validateCredentials(EmailAddress emailAddress, String password) {
-        return userModelRepository.findByEmailAddress(emailAddress)
-                .filter(userModel -> passwordEncoder.matches(password, userModel.getPassword()))
-                .map(userMapper::userToDto)
-                .orElseThrow(() -> new BadCredentialsException("Email or password incorrect!"));
+    public boolean isAccountActive(UUID userId) {
+        return userModelRepository.findById(userId)
+                .map(user -> user.getStatusAccount() == EnumUserStatusAccount.ACTIVE)
+                .orElse(false);
     }
 
     public void updatePassword(UUID userId, String password) {

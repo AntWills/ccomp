@@ -61,7 +61,7 @@ public class AuthApplication {
                 .toList();
 
         return new AccessTokenResponse(
-                jwtService.getAccessToken(userDetails.getId(), roles),
+                jwtService.generateAccessToken(userDetails.getId(), roles),
                 jwtService.getRefreshToken(userDetails.getId()).getToken());
     }
 

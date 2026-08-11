@@ -4,11 +4,14 @@ import com.ccomp.br.domain.auth.dto.RefreshTokenRequest;
 import com.ccomp.br.domain.security.jwt.persistence.RefreshToken;
 import com.ccomp.br.domain.security.jwt.persistence.RefreshTokenRepository;
 import com.ccomp.br.domain.security.roles.application.RolesServices;
+import com.ccomp.br.domain.users.external.UserManagement;
+import com.ccomp.br.shared.exceptions.InvalidTokenException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -25,14 +28,16 @@ public class JwtService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtEncoder jwtEncoder;
     private final RolesServices rolesServices;
+    private final UserManagement userManagement;
 
-    public JwtService(RefreshTokenRepository refreshTokenRepository, JwtEncoder jwtEncoder, RolesServices rolesServices) {
+    public JwtService(RefreshTokenRepository refreshTokenRepository, JwtEncoder jwtEncoder, RolesServices rolesServices, UserManagement userManagement) {
         this.refreshTokenRepository = refreshTokenRepository;
         this.jwtEncoder = jwtEncoder;
         this.rolesServices = rolesServices;
+        this.userManagement = userManagement;
     }
 
-    public String getAccessToken(UUID userId, List<String> roles) {
+    public String generateAccessToken(UUID userId, List<String> roles) {
         Instant now = Instant.now();
         Instant expiresAt = now.plusSeconds(accessExpirationInSeconds);
 
@@ -47,6 +52,7 @@ public class JwtService {
         return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
     }
 
+    @Transactional
     public RefreshToken getRefreshToken(UUID userId){
         RefreshToken refreshToken = RefreshToken.builder()
                 .userId(userId)
@@ -57,14 +63,16 @@ public class JwtService {
         return refreshTokenRepository.save(refreshToken);
     }
 
+    @Transactional
     public Optional<String> validRefreshToken(RefreshTokenRequest request) {
-        Optional<RefreshToken> refreshOpt =
-                refreshTokenRepository.findByToken(request.refreshToken());
+        RefreshToken refresh =
+                refreshTokenRepository.findByToken(request.refreshToken())
+                        .orElseThrow(() -> new InvalidTokenException("Tempo de acesso expirado."));
 
-        if (refreshOpt.isEmpty())
+        if(!userManagement.isAccountActive(refresh.getUserId())) {
+            refreshTokenRepository.delete(refresh);
             return Optional.empty();
-
-        RefreshToken refresh = refreshOpt.get();
+        }
 
         if (refresh.isTokenExpired()) {
             refreshTokenRepository.delete(refresh);
@@ -75,10 +83,16 @@ public class JwtService {
                 .map(role -> "ROLE_" + role.name())
                 .toList();
 
-        return Optional.of(getAccessToken(refresh.getUserId(), roles));
+        return Optional.of(generateAccessToken(refresh.getUserId(), roles));
     }
 
+    @Transactional
     public void deleteRefreshToken(RefreshTokenRequest request){
         refreshTokenRepository.deleteByToken(request.refreshToken());
+    }
+
+    @Transactional
+    public void deleteRefreshTokenByUserId(UUID userId) {
+        refreshTokenRepository.deleteByUserId(userId);
     }
 }

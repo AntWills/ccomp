@@ -74,7 +74,7 @@ public class OpenApiConfig {
                     .map(GrantedAuthority::getAuthority)
                     .toList();
 
-            String accessToken = jwtService.getAccessToken(userDetails.getId(), roles);
+            String accessToken = jwtService.generateAccessToken(userDetails.getId(), roles);
             // RefreshToken refreshToken = jwtService.getRefreshToken(userDetails.getId());
 
             // Descrição ultra direta e limpa, sem rodeios

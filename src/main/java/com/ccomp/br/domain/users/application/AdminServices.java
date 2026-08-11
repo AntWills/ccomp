@@ -1,12 +1,15 @@
 package com.ccomp.br.domain.users.application;
 
+import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.domain.users.util.UserMapper;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
+import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -23,10 +26,21 @@ public class AdminServices {
         this.userMapper = userMapper;
     }
 
-
+    @Transactional(readOnly = true)
     public Optional<UserDTO> getByEmail(EmailAddress email){
         log.info("Buscando no banco os dados do email: {}", email);
         return userModelRepository.findByEmailAddress(email)
                 .map(userMapper::userToDto);
+    }
+
+    @Transactional
+    public void blockUser(UUID userId, String reason, UUID adminId) {
+        UserModel user = userModelRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuário com id [%s] não encontrado.".formatted(userId)));
+
+        user.block();
+
+        userModelRepository.save(user);
+
     }
 }
