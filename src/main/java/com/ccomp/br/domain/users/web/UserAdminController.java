@@ -49,7 +49,7 @@ public class UserAdminController {
     })
     @GetMapping("/all")
     public ResponseEntity<List<UserDTO>> getAll() {
-        return ResponseEntity.ok(userApplication.getAll());
+        return ResponseEntity.ok(adminServices.getAll());
     }
 
     @Operation(
@@ -85,7 +85,7 @@ public class UserAdminController {
     }
 
     @Operation(
-            summary = "Bloquei o usuário",
+            summary = "Bloqueia o usuário",
             description = "O perfil do usuário será bloqueado, com todas as suas credenciais suspensas e impedido de fazer login."
     )
     @ApiResponses(value = {
@@ -94,11 +94,30 @@ public class UserAdminController {
             @ApiResponse(responseCode = "404", description = "Usuário autenticado não encontrado na base de dados")
     })
     @PostMapping("{userId}/block")
-    public ResponseEntity<?> getByEmail(
+    public ResponseEntity<?> blockByEmail(
             @PathVariable UUID userId,
             @Valid @RequestBody BlockAccountReq req,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
         adminServices.blockUser(userId, req.reason(), UUID.fromString(jwt.getSubject()));
+
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(
+            summary = "Desbloqueia o usuário",
+            description = "O perfil do usuário que está bloqueado, será desbloqueado e retornado como ativo (ACTIVE) para a plataforma."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Usuário bloqueado"),
+            @ApiResponse(responseCode = "401", description = "Requisição não autenticada / Token inválido"),
+            @ApiResponse(responseCode = "404", description = "Usuário autenticado não encontrado na base de dados")
+    })
+    @PostMapping("{userId}/unlock")
+    public ResponseEntity<?> unlockByEmail(
+            @PathVariable UUID userId,
+            @Valid @RequestBody BlockAccountReq req,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+        adminServices.unlockUser(userId, req.reason(), UUID.fromString(jwt.getSubject()));
 
         return ResponseEntity.ok().build();
     }

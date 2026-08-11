@@ -45,4 +45,9 @@ public class UserModel {
     public void block() {
         this.statusAccount = EnumUserStatusAccount.BLOCKED;
     }
+
+    public void unlock() {
+        if(statusAccount == EnumUserStatusAccount.BLOCKED)
+            this.statusAccount = EnumUserStatusAccount.ACTIVE;
+    }
 }

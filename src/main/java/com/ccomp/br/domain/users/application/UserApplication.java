@@ -35,13 +35,6 @@ public class UserApplication {
                 .map(userMapper::userToDto);
     }
 
-    public List<UserDTO> getAll(){
-        return userModelRepository.findAll()
-                .stream()
-                .map(userMapper::userToDto)
-                .toList();
-    }
-
     @Transactional
     public void deactivateOwnAccount(UUID userId) {
         UserModel user = userModelRepository.findById(userId)
