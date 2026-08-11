@@ -2,6 +2,9 @@ package com.ccomp.br.config;
 
 import com.ccomp.br.domain.security.jwt.application.JwtService;
 import com.ccomp.br.domain.security.UserDetailsImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import io.swagger.v3.core.jackson.ModelResolver;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
@@ -87,5 +90,12 @@ public class OpenApiConfig {
 
             openApi.getInfo().setDescription(dynamicDescription);
         };
+    }
+
+    @Bean
+    public ModelResolver modelResolver() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+        return new ModelResolver(objectMapper);
     }
 }

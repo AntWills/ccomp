@@ -43,6 +43,8 @@ POSTGRES_DB=ccomp-db
 POSTGRES_DRIVER=org.postgresql.Driver
 POSTGRES_DIALECT=org.hibernate.dialect.PostgreSQLDialect
 
+OTEL_OTLP_ENDPOINT=http://grafana-lgtm:4318
+
 PUBLIC_KEY=file:/app/keys/public.key
 PRIVITE_KEY=file:/app/keys/private.key
 
