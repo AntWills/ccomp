@@ -2,6 +2,7 @@ package com.ccomp.br.domain.news.web;
 
 import com.ccomp.br.domain.news.application.NewsApplication;
 import com.ccomp.br.domain.news.dto.*;
+import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -133,6 +134,30 @@ public class NewsController {
     }
 
     @Operation(
+            summary = "Publica uma notícia",
+            description = "Define a data de publicação da notícia, tornando-a visível publicamente.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Notícia publicada com sucesso"
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "Não autorizado"
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Notícia não encontrada"
+                    )
+            }
+    )
+    @PostMapping("/{id}/publish")
+    public ResponseEntity<?> publish(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        newsApplication.publish(id, UUID.fromString(jwt.getSubject()));
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(
             summary = "Atualiza parcialmente uma notícia",
             description = "Realiza a atualização parcial (PATCH) de uma notícia existente. " +
                     "Apenas os campos enviados no corpo da requisição serão modificados, mantendo os demais inalterados. " +
@@ -171,12 +196,13 @@ public class NewsController {
     }
 
     @Operation(
-            summary = "Publica uma notícia",
-            description = "Define a data de publicação da notícia, tornando-a visível publicamente.",
+            summary = "Deletar uma nóticia",
+            description = "Rota que permite que o autor delete qualquer nóticia que pertença a ele, mesmo que ela já tenha sido publicada.",
             responses = {
                     @ApiResponse(
                             responseCode = "200",
-                            description = "Notícia publicada com sucesso"
+                            description = "Nóticia deletada com sucesso.",
+                            content = @Content(schema = @Schema(implementation = MessageResponse.class))
                     ),
                     @ApiResponse(
                             responseCode = "401",
@@ -188,9 +214,10 @@ public class NewsController {
                     )
             }
     )
-    @PostMapping("/{id}/publish")
-    public ResponseEntity<?> publish(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
-        newsApplication.publish(id, UUID.fromString(jwt.getSubject()));
-        return ResponseEntity.ok().build();
+    @DeleteMapping("/{newsId}")
+    public ResponseEntity<MessageResponse> deleteById(@PathVariable Long newsId, @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(
+                new MessageResponse("Nóticia deletada com sucesso.")
+        );
     }
 }

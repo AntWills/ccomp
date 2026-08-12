@@ -113,6 +113,17 @@ public class NewsApplication {
         return newsMapper.newsToNewsResponse(entity);
     }
 
+    @Transactional
+    public void delete(Long newsId, UUID userId) {
+        News entity = newsRepository.findById(newsId)
+                .orElseThrow(() -> new ResourceNotFoundException("Notícia não encontrada."));
+
+        if(entity.isAuthor(userId))
+            throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+
+        newsRepository.deleteById(newsId);
+    }
+
     private String generateSlug(String title) {
         String base = SlugUtils.toSlug(title);
 
