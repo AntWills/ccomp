@@ -24,6 +24,6 @@ public enum EnumUserStatusAccount {
             }
         }
 
-        throw new DomainException("O status da conta é inválida: " + value + ".");
+        throw new DomainException("O statusAccount da conta é inválida: " + value + ".");
     }
 }

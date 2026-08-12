@@ -5,6 +5,7 @@ import com.ccomp.br.domain.users.application.UserApplication;
 import com.ccomp.br.domain.users.dto.BlockAccountReq;
 import com.ccomp.br.domain.users.dto.UserSearchFilter;
 import com.ccomp.br.module.email.EmailAddress;
+import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -49,7 +50,7 @@ public class UserAdminController {
             @ApiResponse(responseCode = "403", description = "Acesso negado — Requer perfil ADMIN")
     })
     @PostMapping("/search")
-    public ResponseEntity<CursorPage<UserDTO>> getAll(
+    public ResponseEntity<CursorPage<UserDTO>> searchUsers(
             @Valid @RequestBody UserSearchFilter filter,
             @RequestParam(required = false) String nextCursor,
             @RequestParam(defaultValue = "10") int pageSize) {
@@ -98,13 +99,15 @@ public class UserAdminController {
             @ApiResponse(responseCode = "404", description = "Usuário autenticado não encontrado na base de dados")
     })
     @PostMapping("{userId}/block")
-    public ResponseEntity<?> blockByEmail(
+    public ResponseEntity<MessageResponse> blockByEmail(
             @PathVariable UUID userId,
             @Valid @RequestBody BlockAccountReq req,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
         adminServices.blockUser(userId, req.reason(), UUID.fromString(jwt.getSubject()));
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(
+                new MessageResponse("Usuário bloqueado com sucesso.")
+        );
     }
 
     @Operation(
@@ -117,12 +120,14 @@ public class UserAdminController {
             @ApiResponse(responseCode = "404", description = "Usuário autenticado não encontrado na base de dados")
     })
     @PostMapping("{userId}/unlock")
-    public ResponseEntity<?> unlockByEmail(
+    public ResponseEntity<MessageResponse> unlockByEmail(
             @PathVariable UUID userId,
             @Valid @RequestBody BlockAccountReq req,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
         adminServices.unlockUser(userId, req.reason(), UUID.fromString(jwt.getSubject()));
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(
+                new MessageResponse("Usuário desbloqueado com sucesso.")
+        );
     }
 }

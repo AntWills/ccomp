@@ -35,6 +35,6 @@ public class UserSpec {
 
     public static Specification<UserModel> buildSpecByCursor(UserSearchFilter filter, LocalDateTime cursor) {
         return Specification.where(beforeCursor(cursor))
-                .and(hasStausAccount(filter.status()));
+                .and(hasStausAccount(filter.statusAccount()));
     }
 }

@@ -79,7 +79,7 @@ public class AdminServices {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário com id [%s] não encontrado.".formatted(userId)));
 
-//        user.unlock();
+        user.unlock();
 
         log.info("Dados do usuário após unlock:\n{}", DebugUtils.printJson(user));
 
