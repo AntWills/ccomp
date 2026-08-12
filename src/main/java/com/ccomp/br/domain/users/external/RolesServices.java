@@ -1,9 +1,8 @@
-package com.ccomp.br.domain.security.roles.application;
+package com.ccomp.br.domain.users.external;
 
-import com.ccomp.br.domain.security.roles.enums.EnumRoles;
-import com.ccomp.br.domain.security.roles.persistence.Roles;
-import com.ccomp.br.domain.security.roles.persistence.RolesRepository;
-import com.ccomp.br.domain.users.persistence.UserModel;
+import com.ccomp.br.domain.users.enums.EnumRoles;
+import com.ccomp.br.domain.users.persistence.roles.Roles;
+import com.ccomp.br.domain.users.persistence.roles.RolesRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 

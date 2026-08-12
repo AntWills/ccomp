@@ -10,7 +10,7 @@ import com.ccomp.br.domain.events.persistence.activities.EventActivity;
 import com.ccomp.br.domain.events.persistence.activities.EventActivityRepository;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
-import com.ccomp.br.domain.security.roles.application.RolesServices;
+import com.ccomp.br.domain.users.external.RolesServices;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

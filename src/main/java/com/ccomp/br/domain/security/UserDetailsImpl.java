@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.security;
 
-import com.ccomp.br.domain.security.roles.enums.EnumRoles;
+import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.shared.dto.UserDTO;
 import lombok.NonNull;

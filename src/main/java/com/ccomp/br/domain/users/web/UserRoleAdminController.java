@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.users.web;
 
-import com.ccomp.br.domain.security.roles.application.RolesServices;
-import com.ccomp.br.domain.security.roles.enums.EnumRoles;
+import com.ccomp.br.domain.users.external.RolesServices;
+import com.ccomp.br.domain.users.enums.EnumRoles;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;

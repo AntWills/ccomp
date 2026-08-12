@@ -1,9 +1,8 @@
 package com.ccomp.br.domain.users.external;
 
-import com.ccomp.br.domain.security.roles.application.RolesServices;
 import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.domain.users.external.dto.UserCreatedEvent;
-import com.ccomp.br.domain.security.roles.enums.EnumRoles;
+import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.domain.users.util.UserMapper;
@@ -16,7 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -41,7 +39,7 @@ public class UserManagement {
         this.userMapper = userMapper;
     }
 
-    @Transactional(propagation = Propagation.REQUIRED)
+    @Transactional
     public void register(RegisterUserDTO dto){
         var exist = userModelRepository.findByEmailAddress(dto.email());
         if(exist.isPresent()) throw new ConflictException("Exist email!");

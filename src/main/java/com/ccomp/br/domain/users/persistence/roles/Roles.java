@@ -1,6 +1,6 @@
-package com.ccomp.br.domain.security.roles.persistence;
+package com.ccomp.br.domain.users.persistence.roles;
 
-import com.ccomp.br.domain.security.roles.enums.EnumRoles;
+import com.ccomp.br.domain.users.enums.EnumRoles;
 import jakarta.persistence.*;
 import lombok.*;
 
