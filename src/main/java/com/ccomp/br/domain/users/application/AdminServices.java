@@ -46,8 +46,7 @@ public class AdminServices {
         if(pageSize > 50) pageSize = 50;
 
         Specification<UserModel> spec = UserSpec.buildSpecByCursor(filter,
-                        CursorCodec.decode(cursor, LocalDateTime.class).orElse(null))
-                .and(UserSpec.fetchRole());
+                        CursorCodec.decode(cursor, LocalDateTime.class).orElse(null));
 
         int finalPageSize = pageSize;
         List<UserModel> results = userModelRepository.findBy(spec, query -> query
