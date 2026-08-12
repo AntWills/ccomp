@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.users.application;
 
+import com.ccomp.br.domain.users.dto.UserItem;
 import com.ccomp.br.domain.users.dto.UserSearchFilter;
 import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.external.RolesServices;
@@ -41,24 +42,29 @@ public class AdminServices {
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<UserDTO> searchUsers(UserSearchFilter filter, String cursor, int pageSize){
+    public CursorPage<UserItem> searchUsers(UserSearchFilter filter, String cursor, int pageSize){
         if(pageSize > 50) pageSize = 50;
 
         Specification<UserModel> spec = UserSpec.buildSpecByCursor(filter,
-                CursorCodec.decode(cursor, LocalDateTime.class).orElse(null));
+                        CursorCodec.decode(cursor, LocalDateTime.class).orElse(null))
+                .and(UserSpec.fetchRole());
 
         int finalPageSize = pageSize;
-        List<UserDTO> results = userModelRepository.findBy(spec, query -> query
-                .as(UserDTO.class)
-                .limit(finalPageSize + 1)
+        List<UserModel> results = userModelRepository.findBy(spec, query -> query
                 .sortBy(Sort.by(Sort.Direction.DESC, "createdAt"))
+                .limit(finalPageSize + 1)
                 .all());
 
         boolean hasNext = results.size() > finalPageSize;
-        List<UserDTO> page = hasNext ? results.subList(0, finalPageSize) : results;
-        String nextCursor = hasNext ? CursorCodec.encode(page.getLast().createdAt()) : null;
+        List<UserModel> page = hasNext ? results.subList(0, finalPageSize) : results;
 
-        return new CursorPage<>(page, nextCursor, null);
+        List<UserItem> items = page.stream()
+                .map(userMapper::userToItem)
+                .toList();
+
+        String nextCursor = hasNext ? CursorCodec.encode(page.getLast().getCreatedAt()) : null;
+
+        return new CursorPage<>(items, nextCursor, null);
     }
 
     @Transactional(readOnly = true)

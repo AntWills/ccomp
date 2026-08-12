@@ -40,7 +40,7 @@ public class UserModel {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    @OneToOne(mappedBy = "user")
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
     private Roles role;
 
     public UserModel(String name, String password, EmailAddress email){

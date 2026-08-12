@@ -1,7 +1,9 @@
 package com.ccomp.br.domain.users.persistence;
 
 import com.ccomp.br.domain.users.dto.UserSearchFilter;
+import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
+import jakarta.persistence.criteria.JoinType;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
@@ -30,6 +32,26 @@ public class UserSpec {
             if(cursor == null)
                 return cb.lessThanOrEqualTo(root.get("createdAt"), LocalDateTime.now());
             return cb.lessThan(root.get("createdAt"), cursor);
+        };
+    }
+
+    public static Specification<UserModel> hasAnyRole(List<EnumRoles> roles) {
+        return (root, query, cb) -> {
+            if (roles == null || roles.isEmpty())
+                return cb.conjunction();
+
+            var roleJoin = root.join("role", JoinType.LEFT);
+            return roleJoin.get("role").in(roles);
+        };
+    }
+
+    public static Specification<UserModel> fetchRole() {
+        return (root, query, cb) -> {
+            // evita aplicar fetch em queries de contagem (se algum dia usar Page/count)
+            if (query.getResultType() != Long.class && query.getResultType() != long.class) {
+                root.fetch("role", JoinType.LEFT);
+            }
+            return cb.conjunction();
         };
     }
 
