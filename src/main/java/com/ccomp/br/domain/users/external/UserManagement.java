@@ -56,7 +56,7 @@ public class UserManagement {
                 .build();
 
         UserModel userSaved = userModelRepository.save(user);
-        rolesServices.addRole(userSaved.getId(), EnumRoles.USER);
+        rolesServices.initRole(userSaved, EnumRoles.USER);
 
         eventPublisher.publishEvent(new UserCreatedEvent(dto.name(), dto.email()));
     }

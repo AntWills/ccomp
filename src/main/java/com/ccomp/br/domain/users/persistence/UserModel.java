@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.users.persistence;
 
 import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
+import com.ccomp.br.domain.users.persistence.roles.Roles;
 import com.ccomp.br.module.email.EmailAddress;
 import jakarta.persistence.*;
 import lombok.*;
@@ -38,6 +39,9 @@ public class UserModel {
 
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    @OneToOne(mappedBy = "user")
+    private Roles role;
 
     public UserModel(String name, String password, EmailAddress email){
         this.name = name;

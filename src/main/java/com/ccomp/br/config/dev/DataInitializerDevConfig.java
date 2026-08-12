@@ -36,7 +36,7 @@ public class DataInitializerDevConfig {
                         .updatedAt(LocalDateTime.now())
                         .build());
 
-                rolesServices.addRole(userSaved.getId(), EnumRoles.ADMIN);
+                rolesServices.initRole(userSaved, EnumRoles.ADMIN);
 
                 log.info("Usuário admin criado com sucesso.\nEmail: {}\nPassword: {}", emailAddress.getValue(), "admin");
             } else {

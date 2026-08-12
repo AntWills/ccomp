@@ -1,8 +1,10 @@
 package com.ccomp.br.domain.users.external;
 
 import com.ccomp.br.domain.users.enums.EnumRoles;
+import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.roles.Roles;
 import com.ccomp.br.domain.users.persistence.roles.RolesRepository;
+import com.ccomp.br.shared.exceptions.DomainException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,12 +28,12 @@ public class RolesServices {
     }
 
     @Transactional
-    public void addRole(UUID userId, EnumRoles role) {
-        if(rolesRepository.existsByUserIdAndRole(userId, role))
+    public void initRole(UserModel user, EnumRoles role) {
+        if(rolesRepository.existsByUserId(user.getId()))
             return;
 
         Roles roles = Roles.builder()
-                .userId(userId)
+                .user(user)
                 .role(role)
                 .build();
 
@@ -39,11 +41,16 @@ public class RolesServices {
     }
 
     @Transactional
-    public void removeRole(UUID userId, EnumRoles role) {
-        Optional<Roles> entity = rolesRepository.findByUserIdAndRole(userId, role);
+    public void changeRole(UserModel user, EnumRoles role) {
+        Roles entity = rolesRepository.findByUserId(user.getId())
+                .orElse(Roles.builder()
+                        .user(user)
+                        .role(EnumRoles.USER)
+                        .build()
+                );
 
-        if(entity.isEmpty()) return;
+        entity.setRole(role);
 
-        rolesRepository.delete(entity.get());
+        rolesRepository.save(entity);
     }
 }
