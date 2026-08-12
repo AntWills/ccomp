@@ -1,6 +1,5 @@
 package com.ccomp.br.domain.users.application;
 
-import com.ccomp.br.domain.news.dto.NewsItem;
 import com.ccomp.br.domain.users.dto.UserSearchFilter;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
@@ -36,7 +35,8 @@ public class AdminServices {
         this.userMapper = userMapper;
     }
 
-    public CursorPage<UserDTO> getAll(UserSearchFilter filter, String cursor, int pageSize){
+    @Transactional(readOnly = true)
+    public CursorPage<UserDTO> searchUsers(UserSearchFilter filter, String cursor, int pageSize){
         if(pageSize > 50) pageSize = 50;
 
         Specification<UserModel> spec = UserSpec.buildSpecByCursor(filter,

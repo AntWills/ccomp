@@ -1,6 +1,5 @@
 package com.ccomp.br.domain.users.web;
 
-import com.ccomp.br.domain.news.dto.NewsPageResponse;
 import com.ccomp.br.domain.users.application.AdminServices;
 import com.ccomp.br.domain.users.application.UserApplication;
 import com.ccomp.br.domain.users.dto.BlockAccountReq;
@@ -10,23 +9,18 @@ import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @Tag(
@@ -59,7 +53,7 @@ public class UserAdminController {
             @Valid @RequestBody UserSearchFilter filter,
             @RequestParam(required = false) String nextCursor,
             @RequestParam(defaultValue = "10") int pageSize) {
-        return ResponseEntity.ok(adminServices.getAll(filter, nextCursor, pageSize));
+        return ResponseEntity.ok(adminServices.searchUsers(filter, nextCursor, pageSize));
     }
 
     @Operation(
