@@ -3,7 +3,7 @@ package com.ccomp.br.domain.security.jwt.application;
 import com.ccomp.br.domain.auth.dto.RefreshTokenRequest;
 import com.ccomp.br.domain.security.jwt.persistence.RefreshToken;
 import com.ccomp.br.domain.security.jwt.persistence.RefreshTokenRepository;
-import com.ccomp.br.domain.security.roles.application.RolesServices;
+import com.ccomp.br.domain.users.external.RolesServices;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.exceptions.InvalidTokenException;
 import org.springframework.beans.factory.annotation.Value;

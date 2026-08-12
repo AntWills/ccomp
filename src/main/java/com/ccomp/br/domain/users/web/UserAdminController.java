@@ -3,7 +3,9 @@ package com.ccomp.br.domain.users.web;
 import com.ccomp.br.domain.users.application.AdminServices;
 import com.ccomp.br.domain.users.application.UserApplication;
 import com.ccomp.br.domain.users.dto.BlockAccountReq;
+import com.ccomp.br.domain.users.dto.UserItem;
 import com.ccomp.br.domain.users.dto.UserSearchFilter;
+import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -29,7 +31,7 @@ import java.util.UUID;
         description = "Endpoints de gestão de contas para ADMIN e STAFF")
 @RestController
 @RequestMapping("/api/admin/users")
-@PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+@PreAuthorize("hasRole('ADMIN')")
 public class UserAdminController {
     private final AdminServices adminServices;
     private final UserApplication userApplication;
@@ -50,7 +52,7 @@ public class UserAdminController {
             @ApiResponse(responseCode = "403", description = "Acesso negado — Requer perfil ADMIN")
     })
     @PostMapping("/search")
-    public ResponseEntity<CursorPage<UserDTO>> searchUsers(
+    public ResponseEntity<CursorPage<UserItem>> searchUsers(
             @Valid @RequestBody UserSearchFilter filter,
             @RequestParam(required = false) String nextCursor,
             @RequestParam(defaultValue = "10") int pageSize) {
@@ -128,6 +130,34 @@ public class UserAdminController {
 
         return ResponseEntity.ok(
                 new MessageResponse("Usuário desbloqueado com sucesso.")
+        );
+    }
+
+    @Operation(
+            summary = "Mapipular cargos (Roles) de um usuário",
+            description = "Alterar um perfil de acesso/role específico a um usuário. Requer permissão ADMIN."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Role alterado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Parâmetros de entrada inválidos"),
+            @ApiResponse(responseCode = "401", description = "Requisição não autenticada"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — Requer perfil ADMIN"),
+            @ApiResponse(responseCode = "404", description = "Usuário ou Role não encontrada")
+    })
+    @PostMapping("/{userId}/roles/{role}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<MessageResponse> addRole(
+            @Parameter(description = "ID do usuário (UUID)", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID userId,
+
+            @Parameter(description = "Perfil/Role a ser concedido", example = "ADMIN")
+            @PathVariable EnumRoles role,
+
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
+    ) {
+        adminServices.changeRole(userId, role, UUID.fromString(jwt.getSubject()));
+        return ResponseEntity.ok(
+                new MessageResponse("Cargo alterado com sucesso.")
         );
     }
 }

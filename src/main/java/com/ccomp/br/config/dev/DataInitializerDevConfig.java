@@ -1,7 +1,7 @@
 package com.ccomp.br.config.dev;
 
-import com.ccomp.br.domain.security.roles.application.RolesServices;
-import com.ccomp.br.domain.security.roles.enums.EnumRoles;
+import com.ccomp.br.domain.users.external.RolesServices;
+import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
@@ -36,7 +36,7 @@ public class DataInitializerDevConfig {
                         .updatedAt(LocalDateTime.now())
                         .build());
 
-                rolesServices.addRole(userSaved.getId(), EnumRoles.ADMIN);
+                rolesServices.initRole(userSaved, EnumRoles.ADMIN);
 
                 log.info("Usuário admin criado com sucesso.\nEmail: {}\nPassword: {}", emailAddress.getValue(), "admin");
             } else {

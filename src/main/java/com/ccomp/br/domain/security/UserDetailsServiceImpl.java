@@ -1,10 +1,8 @@
 package com.ccomp.br.domain.security;
 
-import com.ccomp.br.domain.security.roles.application.RolesServices;
-import com.ccomp.br.domain.security.roles.enums.EnumRoles;
+import com.ccomp.br.domain.users.external.RolesServices;
+import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.external.UserManagement;
-import com.ccomp.br.domain.users.persistence.UserModel;
-import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
 import lombok.NonNull;
@@ -31,6 +29,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + email));
 
         List<EnumRoles> roles = rolesServices.loadRolesByUserID(user.id());
+
+        log.info("Roles: {}", roles);
 
         return new UserDetailsImpl(user, roles);
     }
