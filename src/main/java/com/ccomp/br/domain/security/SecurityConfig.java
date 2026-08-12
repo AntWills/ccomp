@@ -112,6 +112,7 @@ public class SecurityConfig {
                             authorize.requestMatchers(HttpMethod.GET, PUBLIC_EVENT_ROUTES).permitAll();
                             // News
                             authorize.requestMatchers(HttpMethod.GET, PUBLIC_NEWS_ROUTES).permitAll();
+                            authorize.requestMatchers(HttpMethod.POST, "/api/news/search").permitAll();
                             // Documentação
 //                            authorize.requestMatchers(SWAGGER_ROUTES).permitAll();
 
