@@ -74,7 +74,7 @@ public class NewsController {
     @SecurityRequirements
     @PostMapping("/search")
     public ResponseEntity<CursorPage<NewsItem>> searchNews(
-            @Valid NewsFilter filter,
+            @Valid @RequestBody NewsFilter filter,
             @RequestParam(required = false) String nextCursor,
             @RequestParam(defaultValue = "10") int pageSize) {
         return ResponseEntity.ok(
