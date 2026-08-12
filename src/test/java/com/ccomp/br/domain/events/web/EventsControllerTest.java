@@ -67,7 +67,7 @@ class EventsControllerTest {
     void setUp(){
         UUID userId = UUID.fromString("18b31f15-e2e8-4a8a-a1fc-4dc17d131ef1");
 
-        jwt = jwtService.getAccessToken(userId, rolesServices.loadRolesByUserID(userId)
+        jwt = jwtService.generateAccessToken(userId, rolesServices.loadRolesByUserID(userId)
                 .stream()
                 .map(Enum::name)
                 .toList());
@@ -141,7 +141,7 @@ class EventsControllerTest {
         log.info("===== INÍCIO TESTE: Adicionar Editor =====");
 
         String editorId = "e5a1b9d5-7f4e-405e-b5d1-5e6f7a8b9c05"; // Fernanda
-        String jwt = jwtService.getAccessToken(OWNER_ID, rolesServices.loadRolesByUserID(OWNER_ID)
+        String jwt = jwtService.generateAccessToken(OWNER_ID, rolesServices.loadRolesByUserID(OWNER_ID)
                 .stream()
                 .map(Enum::name)
                 .toList());
@@ -173,7 +173,7 @@ class EventsControllerTest {
         log.info("===== INÍCIO TESTE: Remover Editor =====");
 
         String editorId = "e5a1b9d5-7f4e-405e-b5d1-5e6f7a8b9c05"; // Fernanda
-        String jwt = jwtService.getAccessToken(OWNER_ID, rolesServices.loadRolesByUserID(OWNER_ID)
+        String jwt = jwtService.generateAccessToken(OWNER_ID, rolesServices.loadRolesByUserID(OWNER_ID)
                 .stream()
                 .map(Enum::name)
                 .toList());
@@ -212,7 +212,7 @@ class EventsControllerTest {
     void addActivity() throws Exception {
         log.info("===== INÍCIO TESTE: Adicionar Atividade =====");
 
-        String jwt = jwtService.getAccessToken(OWNER_ID, rolesServices.loadRolesByUserID(OWNER_ID)
+        String jwt = jwtService.generateAccessToken(OWNER_ID, rolesServices.loadRolesByUserID(OWNER_ID)
                 .stream()
                 .map(Enum::name)
                 .toList());
@@ -248,7 +248,7 @@ class EventsControllerTest {
     void removeActivity() throws Exception {
         log.info("===== INÍCIO TESTE: Remover Atividade =====");
 
-        String jwt = jwtService.getAccessToken(OWNER_ID, rolesServices.loadRolesByUserID(OWNER_ID)
+        String jwt = jwtService.generateAccessToken(OWNER_ID, rolesServices.loadRolesByUserID(OWNER_ID)
                 .stream()
                 .map(Enum::name)
                 .toList());

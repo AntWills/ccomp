@@ -2,6 +2,7 @@ package com.ccomp.br.config.dev;
 
 import com.ccomp.br.domain.security.roles.application.RolesServices;
 import com.ccomp.br.domain.security.roles.enums.EnumRoles;
+import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.module.email.EmailAddress;
@@ -11,6 +12,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.time.LocalDateTime;
 
 @Slf4j
 @Configuration
@@ -28,6 +31,9 @@ public class DataInitializerDevConfig {
                         .name("admin")
                         .emailAddress(emailAddress)
                         .password(encoder.encode("admin"))
+                        .statusAccount(EnumUserStatusAccount.ACTIVE)
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
                         .build());
 
                 rolesServices.addRole(userSaved.getId(), EnumRoles.ADMIN);

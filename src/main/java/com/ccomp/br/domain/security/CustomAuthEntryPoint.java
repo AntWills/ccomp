@@ -51,7 +51,7 @@ public class CustomAuthEntryPoint implements AuthenticationEntryPoint {
         };
 
         var body = Map.of(
-                "status", 401,
+                "statusAccount", 401,
                 "error", "Unauthorized",
                 "message", message
         );

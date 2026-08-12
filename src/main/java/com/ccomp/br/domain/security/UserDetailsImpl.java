@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.security;
 
 import com.ccomp.br.domain.security.roles.enums.EnumRoles;
+import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.shared.dto.UserDTO;
 import lombok.NonNull;
 import org.springframework.security.core.GrantedAuthority;
@@ -41,7 +42,7 @@ public class UserDetailsImpl implements UserDetails {
 
     // Conta ativa, não expirada, credenciais válidas
     @Override public boolean isAccountNonExpired() { return true; }
-    @Override public boolean isAccountNonLocked() { return true; }
+    @Override public boolean isAccountNonLocked() { return user.statusAccount() != EnumUserStatusAccount.BLOCKED; }
     @Override public boolean isCredentialsNonExpired() { return true; }
-    @Override public boolean isEnabled() { return true; }
+    @Override public boolean isEnabled() { return user.statusAccount() == EnumUserStatusAccount.ACTIVE; }
 }

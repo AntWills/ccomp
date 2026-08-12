@@ -71,7 +71,7 @@ public class NewsController {
             }
     )
     @SecurityRequirements
-    @GetMapping
+    @PostMapping("/search")
     public ResponseEntity<CursorPage<NewsItem>> searchNews(
             @Valid NewsFilter filter,
             @RequestParam(required = false) String nextCursor,
@@ -136,7 +136,7 @@ public class NewsController {
             summary = "Atualiza parcialmente uma notícia",
             description = "Realiza a atualização parcial (PATCH) de uma notícia existente. " +
                     "Apenas os campos enviados no corpo da requisição serão modificados, mantendo os demais inalterados. " +
-                    "Os campos permitidos na atualização incluem: título, resumo, imagem de capa, status de destaque e blocos de conteúdo. " +
+                    "Os campos permitidos na atualização incluem: título, resumo, imagem de capa, statusAccount de destaque e blocos de conteúdo. " +
                     "A requisição deve ser enviada no formato JSON através do corpo da requisição (verifique o schema NewsUpdateDto para detalhes dos campos). " +
                     "O ID da notícia alvo deve ser informado na URL. " +
                     "Requer autenticação com um token JWT válido pertencente ao autor.",
