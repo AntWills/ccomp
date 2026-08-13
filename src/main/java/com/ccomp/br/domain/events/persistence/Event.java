@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.persistence;
 
 import com.ccomp.br.domain.events.enums.EnumEventCategory;
+import com.ccomp.br.domain.events.enums.EnumEventFormat;
 import com.ccomp.br.domain.events.persistence.activities.EventActivity;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.enrollments.Enrollment;
@@ -60,6 +61,22 @@ public class Event {
     @Enumerated(EnumType.STRING)
     @Column(name = "category", columnDefinition = "varchar(25)", nullable = false)
     private EnumEventCategory category;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "format", columnDefinition = "varchar(20)", nullable = false)
+    private EnumEventFormat format;
+
+    @Column(name = "address")
+    private String address;
+
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
+    @Column(name = "online_url")
+    private String onlineUrl;
 
     @Column(name = "owner_id", nullable = false)
     private UUID ownerId;
