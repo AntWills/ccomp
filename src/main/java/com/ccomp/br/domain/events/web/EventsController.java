@@ -126,9 +126,9 @@ public class EventsController {
             }
     )
     @SecurityRequirements
-    @GetMapping
+    @PostMapping("search")
     public ResponseEntity<CursorPage<EventListItem>> searchEvents(
-            @Valid EventsFilterRequest filter,
+            @Valid @RequestBody EventsFilterRequest filter,
             @RequestParam(required = false) String nextCursor,
             @RequestParam(defaultValue = "10") int pageSize
     ) {

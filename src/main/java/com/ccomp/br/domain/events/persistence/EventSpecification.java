@@ -3,15 +3,17 @@ package com.ccomp.br.domain.events.persistence;
 import com.ccomp.br.domain.events.dto.EventCursor;
 import com.ccomp.br.domain.events.dto.EventsFilterRequest;
 import com.ccomp.br.domain.events.enums.EnumEventCategory;
+import com.ccomp.br.domain.events.enums.EnumEventFormat;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 
 public class EventSpecification {
     public static Specification<Event> isOpen() {
+        var now = LocalDateTime.now();
         return (root, query, criteriaBuilder) -> criteriaBuilder.and(
-                criteriaBuilder.lessThanOrEqualTo(root.get("startDate"), LocalDateTime.now()),
-                criteriaBuilder.greaterThanOrEqualTo(root.get("endDate"), LocalDateTime.now())
+                criteriaBuilder.lessThanOrEqualTo(root.get("startDate"), now),
+                criteriaBuilder.greaterThanOrEqualTo(root.get("endDate"), now)
         );
     }
 
@@ -19,6 +21,13 @@ public class EventSpecification {
         return (root, query, criteriaBuilder) -> {
             if(category == null) return criteriaBuilder.conjunction();
             return criteriaBuilder.equal(root.get("category"), category);
+        };
+    }
+
+    public static Specification<Event> hashFormat(EnumEventFormat format) {
+        return (root, query, criteriaBuilder) -> {
+            if(format == null) return criteriaBuilder.conjunction();
+            return criteriaBuilder.equal(root.get("format"), format);
         };
     }
 
@@ -46,6 +55,8 @@ public class EventSpecification {
         return Specification.where(isOpen())
                 .and(hasCategory(
                         filter.eventCategory()))
+                .and(hashFormat(
+                        filter.format()))
                 .and(cursorBefore(
                         cursor != null ? cursor.startDate() : null,
                         cursor != null ? cursor.id() : null));

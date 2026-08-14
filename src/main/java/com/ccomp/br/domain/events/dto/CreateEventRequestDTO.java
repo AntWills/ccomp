@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.dto;
 
 import com.ccomp.br.domain.events.enums.EnumEventCategory;
+import com.ccomp.br.domain.events.enums.EnumEventFormat;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -14,6 +15,8 @@ public record CreateEventRequestDTO(
 
         @NotNull(message = "A categoria do evento é obrigatória.")
         EnumEventCategory category,
+        @NotNull(message = "O formato do evento é obrigatório.")
+        EnumEventFormat format,
         LocalDateTime startDate,
         LocalDateTime endDate
 ) {
