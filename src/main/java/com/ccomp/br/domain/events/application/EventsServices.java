@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -74,6 +75,9 @@ public class EventsServices {
                 .limit(finalPageSize + 1)
                 .all());
 
+        log.info("Tamanho da lista: {}", events.size());
+        log.info("Hora agora: {}", LocalDateTime.now());
+
         boolean hasNext = events.size() > pageSize;
         List<EventListItem> page = hasNext ? events.subList(0, pageSize) : events;
 
@@ -93,6 +97,7 @@ public class EventsServices {
                 .title(dto.title())
                 .slug(generateSlug(dto.title()))
                 .category(dto.category())
+                .format(dto.format())
                 .ownerId(ownerId).build();
 
         log.info("Salvando evento: {}", DebugUtils.printJson(eventModel));

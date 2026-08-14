@@ -110,6 +110,7 @@ public class SecurityConfig {
                             authorize.requestMatchers(PUBLIC_AUTH_ROUTES).permitAll();
                             // Event
                             authorize.requestMatchers(HttpMethod.GET, PUBLIC_EVENT_ROUTES).permitAll();
+                            authorize.requestMatchers(HttpMethod.POST, "/api/events/search").permitAll();
                             // News
                             authorize.requestMatchers(HttpMethod.GET, PUBLIC_NEWS_ROUTES).permitAll();
                             authorize.requestMatchers(HttpMethod.POST, "/api/news/search").permitAll();

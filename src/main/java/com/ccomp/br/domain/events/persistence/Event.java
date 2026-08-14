@@ -19,8 +19,11 @@ import java.util.Set;
 import java.util.UUID;
 
 @Table(name = "tb_events", indexes = {
-        @Index(name = "idx_events_slug", columnList = "slug"),
-        @Index(name = "idx_category_start_id", columnList = "category, start_date, id")
+//        @Index(name = "idx_events_slug", columnList = "slug"),
+        @Index(name = "idx_events_category", columnList = "category"),
+        @Index(name = "idx_events_format", columnList = "format"),
+        @Index(name = "idx_events_start_date", columnList = "start_date"),
+        @Index(name = "idx_events_location", columnList = "latitude, longitude")
 })
 @Entity
 @AllArgsConstructor
