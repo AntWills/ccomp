@@ -64,9 +64,10 @@ public class ClubService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<ClubResponseDTO> findById(Long id) {
-        return clubRepository.findById(id)
-                        .map(clubMapper::toDTO);
+    public Optional<ClubResponseDTO> findById(Long clubId, UUID userId) {
+        return clubRepository.findById(clubId)
+                .filter(club -> club.isPublic() || club.isInstructor(userId))
+                .map(clubMapper::toDTO);
     }
 
     @Transactional

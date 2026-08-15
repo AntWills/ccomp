@@ -8,6 +8,7 @@ import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -47,12 +48,13 @@ public class ClubController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping
+    @PostMapping("search")
     @Operation(
             summary = "Lista todos os clubes",
             description = "Retorna a lista com o cursor de todos os clubes cadastrados. Não requer que o usuário esteja logado."
     )
     @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
+    @SecurityRequirements
     public ResponseEntity<CursorPage<ClubResponseDTO>> search (
             @RequestParam(required = false) String nextCursor,
             @RequestParam(defaultValue = "10") int pageSize
@@ -60,17 +62,18 @@ public class ClubController {
         return ResponseEntity.ok(clubService.search(nextCursor, pageSize));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{clubId}")
     @Operation(
             summary = "Busca um clube pelo ID",
-            description = "Retorna os dados detalhados de um clube específico."
+            description = "Retorna os dados detalhados de um clube específico caso ele esteja público ou caso o usuário seja o instrutor do clube."
     )
     @ApiResponse(responseCode = "200", description = "Clube encontrado")
     @ApiResponse(responseCode = "404", description = "Clube não encontrado")
     public ResponseEntity<ClubResponseDTO> findById(
-            @Parameter(description = "ID do clube") @PathVariable Long id
+            @Parameter(description = "ID do clube") @PathVariable Long clubId,
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        return clubService.findById(id)
+        return clubService.findById(clubId, extractUserId(jwt))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
