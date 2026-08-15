@@ -62,6 +62,22 @@ public class ClubController {
         return ResponseEntity.ok(clubService.search(nextCursor, pageSize));
     }
 
+    @PostMapping("/me")
+    @Operation(
+            summary = "Lista os clubes do usuário autenticado",
+            description = "Retorna a lista paginada por cursor (ordenada por data de criação) dos clubes criados pelo próprio usuário autenticado."
+    )
+    @ApiResponse(responseCode = "200", description = "Lista de clubes retornada com sucesso")
+    @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
+    public ResponseEntity<CursorPage<ClubResponseDTO>> findMyClubs(
+            @RequestParam(required = false) String nextCursor,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID instructorId = extractUserId(jwt);
+        return ResponseEntity.ok(clubService.findByInstructor(instructorId, nextCursor, pageSize));
+    }
+
     @GetMapping("/{clubId}")
     @Operation(
             summary = "Busca um clube pelo ID",
