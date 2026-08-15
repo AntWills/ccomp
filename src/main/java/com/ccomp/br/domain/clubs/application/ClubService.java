@@ -96,7 +96,7 @@ public class ClubService {
         Club club = clubRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Clube não encontrado com o id:" + id));
 
-        if (club.isInstructor(userId)) {
+        if (!club.isInstructor(userId)) {
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
         }
 

@@ -94,7 +94,7 @@ public class ClubController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PatchMapping("/{id}")
+    @PatchMapping("/{clubId}")
     @Operation(
             summary = "Atualiza um clube",
             description = "Atualiza os dados de um clube existente. Apenas o instrutor (dono) do clube pode realizar esta operação."
@@ -103,15 +103,15 @@ public class ClubController {
     @ApiResponse(responseCode = "403", description = "Usuário não é o dono do clube")
     @ApiResponse(responseCode = "404", description = "Clube não encontrado")
     public ResponseEntity<ClubResponseDTO> update(
-            @Parameter(description = "ID do clube") @PathVariable Long id,
+            @Parameter(description = "ID do clube") @PathVariable Long clubId,
             @Valid @RequestBody UpdateClubRequestDTO dto,
             @AuthenticationPrincipal Jwt jwt
     ) {
         UUID requesterId = extractUserId(jwt);
-        return ResponseEntity.ok(clubService.update(id, dto, requesterId));
+        return ResponseEntity.ok(clubService.update(clubId, dto, requesterId));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{clubId}")
     @Operation(
             summary = "Remove um clube",
             description = "Remove um clube existente. Apenas o instrutor (dono) do clube pode realizar esta operação."
@@ -120,11 +120,11 @@ public class ClubController {
     @ApiResponse(responseCode = "403", description = "Usuário não é o dono do clube")
     @ApiResponse(responseCode = "404", description = "Clube não encontrado")
     public ResponseEntity<Void> delete(
-            @Parameter(description = "ID do clube") @PathVariable Long id,
+            @Parameter(description = "ID do clube") @PathVariable Long clubId,
             @AuthenticationPrincipal Jwt jwt
     ) {
         UUID requesterId = extractUserId(jwt);
-        clubService.delete(id, requesterId);
+        clubService.delete(clubId, requesterId);
         return ResponseEntity.noContent().build();
     }
 
