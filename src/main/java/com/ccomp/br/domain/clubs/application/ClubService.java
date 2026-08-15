@@ -51,10 +51,10 @@ public class ClubService {
 
         int finalPageSize = pageSize;
         List<ClubResponseDTO> results = clubRepository.findBy(spec, query -> query
-                .as(ClubResponseDTO.class))
+                .as(ClubResponseDTO.class)
                 .limit(finalPageSize + 1)
                 .sortBy(Sort.by(Sort.Direction.DESC, "publishedAt"))
-                .all();
+                .all());
 
         boolean hasNext = results.size() > finalPageSize;
         List<ClubResponseDTO> page = hasNext ? results.subList(0, finalPageSize) : results;
