@@ -32,6 +32,54 @@ public class ClubService {
         this.clubMapper = clubMapper;
     }
 
+    @Transactional(readOnly = true)
+    public CursorPage<ClubResponseDTO> search(String cursor, int pageSize) {
+        if(pageSize > 50) pageSize = 50;
+
+        Specification<Club> spec = ClubSpec.buildSpecByCursor(CursorCodec.decode(cursor, LocalDateTime.class).orElse(null));
+
+        int finalPageSize = pageSize;
+        List<ClubResponseDTO> results = clubRepository.findBy(spec, query -> query
+                .as(ClubResponseDTO.class)
+                .limit(finalPageSize + 1)
+                .sortBy(Sort.by(Sort.Direction.DESC, "publishedAt"))
+                .all());
+
+        boolean hasNext = results.size() > finalPageSize;
+        List<ClubResponseDTO> page = hasNext ? results.subList(0, finalPageSize) : results;
+        String nextCursor = hasNext ? CursorCodec.encode(page.getLast().publishedAt()) : null;
+
+        return new CursorPage<>(page, nextCursor, null);
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPage<ClubResponseDTO> findByInstructor(UUID instructorId, String cursor, int pageSize) {
+        if (pageSize > 50) pageSize = 50;
+
+        Specification<Club> spec = ClubSpec.buildSpecByInstructorAndCursor(instructorId,
+                CursorCodec.decode(cursor, LocalDateTime.class).orElse(null));
+
+        int finalPageSize = pageSize;
+        List<ClubResponseDTO> results = clubRepository.findBy(spec, query -> query
+                .as(ClubResponseDTO.class)
+                .limit(finalPageSize + 1)
+                .sortBy(Sort.by(Sort.Direction.DESC, "createdAt"))
+                .all());
+
+        boolean hasNext = results.size() > finalPageSize;
+        List<ClubResponseDTO> page = hasNext ? results.subList(0, finalPageSize) : results;
+        String nextCursor = hasNext ? CursorCodec.encode(page.getLast().createdAt()) : null;
+
+        return new CursorPage<>(page, nextCursor, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<ClubResponseDTO> findById(Long clubId, UUID userId) {
+        return clubRepository.findById(clubId)
+                .filter(club -> club.isPublic() || club.isInstructor(userId))
+                .map(clubMapper::toDTO);
+    }
+
     @Transactional
     public ClubResponseDTO create(CreateClubRequestDTO dto, UUID instructorId) {
         Club club = Club.builder()
@@ -43,38 +91,12 @@ public class ClubService {
         return clubMapper.toDTO(clubRepository.save(club));
     }
 
-    @Transactional(readOnly = true)
-    public CursorPage<ClubResponseDTO> search(String cursor, int pageSize) {
-        if(pageSize > 50) pageSize = 50;
-
-        Specification<Club> spec = ClubSpec.buildSpecByCursor(CursorCodec.decode(cursor, LocalDateTime.class).orElse(null));
-
-        int finalPageSize = pageSize;
-        List<ClubResponseDTO> results = clubRepository.findBy(spec, query -> query
-                .as(ClubResponseDTO.class))
-                .limit(finalPageSize + 1)
-                .sortBy(Sort.by(Sort.Direction.DESC, "publishedAt"))
-                .all();
-
-        boolean hasNext = results.size() > finalPageSize;
-        List<ClubResponseDTO> page = hasNext ? results.subList(0, finalPageSize) : results;
-        String nextCursor = hasNext ? CursorCodec.encode(page.getLast().publishedAt()) : null;
-
-        return new CursorPage<>(page, nextCursor, null);
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<ClubResponseDTO> findById(Long id) {
-        return clubRepository.findById(id)
-                        .map(clubMapper::toDTO);
-    }
-
     @Transactional
     public ClubResponseDTO update(Long id, UpdateClubRequestDTO dto, UUID userId) {
         Club club = clubRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Clube não encontrado com o id:" + id));
 
-        if (club.isInstructor(userId)) {
+        if (!club.isInstructor(userId)) {
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
         }
 

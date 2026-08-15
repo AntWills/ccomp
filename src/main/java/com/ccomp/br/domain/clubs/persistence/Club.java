@@ -1,9 +1,6 @@
 package com.ccomp.br.domain.clubs.persistence;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -22,7 +19,9 @@ import java.util.UUID;
 @Builder
 public class Club {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column(nullable = false)
     private String name;
 
@@ -50,5 +49,10 @@ public class Club {
 
     public boolean isInstructor(UUID userId) {
         return userId.equals(instructor);
+    }
+
+    public boolean isPublic() {
+        if(publishedAt ==  null) return false;
+        return publishedAt.isBefore(LocalDateTime.now());
     }
 }
