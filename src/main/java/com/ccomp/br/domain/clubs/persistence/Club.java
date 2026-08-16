@@ -47,6 +47,9 @@ public class Club {
     @Column(columnDefinition = "text")
     private String content;
 
+    @Column(name = "participant_limit")
+    private Long participantLimit;
+
     public boolean isInstructor(UUID userId) {
         return userId.equals(instructor);
     }
