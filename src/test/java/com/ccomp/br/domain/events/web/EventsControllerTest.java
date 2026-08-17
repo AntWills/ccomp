@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.web;
 
 import com.ccomp.br.domain.events.enums.EnumEventCategory;
+import com.ccomp.br.domain.events.enums.EnumEventFormat;
 import com.ccomp.br.domain.security.jwt.application.JwtService;
 import com.ccomp.br.domain.events.dto.CreateActivityRequest;
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
@@ -81,7 +82,11 @@ class EventsControllerTest {
         void create() throws Exception {
         log.info("===== INÍCIO TESTE: criar evento =====");
 
-        var eventDto = new CreateEventRequestDTO("Evento Teste 1", EnumEventCategory.ACADEMIC_EDUCATIONAL, null, null);
+        var eventDto = new CreateEventRequestDTO("Evento Teste 1",
+                EnumEventCategory.ACADEMIC_EDUCATIONAL,
+                EnumEventFormat.IN_PERSON,
+                null,
+                null);
 
         String requestBody = objectMapper.writeValueAsString(eventDto);
 
