@@ -114,7 +114,7 @@ public class ClubService {
         boolean canEdit = userDTO.isAdmin()
                 || club.isInstructor(userId);
 
-        if (canEdit)
+        if (!canEdit)
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         clubMapper.updateEntityFromDto(dto, club);
@@ -135,7 +135,7 @@ public class ClubService {
         boolean canEdit = userDTO.isAdmin()
                 || club.isInstructor(userId);
 
-        if (canEdit)
+        if (!canEdit)
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         clubRepository.delete(club);
