@@ -25,6 +25,10 @@ public class UserModel {
     private String name;
 
     @Embedded
+    @AttributeOverride(
+            name = "value",
+            column = @Column(name = "email_address", nullable = false, unique = true)
+    )
     private EmailAddress emailAddress;
 
     @Column(nullable = false)
