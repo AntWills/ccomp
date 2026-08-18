@@ -24,6 +24,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Gerir Eventos", description = "Operações relacionadas à criação, busca, atualização e gestão de acesso aos eventos.")
@@ -148,6 +149,21 @@ public class EventsController {
             @RequestParam(defaultValue = "10") int pageSize
     ) {
         return ResponseEntity.ok(eventsServices.searchEventsWithFilters(filter, nextCursor, pageSize));
+    }
+
+    @Operation(
+            summary = "Lista os eventos em destaque",
+            description = "Retorna uma lista resumida (máximo de 3 itens) dos eventos em destaque na plataforma. Ideal para exibição na página inicial."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Destaques retornados com sucesso")
+    })
+    @SecurityRequirements
+    @GetMapping("highlights")
+    public ResponseEntity<List<EventListItem>> highlightsEvents() {
+        return ResponseEntity.ok(
+                eventsServices.searchEventsWithFilters(new EventsFilterRequest(null, null), null, 3).content()
+        );
     }
 
     @Operation(

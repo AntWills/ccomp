@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -21,6 +22,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Notícias", description = "Operações relacionadas ao gerenciamento de notícias.")
@@ -79,6 +81,21 @@ public class NewsController {
             @RequestParam(defaultValue = "10") int pageSize) {
         return ResponseEntity.ok(
                 newsApplication.searchNewsWithFilters(filter, nextCursor, pageSize)
+        );
+    }
+
+    @Operation(
+            summary = "Lista as notícias em destaque",
+            description = "Retorna uma lista resumida (máximo de 3 itens) das notícias em destaque na plataforma. Ideal para exibição na página inicial."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Destaques retornados com sucesso")
+    })
+    @SecurityRequirements
+    @GetMapping("highlights")
+    public ResponseEntity<List<NewsItem>> highlightsNews() {
+        return ResponseEntity.ok(
+                newsApplication.searchNewsWithFilters(new NewsFilter(null), null, 3).content()
         );
     }
 
