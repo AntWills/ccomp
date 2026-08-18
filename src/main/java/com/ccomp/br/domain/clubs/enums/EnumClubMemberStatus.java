@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.clubs.enums;
 
-public enum ClubMemberStatus {
+public enum EnumClubMemberStatus {
     ACTIVE,
     INACTIVE
 }
