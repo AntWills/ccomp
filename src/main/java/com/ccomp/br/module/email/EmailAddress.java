@@ -6,14 +6,15 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import org.apache.commons.validator.routines.EmailValidator;
 
+import java.util.Locale;
 import java.util.Objects;
 
 @Embeddable
 public class EmailAddress {
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email address")
-    @Column(name = "email_address", nullable = false, unique = true)
     private String value;
 
     protected EmailAddress() {
@@ -22,11 +23,25 @@ public class EmailAddress {
 
     @JsonCreator
     public EmailAddress(String value) {
-        this.value = value;
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Email não pode ser null ou em branco.");
+        }
+
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+
+        if(!EmailValidator.getInstance().isValid(normalized))
+            throw new IllegalArgumentException("Formato de e-mail inválido: " + value);
+
+        this.value = normalized;
     }
 
     @JsonValue
     public String getValue() {
+        return value;
+    }
+
+    @Override
+    public String toString() {
         return value;
     }
 

@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -29,23 +30,6 @@ public class ClubController {
 
     public ClubController(ClubService clubService) {
         this.clubService = clubService;
-    }
-
-    @PostMapping
-    @Operation(
-            summary = "Cria um novo clube",
-            description = "Cria um clube vinculado ao usuário autenticado, que se torna automaticamente o instrutor (dono) do clube."
-    )
-    @ApiResponse(responseCode = "201", description = "Clube criado com sucesso")
-    @ApiResponse(responseCode = "400", description = "Dados inválidos")
-    @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
-    public ResponseEntity<ClubResponseDTO> create(
-            @Valid @RequestBody CreateClubRequestDTO dto,
-            @AuthenticationPrincipal Jwt jwt
-    ) {
-        UUID instructorId = extractUserId(jwt);
-        ClubResponseDTO response = clubService.create(dto, instructorId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("search")
@@ -94,6 +78,24 @@ public class ClubController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PostMapping
+    @Operation(
+            summary = "Cria um novo clube",
+            description = "Cria um clube vinculado ao usuário autenticado, que se torna automaticamente o instrutor (dono) do clube."
+    )
+    @ApiResponse(responseCode = "201", description = "Clube criado com sucesso")
+    @ApiResponse(responseCode = "400", description = "Dados inválidos")
+    @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<ClubResponseDTO> create(
+            @Valid @RequestBody CreateClubRequestDTO dto,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID instructorId = extractUserId(jwt);
+        ClubResponseDTO response = clubService.create(dto, instructorId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
     @PatchMapping("/{clubId}")
     @Operation(
             summary = "Atualiza um clube",
@@ -102,6 +104,7 @@ public class ClubController {
     @ApiResponse(responseCode = "200", description = "Clube atualizado com sucesso")
     @ApiResponse(responseCode = "403", description = "Usuário não é o dono do clube")
     @ApiResponse(responseCode = "404", description = "Clube não encontrado")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ClubResponseDTO> update(
             @Parameter(description = "ID do clube") @PathVariable Long clubId,
             @Valid @RequestBody UpdateClubRequestDTO dto,
@@ -119,6 +122,7 @@ public class ClubController {
     @ApiResponse(responseCode = "204", description = "Clube removido com sucesso")
     @ApiResponse(responseCode = "403", description = "Usuário não é o dono do clube")
     @ApiResponse(responseCode = "404", description = "Clube não encontrado")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<Void> delete(
             @Parameter(description = "ID do clube") @PathVariable Long clubId,
             @AuthenticationPrincipal Jwt jwt
