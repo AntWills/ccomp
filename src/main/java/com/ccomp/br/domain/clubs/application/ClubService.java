@@ -8,8 +8,11 @@ import com.ccomp.br.domain.clubs.persistence.ClubRepository;
 import com.ccomp.br.domain.clubs.persistence.ClubSpec;
 import com.ccomp.br.domain.clubs.util.ClubMapper;
 import com.ccomp.br.domain.news.dto.NewsItem;
+import com.ccomp.br.domain.users.external.UserManagement;
+import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
+import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorCodec;
 import com.ccomp.br.shared.utils.CursorPage;
 import org.springframework.data.domain.Sort;
@@ -26,10 +29,12 @@ import java.util.UUID;
 public class ClubService {
     private final ClubRepository clubRepository;
     private final ClubMapper clubMapper;
+    private final UserManagement userManagement;
 
-    public ClubService(ClubRepository clubRepository, ClubMapper clubMapper) {
+    public ClubService(ClubRepository clubRepository, ClubMapper clubMapper, UserManagement userManagement) {
         this.clubRepository = clubRepository;
         this.clubMapper = clubMapper;
+        this.userManagement = userManagement;
     }
 
     @Transactional(readOnly = true)
@@ -82,6 +87,13 @@ public class ClubService {
 
     @Transactional
     public ClubResponseDTO create(CreateClubRequestDTO dto, UUID instructorId) {
+        UserDTO userDTO = userManagement.findById(instructorId)
+                .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
+
+        if (!userDTO.isTeamMember())
+            throw new AccessDeniedException("Apenas membros da equipe (STAFF, MODERATOR ou ADMIN) podem ser adicionados como editores.");
+
+
         Club club = Club.builder()
                 .name(dto.name())
                 .summary(dto.summary())
@@ -96,9 +108,14 @@ public class ClubService {
         Club club = clubRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Clube não encontrado com o id:" + id));
 
-        if (!club.isInstructor(userId)) {
+        UserDTO userDTO = userManagement.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
+
+        boolean canEdit = userDTO.isAdmin()
+                || club.isInstructor(userId);
+
+        if (canEdit)
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
-        }
 
         clubMapper.updateEntityFromDto(dto, club);
 
@@ -112,9 +129,14 @@ public class ClubService {
         Club club = clubRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Clube não encontrado com o id:" + id));
 
-        if (!club.isInstructor(userId)) {
+        UserDTO userDTO = userManagement.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
+
+        boolean canEdit = userDTO.isAdmin()
+                || club.isInstructor(userId);
+
+        if (canEdit)
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
-        }
 
         clubRepository.delete(club);
     }
