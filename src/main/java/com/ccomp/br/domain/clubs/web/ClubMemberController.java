@@ -2,8 +2,8 @@ package com.ccomp.br.domain.clubs.web;
 
 import com.ccomp.br.domain.clubs.application.ClubMemberService;
 import com.ccomp.br.domain.clubs.dto.ClubMemberFilter;
-import com.ccomp.br.domain.clubs.enums.ClubMemberStatus;
-import com.ccomp.br.domain.clubs.enums.ClubMemberRole;
+import com.ccomp.br.domain.clubs.enums.EnumClubMemberStatus;
+import com.ccomp.br.domain.clubs.enums.EnumClubMemberRole;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMember;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -99,7 +99,7 @@ public class ClubMemberController {
             @PathVariable String email,
             
             @Parameter(description = "Papel a ser atribuído (INSTRUCTOR ou MEMBER)", required = true) 
-            @RequestParam ClubMemberRole role,
+            @RequestParam EnumClubMemberRole role,
             
             @Parameter(description = "Identificador da edição/temporada (opcional)") 
             @RequestParam(required = false) String edition
@@ -122,7 +122,7 @@ public class ClubMemberController {
             @PathVariable Long memberId,
             
             @Parameter(description = "Novo status (ACTIVE, INACTIVE, PENDING)", required = true) 
-            @RequestParam ClubMemberStatus status
+            @RequestParam EnumClubMemberStatus status
     ) {
         clubMemberService.changeMemberStatus(memberId, status);
         return ResponseEntity.noContent().build();

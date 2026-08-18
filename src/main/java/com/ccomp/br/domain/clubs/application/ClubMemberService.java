@@ -1,8 +1,8 @@
 package com.ccomp.br.domain.clubs.application;
 
 import com.ccomp.br.domain.clubs.dto.ClubMemberFilter;
-import com.ccomp.br.domain.clubs.enums.ClubMemberStatus;
-import com.ccomp.br.domain.clubs.enums.ClubMemberRole;
+import com.ccomp.br.domain.clubs.enums.EnumClubMemberStatus;
+import com.ccomp.br.domain.clubs.enums.EnumClubMemberRole;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMember;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMemberRepository;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMemberSpec;
@@ -63,15 +63,15 @@ public class ClubMemberService {
     public ClubMember enrollMember(Long clubId, UUID userId, String edition) {
         Optional<ClubMember> existingMemberOpt = clubMemberRepository.findByUserIdAndClubId(userId, clubId)
                 .stream()
-                .filter(m -> m.getRole() == ClubMemberRole.MEMBER && m.getEdition().equals(edition))
+                .filter(m -> m.getRole() == EnumClubMemberRole.MEMBER && m.getEdition().equals(edition))
                 .findFirst();
 
         if (existingMemberOpt.isPresent()) {
             ClubMember existing = existingMemberOpt.get();
-            if (existing.getStatus() == ClubMemberStatus.ACTIVE) {
+            if (existing.getStatus() == EnumClubMemberStatus.ACTIVE) {
                 throw new ConflictException("Usuário já está matriculado nesta edição do clube.");
             } else {
-                existing.setStatus(ClubMemberStatus.ACTIVE);
+                existing.setStatus(EnumClubMemberStatus.ACTIVE);
                 existing.setLeftAt(null);
                 return clubMemberRepository.save(existing);
             }
@@ -80,8 +80,8 @@ public class ClubMemberService {
         ClubMember member = ClubMember.builder()
                 .clubId(clubId)
                 .userId(userId)
-                .role(ClubMemberRole.MEMBER)
-                .status(ClubMemberStatus.ACTIVE)
+                .role(EnumClubMemberRole.MEMBER)
+                .status(EnumClubMemberStatus.ACTIVE)
                 .edition(edition)
                 .joinedAt(LocalDateTime.now())
                 .build();
@@ -89,7 +89,7 @@ public class ClubMemberService {
     }
 
     @Transactional
-    public ClubMember addStaff(Long clubId, String email, ClubMemberRole role, String edition) {
+    public ClubMember addStaff(Long clubId, String email, EnumClubMemberRole role, String edition) {
         UserDTO user = userManagement.findByEmailAddress(new EmailAddress(email))
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado com o e-mail informado."));
 
@@ -100,10 +100,10 @@ public class ClubMemberService {
 
         if (existingMemberOpt.isPresent()) {
             ClubMember existing = existingMemberOpt.get();
-            if (existing.getStatus() == ClubMemberStatus.ACTIVE) {
+            if (existing.getStatus() == EnumClubMemberStatus.ACTIVE) {
                 throw new ConflictException("Usuário já faz parte da equipe deste clube.");
             } else {
-                existing.setStatus(ClubMemberStatus.ACTIVE);
+                existing.setStatus(EnumClubMemberStatus.ACTIVE);
                 existing.setLeftAt(null);
                 return clubMemberRepository.save(existing);
             }
@@ -113,7 +113,7 @@ public class ClubMemberService {
                 .clubId(clubId)
                 .userId(user.id())
                 .role(role)
-                .status(ClubMemberStatus.ACTIVE)
+                .status(EnumClubMemberStatus.ACTIVE)
                 .edition(edition)
                 .joinedAt(LocalDateTime.now())
                 .build();
@@ -121,13 +121,13 @@ public class ClubMemberService {
     }
 
     @Transactional
-    public void changeMemberStatus(Long memberId, ClubMemberStatus newStatus) {
+    public void changeMemberStatus(Long memberId, EnumClubMemberStatus newStatus) {
         ClubMember member = clubMemberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("Membro não encontrado"));
         member.setStatus(newStatus);
-        if (newStatus == ClubMemberStatus.INACTIVE) {
+        if (newStatus == EnumClubMemberStatus.INACTIVE) {
             member.setLeftAt(LocalDateTime.now());
-        } else if (newStatus == ClubMemberStatus.ACTIVE) {
+        } else if (newStatus == EnumClubMemberStatus.ACTIVE) {
             member.setLeftAt(null);
         }
         clubMemberRepository.save(member);

@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.clubs.persistence.members;
 
-import com.ccomp.br.domain.clubs.enums.ClubMemberStatus;
-import com.ccomp.br.domain.clubs.enums.ClubMemberRole;
+import com.ccomp.br.domain.clubs.enums.EnumClubMemberStatus;
+import com.ccomp.br.domain.clubs.enums.EnumClubMemberRole;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -31,11 +31,11 @@ public class ClubMember {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "varchar(25)")
-    private ClubMemberRole role;
+    private EnumClubMemberRole role;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "varchar(25)")
-    private ClubMemberStatus status;
+    private EnumClubMemberStatus status;
 
     @Column(name = "edition")
     private String edition;
