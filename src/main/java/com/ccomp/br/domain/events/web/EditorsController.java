@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.web;
 
 import com.ccomp.br.domain.events.application.EditorServices;
+import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -31,12 +32,12 @@ public class EditorsController {
             @ApiResponse(responseCode = "403", description = "Acesso negado"),
             @ApiResponse(responseCode = "404", description = "Evento ou usuário não encontrado")
     })
-    @PostMapping("/{eventId}/editors/{userId}")
+    @PostMapping("/{eventId}/editors/{email}")
     public ResponseEntity<MessageResponse> addEditor(
             @PathVariable Long eventId,
-            @PathVariable UUID userId,
+            @PathVariable String email,
             @AuthenticationPrincipal Jwt jwt){
-        MessageResponse response = editorServices.addEditor(eventId, UUID.fromString(jwt.getSubject()), userId);
+        MessageResponse response = editorServices.addEditor(eventId, extractUserId(jwt), new EmailAddress(email));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -47,12 +48,16 @@ public class EditorsController {
             @ApiResponse(responseCode = "403", description = "Acesso negado"),
             @ApiResponse(responseCode = "404", description = "Evento ou usuário não encontrado")
     })
-    @DeleteMapping("{eventId}/editors/{userId}")
+    @DeleteMapping("{eventId}/editors/{email}")
     public ResponseEntity<MessageResponse> removeEditor(
             @PathVariable Long eventId,
-            @PathVariable UUID userId,
+            @PathVariable String email,
             @AuthenticationPrincipal Jwt jwt){
-        MessageResponse response = editorServices.removeEditor(eventId, UUID.fromString(jwt.getSubject()), userId);
+        MessageResponse response = editorServices.removeEditor(eventId, extractUserId(jwt), new EmailAddress(email));
         return ResponseEntity.ok(response);
+    }
+
+    private UUID extractUserId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
     }
 }
