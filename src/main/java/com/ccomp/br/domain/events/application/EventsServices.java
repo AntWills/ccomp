@@ -64,6 +64,13 @@ public class EventsServices {
     }
 
     @Transactional(readOnly = true)
+    public Optional<EventResponse> getBySlug(String slug) {
+        return eventRepository.findBySlug(slug)
+                .filter(Event::isOpen)
+                .map(eventMapper::eventToEventResponse);
+    }
+
+    @Transactional(readOnly = true)
     public CursorPage<EventListItem> searchEventsWithFilters(
             EventsFilterRequest filter, String cursor, int pageSize) {
         if(pageSize > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
@@ -134,6 +141,7 @@ public class EventsServices {
         }
     }
 
+    @Transactional
     public EventListItem update(UpdateEventRequest request, UUID userId) {
         Event event = eventRepository.findById(request.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
@@ -159,5 +167,22 @@ public class EventsServices {
        eventRepository.save(event);
 
        return eventMapper.eventToEventListItem(event);
+    }
+
+    @Transactional
+    public void delete(Long eventId, UUID userId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        UserDTO userDTO = userManagement.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
+
+        boolean canEdit = userDTO.isAdmin()
+                || event.isOwner(userId);
+
+        if (!canEdit)
+            throw new AccessDeniedException("Você não tem permissão para deletar este evento.");
+
+        eventRepository.delete(event);
     }
 }

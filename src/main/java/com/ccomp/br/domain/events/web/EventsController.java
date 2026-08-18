@@ -86,6 +86,36 @@ public class EventsController {
     }
 
     @Operation(
+            summary = "Busca detalhes de um evento público por Slug",
+            description = """
+        Retorna as informações de um evento através do seu identificador amigável na URL (*slug*).
+
+        ### Regras de Visibilidade:
+        - Esta consulta é **estritamente pública** e **restrita a eventos com status ABERTO**.
+        - Eventos fechados/privados **não** serão retornados por esta rota (retornará `404 Not Found`), mesmo que o usuário seja o proprietário ou um ADMIN.
+        """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Evento público encontrado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = EventResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Evento não encontrado ou o evento está com visibilidade FECHADA",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @SecurityRequirements
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<EventResponse> getBySlug(@PathVariable String slug) {
+        return eventsServices.getBySlug(slug)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
+    @Operation(
             summary = "Busca e filtra eventos com paginação por cursor",
             description = """
         Realiza consultas avançadas no catálogo de eventos com suporte a paginação contínua (*Cursor-based Pagination*).
@@ -211,6 +241,50 @@ public class EventsController {
             @AuthenticationPrincipal Jwt jwt
     ) {
         return ResponseEntity.ok(eventsServices.update(request, extractUserId(jwt)));
+    }
+
+    @Operation(
+            summary = "Exclui um evento por ID",
+            description = """
+        Remove permanentemente um evento do sistema.
+
+        ### Regras de Permissões para Deleção:
+        A deleção do evento é **restrita** a:
+        1. Administradores (**ADMIN**).
+        2. O proprietário original do evento (**Owner**).
+
+        *Nota: Usuários com papel de **Editor** do evento **NÃO** possuem autorização para excluí-lo.*
+        """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Evento excluído com sucesso (sem corpo na resposta)"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Usuário não autenticado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Acesso negado (Usuário não é ADMIN nem o Proprietário do evento)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Evento ou Usuário não encontrado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @DeleteMapping("/{eventId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<Void> deleteEvent(
+            @PathVariable Long eventId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        eventsServices.delete(eventId, extractUserId(jwt));
+        return ResponseEntity.noContent().build();
     }
 
     private UUID extractUserId(Jwt jwt) {
