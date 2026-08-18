@@ -25,6 +25,10 @@ public class UserModel {
     private String name;
 
     @Embedded
+    @AttributeOverride(
+            name = "value",
+            column = @Column(name = "email_address", nullable = false, unique = true)
+    )
     private EmailAddress emailAddress;
 
     @Column(nullable = false)
@@ -60,5 +64,9 @@ public class UserModel {
     public void unlock() {
         if(statusAccount == EnumUserStatusAccount.BLOCKED)
             this.statusAccount = EnumUserStatusAccount.ACTIVE;
+    }
+
+    public boolean isAccountValid() {
+        return statusAccount == EnumUserStatusAccount.ACTIVE;
     }
 }

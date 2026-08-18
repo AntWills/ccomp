@@ -12,7 +12,7 @@ services:
     build: .
     profiles: [all]
     env_file:
-      - .env.dev
+      - .env.prod
     depends_on:
       grafana-lgtm:
         condition: service_started

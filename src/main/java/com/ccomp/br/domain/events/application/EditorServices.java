@@ -5,9 +5,12 @@ import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
+import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
+import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
+import com.ccomp.br.shared.exceptions.UserBlockedException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,31 +33,40 @@ public class EditorServices {
     }
 
     @Transactional
-    public MessageResponse addEditor(Long eventId, UUID ownerId, UUID userId){
-//        log.info("addEditor chamado | eventId={}, ownerId={}, userId={}",
-//                eventId, ownerId, userId);
+    public MessageResponse addEditor(Long eventId, UUID ownerId, EmailAddress emailAddress) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if(!event.isOwner(ownerId)) throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
+        if (!event.isOwner(ownerId)) {
+            throw new AccessDeniedException("Você não tem permissão para gerenciar os editores deste evento.");
+        }
 
-        if(editorRepository.existsByEventIdAndUserId(event.getId(), userId))
-            return new MessageResponse("O usuario já é editor deste evento");
+        UserDTO userDTO = userManagement.findByEmailAddress(emailAddress)
+                .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado para o e-mail: %s".formatted(emailAddress)));
 
-        if(!userManagement.userExists(userId))
-            throw new UserNotFoundException("O usuario não existe.");
+        if (!userDTO.isActive()) {
+            throw new UserBlockedException("O usuário informado está inativo ou bloqueado.");
+        }
+
+        if (!userDTO.isTeamMember()) {
+            throw new AccessDeniedException("Apenas membros da equipe (STAFF, MODERATOR ou ADMIN) podem ser adicionados como editores.");
+        }
+
+        if (editorRepository.existsByEventIdAndUserId(event.getId(), userDTO.id())) {
+            return new MessageResponse("Este usuário já é um editor deste evento.");
+        }
 
         editorRepository.save(EventEditor.builder()
                 .event(event)
-                .userId(userId)
+                .userId(userDTO.id())
                 .assignedAt(LocalDateTime.now())
                 .build());
 
-        return new MessageResponse("Usuario adicionar como editor.");
+        return new MessageResponse("Usuário adicionado como editor com sucesso.");
     }
 
     @Transactional
-    public MessageResponse removeEditor(Long eventId, UUID ownerId, UUID userId){
+    public MessageResponse removeEditor(Long eventId, UUID ownerId, EmailAddress emailAddress){
 //        log.info("removerEditor chamado | eventId={}, ownerId={}, userId={}",
 //                eventId, ownerId, userId);
         Event event = eventRepository.findById(eventId)
@@ -63,10 +75,13 @@ public class EditorServices {
         if(!event.isOwner(ownerId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
-        if(!editorRepository.existsByEventIdAndUserId(event.getId(), userId))
+        UserDTO userDTO = userManagement.findByEmailAddress(emailAddress)
+                .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado para o e-mail: %s".formatted(emailAddress)));
+
+        if(!editorRepository.existsByEventIdAndUserId(event.getId(), userDTO.id()))
             return new MessageResponse("O usuário não é editor deste evento.");
 
-        editorRepository.deleteByEventIdAndUserId(event.getId(), userId);
+        editorRepository.deleteByEventIdAndUserId(event.getId(), userDTO.id());
 
         return new MessageResponse("Usuário removido como editor.");
     }
