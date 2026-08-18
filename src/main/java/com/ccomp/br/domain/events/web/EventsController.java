@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -34,17 +35,6 @@ public class EventsController {
 
     public EventsController(EventsServices eventsServices) {
         this.eventsServices = eventsServices;
-    }
-
-    @Operation(summary = "Cria um novo evento", description = "Cria um novo evento no sistema associado ao usuário autenticado.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Evento criado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Dados do evento inválidos"),
-            @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
-    })
-    @PostMapping
-    public ResponseEntity<EventResponse> create(@Valid @RequestBody CreateEventRequestDTO dto, @AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(eventsServices.create(UUID.fromString(jwt.getSubject()), dto));
     }
 
     @Operation(
@@ -105,7 +95,7 @@ public class EventsController {
     @SecurityRequirements
     @GetMapping("/{eventId}")
     public ResponseEntity<EventResponse> getById(@PathVariable Long eventId, @AuthenticationPrincipal Jwt jwt) {
-        UUID userId = jwt == null ? null : UUID.fromString(jwt.getSubject());
+        UUID userId = jwt == null ? null :extractUserId(jwt);
 
         return eventsServices.getById(eventId, userId).map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
@@ -135,8 +125,25 @@ public class EventsController {
         return ResponseEntity.ok(eventsServices.searchEventsWithFilters(filter, nextCursor, pageSize));
     }
 
+    @Operation(summary = "Cria um novo evento", description = "Cria um novo evento no sistema associado ao usuário autenticado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Evento criado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados do evento inválidos"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
+    })
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<EventResponse> create(@Valid @RequestBody CreateEventRequestDTO dto, @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(eventsServices.create(extractUserId(jwt), dto));
+    }
+
     @PatchMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<EventListItem> updateEvent(@Valid @RequestBody UpdateEventRequest request, @AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.ok(eventsServices.update(request, UUID.fromString(jwt.getSubject())));
+        return ResponseEntity.ok(eventsServices.update(request, extractUserId(jwt)));
+    }
+
+    private UUID extractUserId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
     }
 }

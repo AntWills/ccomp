@@ -8,6 +8,7 @@ import com.ccomp.br.shared.dto.EventResponse;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
+import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
@@ -53,6 +54,11 @@ public class EventsServices {
 
                     if (allowed) return eventMapper.eventToEventResponse(event);
 
+                    UserDTO userDTO = userManagement.findById(userId)
+                            .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
+
+                    if(userDTO.isAdmin()) return eventMapper.eventToEventResponse(event);
+
                     throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
                 });
     }
@@ -91,7 +97,12 @@ public class EventsServices {
     // ---- Commands ----
     @Transactional
     public EventResponse create(UUID ownerId, CreateEventRequestDTO dto){
-        if(userManagement.findById(ownerId).isEmpty()) throw new UserNotFoundException("Owner not found with ID: " + ownerId);
+        UserDTO userDTO = userManagement.findById(ownerId)
+                .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
+
+        if (!userDTO.isTeamMember()) {
+            throw new AccessDeniedException("Apenas membros da equipe (STAFF, MODERATOR ou ADMIN) podem ser adicionados como editores.");
+        }
 
         var eventModel = Event.builder()
                 .title(dto.title())
@@ -127,8 +138,16 @@ public class EventsServices {
         Event event = eventRepository.findById(request.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if(!event.isOwner(userId) && !editorServices.isEditor(event, userId))
-            throw new AccessDeniedException("O usuario não tem permissão para alterar este recurso.");
+        UserDTO userDTO = userManagement.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
+
+        boolean canEdit = userDTO.isAdmin()
+                || event.isOwner(userId)
+                || editorServices.isEditor(event, userId);
+
+        if (!canEdit)
+            throw new AccessDeniedException("Você não tem permissão para alterar este evento.");
+
 
         request.optionalTitle().ifPresent(title -> {
             event.setTitle(title);

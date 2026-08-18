@@ -27,4 +27,8 @@ public record UserDTO(
     public boolean isActive() {
         return this.statusAccount == EnumUserStatusAccount.ACTIVE;
     }
+
+    public boolean isAdmin() {
+        return this.role == EnumRoles.ADMIN;
+    }
 }
