@@ -1,0 +1,48 @@
+package com.ccomp.br.domain.clubs.persistence.members;
+
+import com.ccomp.br.domain.clubs.enums.ClubMemberStatus;
+import com.ccomp.br.domain.clubs.enums.ClubMemberRole;
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Entity
+@Table(name = "tb_club_members", indexes = {
+        @Index(name = "idx_club_members_user_id", columnList = "user_id"),
+        @Index(name = "idx_club_members_club_id", columnList = "club_id")
+})
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ClubMember {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "club_id", nullable = false)
+    private Long clubId;
+
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "varchar(25)")
+    private ClubMemberRole role;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "varchar(25)")
+    private ClubMemberStatus status;
+
+    @Column(name = "edition")
+    private String edition;
+
+    @Column(name = "joined_at")
+    private LocalDateTime joinedAt;
+
+    @Column(name = "left_at")
+    private LocalDateTime leftAt;
+}
