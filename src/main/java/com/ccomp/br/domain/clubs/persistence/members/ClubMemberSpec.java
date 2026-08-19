@@ -14,14 +14,6 @@ public class ClubMemberSpec {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            if (filter.getClubId() != null) {
-                predicates.add(criteriaBuilder.equal(root.get("clubId"), filter.getClubId()));
-            }
-
-            if (filter.getUserId() != null) {
-                predicates.add(criteriaBuilder.equal(root.get("userId"), filter.getUserId()));
-            }
-
             if (filter.getRole() != null) {
                 predicates.add(criteriaBuilder.equal(root.get("role"), filter.getRole()));
             }

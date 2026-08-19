@@ -12,8 +12,6 @@ import java.util.UUID;
 @Setter
 @Builder
 public class ClubMemberFilter {
-    private Long clubId;
-    private UUID userId;
     private EnumClubMemberRole role;
     private EnumClubMemberStatus status;
 }
