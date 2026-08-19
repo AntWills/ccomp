@@ -4,10 +4,13 @@ import com.ccomp.br.domain.clubs.application.ClubService;
 import com.ccomp.br.domain.clubs.dto.CreateClubRequestDTO;
 import com.ccomp.br.domain.clubs.dto.ClubResponseDTO;
 import com.ccomp.br.domain.clubs.dto.UpdateClubRequestDTO;
+import com.ccomp.br.domain.news.dto.NewsFilter;
+import com.ccomp.br.domain.news.dto.NewsItem;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -44,6 +47,21 @@ public class ClubController {
             @RequestParam(defaultValue = "10") int pageSize
     ) {
         return ResponseEntity.ok(clubService.search(nextCursor, pageSize));
+    }
+
+    @Operation(
+            summary = "Lista os clubes em destaque",
+            description = "Retorna uma lista resumida (máximo de 3 itens) dos clubes em destaque na plataforma. Ideal para exibição na página inicial."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Destaques retornados com sucesso")
+    })
+    @SecurityRequirements
+    @GetMapping("highlights")
+    public ResponseEntity<List<ClubResponseDTO>> highlightsClubs() {
+        return ResponseEntity.ok(
+                clubService.search(null, 3).content()
+        );
     }
 
     @PostMapping("/me")
