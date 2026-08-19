@@ -60,20 +60,24 @@ public class SecurityConfig {
     };
 
     private static final String[] PUBLIC_CLUB_ROUTES = {
-            "/api/clubs/{clubId:\\d+}",
-            "/api/clubs/highlights"
+            "/api/clubs/{clubId:\\d+}"
     };
 
     private static final String[] PUBLIC_EVENT_ROUTES = {
             "/api/events/{eventId:\\d+}",
-            "/api/events",
-            "/api/events/highlights"
+            "/api/events"
+    };
+
+    private static final String[] PUBLIC_HIGHLIGHTS_ROUTES = {
+        "/api/highlights",
+        "/api/highlights/clubs",
+        "/api/highlights/news",
+        "/api/highlights/events"
     };
 
     private static final String[] PUBLIC_NEWS_ROUTES = {
             "/api/news/{slug}",
-            "/api/news",
-            "/api/news/highlights"
+            "/api/news"
     };
 
     private static final String[] SWAGGER_ROUTES = {
@@ -121,6 +125,8 @@ public class SecurityConfig {
                             // Event
                             authorize.requestMatchers(HttpMethod.GET, PUBLIC_EVENT_ROUTES).permitAll();
                             authorize.requestMatchers(HttpMethod.POST, "/api/events/search").permitAll();
+                            // Highlights
+                            authorize.requestMatchers(HttpMethod.GET, PUBLIC_HIGHLIGHTS_ROUTES).permitAll();
                             // News
                             authorize.requestMatchers(HttpMethod.GET, PUBLIC_NEWS_ROUTES).permitAll();
                             authorize.requestMatchers(HttpMethod.POST, "/api/news/search").permitAll();
