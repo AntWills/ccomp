@@ -114,7 +114,7 @@ public class ClubMemberController {
         return ResponseEntity.ok(clubMemberService.addMemberByEmail(extractUserId(jwt), clubId, email, role));
     }
 
-    @PatchMapping("/members/{memberId}/status")
+    @PatchMapping("/{clubId}/members/{memberId}/status")
     @Operation(
             summary = "Altera o status de um membro no clube",
             description = "Atualiza o status de participação (`ACTIVE`, `INACTIVE`, `PENDING`). Ao inativar (`INACTIVE`), a data de saída (`leftAt`) é preenchida automaticamente."
@@ -128,13 +128,18 @@ public class ClubMemberController {
     })
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<Void> changeStatus(
+            @Parameter(description = "ID do clube", required = true)
+            @PathVariable Long clubId,
+
             @Parameter(description = "ID da matrícula do membro", required = true)
             @PathVariable Long memberId,
 
             @Parameter(description = "Novo status (ACTIVE, INACTIVE, PENDING)", required = true)
-            @RequestParam EnumClubMemberStatus status
+            @RequestParam EnumClubMemberStatus status,
+
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        clubMemberService.changeMemberStatus(memberId, status);
+        clubMemberService.changeMemberStatus(extractUserId(jwt), clubId, memberId, status);
         return ResponseEntity.noContent().build();
     }
 

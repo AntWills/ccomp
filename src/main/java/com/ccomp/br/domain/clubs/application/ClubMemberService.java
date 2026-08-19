@@ -4,11 +4,11 @@ import com.ccomp.br.domain.clubs.dto.ClubMemberFilter;
 import com.ccomp.br.domain.clubs.dto.ClubMemberListItem;
 import com.ccomp.br.domain.clubs.enums.EnumClubMemberStatus;
 import com.ccomp.br.domain.clubs.enums.EnumClubMemberRole;
-import com.ccomp.br.domain.clubs.persistence.Club;
 import com.ccomp.br.domain.clubs.persistence.ClubRepository;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMember;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMemberRepository;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMemberSpec;
+import com.ccomp.br.domain.security.SecurityUtils;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -47,14 +47,11 @@ public class ClubMemberService {
 
     @Transactional(readOnly = true)
     public CursorPage<ClubMemberListItem> searchMembers(UUID userId, Long clubId, ClubMemberFilter filter, String cursor, int pageSize) {
-        if (!clubAccessPolicy.isInstructor(clubId, userId)) {
-            var user = userManagement.findById(userId)
-                    .orElseThrow(() -> new AccessDeniedException("O usuário não tem acesso a este recurso."));
+        boolean canAccess = clubAccessPolicy.isInstructor(clubId, userId)
+                || SecurityUtils.isAdmin();
 
-            if (!user.isAdmin()) {
-                throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
-            }
-        }
+        if (!canAccess)
+            throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         if (pageSize > 50) pageSize = 50;
 
@@ -132,15 +129,11 @@ public class ClubMemberService {
         UserDTO user = userManagement.findByEmailAddress(new EmailAddress(email))
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado com o e-mail informado."));
 
-        if(!clubAccessPolicy.isInstructor(clubId, userLoggedId)) {
-            var userLogged = userManagement.findById(userLoggedId)
-                    .orElseThrow(() ->
-                            new AccessDeniedException("O usuário não tem acesso a este recurso."));
+        boolean canAccess = clubAccessPolicy.isInstructor(clubId, userLoggedId)
+                || SecurityUtils.isAdmin();
 
-            if (!userLogged.isAdmin()) {
-                throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
-            }
-        }
+        if (!canAccess)
+            throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         return addMember(clubId, user.id(), role);
     }
@@ -170,9 +163,18 @@ public class ClubMemberService {
     }
 
     @Transactional
-    public void changeMemberStatus(Long memberId, EnumClubMemberStatus newStatus) {
+    public void changeMemberStatus(UUID userLoggedId, Long clubId, Long memberId, EnumClubMemberStatus newStatus) {
         ClubMember member = clubMemberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("Membro não encontrado."));
+
+        if(member.getUserId().equals(userLoggedId) && !SecurityUtils.isAdmin())
+            throw new ConflictException("O usuário não pode alterar o próprio status.");
+
+        boolean canAccess = member.isInstructor(clubId)
+                || SecurityUtils.isAdmin();
+
+        if (!canAccess)
+            throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         if (newStatus == EnumClubMemberStatus.INACTIVE) {
             member.deactivate();
