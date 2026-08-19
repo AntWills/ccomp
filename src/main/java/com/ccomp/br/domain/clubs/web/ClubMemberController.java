@@ -2,6 +2,7 @@ package com.ccomp.br.domain.clubs.web;
 
 import com.ccomp.br.domain.clubs.application.ClubMemberService;
 import com.ccomp.br.domain.clubs.dto.ClubMemberFilter;
+import com.ccomp.br.domain.clubs.dto.ClubMemberListItem;
 import com.ccomp.br.domain.clubs.enums.EnumClubMemberStatus;
 import com.ccomp.br.domain.clubs.enums.EnumClubMemberRole;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMember;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -40,7 +42,8 @@ public class ClubMemberController {
             @ApiResponse(responseCode = "200", description = "Busca realizada com sucesso"),
             @ApiResponse(responseCode = "403", description = "Acesso negado")
     })
-    public ResponseEntity<CursorPage<ClubMember>> search(
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<CursorPage<ClubMemberListItem>> search(
             @Parameter(description = "Filtros de busca (papel, status)")
             @RequestBody ClubMemberFilter filter,
 
@@ -67,6 +70,7 @@ public class ClubMemberController {
             @ApiResponse(responseCode = "409", description = "Usuário já está matriculado nesta edição do clube ativamente"),
             @ApiResponse(responseCode = "403", description = "Acesso negado")
     })
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'USER')")
     public ResponseEntity<ClubMember> enroll(
             @Parameter(description = "ID do clube", required = true) 
             @PathVariable Long clubId,
@@ -89,6 +93,7 @@ public class ClubMemberController {
             @ApiResponse(responseCode = "409", description = "Usuário já faz parte da equipe deste clube nesta edição"),
             @ApiResponse(responseCode = "403", description = "Acesso negado")
     })
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ClubMember> addMember(
             @Parameter(description = "ID do clube", required = true) 
             @PathVariable Long clubId,
@@ -97,9 +102,11 @@ public class ClubMemberController {
             @PathVariable String email,
             
             @Parameter(description = "Papel a ser atribuído (INSTRUCTOR ou MEMBER)", required = true) 
-            @RequestParam EnumClubMemberRole role
+            @RequestParam EnumClubMemberRole role,
+
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        return ResponseEntity.ok(clubMemberService.addMemberByEmail(clubId, email, role));
+        return ResponseEntity.ok(clubMemberService.addMemberByEmail(extractUserId(jwt), clubId, email, role));
     }
 
     @PatchMapping("/members/{memberId}/status")
@@ -112,6 +119,7 @@ public class ClubMemberController {
             @ApiResponse(responseCode = "400", description = "Status inválido ou membro não encontrado"),
             @ApiResponse(responseCode = "403", description = "Acesso negado")
     })
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<Void> changeStatus(
             @Parameter(description = "ID da matrícula do membro", required = true) 
             @PathVariable Long memberId,

@@ -1,8 +1,11 @@
 package com.ccomp.br.domain.clubs.application;
 
 import com.ccomp.br.domain.clubs.dto.ClubMemberFilter;
+import com.ccomp.br.domain.clubs.dto.ClubMemberListItem;
 import com.ccomp.br.domain.clubs.enums.EnumClubMemberStatus;
 import com.ccomp.br.domain.clubs.enums.EnumClubMemberRole;
+import com.ccomp.br.domain.clubs.persistence.Club;
+import com.ccomp.br.domain.clubs.persistence.ClubRepository;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMember;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMemberRepository;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMemberSpec;
@@ -11,6 +14,7 @@ import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ConflictException;
+import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorCodec;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -21,35 +25,38 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class ClubMemberService {
-
+    private final ClubRepository clubRepository;
     private final ClubMemberRepository clubMemberRepository;
     private final ClubAccessPolicy clubAccessPolicy;
     private final UserManagement userManagement;
 
-    public ClubMemberService(ClubMemberRepository clubMemberRepository, ClubAccessPolicy clubAccessPolicy, UserManagement userManagement) {
+    public ClubMemberService(ClubRepository clubRepository, ClubMemberRepository clubMemberRepository, ClubAccessPolicy clubAccessPolicy, UserManagement userManagement) {
+        this.clubRepository = clubRepository;
         this.clubMemberRepository = clubMemberRepository;
         this.clubAccessPolicy = clubAccessPolicy;
         this.userManagement = userManagement;
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<ClubMember> searchMembers(UUID userId, Long clubId, ClubMemberFilter filter, String cursor, int pageSize) {
-        if(!clubAccessPolicy.isInstructor(clubId, userId)) {
+    public CursorPage<ClubMemberListItem> searchMembers(UUID userId, Long clubId, ClubMemberFilter filter, String cursor, int pageSize) {
+        if (!clubAccessPolicy.isInstructor(clubId, userId)) {
             var user = userManagement.findById(userId)
-                    .orElseThrow(() ->
-                            new AccessDeniedException("O usuário não tem acesso a este recurso."));
+                    .orElseThrow(() -> new AccessDeniedException("O usuário não tem acesso a este recurso."));
 
             if (!user.isAdmin()) {
                 throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
             }
         }
 
-        if(pageSize > 50) pageSize = 50;
+        if (pageSize > 50) pageSize = 50;
 
         Specification<ClubMember> spec = ClubMemberSpec.filterByAndCursor(clubId, filter,
                 CursorCodec.decode(cursor, LocalDateTime.class).orElse(null));
@@ -62,9 +69,30 @@ public class ClubMemberService {
 
         boolean hasNext = results.size() > finalPageSize;
         List<ClubMember> page = hasNext ? results.subList(0, finalPageSize) : results;
+
+        List<UUID> ids = page.stream()
+                .map(ClubMember::getUserId)
+                .toList();
+
+        Map<UUID, UserDTO> userMap = userManagement.findAllByIds(ids)
+                .stream()
+                .collect(Collectors.toMap(UserDTO::id, Function.identity(), (user1, user2) -> user1));
+
         String nextCursor = hasNext && !page.isEmpty() ? CursorCodec.encode(page.getLast().getJoinedAt()) : null;
 
-        return new CursorPage<>(page, nextCursor, null);
+        List<ClubMemberListItem> contents = page.stream()
+                .map(cm -> ClubMemberListItem.builder()
+                        .id(cm.getId())
+                        .clubId(cm.getClubId())
+                        .user(userMap.get(cm.getUserId()))
+                        .role(cm.getRole())
+                        .status(cm.getStatus())
+                        .joinedAt(cm.getJoinedAt())
+                        .leftAt(cm.getLeftAt())
+                        .build())
+                .toList();
+
+        return new CursorPage<>(contents, nextCursor, null);
     }
 
 //    @Transactional(readOnly = true)
@@ -74,6 +102,9 @@ public class ClubMemberService {
 
     @Transactional
     public ClubMember enrollMember(Long clubId, UUID userId) {
+        if(!clubRepository.existsById(clubId))
+            throw new ResourceNotFoundException("Clube não encontrado com o id:" + clubId);
+
         Optional<ClubMember> existingMemberOpt = clubMemberRepository.findByUserIdAndClubId(userId, clubId);
 
         if (existingMemberOpt.isPresent()) {
@@ -97,9 +128,19 @@ public class ClubMemberService {
         return clubMemberRepository.save(member);
     }
     @Transactional
-    public ClubMember addMemberByEmail(Long clubId, String email, EnumClubMemberRole role) {
+    public ClubMember addMemberByEmail(UUID userLoggedId, Long clubId, String email, EnumClubMemberRole role) {
         UserDTO user = userManagement.findByEmailAddress(new EmailAddress(email))
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado com o e-mail informado."));
+
+        if(!clubAccessPolicy.isInstructor(clubId, userLoggedId)) {
+            var userLogged = userManagement.findById(userLoggedId)
+                    .orElseThrow(() ->
+                            new AccessDeniedException("O usuário não tem acesso a este recurso."));
+
+            if (!userLogged.isAdmin()) {
+                throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+            }
+        }
 
         return addMember(clubId, user.id(), role);
     }

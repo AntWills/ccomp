@@ -6,7 +6,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "tb_clubs", indexes = {
@@ -47,8 +46,8 @@ public class Club {
     @Column(columnDefinition = "text")
     private String content;
 
-    @Column(name = "participant_limit")
-    private Long participantLimit;
+//    @Column(name = "participant_limit")
+//    private Long participantLimit;
 
 //    public boolean isInstructor(UUID userId) {
 //        return userId.equals(instructor);

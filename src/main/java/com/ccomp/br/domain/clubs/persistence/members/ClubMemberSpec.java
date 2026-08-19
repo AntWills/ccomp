@@ -11,9 +11,9 @@ import java.util.List;
 public class ClubMemberSpec {
     public static Specification<ClubMember> hasClubId(Long clubId) {
         return (root, query, criteriaBuilder) -> {
-            if(clubId == null) criteriaBuilder.conjunction();
+            if(clubId == null) return criteriaBuilder.conjunction();
 
-            return criteriaBuilder.equal(root.get("id"), clubId);
+            return criteriaBuilder.equal(root.get("clubId"), clubId);
         };
     }
 
@@ -21,12 +21,12 @@ public class ClubMemberSpec {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            if (filter.getRole() != null) {
-                predicates.add(criteriaBuilder.equal(root.get("role"), filter.getRole()));
+            if (filter.role() != null) {
+                predicates.add(criteriaBuilder.equal(root.get("role"), filter.role()));
             }
 
-            if (filter.getStatus() != null) {
-                predicates.add(criteriaBuilder.equal(root.get("status"), filter.getStatus()));
+            if (filter.status() != null) {
+                predicates.add(criteriaBuilder.equal(root.get("status"), filter.status()));
             }
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
