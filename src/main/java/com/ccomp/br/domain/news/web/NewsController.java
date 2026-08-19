@@ -84,21 +84,6 @@ public class NewsController {
         );
     }
 
-    @Operation(
-            summary = "Lista as notícias em destaque",
-            description = "Retorna uma lista resumida (máximo de 3 itens) das notícias em destaque na plataforma. Ideal para exibição na página inicial."
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Destaques retornados com sucesso")
-    })
-    @SecurityRequirements
-    @GetMapping("highlights")
-    public ResponseEntity<List<NewsItem>> highlightsNews() {
-        return ResponseEntity.ok(
-                newsApplication.searchNewsWithFilters(new NewsFilter(null), null, 3).content()
-        );
-    }
-
     // Rotas privadas
     @Operation(
             summary = "Obtém uma notícia pelo ID (Admin)",

@@ -49,21 +49,6 @@ public class ClubController {
         return ResponseEntity.ok(clubService.search(nextCursor, pageSize));
     }
 
-    @Operation(
-            summary = "Lista os clubes em destaque",
-            description = "Retorna uma lista resumida (máximo de 3 itens) dos clubes em destaque na plataforma. Ideal para exibição na página inicial."
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Destaques retornados com sucesso")
-    })
-    @SecurityRequirements
-    @GetMapping("highlights")
-    public ResponseEntity<List<ClubResponseDTO>> highlightsClubs() {
-        return ResponseEntity.ok(
-                clubService.search(null, 3).content()
-        );
-    }
-
     @PostMapping("/me")
     @Operation(
             summary = "Lista os clubes do usuário autenticado",
