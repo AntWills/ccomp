@@ -152,21 +152,6 @@ public class EventsController {
     }
 
     @Operation(
-            summary = "Lista os eventos em destaque",
-            description = "Retorna uma lista resumida (máximo de 3 itens) dos eventos em destaque na plataforma. Ideal para exibição na página inicial."
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Destaques retornados com sucesso")
-    })
-    @SecurityRequirements
-    @GetMapping("highlights")
-    public ResponseEntity<List<EventListItem>> highlightsEvents() {
-        return ResponseEntity.ok(
-                eventsServices.searchEventsWithFilters(new EventsFilterRequest(null, null), null, 3).content()
-        );
-    }
-
-    @Operation(
             summary = "Cria um novo evento",
             description = """
         Registra um novo evento associando o usuário autenticado como o proprietário (*owner*).
