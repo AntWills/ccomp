@@ -1,11 +1,9 @@
 package com.ccomp.br.domain.clubs.web;
 
 import com.ccomp.br.domain.clubs.application.ClubService;
-import com.ccomp.br.domain.clubs.dto.CreateClubRequestDTO;
 import com.ccomp.br.domain.clubs.dto.ClubResponseDTO;
+import com.ccomp.br.domain.clubs.dto.CreateClubRequestDTO;
 import com.ccomp.br.domain.clubs.dto.UpdateClubRequestDTO;
-import com.ccomp.br.domain.news.dto.NewsFilter;
-import com.ccomp.br.domain.news.dto.NewsItem;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -21,7 +19,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -35,15 +32,21 @@ public class ClubController {
         this.clubService = clubService;
     }
 
-    @PostMapping("search")
+    @PostMapping("/search")
     @Operation(
-            summary = "Lista todos os clubes",
-            description = "Retorna a lista com o cursor de todos os clubes cadastrados. Não requer que o usuário esteja logado."
+            summary = "Lista todos os clubes públicos",
+            description = "Retorna uma lista paginada por cursor com os clubes públicos cadastrados. Endpoint público."
     )
-    @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Parâmetros de paginação inválidos")
+    })
     @SecurityRequirements
-    public ResponseEntity<CursorPage<ClubResponseDTO>> search (
+    public ResponseEntity<CursorPage<ClubResponseDTO>> search(
+            @Parameter(description = "Cursor para a próxima página (codificado)")
             @RequestParam(required = false) String nextCursor,
+
+            @Parameter(description = "Quantidade de itens por página (máximo 50)")
             @RequestParam(defaultValue = "10") int pageSize
     ) {
         return ResponseEntity.ok(clubService.search(nextCursor, pageSize));
@@ -51,14 +54,20 @@ public class ClubController {
 
     @PostMapping("/me")
     @Operation(
-            summary = "Lista os clubes do usuário autenticado",
-            description = "Retorna a lista paginada por cursor (ordenada por data de criação) dos clubes criados pelo próprio usuário autenticado."
+            summary = "Lista os clubes do instrutor autenticado",
+            description = "Retorna uma lista paginada por cursor dos clubes criados/gerenciados pelo usuário autenticado."
     )
-    @ApiResponse(responseCode = "200", description = "Lista de clubes retornada com sucesso")
-    @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Lista de clubes retornada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
+    })
     public ResponseEntity<CursorPage<ClubResponseDTO>> findMyClubs(
+            @Parameter(description = "Cursor para a próxima página (codificado)")
             @RequestParam(required = false) String nextCursor,
+
+            @Parameter(description = "Quantidade de itens por página")
             @RequestParam(defaultValue = "10") int pageSize,
+
             @AuthenticationPrincipal Jwt jwt
     ) {
         UUID instructorId = extractUserId(jwt);
@@ -68,12 +77,18 @@ public class ClubController {
     @GetMapping("/{clubId}")
     @Operation(
             summary = "Busca um clube pelo ID",
-            description = "Retorna os dados detalhados de um clube específico caso ele esteja público ou caso o usuário seja o instrutor do clube."
+            description = "Retorna os detalhes de um clube específico. Se o clube não for público, exige que o requisitante seja o instrutor responsável."
     )
-    @ApiResponse(responseCode = "200", description = "Clube encontrado")
-    @ApiResponse(responseCode = "404", description = "Clube não encontrado")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Clube encontrado com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado para visualizar este clube"),
+            @ApiResponse(responseCode = "404", description = "Clube não encontrado")
+    })
     public ResponseEntity<ClubResponseDTO> findById(
-            @Parameter(description = "ID do clube") @PathVariable Long clubId,
+            @Parameter(description = "ID do clube", required = true)
+            @PathVariable Long clubId,
+
             @AuthenticationPrincipal Jwt jwt
     ) {
         return clubService.findById(clubId, extractUserId(jwt))
@@ -84,11 +99,14 @@ public class ClubController {
     @PostMapping
     @Operation(
             summary = "Cria um novo clube",
-            description = "Cria um clube vinculado ao usuário autenticado, que se torna automaticamente o instrutor (dono) do clube."
+            description = "Cria um clube vinculado ao usuário autenticado, tornando-o o instrutor do clube."
     )
-    @ApiResponse(responseCode = "201", description = "Clube criado com sucesso")
-    @ApiResponse(responseCode = "400", description = "Dados inválidos")
-    @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Clube criado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados da requisição inválidos"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Perfil sem permissão para criar clubes")
+    })
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ClubResponseDTO> create(
             @Valid @RequestBody CreateClubRequestDTO dto,
@@ -101,16 +119,23 @@ public class ClubController {
 
     @PatchMapping("/{clubId}")
     @Operation(
-            summary = "Atualiza um clube",
-            description = "Atualiza os dados de um clube existente. Apenas o instrutor (dono) do clube pode realizar esta operação."
+            summary = "Atualiza dados de um clube",
+            description = "Atualiza as informações do clube especificado. Restrito ao instrutor do clube ou administrador."
     )
-    @ApiResponse(responseCode = "200", description = "Clube atualizado com sucesso")
-    @ApiResponse(responseCode = "403", description = "Usuário não é o dono do clube")
-    @ApiResponse(responseCode = "404", description = "Clube não encontrado")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Clube atualizado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados da requisição inválidos"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — usuário não é instrutor do clube"),
+            @ApiResponse(responseCode = "404", description = "Clube não encontrado")
+    })
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ClubResponseDTO> update(
-            @Parameter(description = "ID do clube") @PathVariable Long clubId,
+            @Parameter(description = "ID do clube", required = true)
+            @PathVariable Long clubId,
+
             @Valid @RequestBody UpdateClubRequestDTO dto,
+
             @AuthenticationPrincipal Jwt jwt
     ) {
         UUID requesterId = extractUserId(jwt);
@@ -120,14 +145,19 @@ public class ClubController {
     @DeleteMapping("/{clubId}")
     @Operation(
             summary = "Remove um clube",
-            description = "Remove um clube existente. Apenas o instrutor (dono) do clube pode realizar esta operação."
+            description = "Remove o clube especificado. Restrito ao instrutor do clube ou administrador."
     )
-    @ApiResponse(responseCode = "204", description = "Clube removido com sucesso")
-    @ApiResponse(responseCode = "403", description = "Usuário não é o dono do clube")
-    @ApiResponse(responseCode = "404", description = "Clube não encontrado")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Clube removido com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — usuário não é instrutor do clube"),
+            @ApiResponse(responseCode = "404", description = "Clube não encontrado")
+    })
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<Void> delete(
-            @Parameter(description = "ID do clube") @PathVariable Long clubId,
+            @Parameter(description = "ID do clube", required = true)
+            @PathVariable Long clubId,
+
             @AuthenticationPrincipal Jwt jwt
     ) {
         UUID requesterId = extractUserId(jwt);
@@ -136,6 +166,6 @@ public class ClubController {
     }
 
     private UUID extractUserId(Jwt jwt) {
-        return UUID.fromString(jwt.getSubject());
+        return jwt != null ? UUID.fromString(jwt.getSubject()) : null;
     }
 }
