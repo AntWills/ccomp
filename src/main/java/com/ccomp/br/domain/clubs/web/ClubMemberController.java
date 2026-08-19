@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/clubs/members")
+@RequestMapping("/api/clubs")
 @Tag(name = "Club Members", description = "Endpoints para gerenciamento de membros e instrutores de clubes")
 @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
 public class ClubMemberController {
@@ -31,7 +31,7 @@ public class ClubMemberController {
         this.clubMemberService = clubMemberService;
     }
 
-    @PostMapping("/search")
+    @PostMapping("{clubId}/members/search")
     @Operation(
             summary = "Busca membros de clubes",
             description = "Retorna uma lista paginada de membros de clubes utilizando paginação por cursor (CursorPage). Permite aplicar filtros complexos no corpo da requisição."
@@ -41,22 +41,23 @@ public class ClubMemberController {
             @ApiResponse(responseCode = "403", description = "Acesso negado")
     })
     public ResponseEntity<CursorPage<ClubMember>> search(
-            @Parameter(description = "Filtros de busca (ex: clube, usuário, papel, status e edição)") 
-            @RequestBody(required = false) ClubMemberFilter filter,
+            @Parameter(description = "Filtros de busca (papel, status)")
+            @RequestBody ClubMemberFilter filter,
+
+            @PathVariable Long clubId,
             
             @Parameter(description = "Cursor para a próxima página (codificado)") 
             @RequestParam(required = false) String cursor,
             
             @Parameter(description = "Quantidade de itens por página (máximo 50)") 
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        if (filter == null) {
-            filter = ClubMemberFilter.builder().build();
-        }
-        return ResponseEntity.ok(clubMemberService.searchMembers(filter, cursor, size));
+        return ResponseEntity.ok(clubMemberService.searchMembers(extractUserId(jwt), clubId, filter, cursor, size));
     }
 
-    @PostMapping("/enroll/{clubId}")
+    @PostMapping("/{clubId}/members/enroll")
     @Operation(
             summary = "Inscreve o usuário autenticado",
             description = "Inscreve o usuário atual como membro (MEMBER) em uma edição específica de um clube. Caso o usuário já tenha participado anteriormente, sua inscrição pode ser reativada."
@@ -70,17 +71,14 @@ public class ClubMemberController {
             @Parameter(description = "ID do clube", required = true) 
             @PathVariable Long clubId,
             
-            @Parameter(description = "Identificador da edição/temporada do clube", required = true) 
-            @RequestParam String edition,
-            
             @Parameter(hidden = true) 
             @AuthenticationPrincipal Jwt jwt
     ) {
         UUID userId = extractUserId(jwt);
-        return ResponseEntity.ok(clubMemberService.enrollMember(clubId, userId, edition));
+        return ResponseEntity.ok(clubMemberService.enrollMember(clubId, userId));
     }
 
-    @PostMapping("/{clubId}/staff/{email}")
+    @PostMapping("/{clubId}/members/staff/{email}")
     @Operation(
             summary = "Adiciona um instrutor/staff ao clube",
             description = "Adiciona um usuário existente (buscado pelo email) como instrutor (INSTRUCTOR) ou membro em uma edição do clube."
@@ -99,15 +97,12 @@ public class ClubMemberController {
             @PathVariable String email,
             
             @Parameter(description = "Papel a ser atribuído (INSTRUCTOR ou MEMBER)", required = true) 
-            @RequestParam EnumClubMemberRole role,
-            
-            @Parameter(description = "Identificador da edição/temporada (opcional)") 
-            @RequestParam(required = false) String edition
+            @RequestParam EnumClubMemberRole role
     ) {
-        return ResponseEntity.ok(clubMemberService.addStaff(clubId, email, role, edition));
+        return ResponseEntity.ok(clubMemberService.addMemberByEmail(clubId, email, role));
     }
 
-    @PatchMapping("/{memberId}/status")
+    @PatchMapping("/members/{memberId}/status")
     @Operation(
             summary = "Altera o status de um membro",
             description = "Permite inativar ou ativar a participação de um membro/staff em um clube. Inativar (INACTIVE) irá definir a data de saída (leftAt)."

@@ -9,6 +9,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ClubMemberSpec {
+    public static Specification<ClubMember> hasClubId(Long clubId) {
+        return (root, query, criteriaBuilder) -> {
+            if(clubId == null) criteriaBuilder.conjunction();
+
+            return criteriaBuilder.equal(root.get("id"), clubId);
+        };
+    }
 
     public static Specification<ClubMember> filterBy(ClubMemberFilter filter) {
         return (root, query, criteriaBuilder) -> {
@@ -26,8 +33,9 @@ public class ClubMemberSpec {
         };
     }
 
-    public static Specification<ClubMember> filterByAndCursor(ClubMemberFilter filter, LocalDateTime cursor) {
-        return Specification.where(filterBy(filter))
+    public static Specification<ClubMember> filterByAndCursor(Long clubId, ClubMemberFilter filter, LocalDateTime cursor) {
+        return Specification.where(hasClubId(clubId))
+                .and(filterBy(filter))
                 .and((root, query, cb) -> {
                     if (cursor == null) {
                         return cb.conjunction();

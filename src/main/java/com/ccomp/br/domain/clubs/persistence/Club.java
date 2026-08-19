@@ -30,8 +30,8 @@ public class Club {
     @Column(name = "cover_image_url")
     private String coverImageUrl;
 
-    @Column(nullable = false)
-    private UUID instructor;
+//    @Column(nullable = false)
+//    private UUID instructor;
 
     @CreationTimestamp
     @Column(name = "created_at")
@@ -50,9 +50,9 @@ public class Club {
     @Column(name = "participant_limit")
     private Long participantLimit;
 
-    public boolean isInstructor(UUID userId) {
-        return userId.equals(instructor);
-    }
+//    public boolean isInstructor(UUID userId) {
+//        return userId.equals(instructor);
+//    }
 
     public boolean isPublic() {
         if(publishedAt ==  null) return false;

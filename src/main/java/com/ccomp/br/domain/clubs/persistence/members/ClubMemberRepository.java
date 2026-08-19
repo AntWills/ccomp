@@ -6,10 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ClubMemberRepository extends JpaRepository<ClubMember, Long>, JpaSpecificationExecutor<ClubMember> {
     List<ClubMember> findByUserId(UUID userId);
-    List<ClubMember> findByUserIdAndClubId(UUID userId, Long clubId);
+    Optional<ClubMember> findByUserIdAndClubId(UUID userId, Long clubId);
     boolean existsByUserIdAndClubIdAndRoleAndStatus(UUID userId, Long clubId, EnumClubMemberRole role, EnumClubMemberStatus status);
 }

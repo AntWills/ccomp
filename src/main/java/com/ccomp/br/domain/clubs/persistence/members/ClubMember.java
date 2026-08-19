@@ -9,10 +9,18 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "tb_club_members", indexes = {
-        @Index(name = "idx_club_members_user_id", columnList = "user_id"),
-        @Index(name = "idx_club_members_club_id", columnList = "club_id")
-})
+@Table(name = "tb_club_members",
+        indexes = {
+            @Index(name = "idx_club_members_user_id", columnList = "user_id"),
+            @Index(name = "idx_club_members_club_id", columnList = "club_id")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_club_members_club_user",
+                        columnNames = {"club_id", "user_id"}
+                )
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -46,7 +54,17 @@ public class ClubMember {
     @Column(name = "left_at")
     private LocalDateTime leftAt;
 
+    public void activate() {
+        this.status = EnumClubMemberStatus.ACTIVE;
+        this.leftAt = null;
+    }
+
+    public void deactivate() {
+        this.status = EnumClubMemberStatus.INACTIVE;
+        this.leftAt = LocalDateTime.now();
+    }
+
     public boolean isStillLinked() {
-        return leftAt == null;
+        return this.status == EnumClubMemberStatus.ACTIVE;
     }
 }
