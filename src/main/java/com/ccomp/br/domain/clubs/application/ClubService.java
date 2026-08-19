@@ -3,6 +3,7 @@ package com.ccomp.br.domain.clubs.application;
 import com.ccomp.br.domain.clubs.dto.CreateClubRequestDTO;
 import com.ccomp.br.domain.clubs.dto.ClubResponseDTO;
 import com.ccomp.br.domain.clubs.dto.UpdateClubRequestDTO;
+import com.ccomp.br.domain.clubs.enums.EnumClubMemberRole;
 import com.ccomp.br.domain.clubs.persistence.Club;
 import com.ccomp.br.domain.clubs.persistence.ClubRepository;
 import com.ccomp.br.domain.clubs.persistence.ClubSpec;
@@ -28,11 +29,15 @@ import java.util.UUID;
 @Service
 public class ClubService {
     private final ClubRepository clubRepository;
+    private final ClubMemberService clubMemberService;
+    private final ClubAccessPolicy clubAccessPolicy;
     private final ClubMapper clubMapper;
     private final UserManagement userManagement;
 
-    public ClubService(ClubRepository clubRepository, ClubMapper clubMapper, UserManagement userManagement) {
+    public ClubService(ClubRepository clubRepository, ClubMemberService clubMemberService, ClubAccessPolicy clubAccessPolicy, ClubMapper clubMapper, UserManagement userManagement) {
         this.clubRepository = clubRepository;
+        this.clubMemberService = clubMemberService;
+        this.clubAccessPolicy = clubAccessPolicy;
         this.clubMapper = clubMapper;
         this.userManagement = userManagement;
     }
@@ -81,7 +86,7 @@ public class ClubService {
     @Transactional(readOnly = true)
     public Optional<ClubResponseDTO> findById(Long clubId, UUID userId) {
         return clubRepository.findById(clubId)
-                .filter(club -> club.isPublic() || club.isInstructor(userId))
+                .filter(club -> club.isPublic() || clubAccessPolicy.isInstructor(clubId, userId))
                 .map(clubMapper::toDTO);
     }
 
@@ -97,24 +102,27 @@ public class ClubService {
         Club club = Club.builder()
                 .name(dto.name())
                 .summary(dto.summary())
-                .instructor(instructorId)
+//                .instructor(instructorId)
                 .build();
+        Club saved = clubRepository.save(club);
 
-        return clubMapper.toDTO(clubRepository.save(club));
+        clubMemberService.addMember(saved.getId(), userDTO.id(), EnumClubMemberRole.INSTRUCTOR);
+
+        return clubMapper.toDTO(saved);
     }
 
     @Transactional
-    public ClubResponseDTO update(Long id, UpdateClubRequestDTO dto, UUID userId) {
-        Club club = clubRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Clube não encontrado com o id:" + id));
+    public ClubResponseDTO update(Long clubId, UpdateClubRequestDTO dto, UUID userId) {
+        Club club = clubRepository.findById(clubId)
+                .orElseThrow(() -> new ResourceNotFoundException("Clube não encontrado com o id:" + clubId));
 
         UserDTO userDTO = userManagement.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
 
         boolean canEdit = userDTO.isAdmin()
-                || club.isInstructor(userId);
+                || clubAccessPolicy.isInstructor(clubId, userId);
 
-        if (canEdit)
+        if (!canEdit)
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         clubMapper.updateEntityFromDto(dto, club);
@@ -125,17 +133,17 @@ public class ClubService {
     }
 
     @Transactional
-    public void delete(Long id, UUID userId) {
-        Club club = clubRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Clube não encontrado com o id:" + id));
+    public void delete(Long clubId, UUID userId) {
+        Club club = clubRepository.findById(clubId)
+                .orElseThrow(() -> new ResourceNotFoundException("Clube não encontrado com o id:" + clubId));
 
         UserDTO userDTO = userManagement.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
 
         boolean canEdit = userDTO.isAdmin()
-                || club.isInstructor(userId);
+                || clubAccessPolicy.isInstructor(clubId, userId);
 
-        if (canEdit)
+        if (!canEdit)
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         clubRepository.delete(club);

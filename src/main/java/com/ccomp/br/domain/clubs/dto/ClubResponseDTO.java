@@ -12,8 +12,8 @@ public record ClubResponseDTO(
         String name,
         String summary,
         String coverImageUrl,
-        UUID instructor,
         String content,
+//        Long participantLimit,
         LocalDateTime createdAt,
         LocalDateTime publishedAt,
         LocalDateTime updatedAt

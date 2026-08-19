@@ -6,6 +6,7 @@ public record UpdateClubRequestDTO(
         String name,
         String summary,
         String coverImageUrl,
+//        Long participantLimit,
         LocalDateTime publishedAt,
         String content
 ) {
