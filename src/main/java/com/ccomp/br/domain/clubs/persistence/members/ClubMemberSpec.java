@@ -30,10 +30,6 @@ public class ClubMemberSpec {
                 predicates.add(criteriaBuilder.equal(root.get("status"), filter.getStatus()));
             }
 
-            if (filter.getEdition() != null) {
-                predicates.add(criteriaBuilder.equal(root.get("edition"), filter.getEdition()));
-            }
-
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }

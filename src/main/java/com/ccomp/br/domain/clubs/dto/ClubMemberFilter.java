@@ -16,5 +16,4 @@ public class ClubMemberFilter {
     private UUID userId;
     private EnumClubMemberRole role;
     private EnumClubMemberStatus status;
-    private String edition;
 }

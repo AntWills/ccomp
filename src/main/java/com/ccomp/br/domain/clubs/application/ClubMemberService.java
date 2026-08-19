@@ -63,7 +63,7 @@ public class ClubMemberService {
     public ClubMember enrollMember(Long clubId, UUID userId, String edition) {
         Optional<ClubMember> existingMemberOpt = clubMemberRepository.findByUserIdAndClubId(userId, clubId)
                 .stream()
-                .filter(m -> m.getRole() == EnumClubMemberRole.MEMBER && m.getEdition().equals(edition))
+                .filter(m -> m.getRole() == EnumClubMemberRole.MEMBER)
                 .findFirst();
 
         if (existingMemberOpt.isPresent()) {
@@ -82,20 +82,19 @@ public class ClubMemberService {
                 .userId(userId)
                 .role(EnumClubMemberRole.MEMBER)
                 .status(EnumClubMemberStatus.ACTIVE)
-                .edition(edition)
                 .joinedAt(LocalDateTime.now())
                 .build();
         return clubMemberRepository.save(member);
     }
 
     @Transactional
-    public ClubMember addStaff(Long clubId, String email, EnumClubMemberRole role, String edition) {
+    public ClubMember addStaff(Long clubId, String email, EnumClubMemberRole role) {
         UserDTO user = userManagement.findByEmailAddress(new EmailAddress(email))
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado com o e-mail informado."));
 
         Optional<ClubMember> existingMemberOpt = clubMemberRepository.findByUserIdAndClubId(user.id(), clubId)
                 .stream()
-                .filter(m -> m.getRole() == role && (edition == null || edition.equals(m.getEdition())))
+                .filter(m -> m.getRole() == role )
                 .findFirst();
 
         if (existingMemberOpt.isPresent()) {
@@ -114,7 +113,6 @@ public class ClubMemberService {
                 .userId(user.id())
                 .role(role)
                 .status(EnumClubMemberStatus.ACTIVE)
-                .edition(edition)
                 .joinedAt(LocalDateTime.now())
                 .build();
         return clubMemberRepository.save(member);

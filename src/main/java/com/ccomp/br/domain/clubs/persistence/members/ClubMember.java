@@ -37,12 +37,16 @@ public class ClubMember {
     @Column(nullable = false, columnDefinition = "varchar(25)")
     private EnumClubMemberStatus status;
 
-    @Column(name = "edition")
-    private String edition;
+//    @Column(name = "edition")
+//    private String edition;
 
-    @Column(name = "joined_at")
+    @Column(name = "joined_at", nullable = false)
     private LocalDateTime joinedAt;
 
     @Column(name = "left_at")
     private LocalDateTime leftAt;
+
+    public boolean isStillLinked() {
+        return leftAt == null;
+    }
 }
