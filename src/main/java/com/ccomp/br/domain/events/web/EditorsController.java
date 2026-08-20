@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-@Tag(name = "Gerir Eventos")
+@Tag(name = "Gerir Eventos (Editores)")
 @RestController
 @RequestMapping("api/events")
 @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")

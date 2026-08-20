@@ -4,6 +4,7 @@ import com.ccomp.br.domain.events.dto.*;
 import com.ccomp.br.domain.events.persistence.EventSpecification;
 import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.domain.news.util.SlugUtils;
+import com.ccomp.br.domain.security.SecurityUtils;
 import com.ccomp.br.shared.dto.EventResponse;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
@@ -50,14 +51,10 @@ public class EventsServices {
                 .map(event -> {
                     boolean allowed =
                             event.isOpen()
-                                    || Optional.ofNullable(userId).filter(event::isOwner).isPresent();
+                                    || Optional.ofNullable(userId).filter(event::isOwner).isPresent()
+                                    || SecurityUtils.isAdmin();
 
                     if (allowed) return eventMapper.eventToEventResponse(event);
-
-                    UserDTO userDTO = userManagement.findById(userId)
-                            .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
-
-                    if(userDTO.isAdmin()) return eventMapper.eventToEventResponse(event);
 
                     throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
                 });
@@ -146,10 +143,8 @@ public class EventsServices {
         Event event = eventRepository.findById(request.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        UserDTO userDTO = userManagement.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
 
-        boolean canEdit = userDTO.isAdmin()
+        boolean canEdit = SecurityUtils.isAdmin()
                 || event.isOwner(userId)
                 || editorServices.isEditor(event, userId);
 
@@ -174,10 +169,7 @@ public class EventsServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        UserDTO userDTO = userManagement.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
-
-        boolean canEdit = userDTO.isAdmin()
+        boolean canEdit = SecurityUtils.isAdmin()
                 || event.isOwner(userId);
 
         if (!canEdit)
