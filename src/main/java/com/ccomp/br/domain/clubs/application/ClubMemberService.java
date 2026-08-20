@@ -11,6 +11,7 @@ import com.ccomp.br.domain.clubs.persistence.members.ClubMemberSpec;
 import com.ccomp.br.domain.security.SecurityUtils;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
+import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ConflictException;
@@ -107,7 +108,7 @@ public class ClubMemberService {
         if (existingMemberOpt.isPresent()) {
             ClubMember existing = existingMemberOpt.get();
             if (existing.getStatus() == EnumClubMemberStatus.ACTIVE)
-                throw new ConflictException("Usuário já está matriculado nesta edição do clube.");
+                return existing;
 
             existing.activate();
             existing.setRole(EnumClubMemberRole.MEMBER);
@@ -124,6 +125,25 @@ public class ClubMemberService {
 
         return clubMemberRepository.save(member);
     }
+
+    @Transactional
+    public MessageResponse unenrollMember(Long clubId, UUID userId) {
+        if(!clubRepository.existsById(clubId))
+            throw new ResourceNotFoundException("Clube não encontrado com o id:" + clubId);
+
+        ClubMember member = clubMemberRepository.findByUserIdAndClubId(userId, clubId)
+                .orElseThrow(() -> new IllegalArgumentException("O usuário não está vinculado ao clube."));
+
+        if(!member.isStillLinked())
+            return new MessageResponse("O usuário não está vinculado a este clube.");
+
+        member.unsubscribe();
+
+        clubMemberRepository.save(member);
+
+        return new MessageResponse("Inscrição cancelada com sucesso.");
+    }
+
     @Transactional
     public ClubMember addMemberByEmail(UUID userLoggedId, Long clubId, String email, EnumClubMemberRole role) {
         UserDTO user = userManagement.findByEmailAddress(new EmailAddress(email))
