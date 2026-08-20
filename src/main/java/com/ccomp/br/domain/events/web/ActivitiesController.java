@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Optional;
 import java.util.UUID;
 
-@Tag(name = "Gerir Eventos")
+@Tag(name = "Gerir Eventos (Atividades)")
 @RestController
 @RequestMapping("api/events")
 public class ActivitiesController {

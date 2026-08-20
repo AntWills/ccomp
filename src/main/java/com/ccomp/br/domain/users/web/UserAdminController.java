@@ -42,6 +42,7 @@ public class UserAdminController {
         this.userApplication = userApplication;
     }
 
+    @PostMapping("/search")
     @Operation(
             summary = "Listar todos os usuários",
             description = "Retorna uma lista, junto com o cursor, de todos os usuários cadastrados na aplicação. Requer permissão ADMIN."
@@ -51,7 +52,6 @@ public class UserAdminController {
             @ApiResponse(responseCode = "401", description = "Requisição não autenticada"),
             @ApiResponse(responseCode = "403", description = "Acesso negado — Requer perfil ADMIN")
     })
-    @PostMapping("/search")
     public ResponseEntity<CursorPage<UserItem>> searchUsers(
             @Valid @RequestBody UserSearchFilter filter,
             @RequestParam(required = false) String nextCursor,
@@ -59,6 +59,7 @@ public class UserAdminController {
         return ResponseEntity.ok(adminServices.searchUsers(filter, nextCursor, pageSize));
     }
 
+    @GetMapping("/{userId}")
     @Operation(
             summary = "Obter dados do usuário via ID",
             description = "Retorna os detalhes do perfil do usuário usando o UUID."
@@ -68,13 +69,13 @@ public class UserAdminController {
             @ApiResponse(responseCode = "401", description = "Requisição não autenticada / Token inválido"),
             @ApiResponse(responseCode = "404", description = "Usuário autenticado não encontrado na base de dados")
     })
-    @GetMapping("/{userId}")
     public ResponseEntity<UserDTO> getById(@PathVariable UUID userId) {
         return userApplication.getById(userId)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
+    @GetMapping("email/{email}")
     @Operation(
             summary = "Obter dados do usuário via email",
             description = "Retorna os detalhes do perfil do usuário usando o email."
@@ -84,13 +85,13 @@ public class UserAdminController {
             @ApiResponse(responseCode = "401", description = "Requisição não autenticada / Token inválido"),
             @ApiResponse(responseCode = "404", description = "Usuário autenticado não encontrado na base de dados")
     })
-    @GetMapping("email/{email}")
     public ResponseEntity<UserDTO> getByEmail(@PathVariable EmailAddress email) {
         return adminServices.getByEmail(email)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
+    @PatchMapping("{userId}/block")
     @Operation(
             summary = "Bloqueia o usuário",
             description = "O perfil do usuário será bloqueado, com todas as suas credenciais suspensas e impedido de fazer login."
@@ -100,7 +101,6 @@ public class UserAdminController {
             @ApiResponse(responseCode = "401", description = "Requisição não autenticada / Token inválido"),
             @ApiResponse(responseCode = "404", description = "Usuário autenticado não encontrado na base de dados")
     })
-    @PostMapping("{userId}/block")
     public ResponseEntity<MessageResponse> blockByEmail(
             @PathVariable UUID userId,
             @Valid @RequestBody BlockAccountReq req,
@@ -112,6 +112,7 @@ public class UserAdminController {
         );
     }
 
+    @PatchMapping("{userId}/unlock")
     @Operation(
             summary = "Desbloqueia o usuário",
             description = "O perfil do usuário que está bloqueado, será desbloqueado e retornado como ativo (ACTIVE) para a plataforma."
@@ -121,7 +122,6 @@ public class UserAdminController {
             @ApiResponse(responseCode = "401", description = "Requisição não autenticada / Token inválido"),
             @ApiResponse(responseCode = "404", description = "Usuário autenticado não encontrado na base de dados")
     })
-    @PostMapping("{userId}/unlock")
     public ResponseEntity<MessageResponse> unlockByEmail(
             @PathVariable UUID userId,
             @Valid @RequestBody BlockAccountReq req,
@@ -133,6 +133,8 @@ public class UserAdminController {
         );
     }
 
+    @PutMapping("/{userId}/roles/{role}")
+//    @PreAuthorize("hasRole('ADMIN')")
     @Operation(
             summary = "Mapipular cargos (Roles) de um usuário",
             description = "Alterar um perfil de acesso/role específico a um usuário. Requer permissão ADMIN."
@@ -144,9 +146,7 @@ public class UserAdminController {
             @ApiResponse(responseCode = "403", description = "Acesso negado — Requer perfil ADMIN"),
             @ApiResponse(responseCode = "404", description = "Usuário ou Role não encontrada")
     })
-    @PostMapping("/{userId}/roles/{role}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MessageResponse> addRole(
+    public ResponseEntity<MessageResponse> changeRole(
             @Parameter(description = "ID do usuário (UUID)", example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable UUID userId,
 

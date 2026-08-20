@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Optional;
 import java.util.UUID;
 
-@Tag(name = "Gerir Eventos")
+@Tag(name = "Gerir Eventos (Inscritos)")
 @RestController
 @RequestMapping("api/events")
 public class EnrollmentsController {

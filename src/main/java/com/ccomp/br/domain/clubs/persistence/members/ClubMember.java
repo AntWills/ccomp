@@ -64,7 +64,14 @@ public class ClubMember {
         this.leftAt = LocalDateTime.now();
     }
 
-    public boolean isStillLinked() {
-        return this.status == EnumClubMemberStatus.ACTIVE;
+    public void unsubscribe() {
+        this.status = EnumClubMemberStatus.CANCELLED;
+        this.leftAt = LocalDateTime.now();
     }
+
+    public boolean isInstructor(Long clubId) {
+        return this.role == EnumClubMemberRole.INSTRUCTOR && clubId.equals(this.clubId);
+    }
+
+    public boolean isStillLinked() { return this.status != EnumClubMemberStatus.CANCELLED; }
 }

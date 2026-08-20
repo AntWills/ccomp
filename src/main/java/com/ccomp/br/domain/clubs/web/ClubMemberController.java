@@ -6,6 +6,7 @@ import com.ccomp.br.domain.clubs.dto.ClubMemberListItem;
 import com.ccomp.br.domain.clubs.enums.EnumClubMemberRole;
 import com.ccomp.br.domain.clubs.enums.EnumClubMemberStatus;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMember;
+import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -74,7 +75,6 @@ public class ClubMemberController {
             @ApiResponse(responseCode = "404", description = "Clube não encontrado"),
             @ApiResponse(responseCode = "409", description = "Usuário já possui inscrição ativa neste clube")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'USER')")
     public ResponseEntity<ClubMember> enroll(
             @Parameter(description = "ID do clube", required = true)
             @PathVariable Long clubId,
@@ -83,6 +83,27 @@ public class ClubMemberController {
     ) {
         UUID userId = extractUserId(jwt);
         return ResponseEntity.ok(clubMemberService.enrollMember(clubId, userId));
+    }
+
+    @DeleteMapping("/{clubId}/members/unenroll")
+    @Operation(
+            summary = "Inscreve o usuário autenticado em um clube",
+            description = "Inscreve o usuário logado como participante (`MEMBER`) no clube. Reativa a inscrição caso o usuário tenha participado anteriormente."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Inscrição cancelada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado"),
+            @ApiResponse(responseCode = "404", description = "Clube não encontrado")
+    })
+    public ResponseEntity<MessageResponse> unenroll(
+            @Parameter(description = "ID do clube", required = true)
+            @PathVariable Long clubId,
+
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID userId = extractUserId(jwt);
+        return ResponseEntity.ok(clubMemberService.unenrollMember(clubId, userId));
     }
 
     @PostMapping("/{clubId}/members/staff/{email}")
@@ -114,7 +135,7 @@ public class ClubMemberController {
         return ResponseEntity.ok(clubMemberService.addMemberByEmail(extractUserId(jwt), clubId, email, role));
     }
 
-    @PatchMapping("/members/{memberId}/status")
+    @PatchMapping("/{clubId}/members/{memberId}/status")
     @Operation(
             summary = "Altera o status de um membro no clube",
             description = "Atualiza o status de participação (`ACTIVE`, `INACTIVE`, `PENDING`). Ao inativar (`INACTIVE`), a data de saída (`leftAt`) é preenchida automaticamente."
@@ -128,13 +149,18 @@ public class ClubMemberController {
     })
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<Void> changeStatus(
+            @Parameter(description = "ID do clube", required = true)
+            @PathVariable Long clubId,
+
             @Parameter(description = "ID da matrícula do membro", required = true)
             @PathVariable Long memberId,
 
             @Parameter(description = "Novo status (ACTIVE, INACTIVE, PENDING)", required = true)
-            @RequestParam EnumClubMemberStatus status
+            @RequestParam EnumClubMemberStatus status,
+
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        clubMemberService.changeMemberStatus(memberId, status);
+        clubMemberService.changeMemberStatus(extractUserId(jwt), clubId, memberId, status);
         return ResponseEntity.noContent().build();
     }
 
