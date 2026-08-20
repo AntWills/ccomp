@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.users.application;
 
 import com.ccomp.br.domain.security.jwt.application.JwtService;
+import com.ccomp.br.domain.users.dto.UpdateUserDTO;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.util.UserMapper;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -29,11 +30,25 @@ public class UserApplication {
         this.jwtService = jwtService;
     }
 
+    @Transactional(readOnly = true)
     public Optional<UserDTO> getById(UUID id){
         log.info("Buscando no banco os dados do userId: {}", id);
         return userModelRepository.findById(id)
                 .map(userMapper::userToDto);
     }
+
+    @Transactional
+    public UserDTO update(UUID userId, UpdateUserDTO dto) {
+        UserModel user = userModelRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
+
+        dto.nameOpt().ifPresent(user::setName);
+
+        userModelRepository.save(user);
+
+        return userMapper.userToDto(user);
+    }
+
 
     @Transactional
     public void deactivateOwnAccount(UUID userId) {
