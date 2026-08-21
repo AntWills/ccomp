@@ -9,6 +9,7 @@ import com.ccomp.br.domain.users.util.UserMapper;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
 import com.ccomp.br.shared.dto.UserDTO;
+import com.ccomp.br.shared.dto.UserSummaryView;
 import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -91,6 +92,10 @@ public class UserManagement {
                 .stream()
                 .map(userMapper::userToDto)
                 .toList();
+    }
+
+    public List<UserSummaryView> findAllSummaryByIds(List<UUID> ids) {
+        return userModelRepository.findAllByIdIn(ids);
     }
 
     public boolean userExists(UUID id){

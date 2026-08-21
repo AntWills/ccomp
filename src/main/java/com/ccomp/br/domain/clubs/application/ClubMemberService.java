@@ -13,6 +13,7 @@ import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
+import com.ccomp.br.shared.dto.UserSummaryView;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
@@ -72,9 +73,9 @@ public class ClubMemberService {
                 .map(ClubMember::getUserId)
                 .toList();
 
-        Map<UUID, UserDTO> userMap = userManagement.findAllByIds(ids)
+        Map<UUID, UserSummaryView> userMap = userManagement.findAllSummaryByIds(ids)
                 .stream()
-                .collect(Collectors.toMap(UserDTO::id, Function.identity(), (user1, user2) -> user1));
+                .collect(Collectors.toMap(UserSummaryView::getId, Function.identity(), (user1, user2) -> user1));
 
         String nextCursor = hasNext && !page.isEmpty() ? CursorCodec.encode(page.getLast().getJoinedAt()) : null;
 
