@@ -4,6 +4,7 @@ import com.ccomp.br.domain.clubs.application.ClubService;
 import com.ccomp.br.domain.clubs.dto.ClubResponseDTO;
 import com.ccomp.br.domain.clubs.dto.CreateClubRequestDTO;
 import com.ccomp.br.domain.clubs.dto.UpdateClubRequestDTO;
+import com.ccomp.br.domain.clubs.enums.EnumClubMemberRole;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -54,14 +55,17 @@ public class ClubController {
 
     @PostMapping("/me")
     @Operation(
-            summary = "Lista os clubes do instrutor autenticado",
-            description = "Retorna uma lista paginada por cursor dos clubes criados/gerenciados pelo usuário autenticado."
+            summary = "Lista os clubes do usuário autenticado",
+            description = "Retorna uma lista paginada por cursor dos clubes gerenciados/inscrito pelo usuário autenticado."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista de clubes retornada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
     })
     public ResponseEntity<CursorPage<ClubResponseDTO>> findMyClubs(
+            @Parameter(description = "Filtro opcional pelo papel do usuário no clube (INSTRUCTOR ou MEMBER)")
+            @RequestParam(required = false) EnumClubMemberRole role,
+
             @Parameter(description = "Cursor para a próxima página (codificado)")
             @RequestParam(required = false) String nextCursor,
 
@@ -70,8 +74,8 @@ public class ClubController {
 
             @AuthenticationPrincipal Jwt jwt
     ) {
-        UUID instructorId = extractUserId(jwt);
-        return ResponseEntity.ok(clubService.findByInstructor(instructorId, nextCursor, pageSize));
+        UUID userId = extractUserId(jwt);
+        return ResponseEntity.ok(clubService.findByUserInvolved(userId, role, nextCursor, pageSize));
     }
 
     @GetMapping("/{clubId}")
