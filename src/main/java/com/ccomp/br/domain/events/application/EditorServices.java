@@ -16,8 +16,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ccomp.br.domain.events.dto.EventEditorCursor;
+import com.ccomp.br.domain.events.dto.EventEditorListItem;
+import com.ccomp.br.domain.events.persistence.editors.EventEditorSpec;
+import com.ccomp.br.domain.security.SecurityUtils;
+import com.ccomp.br.shared.utils.CursorCodec;
+import com.ccomp.br.shared.utils.CursorPage;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -89,5 +102,61 @@ public class EditorServices {
     @Transactional(readOnly = true)
     boolean isEditor(Event event, UUID userId) {
         return editorRepository.existsByEventIdAndUserId(event.getId(), userId);
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPage<EventEditorListItem> getEditorsByEvent(Long eventId, UUID requesterId, String cursor, int pageSize) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        boolean canAccess = SecurityUtils.isAdmin()
+                || event.isOwner(requesterId)
+                || isEditor(event, requesterId);
+
+        if (!canAccess) {
+            throw new AccessDeniedException("Você não tem permissão para visualizar os editores deste evento.");
+        }
+
+        int maxPageSize = 50;
+        int finalPageSize = pageSize > maxPageSize ? maxPageSize : pageSize;
+
+        EventEditorCursor decodedCursor = CursorCodec.decode(cursor, EventEditorCursor.class).orElse(null);
+        Specification<EventEditor> spec = EventEditorSpec.buildSpec(eventId, decodedCursor);
+
+        List<EventEditor> results = editorRepository.findBy(spec, query -> query
+                .limit(finalPageSize + 1)
+                .sortBy(Sort.by(
+                        Sort.Order.desc("assignedAt"),
+                        Sort.Order.desc("id")
+                ))
+                .all());
+
+        boolean hasNext = results.size() > finalPageSize;
+        List<EventEditor> page = hasNext ? results.subList(0, finalPageSize) : results;
+
+        List<UUID> ids = page.stream()
+                .map(EventEditor::getUserId)
+                .toList();
+
+        Map<UUID, UserDTO> userMap = userManagement.findAllByIds(ids)
+                .stream()
+                .collect(Collectors.toMap(UserDTO::id, Function.identity(), (user1, user2) -> user1));
+
+        String nextCursor = hasNext && !page.isEmpty()
+                ? CursorCodec.encode(new EventEditorCursor(page.getLast().getAssignedAt(), page.getLast().getId()))
+                : null;
+
+        List<EventEditorListItem> contents = page.stream()
+                .map(ee -> EventEditorListItem.builder()
+                        .id(ee.getId())
+                        .eventId(ee.getEvent().getId())
+                        .user(userMap.get(ee.getUserId()))
+                        .assignedAt(ee.getAssignedAt())
+                        .revokedAt(ee.getRevokedAt())
+                        .active(ee.isActive())
+                        .build())
+                .toList();
+
+        return new CursorPage<>(contents, nextCursor, null);
     }
 }

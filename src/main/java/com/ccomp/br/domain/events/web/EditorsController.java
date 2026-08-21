@@ -14,6 +14,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import com.ccomp.br.domain.events.dto.EventEditorListItem;
+import com.ccomp.br.shared.utils.CursorPage;
+
 import java.util.UUID;
 
 @Tag(name = "Gerir Eventos (Editores)")
@@ -64,6 +67,26 @@ public class EditorsController {
             @AuthenticationPrincipal Jwt jwt){
         MessageResponse response = editorServices.removeEditor(eventId, extractUserId(jwt), new EmailAddress(email));
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{eventId}/editors")
+    @Operation(
+            summary = "Busca todos os editores de um evento",
+            description = "Retorna uma lista paginada por cursor (`CursorPage`) com os editores de um evento. **Restrito ao proprietário do evento, editores do evento ou administradores**."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de editores retornada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado (Usuário não é proprietário, editor ou ADMIN)"),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado")
+    })
+    public ResponseEntity<CursorPage<EventEditorListItem>> getEditors(
+            @PathVariable Long eventId,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ResponseEntity.ok(editorServices.getEditorsByEvent(eventId, extractUserId(jwt), cursor, size));
     }
 
     private UUID extractUserId(Jwt jwt) {
