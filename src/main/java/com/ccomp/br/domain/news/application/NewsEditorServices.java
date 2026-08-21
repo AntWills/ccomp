@@ -8,6 +8,7 @@ import com.ccomp.br.domain.news.persistence.editor.NewsEditorsRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
+import com.ccomp.br.shared.dto.UserSummaryView;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
@@ -32,14 +33,14 @@ public class NewsEditorServices {
     }
 
     @Transactional(readOnly = true)
-    public List<UserDTO> listEditors(UUID userId, Long newsId) {
+    public List<UserSummaryView> listEditors(UUID userId, Long newsId) {
         if (!newsRepository.existsById(newsId))
             throw new ResourceNotFoundException("Notícia não existe.");
 
         if(!newsAccessPolicy.hasAccess(userId, newsId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
-        return userManagement.findAllByIds(
+        return userManagement.findAllSummaryByIds(
                 newsEditorsRepository.findAllByNewsId(newsId)
                         .stream()
                         .map(NewsEditors::getUserId)

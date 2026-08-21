@@ -6,6 +6,7 @@ import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
+import com.ccomp.br.shared.dto.UserSummaryView;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -59,7 +60,7 @@ public class EditorController {
             )
     })
     @GetMapping("/{newsId}/editors")
-    public ResponseEntity<List<UserDTO>> getEditors(
+    public ResponseEntity<List<UserSummaryView>> getEditors(
             @PathVariable Long newsId,
             @AuthenticationPrincipal Jwt jwt
     ) {
