@@ -63,10 +63,10 @@ public class ClubService {
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<ClubResponseDTO> findByInstructor(UUID instructorId, String cursor, int pageSize) {
+    public CursorPage<ClubResponseDTO> findByUserInvolved(UUID userId, EnumClubMemberRole role, String cursor, int pageSize) {
         if (pageSize > 50) pageSize = 50;
 
-        Specification<Club> spec = ClubSpec.buildSpecByInstructorAndCursor(instructorId,
+        Specification<Club> spec = ClubSpec.buildSpecByInvolvedUserAndCursor(userId, role,
                 CursorCodec.decode(cursor, LocalDateTime.class).orElse(null));
 
         int finalPageSize = pageSize;

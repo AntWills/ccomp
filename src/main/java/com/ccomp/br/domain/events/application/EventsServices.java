@@ -5,7 +5,7 @@ import com.ccomp.br.domain.events.persistence.EventSpecification;
 import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.domain.news.util.SlugUtils;
 import com.ccomp.br.domain.security.SecurityUtils;
-import com.ccomp.br.shared.dto.EventResponse;
+import com.ccomp.br.shared.dto.EventListItem;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
@@ -46,7 +46,7 @@ public class EventsServices {
 
     // ---- Queries ----
     @Transactional(readOnly = true)
-    public Optional<EventResponse> getById(Long eventId, UUID userId) {
+    public Optional<EventDTO> getById(Long eventId, UUID userId) {
         return eventRepository.findById(eventId)
                 .map(event -> {
                     boolean allowed =
@@ -54,17 +54,17 @@ public class EventsServices {
                                     || Optional.ofNullable(userId).filter(event::isOwner).isPresent()
                                     || SecurityUtils.isAdmin();
 
-                    if (allowed) return eventMapper.eventToEventResponse(event);
+                    if (allowed) return eventMapper.eventToEventDTO(event);
 
                     throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
                 });
     }
 
     @Transactional(readOnly = true)
-    public Optional<EventResponse> getBySlug(String slug) {
+    public Optional<EventDTO> getBySlug(String slug) {
         return eventRepository.findBySlug(slug)
                 .filter(Event::isOpen)
-                .map(eventMapper::eventToEventResponse);
+                .map(eventMapper::eventToEventDTO);
     }
 
     @Transactional(readOnly = true)
@@ -100,7 +100,7 @@ public class EventsServices {
 
     // ---- Commands ----
     @Transactional
-    public EventResponse create(UUID ownerId, CreateEventRequestDTO dto){
+    public EventDTO create(UUID ownerId, CreateEventRequestDTO dto){
         UserDTO userDTO = userManagement.findById(ownerId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
 
@@ -111,6 +111,7 @@ public class EventsServices {
         var eventModel = Event.builder()
                 .title(dto.title())
                 .slug(generateSlug(dto.title()))
+                .summary("exemplo de sumário")
                 .category(dto.category())
                 .format(dto.format())
                 .ownerId(ownerId).build();
@@ -122,7 +123,7 @@ public class EventsServices {
 
         var savedEvent = eventRepository.save(eventModel);
 
-        return eventMapper.eventToEventResponse(savedEvent);
+        return eventMapper.eventToEventDTO(savedEvent);
     }
 
     private String generateSlug(String title) {
@@ -139,7 +140,7 @@ public class EventsServices {
     }
 
     @Transactional
-    public EventListItem update(UpdateEventRequest request, UUID userId) {
+    public EventDTO update(UpdateEventRequest request, UUID userId) {
         Event event = eventRepository.findById(request.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -161,7 +162,7 @@ public class EventsServices {
 
        eventRepository.save(event);
 
-       return eventMapper.eventToEventListItem(event);
+       return eventMapper.eventToEventDTO(event);
     }
 
     @Transactional

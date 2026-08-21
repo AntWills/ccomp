@@ -3,7 +3,7 @@ package com.ccomp.br.domain.events.management;
 import com.ccomp.br.domain.events.persistence.enrollments.EnrollmentRepository;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.util.EventMapper;
-import com.ccomp.br.shared.dto.EventResponse;
+import com.ccomp.br.shared.dto.EventListItem;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -21,13 +21,13 @@ public class EventsManagement {
         this.eventMapper = eventMapper;
     }
 
-    public List<EventResponse> findAllByOwnerId(UUID ownerId){
+    public List<EventListItem> findAllByOwnerId(UUID ownerId){
         return eventRepository.findAllByOwnerId(ownerId)
                 .stream().map(eventMapper::eventToEventResponse)
                 .toList();
     }
 
-    public List<EventResponse> findAllSubscriptions(UUID participantId) {
+    public List<EventListItem> findAllSubscriptions(UUID participantId) {
         return enrollmentRepository.findAllByUserIdWithEvent(participantId)
                 .stream().map(enrollmentsModel -> eventMapper.eventToEventResponse(enrollmentsModel.getEvent())
                 ).toList();

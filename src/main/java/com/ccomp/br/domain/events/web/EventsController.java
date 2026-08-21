@@ -2,10 +2,10 @@ package com.ccomp.br.domain.events.web;
 
 import com.ccomp.br.domain.events.application.EventsServices;
 import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
-import com.ccomp.br.domain.events.dto.EventListItem;
+import com.ccomp.br.domain.events.dto.EventDTO;
 import com.ccomp.br.domain.events.dto.EventsFilterRequest;
 import com.ccomp.br.domain.events.dto.UpdateEventRequest;
-import com.ccomp.br.shared.dto.EventResponse;
+import com.ccomp.br.shared.dto.EventListItem;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,7 +24,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Gerir Eventos", description = "Operações relacionadas à criação, busca, atualização e gestão de acesso aos eventos.")
@@ -62,8 +61,7 @@ public class EventsController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Evento encontrado e acesso permitido",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = EventResponse.class))
+                    description = "Evento encontrado e acesso permitido"
             ),
             @ApiResponse(
                     responseCode = "403",
@@ -78,7 +76,7 @@ public class EventsController {
     })
     @SecurityRequirements
     @GetMapping("/{eventId}")
-    public ResponseEntity<EventResponse> getById(@PathVariable Long eventId, @AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<EventDTO> getById(@PathVariable Long eventId, @AuthenticationPrincipal Jwt jwt) {
         UUID userId = (jwt == null) ? null : extractUserId(jwt);
 
         return eventsServices.getById(eventId, userId)
@@ -99,8 +97,7 @@ public class EventsController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Evento público encontrado",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = EventResponse.class))
+                    description = "Evento público encontrado"
             ),
             @ApiResponse(
                     responseCode = "404",
@@ -110,7 +107,7 @@ public class EventsController {
     })
     @SecurityRequirements
     @GetMapping("/slug/{slug}")
-    public ResponseEntity<EventResponse> getBySlug(@PathVariable String slug) {
+    public ResponseEntity<EventDTO> getBySlug(@PathVariable String slug) {
         return eventsServices.getBySlug(slug)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
@@ -130,8 +127,7 @@ public class EventsController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Página de eventos retornada com sucesso",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = CursorPage.class))
+                    description = "Página de eventos retornada com sucesso"
             ),
             @ApiResponse(
                     responseCode = "400",
@@ -151,6 +147,8 @@ public class EventsController {
         return ResponseEntity.ok(eventsServices.searchEventsWithFilters(filter, nextCursor, pageSize));
     }
 
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     @Operation(
             summary = "Cria um novo evento",
             description = """
@@ -165,8 +163,7 @@ public class EventsController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
-                    description = "Evento criado com sucesso",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = EventResponse.class))
+                    description = "Evento criado com sucesso"
             ),
             @ApiResponse(
                     responseCode = "400",
@@ -184,15 +181,15 @@ public class EventsController {
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    public ResponseEntity<EventResponse> create(
+    public ResponseEntity<EventDTO> create(
             @Valid @RequestBody CreateEventRequestDTO dto,
             @AuthenticationPrincipal Jwt jwt
     ) {
         return ResponseEntity.status(HttpStatus.CREATED).body(eventsServices.create(extractUserId(jwt), dto));
     }
 
+    @PatchMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     @Operation(
             summary = "Atualiza parcialmente um evento existente",
             description = """
@@ -211,8 +208,7 @@ public class EventsController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Evento atualizado com sucesso",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = EventListItem.class))
+                    description = "Evento atualizado com sucesso"
             ),
             @ApiResponse(
                     responseCode = "400",
@@ -235,9 +231,7 @@ public class EventsController {
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    @PatchMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    public ResponseEntity<EventListItem> updateEvent(
+    public ResponseEntity<EventDTO> updateEvent(
             @Valid @RequestBody UpdateEventRequest request,
             @AuthenticationPrincipal Jwt jwt
     ) {

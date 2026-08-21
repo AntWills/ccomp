@@ -13,7 +13,7 @@ public class ClubMemberSpec {
         return (root, query, criteriaBuilder) -> {
             if(clubId == null) return criteriaBuilder.conjunction();
 
-            return criteriaBuilder.equal(root.get("clubId"), clubId);
+            return criteriaBuilder.equal(root.get("club").get("id"), clubId);
         };
     }
 

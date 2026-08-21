@@ -81,7 +81,7 @@ public class ClubMemberService {
         List<ClubMemberListItem> contents = page.stream()
                 .map(cm -> ClubMemberListItem.builder()
                         .id(cm.getId())
-                        .clubId(cm.getClubId())
+                        .clubId(cm.getClub().getId())
                         .user(userMap.get(cm.getUserId()))
                         .role(cm.getRole())
                         .status(cm.getStatus())
@@ -116,7 +116,7 @@ public class ClubMemberService {
         }
 
         ClubMember member = ClubMember.builder()
-                .clubId(clubId)
+                .club(clubRepository.getReferenceById(clubId))
                 .userId(userId)
                 .role(EnumClubMemberRole.MEMBER)
                 .status(EnumClubMemberStatus.ACTIVE)
@@ -173,7 +173,7 @@ public class ClubMemberService {
         }
 
         ClubMember member = ClubMember.builder()
-                .clubId(clubId)
+                .club(clubRepository.getReferenceById(clubId))
                 .userId(userId)
                 .role(role)
                 .status(EnumClubMemberStatus.ACTIVE)

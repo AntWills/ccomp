@@ -2,6 +2,7 @@ package com.ccomp.br.domain.clubs.persistence.members;
 
 import com.ccomp.br.domain.clubs.enums.EnumClubMemberStatus;
 import com.ccomp.br.domain.clubs.enums.EnumClubMemberRole;
+import com.ccomp.br.domain.clubs.persistence.Club;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -31,8 +32,9 @@ public class ClubMember {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "club_id", nullable = false)
-    private Long clubId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "club_id", nullable = false)
+    private Club club;
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;
@@ -70,7 +72,7 @@ public class ClubMember {
     }
 
     public boolean isInstructor(Long clubId) {
-        return this.role == EnumClubMemberRole.INSTRUCTOR && clubId.equals(this.clubId);
+        return this.role == EnumClubMemberRole.INSTRUCTOR && clubId.equals(this.club.getId());
     }
 
     public boolean isStillLinked() { return this.status != EnumClubMemberStatus.CANCELLED; }

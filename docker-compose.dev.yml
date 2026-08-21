@@ -97,6 +97,8 @@ services:
   grafana-lgtm:
     image: 'grafana/otel-lgtm:latest'
     profiles: [all, infra]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: false
     ports:
       - '3000:3000' # UI
       - '4317:4317'
