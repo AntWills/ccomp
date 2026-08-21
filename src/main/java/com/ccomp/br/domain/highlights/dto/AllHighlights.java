@@ -1,8 +1,8 @@
 package com.ccomp.br.domain.highlights.dto;
 
 import com.ccomp.br.domain.clubs.dto.ClubResponseDTO;
-import com.ccomp.br.domain.events.dto.EventListItem;
 import com.ccomp.br.domain.news.dto.NewsItem;
+import com.ccomp.br.shared.dto.EventListItem;
 
 import java.util.List;
 

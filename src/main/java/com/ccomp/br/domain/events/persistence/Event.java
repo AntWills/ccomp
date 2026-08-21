@@ -42,6 +42,21 @@ public class Event {
     @Column(nullable = false, unique = true)
     private String slug;
 
+    @Size(max = 500, message = "O máximo são 500 letras.")
+    @Column(columnDefinition = "TEXT")
+    private String summary;
+
+    @Column(columnDefinition = "TEXT")
+    private String content;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", columnDefinition = "varchar(25)", nullable = false)
+    private EnumEventCategory category;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "format", columnDefinition = "varchar(20)", nullable = false)
+    private EnumEventFormat format;
+
     @OneToMany(mappedBy = "event")
     private Set<Enrollment> enrollments = new HashSet<>();
 
@@ -56,18 +71,6 @@ public class Event {
 
     @Column(name = "end_date")
     private LocalDateTime endDate;
-
-    @Size(max = 1000, message = "O máximo são 1000 letras.")
-    @Column(name = "description", columnDefinition = "TEXT")
-    private String description;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "category", columnDefinition = "varchar(25)", nullable = false)
-    private EnumEventCategory category;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "format", columnDefinition = "varchar(20)", nullable = false)
-    private EnumEventFormat format;
 
     @Column(name = "address")
     private String address;

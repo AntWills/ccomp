@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.users.web;
 
 import com.ccomp.br.domain.events.management.EventsManagement;
-import com.ccomp.br.shared.dto.EventResponse;
+import com.ccomp.br.shared.dto.EventListItem;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -40,7 +40,7 @@ public class UserEventsGateway {
                             description = "Lista de eventos encontrados com sucesso.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    array = @ArraySchema(schema = @Schema(implementation = EventResponse.class))
+                                    array = @ArraySchema(schema = @Schema(implementation = EventListItem.class))
                             )
                     ),
                     @ApiResponse(
@@ -54,7 +54,7 @@ public class UserEventsGateway {
             }
     )
     @GetMapping("created-events")
-    public ResponseEntity<List<EventResponse>> getCreatedEvents(@AuthenticationPrincipal Jwt jwt){
+    public ResponseEntity<List<EventListItem>> getCreatedEvents(@AuthenticationPrincipal Jwt jwt){
         UUID ownerId = UUID.fromString(jwt.getSubject());
         return ResponseEntity.ok(eventsManagement.findAllByOwnerId(ownerId));
     }
@@ -68,7 +68,7 @@ public class UserEventsGateway {
                             description = "Lista de inscrições encontrada com sucesso.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    array = @ArraySchema(schema = @Schema(implementation = EventResponse.class))
+                                    array = @ArraySchema(schema = @Schema(implementation = EventListItem.class))
                             )
                     ),
                     @ApiResponse(
@@ -82,7 +82,7 @@ public class UserEventsGateway {
             }
     )
     @GetMapping("/events-subscriptions")
-    public ResponseEntity<List<EventResponse>> getMe(@AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<List<EventListItem>> getMe(@AuthenticationPrincipal Jwt jwt) {
         UUID participantId = UUID.fromString(jwt.getSubject());
         return ResponseEntity.ok(eventsManagement.findAllSubscriptions(participantId));
     }
