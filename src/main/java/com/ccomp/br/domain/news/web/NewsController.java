@@ -36,6 +36,7 @@ public class NewsController {
     }
 
     // Rotas publicas
+    @GetMapping("/{slug}")
     @Operation(
             summary = "Obtém uma notícia pelo slug",
             description = "Retorna os detalhes completos de uma notícia específica através do seu slug amigável.",
@@ -52,29 +53,24 @@ public class NewsController {
             }
     )
     @SecurityRequirements
-    @GetMapping("/{slug}")
     public ResponseEntity<?> getBySlug(@PathVariable String slug) {
         return newsApplication.getBySlug(slug)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PostMapping("/search")
     @Operation(
             summary = "Lista notícias com filtros",
             description = "Retorna uma lista paginada de notícias simplificadas, permitindo filtrar por destaque.",
             responses = {
                     @ApiResponse(
                             responseCode = "200",
-                            description = "Lista de notícias recuperada com sucesso",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    array = @ArraySchema(schema = @Schema(implementation = NewsPageResponse.class))
-                            )
+                            description = "Lista de notícias recuperada com sucesso"
                     )
             }
     )
     @SecurityRequirements
-    @PostMapping("/search")
     public ResponseEntity<CursorPage<NewsItem>> searchNews(
             @Valid @RequestBody NewsFilter filter,
             @RequestParam(required = false) String nextCursor,
