@@ -1,5 +1,8 @@
 package com.ccomp.br.domain.clubs.persistence;
 
+import com.ccomp.br.domain.clubs.enums.EnumClubMemberRole;
+import com.ccomp.br.domain.clubs.persistence.members.ClubMember;
+import jakarta.persistence.criteria.Join;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
@@ -24,7 +27,13 @@ public class ClubSpec {
     }
 
     public static Specification<Club> byInstructor(UUID instructor) {
-        return (root, query, cb) -> cb.equal(root.get("instructor"), instructor);
+        return (root, query, cb) -> {
+            Join<Club, ClubMember> members = root.join("members");
+            return cb.and(
+                cb.equal(members.get("userId"), instructor),
+                cb.equal(members.get("role"), EnumClubMemberRole.INSTRUCTOR)
+            );
+        };
     }
 
     public static Specification<Club> buildSpecByCursor(LocalDateTime cursor) {
