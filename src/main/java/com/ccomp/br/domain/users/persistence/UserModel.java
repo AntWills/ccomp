@@ -53,6 +53,8 @@ public class UserModel {
         this.emailAddress = email;
     }
 
+    public void activate() { this.statusAccount = EnumUserStatusAccount.ACTIVE; }
+
     public void deactivate() {
         this.statusAccount = EnumUserStatusAccount.DEACTIVATED;
     }

@@ -62,6 +62,15 @@ public class UserManagement {
         eventPublisher.publishEvent(new UserCreatedEvent(dto.name(), dto.email()));
     }
 
+    @Transactional
+    public void reactivateAccount(UUID userId) {
+        UserModel user = userModelRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuario não encontrado."));
+        user.activate();
+
+        userModelRepository.save(user);
+    }
+
     public boolean isAccountActive(UUID userId) {
         return userModelRepository.findById(userId)
                 .map(user -> user.getStatusAccount() == EnumUserStatusAccount.ACTIVE)
