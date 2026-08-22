@@ -56,6 +56,10 @@ public class AuthApplication {
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
+        if(!userDetails.isEnabled()) {
+            userManagement.reactivateAccount(userDetails.getId());
+        }
+
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .toList();

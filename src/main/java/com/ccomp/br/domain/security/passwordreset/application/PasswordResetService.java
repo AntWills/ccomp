@@ -22,7 +22,7 @@ public class PasswordResetService {
     @Transactional
     public String issuePasswordResetToken(UUID userId) {
         String token = TokenGenerator.generateToken();
-        log.info("Token: {}", token);
+
         String hash = TokenHasher.hash(token);
 
         passwordResetTokenRepository.save(

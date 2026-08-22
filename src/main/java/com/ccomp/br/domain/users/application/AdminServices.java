@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.users.application;
 
+import com.ccomp.br.domain.security.jwt.application.JwtService;
 import com.ccomp.br.domain.users.dto.UserItem;
 import com.ccomp.br.domain.users.dto.UserSearchFilter;
 import com.ccomp.br.domain.users.enums.EnumRoles;
@@ -31,12 +32,14 @@ import java.util.UUID;
 @Service
 public class AdminServices {
     private final UserModelRepository userModelRepository;
+    private final JwtService jwtService;
     private final UserMapper userMapper;
     private final RolesServices rolesServices;
 
     @Autowired
-    public AdminServices(UserModelRepository userModelRepository, UserMapper userMapper, RolesServices rolesServices){
+    public AdminServices(UserModelRepository userModelRepository, JwtService jwtService, UserMapper userMapper, RolesServices rolesServices){
         this.userModelRepository = userModelRepository;
+        this.jwtService = jwtService;
         this.userMapper = userMapper;
         this.rolesServices = rolesServices;
     }
@@ -78,6 +81,7 @@ public class AdminServices {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário com id [%s] não encontrado.".formatted(userId)));
 
+        jwtService.deleteRefreshTokenByUserId(userId);
         user.block();
 
         userModelRepository.save(user);

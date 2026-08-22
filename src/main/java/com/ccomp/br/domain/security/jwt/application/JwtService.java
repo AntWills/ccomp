@@ -54,6 +54,8 @@ public class JwtService {
 
     @Transactional
     public RefreshToken getRefreshToken(UUID userId){
+        refreshTokenRepository.deleteByUserId(userId);
+
         RefreshToken refreshToken = RefreshToken.builder()
                 .userId(userId)
                 .token(UUID.randomUUID().toString())
@@ -65,8 +67,7 @@ public class JwtService {
 
     @Transactional
     public Optional<String> validRefreshToken(RefreshTokenRequest request) {
-        RefreshToken refresh =
-                refreshTokenRepository.findByToken(request.refreshToken())
+        RefreshToken refresh = refreshTokenRepository.findByToken(request.refreshToken())
                         .orElseThrow(() -> new InvalidTokenException("Tempo de acesso expirado."));
 
         if(!userManagement.isAccountActive(refresh.getUserId())) {

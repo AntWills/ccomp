@@ -30,8 +30,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
         List<EnumRoles> roles = rolesServices.loadRolesByUserID(user.id());
 
-        log.info("Roles: {}", roles);
-
         return new UserDetailsImpl(user, roles);
     }
 }
