@@ -3,11 +3,16 @@ package com.ccomp.br.domain.users.application;
 import com.ccomp.br.domain.security.jwt.application.JwtService;
 import com.ccomp.br.domain.users.dto.UserItem;
 import com.ccomp.br.domain.users.dto.UserSearchFilter;
+import com.ccomp.br.domain.users.enums.EnumActionType;
+import com.ccomp.br.domain.users.enums.EnumActorType;
 import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.external.RolesServices;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.domain.users.persistence.UserSpec;
+import com.ccomp.br.domain.users.persistence.audit.AuditLog;
+import com.ccomp.br.domain.users.persistence.audit.AuditLogRepository;
+import com.ccomp.br.domain.users.persistence.audit.ChangeLog;
 import com.ccomp.br.domain.users.util.UserMapper;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -15,7 +20,6 @@ import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorCodec;
 import com.ccomp.br.shared.utils.CursorPage;
-import com.ccomp.br.shared.utils.DebugUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
@@ -25,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -35,13 +40,15 @@ public class AdminServices {
     private final JwtService jwtService;
     private final UserMapper userMapper;
     private final RolesServices rolesServices;
+    private final AuditLogRepository auditLogRepository;
 
     @Autowired
-    public AdminServices(UserModelRepository userModelRepository, JwtService jwtService, UserMapper userMapper, RolesServices rolesServices){
+    public AdminServices(UserModelRepository userModelRepository, JwtService jwtService, UserMapper userMapper, RolesServices rolesServices, AuditLogRepository auditLogRepository){
         this.userModelRepository = userModelRepository;
         this.jwtService = jwtService;
         this.userMapper = userMapper;
         this.rolesServices = rolesServices;
+        this.auditLogRepository = auditLogRepository;
     }
 
     @Transactional(readOnly = true)
@@ -82,10 +89,28 @@ public class AdminServices {
                 .orElseThrow(() -> new UserNotFoundException("Usuário com id [%s] não encontrado.".formatted(userId)));
 
         jwtService.deleteRefreshTokenByUserId(userId);
+        String previousStatus = user.getStatusAccount().name();
         user.block();
+        String newStatus = user.getStatusAccount().name();
+
+        var audiLog = AuditLog.builder()
+                .action(EnumActionType.BLOCK.name())
+                .actorType(EnumActorType.USER)
+                .actorId(adminId)
+                .targetId(userId)
+                .reason(reason)
+                .changes(
+                        Map.of(
+                                "status_account",
+                                new ChangeLog(previousStatus, newStatus)
+                        )
+                )
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        auditLogRepository.save(audiLog);
 
         userModelRepository.save(user);
-
     }
 
     @Transactional
@@ -93,9 +118,26 @@ public class AdminServices {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário com id [%s] não encontrado.".formatted(userId)));
 
+        String previousStatus = user.getStatusAccount().name();
         user.unlock();
+        String newStatus = user.getStatusAccount().name();
 
-        log.info("Dados do usuário após unlock:\n{}", DebugUtils.printJson(user));
+        var audiLog = AuditLog.builder()
+                .action(EnumActionType.UNLOCK.name())
+                .actorType(EnumActorType.USER)
+                .actorId(adminId)
+                .targetId(userId)
+                .reason(reason)
+                .changes(
+                        Map.of(
+                                "status_account",
+                                new ChangeLog(previousStatus, newStatus)
+                        )
+                )
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        auditLogRepository.save(audiLog);
 
         userModelRepository.save(user);
     }
@@ -108,6 +150,22 @@ public class AdminServices {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário com id [%s] não encontrado.".formatted(userId)));
 
+        var audiLog = AuditLog.builder()
+                .action(EnumActionType.CHANGE_ROLE.name())
+                .actorType(EnumActorType.USER)
+                .actorId(adminId)
+                .targetId(userId)
+                .changes(
+                        Map.of(
+                                "role",
+                                new ChangeLog(user.getRole().getRole(), role)
+                        )
+                )
+                .timestamp(LocalDateTime.now())
+                .build();
+
         rolesServices.changeRole(user, role);
+
+        auditLogRepository.save(audiLog);
     }
 }
