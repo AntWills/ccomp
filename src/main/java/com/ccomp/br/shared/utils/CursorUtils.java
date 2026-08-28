@@ -5,14 +5,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
-public final class CursorCodec {
+public final class CursorUtils {
 
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .registerModule(new JavaTimeModule());
 
-    private CursorCodec() {
+    private CursorUtils() {
     }
 
     public static <K> String encode(K cursor) {
@@ -39,5 +41,18 @@ public final class CursorCodec {
         } catch (Exception e) {
             throw new IllegalArgumentException("Cursor inválido ou corrompido", e);
         }
+    }
+
+    public static <T, C> CursorPage<T> buildPage(
+            List<T> results, int pageSize, Function<T, C> cursorExtractor) {
+
+        boolean hasNext = results.size() > pageSize;
+        List<T> page = hasNext ? results.subList(0, pageSize) : results;
+
+        String nextCursor = (hasNext && !page.isEmpty())
+                ? encode(cursorExtractor.apply(page.getLast()))
+                : null;
+
+        return new CursorPage<>(page, nextCursor, null);
     }
 }

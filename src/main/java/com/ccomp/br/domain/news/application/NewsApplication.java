@@ -4,8 +4,6 @@ import com.ccomp.br.domain.news.dto.NewsFilter;
 import com.ccomp.br.domain.news.dto.NewsItem;
 import com.ccomp.br.domain.news.dto.NewsResponse;
 import com.ccomp.br.domain.news.dto.NewsUpdateDto;
-import com.ccomp.br.domain.news.enums.ContentBlockType;
-import com.ccomp.br.domain.news.persistence.ContentBlock;
 import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.domain.news.persistence.NewsRepository;
 import com.ccomp.br.domain.news.persistence.NewsSpecs;
@@ -13,7 +11,7 @@ import com.ccomp.br.domain.news.util.NewsMapper;
 import com.ccomp.br.domain.news.util.SlugUtils;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
-import com.ccomp.br.shared.utils.CursorCodec;
+import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -40,7 +38,7 @@ public class NewsApplication {
         if(pageSize > 50) pageSize = 50;
 
         Specification<News> spec = NewsSpecs.buildSpecByCursor(filter,
-                CursorCodec.decode(cursor, LocalDateTime.class).orElse(null));
+                CursorUtils.decode(cursor, LocalDateTime.class).orElse(null));
 
         int finalPageSize = pageSize;
         List<NewsItem> results = newsRepository.findBy(spec, query -> query
@@ -51,7 +49,7 @@ public class NewsApplication {
 
         boolean hasNext = results.size() > finalPageSize;
         List<NewsItem> page = hasNext ? results.subList(0, finalPageSize) : results;
-        String nextCursor = hasNext ? CursorCodec.encode(page.getLast().publishedAt()) : null;
+        String nextCursor = hasNext ? CursorUtils.encode(page.getLast().publishedAt()) : null;
 
         return new CursorPage<>(page, nextCursor, null);
     }
