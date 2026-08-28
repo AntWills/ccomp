@@ -8,13 +8,12 @@ import com.ccomp.br.domain.clubs.persistence.Club;
 import com.ccomp.br.domain.clubs.persistence.ClubRepository;
 import com.ccomp.br.domain.clubs.persistence.ClubSpec;
 import com.ccomp.br.domain.clubs.util.ClubMapper;
-import com.ccomp.br.domain.news.dto.NewsItem;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
-import com.ccomp.br.shared.utils.CursorCodec;
+import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -46,7 +45,7 @@ public class ClubService {
     public CursorPage<ClubResponseDTO> search(String cursor, int pageSize) {
         if(pageSize > 50) pageSize = 50;
 
-        Specification<Club> spec = ClubSpec.buildSpecByCursor(CursorCodec.decode(cursor, LocalDateTime.class).orElse(null));
+        Specification<Club> spec = ClubSpec.buildSpecByCursor(CursorUtils.decode(cursor, LocalDateTime.class).orElse(null));
 
         int finalPageSize = pageSize;
         List<ClubResponseDTO> results = clubRepository.findBy(spec, query -> query
@@ -57,7 +56,7 @@ public class ClubService {
 
         boolean hasNext = results.size() > finalPageSize;
         List<ClubResponseDTO> page = hasNext ? results.subList(0, finalPageSize) : results;
-        String nextCursor = hasNext ? CursorCodec.encode(page.getLast().publishedAt()) : null;
+        String nextCursor = hasNext ? CursorUtils.encode(page.getLast().publishedAt()) : null;
 
         return new CursorPage<>(page, nextCursor, null);
     }
@@ -67,7 +66,7 @@ public class ClubService {
         if (pageSize > 50) pageSize = 50;
 
         Specification<Club> spec = ClubSpec.buildSpecByInvolvedUserAndCursor(userId, role,
-                CursorCodec.decode(cursor, LocalDateTime.class).orElse(null));
+                CursorUtils.decode(cursor, LocalDateTime.class).orElse(null));
 
         int finalPageSize = pageSize;
         List<ClubResponseDTO> results = clubRepository.findBy(spec, query -> query
@@ -78,7 +77,7 @@ public class ClubService {
 
         boolean hasNext = results.size() > finalPageSize;
         List<ClubResponseDTO> page = hasNext ? results.subList(0, finalPageSize) : results;
-        String nextCursor = hasNext ? CursorCodec.encode(page.getLast().createdAt()) : null;
+        String nextCursor = hasNext ? CursorUtils.encode(page.getLast().createdAt()) : null;
 
         return new CursorPage<>(page, nextCursor, null);
     }

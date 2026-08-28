@@ -18,7 +18,7 @@ import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
-import com.ccomp.br.shared.utils.CursorCodec;
+import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -58,7 +58,7 @@ public class ClubMemberService {
         if (pageSize > 50) pageSize = 50;
 
         Specification<ClubMember> spec = ClubMemberSpec.filterByAndCursor(clubId, filter,
-                CursorCodec.decode(cursor, LocalDateTime.class).orElse(null));
+                CursorUtils.decode(cursor, LocalDateTime.class).orElse(null));
 
         int finalPageSize = pageSize;
         List<ClubMember> results = clubMemberRepository.findBy(spec, query -> query
@@ -77,7 +77,7 @@ public class ClubMemberService {
                 .stream()
                 .collect(Collectors.toMap(UserSummaryView::getId, Function.identity(), (user1, user2) -> user1));
 
-        String nextCursor = hasNext && !page.isEmpty() ? CursorCodec.encode(page.getLast().getJoinedAt()) : null;
+        String nextCursor = hasNext && !page.isEmpty() ? CursorUtils.encode(page.getLast().getJoinedAt()) : null;
 
         List<ClubMemberListItem> contents = page.stream()
                 .map(cm -> ClubMemberListItem.builder()

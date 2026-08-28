@@ -18,7 +18,7 @@ import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
-import com.ccomp.br.shared.utils.CursorCodec;
+import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,7 +56,7 @@ public class AdminServices {
         if(pageSize > 50) pageSize = 50;
 
         Specification<UserModel> spec = UserSpec.buildSpecByCursor(filter,
-                        CursorCodec.decode(cursor, LocalDateTime.class).orElse(null));
+                        CursorUtils.decode(cursor, LocalDateTime.class).orElse(null));
 
         int finalPageSize = pageSize;
         List<UserModel> results = userModelRepository.findBy(spec, query -> query
@@ -71,7 +71,7 @@ public class AdminServices {
                 .map(userMapper::userToItem)
                 .toList();
 
-        String nextCursor = hasNext ? CursorCodec.encode(page.getLast().getCreatedAt()) : null;
+        String nextCursor = hasNext ? CursorUtils.encode(page.getLast().getCreatedAt()) : null;
 
         return new CursorPage<>(items, nextCursor, null);
     }

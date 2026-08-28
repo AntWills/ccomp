@@ -13,7 +13,7 @@ import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
-import com.ccomp.br.shared.utils.CursorCodec;
+import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.DebugUtils;
 import org.springframework.data.domain.Sort;
@@ -73,7 +73,7 @@ public class EventsServices {
         if(pageSize > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 
         Specification<Event> spec = EventSpecification.buildSpecByCursor(filter,
-                CursorCodec.decode(cursor, EventCursor.class).orElse(null));
+                CursorUtils.decode(cursor, EventCursor.class).orElse(null));
 
         int finalPageSize = pageSize;
         List<EventListItem> events = eventRepository.findBy(spec, query -> query
@@ -92,7 +92,7 @@ public class EventsServices {
         List<EventListItem> page = hasNext ? events.subList(0, pageSize) : events;
 
         String nextCursor = hasNext
-                ? CursorCodec.encode(new EventCursor(page.getLast().startDate(), page.getLast().id()))
+                ? CursorUtils.encode(new EventCursor(page.getLast().startDate(), page.getLast().id()))
                 : null;
 
         return new CursorPage<>(page, nextCursor, null);
