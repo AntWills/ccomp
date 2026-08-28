@@ -1,8 +1,7 @@
 package com.ccomp.br.domain.users.application;
 
 import com.ccomp.br.domain.security.jwt.application.JwtService;
-import com.ccomp.br.domain.users.dto.UserItem;
-import com.ccomp.br.domain.users.dto.UserSearchFilter;
+import com.ccomp.br.domain.users.dto.*;
 import com.ccomp.br.domain.users.enums.EnumActionType;
 import com.ccomp.br.domain.users.enums.EnumActorType;
 import com.ccomp.br.domain.users.enums.EnumRoles;
@@ -12,6 +11,7 @@ import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.domain.users.persistence.UserSpec;
 import com.ccomp.br.domain.users.persistence.audit.AuditLog;
 import com.ccomp.br.domain.users.persistence.audit.AuditLogRepository;
+import com.ccomp.br.domain.users.persistence.audit.AuditLogSpec;
 import com.ccomp.br.domain.users.persistence.audit.ChangeLog;
 import com.ccomp.br.domain.users.util.UserMapper;
 import com.ccomp.br.module.email.EmailAddress;
@@ -74,6 +74,30 @@ public class AdminServices {
         String nextCursor = hasNext ? CursorUtils.encode(page.getLast().getCreatedAt()) : null;
 
         return new CursorPage<>(items, nextCursor, null);
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPage<AuditLogResponse> searchAuditLogs(AuditLogSearchFilter filter, String cursor, int pageSize) {
+        if(pageSize > 50) pageSize = 50;
+
+        int finalPageSize = pageSize;
+
+        AuditLogCursor decodedCursor = CursorUtils.decode(cursor, AuditLogCursor.class).orElse(null);
+
+        List<AuditLogResponse> results = auditLogRepository
+                .findBy(
+                        AuditLogSpec
+                                .buildSpec(filter, decodedCursor),
+                        query -> query
+                                .sortBy(Sort.by(
+                                        Sort.Order.desc("timestamp"),
+                                        Sort.Order.desc("id")))
+                                .as(AuditLogResponse.class)
+                                .limit(finalPageSize)
+                                .all()
+                );
+
+        return CursorUtils.buildPage(results, finalPageSize, e -> new AuditLogCursor(e.timestamp(), e.id()));
     }
 
     @Transactional(readOnly = true)
