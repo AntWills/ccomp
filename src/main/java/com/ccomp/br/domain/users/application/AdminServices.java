@@ -1,18 +1,19 @@
 package com.ccomp.br.domain.users.application;
 
+import com.ccomp.br.domain.audit.external.AuditExternal;
+import com.ccomp.br.domain.audit.external.dto.AuditBlockUserDTO;
+import com.ccomp.br.domain.audit.external.dto.AuditChangerRoleDTO;
+import com.ccomp.br.domain.audit.external.dto.AuditUnlockUserDTO;
 import com.ccomp.br.domain.security.jwt.application.JwtService;
 import com.ccomp.br.domain.users.dto.*;
-import com.ccomp.br.domain.users.enums.EnumActionType;
-import com.ccomp.br.domain.users.enums.EnumActorType;
+import com.ccomp.br.domain.audit.external.enums.EnumActionType;
+import com.ccomp.br.domain.audit.external.enums.EnumActorType;
 import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.external.RolesServices;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.domain.users.persistence.UserSpec;
-import com.ccomp.br.domain.users.persistence.audit.AuditLog;
-import com.ccomp.br.domain.users.persistence.audit.AuditLogRepository;
-import com.ccomp.br.domain.users.persistence.audit.AuditLogSpec;
-import com.ccomp.br.domain.users.persistence.audit.ChangeLog;
+import com.ccomp.br.domain.audit.persistence.ChangeLog;
 import com.ccomp.br.domain.users.util.UserMapper;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -40,15 +41,15 @@ public class AdminServices {
     private final JwtService jwtService;
     private final UserMapper userMapper;
     private final RolesServices rolesServices;
-    private final AuditLogRepository auditLogRepository;
+    private final AuditExternal auditExternal;
 
     @Autowired
-    public AdminServices(UserModelRepository userModelRepository, JwtService jwtService, UserMapper userMapper, RolesServices rolesServices, AuditLogRepository auditLogRepository){
+    public AdminServices(UserModelRepository userModelRepository, JwtService jwtService, UserMapper userMapper, RolesServices rolesServices, AuditExternal auditExternal){
         this.userModelRepository = userModelRepository;
         this.jwtService = jwtService;
         this.userMapper = userMapper;
         this.rolesServices = rolesServices;
-        this.auditLogRepository = auditLogRepository;
+        this.auditExternal = auditExternal;
     }
 
     @Transactional(readOnly = true)
@@ -77,30 +78,6 @@ public class AdminServices {
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<AuditLogResponse> searchAuditLogs(AuditLogSearchFilter filter, String cursor, int pageSize) {
-        if(pageSize > 50) pageSize = 50;
-
-        int finalPageSize = pageSize;
-
-        AuditLogCursor decodedCursor = CursorUtils.decode(cursor, AuditLogCursor.class).orElse(null);
-
-        List<AuditLogResponse> results = auditLogRepository
-                .findBy(
-                        AuditLogSpec
-                                .buildSpec(filter, decodedCursor),
-                        query -> query
-                                .sortBy(Sort.by(
-                                        Sort.Order.desc("timestamp"),
-                                        Sort.Order.desc("id")))
-                                .as(AuditLogResponse.class)
-                                .limit(finalPageSize)
-                                .all()
-                );
-
-        return CursorUtils.buildPage(results, finalPageSize, e -> new AuditLogCursor(e.timestamp(), e.id()));
-    }
-
-    @Transactional(readOnly = true)
     public Optional<UserDTO> getByEmail(EmailAddress email){
         log.info("Buscando no banco os dados do email: {}", email);
         return userModelRepository.findByEmailAddress(email)
@@ -117,22 +94,14 @@ public class AdminServices {
         user.block();
         String newStatus = user.getStatusAccount().name();
 
-        var audiLog = AuditLog.builder()
-                .action(EnumActionType.BLOCK.name())
-                .actorType(EnumActorType.USER)
-                .actorId(adminId)
-                .targetId(userId)
-                .reason(reason)
-                .changes(
-                        Map.of(
-                                "status_account",
-                                new ChangeLog(previousStatus, newStatus)
-                        )
-                )
-                .timestamp(LocalDateTime.now())
-                .build();
-
-        auditLogRepository.save(audiLog);
+        auditExternal.userBlocked(AuditBlockUserDTO.builder()
+                        .adminId(adminId)
+                        .targetId(userId)
+                        .reason(reason)
+                        .previousStatus(previousStatus)
+                        .newStatus(newStatus)
+                .build()
+        );
 
         userModelRepository.save(user);
     }
@@ -146,22 +115,13 @@ public class AdminServices {
         user.unlock();
         String newStatus = user.getStatusAccount().name();
 
-        var audiLog = AuditLog.builder()
-                .action(EnumActionType.UNLOCK.name())
-                .actorType(EnumActorType.USER)
-                .actorId(adminId)
-                .targetId(userId)
-                .reason(reason)
-                .changes(
-                        Map.of(
-                                "status_account",
-                                new ChangeLog(previousStatus, newStatus)
-                        )
-                )
-                .timestamp(LocalDateTime.now())
-                .build();
-
-        auditLogRepository.save(audiLog);
+        auditExternal.userUnlock(AuditUnlockUserDTO.builder()
+                        .adminId(adminId)
+                        .targetId(userId)
+                        .reason(reason)
+                        .previousStatus(previousStatus)
+                        .newStatus(newStatus)
+                .build());
 
         userModelRepository.save(user);
     }
@@ -174,22 +134,13 @@ public class AdminServices {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário com id [%s] não encontrado.".formatted(userId)));
 
-        var audiLog = AuditLog.builder()
-                .action(EnumActionType.CHANGE_ROLE.name())
-                .actorType(EnumActorType.USER)
-                .actorId(adminId)
-                .targetId(userId)
-                .changes(
-                        Map.of(
-                                "role",
-                                new ChangeLog(user.getRole().getRole(), role)
-                        )
-                )
-                .timestamp(LocalDateTime.now())
-                .build();
-
         rolesServices.changeRole(user, role);
 
-        auditLogRepository.save(audiLog);
+        auditExternal.userChangeRole(AuditChangerRoleDTO.builder()
+                        .adminId(adminId)
+                        .targetId(userId)
+                        .previousStatus(user.getRole().getRole().name())
+                        .newStatus(role.name())
+                .build());
     }
 }

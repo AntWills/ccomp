@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.users.enums;
+package com.ccomp.br.domain.audit.external.enums;
 
 public enum EnumActorType {
     USER,

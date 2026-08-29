@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.users.persistence.audit;
+package com.ccomp.br.domain.audit.persistence;
 
 public record ChangeLog (
         Object oldValue,

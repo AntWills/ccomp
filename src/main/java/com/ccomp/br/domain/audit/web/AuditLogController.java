@@ -1,8 +1,8 @@
-package com.ccomp.br.domain.users.web;
+package com.ccomp.br.domain.audit.web;
 
-import com.ccomp.br.domain.users.application.AdminServices;
-import com.ccomp.br.domain.users.dto.AuditLogResponse;
-import com.ccomp.br.domain.users.dto.AuditLogSearchFilter;
+import com.ccomp.br.domain.audit.application.AuditService;
+import com.ccomp.br.domain.audit.dto.AuditLogResponse;
+import com.ccomp.br.domain.audit.dto.AuditLogSearchFilter;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,10 +18,10 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/admin/audit-logs")
 @PreAuthorize("hasRole('ADMIN')")
 public class AuditLogController {
-    private final AdminServices adminServices;
+    private final AuditService auditService;
 
-    public AuditLogController(AdminServices adminServices) {
-        this.adminServices = adminServices;
+    public AuditLogController(AuditService auditService) {
+        this.auditService = auditService;
     }
 
     @PostMapping("/users/search")
@@ -34,6 +34,6 @@ public class AuditLogController {
             @RequestParam(required = false) String nextCursor,
             @RequestParam(defaultValue = "10") int pageSize
     ) {
-        return ResponseEntity.ok(adminServices.searchAuditLogs(filter, nextCursor, pageSize));
+        return ResponseEntity.ok(auditService.searchAuditLogs(filter, nextCursor, pageSize));
     }
 }

@@ -1,6 +1,6 @@
-package com.ccomp.br.domain.users.persistence.audit;
+package com.ccomp.br.domain.audit.persistence;
 
-import com.ccomp.br.domain.users.enums.EnumActorType;
+import com.ccomp.br.domain.audit.external.enums.EnumActorType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;

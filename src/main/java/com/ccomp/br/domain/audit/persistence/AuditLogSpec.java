@@ -1,7 +1,7 @@
-package com.ccomp.br.domain.users.persistence.audit;
+package com.ccomp.br.domain.audit.persistence;
 
-import com.ccomp.br.domain.users.dto.AuditLogCursor;
-import com.ccomp.br.domain.users.dto.AuditLogSearchFilter;
+import com.ccomp.br.domain.audit.dto.AuditLogCursor;
+import com.ccomp.br.domain.audit.dto.AuditLogSearchFilter;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;

@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.users.dto;
+package com.ccomp.br.domain.audit.dto;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

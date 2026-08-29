@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.users.persistence.audit;
+package com.ccomp.br.domain.audit.persistence;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
