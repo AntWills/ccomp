@@ -74,7 +74,7 @@ public class EventsController {
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    @SecurityRequirements
+//    @SecurityRequirements
     @GetMapping("/{eventId}")
     public ResponseEntity<EventDTO> getById(@PathVariable Long eventId, @AuthenticationPrincipal Jwt jwt) {
         UUID userId = (jwt == null) ? null : extractUserId(jwt);
@@ -188,7 +188,7 @@ public class EventsController {
         return ResponseEntity.status(HttpStatus.CREATED).body(eventsServices.create(extractUserId(jwt), dto));
     }
 
-    @PatchMapping
+    @PatchMapping("{eventId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     @Operation(
             summary = "Atualiza parcialmente um evento existente",
@@ -233,9 +233,10 @@ public class EventsController {
     })
     public ResponseEntity<EventDTO> updateEvent(
             @Valid @RequestBody UpdateEventRequest request,
+            @PathVariable Long eventId,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        return ResponseEntity.ok(eventsServices.update(request, extractUserId(jwt)));
+        return ResponseEntity.ok(eventsServices.update(request, eventId, extractUserId(jwt)));
     }
 
     @Operation(

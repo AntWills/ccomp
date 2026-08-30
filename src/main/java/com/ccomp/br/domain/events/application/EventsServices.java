@@ -49,8 +49,7 @@ public class EventsServices {
     public Optional<EventDTO> getById(Long eventId, UUID userId) {
         return eventRepository.findById(eventId)
                 .map(event -> {
-                    boolean allowed =
-                            event.isOpen()
+                    boolean allowed = event.isOpen()
                                     || Optional.ofNullable(userId).filter(event::isOwner).isPresent()
                                     || SecurityUtils.isAdmin();
 
@@ -140,8 +139,8 @@ public class EventsServices {
     }
 
     @Transactional
-    public EventDTO update(UpdateEventRequest request, UUID userId) {
-        Event event = eventRepository.findById(request.id())
+    public EventDTO update(UpdateEventRequest request, Long eventId, UUID userId) {
+        Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
 
