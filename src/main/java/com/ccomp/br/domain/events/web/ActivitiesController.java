@@ -3,8 +3,11 @@ package com.ccomp.br.domain.events.web;
 import com.ccomp.br.domain.events.application.ActivitiesServices;
 import com.ccomp.br.domain.events.dto.ActivityDTO;
 import com.ccomp.br.domain.events.dto.CreateActivityRequest;
+import com.ccomp.br.domain.events.dto.EventActivityView;
+import com.ccomp.br.domain.events.persistence.activities.EventActivity;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
+import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -27,6 +30,21 @@ public class ActivitiesController {
 
     public ActivitiesController(ActivitiesServices activitiesServices) {
         this.activitiesServices = activitiesServices;
+    }
+
+    @Operation(summary = "Lista as atividades de um evento", description = "Retorna uma lista paginada (por cursor) de todas as atividades associadas a um evento específico. Acesso restrito a eventos abertos, dono do evento, editores ou administradores.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Atividades retornadas com sucesso"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado"),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado")
+    })
+    @GetMapping("/{eventId}/activities")
+    public ResponseEntity<CursorPage<EventActivityView>> getActivities(
+            @PathVariable Long eventId,
+            @RequestParam(required = false) String cursor,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID userId = jwt != null ? UUID.fromString(jwt.getSubject()) : null;
+        return ResponseEntity.ok(activitiesServices.searchByCursor(eventId, cursor, userId));
     }
 
     @Operation(summary = "Cria uma nova atividade", description = "Cria uma nova atividade para um evento específico. Requer autenticação do usuário e dados da atividade.")
