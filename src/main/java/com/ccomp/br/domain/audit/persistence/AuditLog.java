@@ -1,6 +1,9 @@
 package com.ccomp.br.domain.audit.persistence;
 
+import com.ccomp.br.domain.audit.external.dto.ChangeLog;
+import com.ccomp.br.domain.audit.external.enums.EnumActionType;
 import com.ccomp.br.domain.audit.external.enums.EnumActorType;
+import com.ccomp.br.domain.audit.external.enums.EnumTargetType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -29,16 +32,22 @@ public class AuditLog {
     private Long id;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "action", nullable = false, length = 25)
+    private EnumActionType action;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "actor_type", nullable = false, length = 20)
     private EnumActorType actorType;
 
     @Column(name = "actor_id")
     private UUID actorId;
 
-    private String action;
-
     @Column(name = "target_id", nullable = false)
-    private UUID targetId;
+    private String targetId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "target_type", nullable = false, length = 30)
+    private EnumTargetType targetType;
 
     @Column(nullable = false)
     private LocalDateTime timestamp;

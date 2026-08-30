@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.audit.external.enums;
 
 public enum EnumActionType {
-    BLOCK,
-    UNLOCK,
-    CHANGE_ROLE;
+    USER_BLOCKED,
+    USER_UNLOCKED,
+    USER_CHANGE_ROLE;
 }

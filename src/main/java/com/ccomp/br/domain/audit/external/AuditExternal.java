@@ -1,13 +1,9 @@
 package com.ccomp.br.domain.audit.external;
 
-import com.ccomp.br.domain.audit.external.dto.AuditBlockUserDTO;
-import com.ccomp.br.domain.audit.external.dto.AuditChangerRoleDTO;
-import com.ccomp.br.domain.audit.external.dto.AuditUnlockUserDTO;
+import com.ccomp.br.domain.audit.external.dto.AuditCommand;
 import com.ccomp.br.domain.audit.persistence.AuditLog;
 import com.ccomp.br.domain.audit.persistence.AuditLogRepository;
-import com.ccomp.br.domain.audit.persistence.ChangeLog;
-import com.ccomp.br.domain.audit.external.enums.EnumActionType;
-import com.ccomp.br.domain.audit.external.enums.EnumActorType;
+import com.ccomp.br.domain.audit.external.dto.ChangeLog;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,55 +19,17 @@ public class AuditExternal {
     }
 
     @Transactional
-    public void userBlocked(AuditBlockUserDTO dto) {
+    public void registerLog(AuditCommand dto) {
         var audiLog = AuditLog.builder()
-                .action(EnumActionType.BLOCK.name())
-                .actorType(EnumActorType.USER)
+                .action(dto.actionType())
+                .actorType(dto.actorType())
                 .actorId(dto.adminId())
-                .targetId(dto.targetId())
+                .targetId(dto.targetId().toString())
+                .targetType(dto.targetType())
                 .reason(dto.reason())
                 .changes(
                         Map.of(
-                                "status_account",
-                                new ChangeLog(dto.previousStatus(), dto.newStatus())
-                        )
-                )
-                .timestamp(LocalDateTime.now())
-                .build();
-
-        auditLogRepository.save(audiLog);
-    }
-
-    @Transactional
-    public void userUnlock(AuditUnlockUserDTO dto) {
-        var audiLog = AuditLog.builder()
-                .action(EnumActionType.UNLOCK.name())
-                .actorType(EnumActorType.USER)
-                .actorId(dto.adminId())
-                .targetId(dto.targetId())
-                .reason(dto.reason())
-                .changes(
-                        Map.of(
-                                "status_account",
-                                new ChangeLog(dto.previousStatus(), dto.newStatus())
-                        )
-                )
-                .timestamp(LocalDateTime.now())
-                .build();
-
-        auditLogRepository.save(audiLog);
-    }
-
-    @Transactional
-    public void userChangeRole(AuditChangerRoleDTO dto) {
-        var audiLog = AuditLog.builder()
-                .action(EnumActionType.CHANGE_ROLE.name())
-                .actorType(EnumActorType.USER)
-                .actorId(dto.adminId())
-                .targetId(dto.targetId())
-                .changes(
-                        Map.of(
-                                "role",
+                                dto.fieldName(),
                                 new ChangeLog(dto.previousStatus(), dto.newStatus())
                         )
                 )

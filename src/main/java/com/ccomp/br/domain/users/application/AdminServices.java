@@ -1,19 +1,16 @@
 package com.ccomp.br.domain.users.application;
 
 import com.ccomp.br.domain.audit.external.AuditExternal;
-import com.ccomp.br.domain.audit.external.dto.AuditBlockUserDTO;
-import com.ccomp.br.domain.audit.external.dto.AuditChangerRoleDTO;
-import com.ccomp.br.domain.audit.external.dto.AuditUnlockUserDTO;
+import com.ccomp.br.domain.audit.external.dto.AuditCommand;
+import com.ccomp.br.domain.audit.external.enums.EnumActorType;
+import com.ccomp.br.domain.audit.external.enums.EnumTargetType;
 import com.ccomp.br.domain.security.jwt.application.JwtService;
 import com.ccomp.br.domain.users.dto.*;
-import com.ccomp.br.domain.audit.external.enums.EnumActionType;
-import com.ccomp.br.domain.audit.external.enums.EnumActorType;
 import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.external.RolesServices;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.domain.users.persistence.UserSpec;
-import com.ccomp.br.domain.audit.persistence.ChangeLog;
 import com.ccomp.br.domain.users.util.UserMapper;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -30,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -94,10 +90,13 @@ public class AdminServices {
         user.block();
         String newStatus = user.getStatusAccount().name();
 
-        auditExternal.userBlocked(AuditBlockUserDTO.builder()
-                        .adminId(adminId)
+        auditExternal.registerLog(AuditCommand.builder()
+                        .targetType(EnumTargetType.USER)
                         .targetId(userId)
+                        .actorType(EnumActorType.USER)
+                        .adminId(adminId)
                         .reason(reason)
+                        .fieldName("status_account")
                         .previousStatus(previousStatus)
                         .newStatus(newStatus)
                 .build()
@@ -115,13 +114,17 @@ public class AdminServices {
         user.unlock();
         String newStatus = user.getStatusAccount().name();
 
-        auditExternal.userUnlock(AuditUnlockUserDTO.builder()
-                        .adminId(adminId)
-                        .targetId(userId)
-                        .reason(reason)
-                        .previousStatus(previousStatus)
-                        .newStatus(newStatus)
-                .build());
+        auditExternal.registerLog(AuditCommand.builder()
+                .targetType(EnumTargetType.USER)
+                .targetId(userId)
+                .actorType(EnumActorType.USER)
+                .adminId(adminId)
+                .reason(reason)
+                .fieldName("status_account")
+                .previousStatus(previousStatus)
+                .newStatus(newStatus)
+                .build()
+        );
 
         userModelRepository.save(user);
     }
@@ -137,11 +140,15 @@ public class AdminServices {
         EnumRoles oldRole = user.getRole().getRole();
         rolesServices.changeRole(user, role);
 
-        auditExternal.userChangeRole(AuditChangerRoleDTO.builder()
-                        .adminId(adminId)
-                        .targetId(userId)
-                        .previousStatus(oldRole.name())
-                        .newStatus(role.name())
-                .build());
+        auditExternal.registerLog(AuditCommand.builder()
+                .targetType(EnumTargetType.USER)
+                .targetId(userId)
+                .actorType(EnumActorType.USER)
+                .adminId(adminId)
+                .fieldName("roles")
+                .previousStatus(oldRole.name())
+                .newStatus(role.name())
+                .build()
+        );
     }
 }

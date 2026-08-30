@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.audit.persistence;
+package com.ccomp.br.domain.audit.external.dto;
 
 public record ChangeLog (
         Object oldValue,
