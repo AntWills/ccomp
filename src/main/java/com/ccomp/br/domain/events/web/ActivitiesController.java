@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.web;
 import com.ccomp.br.domain.events.application.ActivitiesServices;
 import com.ccomp.br.domain.events.dto.ActivityDTO;
 import com.ccomp.br.domain.events.dto.CreateActivityRequest;
+import com.ccomp.br.domain.events.dto.UpdateActivityRequest;
 import com.ccomp.br.domain.events.dto.EventActivityView;
 import com.ccomp.br.domain.events.persistence.activities.EventActivity;
 import com.ccomp.br.shared.dto.MessageResponse;
@@ -83,5 +84,26 @@ public class ActivitiesController {
 
         activitiesServices.deleteActivity(userId, id);
         return ResponseEntity.ok(new MessageResponse("Atividade removida com sucesso."));
+    }
+
+    @Operation(summary = "Atualiza uma atividade", description = "Atualiza os dados de uma atividade existente usando o seu ID. Requer autenticação do usuário.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Atividade atualizada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão para atualizar a atividade"),
+            @ApiResponse(responseCode = "404", description = "Atividade não encontrada")
+    })
+    @PatchMapping("/activities/{id}")
+    public ResponseEntity<ActivityDTO> updateActivity(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateActivityRequest request,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID userId = Optional.ofNullable(jwt)
+                .map(Jwt::getSubject)
+                .map(UUID::fromString)
+                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
+
+        return ResponseEntity.ok(activitiesServices.updateActivity(userId, id, request));
     }
 }

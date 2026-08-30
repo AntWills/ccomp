@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.application;
 import com.ccomp.br.domain.events.dto.ActivityDTO;
 import com.ccomp.br.domain.events.dto.CreateActivityRequest;
 import com.ccomp.br.domain.events.dto.EventActivityCursor;
+import com.ccomp.br.domain.events.dto.UpdateActivityRequest;
 import com.ccomp.br.domain.events.dto.EventActivityView;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
@@ -85,6 +86,26 @@ public class ActivitiesServices {
     }
 
     @Transactional
+    public ActivityDTO updateActivity(UUID userId, Long activityId, UpdateActivityRequest request) {
+        EventActivity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não existe."));
+
+        Event event = activity.getEvent();
+
+        boolean allowed = event.isOwner(userId)
+                || editorRepository.existsByEventIdAndUserId(event.getId(), userId);
+
+        if (!allowed)
+            throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
+
+        activityMapper.updateEventActivityFromRequest(request, activity);
+        
+        EventActivity activitySaved = activityRepository.save(activity);
+        
+        return activityMapper.eventActivityToActivityDTO(activitySaved);
+    }
+
+    @Transactional
     public void deleteActivity(UUID userId, Long activityId) {
         EventActivity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não existe."));
@@ -95,7 +116,7 @@ public class ActivitiesServices {
                 || editorRepository.existsByEventIdAndUserId(event.getId(), userId);
 
         if (!allowed)
-            throw new AccessDeniedException("User is not allowed to delete this activity.");
+            throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         activityRepository.deleteById(activityId);
     }
