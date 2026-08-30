@@ -1,8 +1,11 @@
 package com.ccomp.br.domain.users.application;
 
+import com.ccomp.br.domain.audit.external.AuditExternal;
+import com.ccomp.br.domain.audit.external.dto.AuditCommand;
+import com.ccomp.br.domain.audit.external.enums.EnumActorType;
+import com.ccomp.br.domain.audit.external.enums.EnumTargetType;
 import com.ccomp.br.domain.security.jwt.application.JwtService;
-import com.ccomp.br.domain.users.dto.UserItem;
-import com.ccomp.br.domain.users.dto.UserSearchFilter;
+import com.ccomp.br.domain.users.dto.*;
 import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.external.RolesServices;
 import com.ccomp.br.domain.users.persistence.UserModel;
@@ -13,9 +16,8 @@ import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
-import com.ccomp.br.shared.utils.CursorCodec;
+import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
-import com.ccomp.br.shared.utils.DebugUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
@@ -35,13 +37,15 @@ public class AdminServices {
     private final JwtService jwtService;
     private final UserMapper userMapper;
     private final RolesServices rolesServices;
+    private final AuditExternal auditExternal;
 
     @Autowired
-    public AdminServices(UserModelRepository userModelRepository, JwtService jwtService, UserMapper userMapper, RolesServices rolesServices){
+    public AdminServices(UserModelRepository userModelRepository, JwtService jwtService, UserMapper userMapper, RolesServices rolesServices, AuditExternal auditExternal){
         this.userModelRepository = userModelRepository;
         this.jwtService = jwtService;
         this.userMapper = userMapper;
         this.rolesServices = rolesServices;
+        this.auditExternal = auditExternal;
     }
 
     @Transactional(readOnly = true)
@@ -49,7 +53,7 @@ public class AdminServices {
         if(pageSize > 50) pageSize = 50;
 
         Specification<UserModel> spec = UserSpec.buildSpecByCursor(filter,
-                        CursorCodec.decode(cursor, LocalDateTime.class).orElse(null));
+                        CursorUtils.decode(cursor, LocalDateTime.class).orElse(null));
 
         int finalPageSize = pageSize;
         List<UserModel> results = userModelRepository.findBy(spec, query -> query
@@ -64,7 +68,7 @@ public class AdminServices {
                 .map(userMapper::userToItem)
                 .toList();
 
-        String nextCursor = hasNext ? CursorCodec.encode(page.getLast().getCreatedAt()) : null;
+        String nextCursor = hasNext ? CursorUtils.encode(page.getLast().getCreatedAt()) : null;
 
         return new CursorPage<>(items, nextCursor, null);
     }
@@ -82,10 +86,23 @@ public class AdminServices {
                 .orElseThrow(() -> new UserNotFoundException("Usuário com id [%s] não encontrado.".formatted(userId)));
 
         jwtService.deleteRefreshTokenByUserId(userId);
+        String previousStatus = user.getStatusAccount().name();
         user.block();
+        String newStatus = user.getStatusAccount().name();
+
+        auditExternal.registerLog(AuditCommand.builder()
+                        .targetType(EnumTargetType.USER)
+                        .targetId(userId)
+                        .actorType(EnumActorType.USER)
+                        .adminId(adminId)
+                        .reason(reason)
+                        .fieldName("status_account")
+                        .previousStatus(previousStatus)
+                        .newStatus(newStatus)
+                .build()
+        );
 
         userModelRepository.save(user);
-
     }
 
     @Transactional
@@ -93,9 +110,21 @@ public class AdminServices {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário com id [%s] não encontrado.".formatted(userId)));
 
+        String previousStatus = user.getStatusAccount().name();
         user.unlock();
+        String newStatus = user.getStatusAccount().name();
 
-        log.info("Dados do usuário após unlock:\n{}", DebugUtils.printJson(user));
+        auditExternal.registerLog(AuditCommand.builder()
+                .targetType(EnumTargetType.USER)
+                .targetId(userId)
+                .actorType(EnumActorType.USER)
+                .adminId(adminId)
+                .reason(reason)
+                .fieldName("status_account")
+                .previousStatus(previousStatus)
+                .newStatus(newStatus)
+                .build()
+        );
 
         userModelRepository.save(user);
     }
@@ -108,6 +137,18 @@ public class AdminServices {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário com id [%s] não encontrado.".formatted(userId)));
 
+        EnumRoles oldRole = user.getRole().getRole();
         rolesServices.changeRole(user, role);
+
+        auditExternal.registerLog(AuditCommand.builder()
+                .targetType(EnumTargetType.USER)
+                .targetId(userId)
+                .actorType(EnumActorType.USER)
+                .adminId(adminId)
+                .fieldName("roles")
+                .previousStatus(oldRole.name())
+                .newStatus(role.name())
+                .build()
+        );
     }
 }

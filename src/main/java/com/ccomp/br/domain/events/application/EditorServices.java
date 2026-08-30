@@ -21,7 +21,7 @@ import com.ccomp.br.domain.events.dto.EventEditorCursor;
 import com.ccomp.br.domain.events.dto.EventEditorListItem;
 import com.ccomp.br.domain.events.persistence.editors.EventEditorSpec;
 import com.ccomp.br.domain.security.SecurityUtils;
-import com.ccomp.br.shared.utils.CursorCodec;
+import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -121,7 +121,7 @@ public class EditorServices {
         int maxPageSize = 50;
         int finalPageSize = pageSize > maxPageSize ? maxPageSize : pageSize;
 
-        EventEditorCursor decodedCursor = CursorCodec.decode(cursor, EventEditorCursor.class).orElse(null);
+        EventEditorCursor decodedCursor = CursorUtils.decode(cursor, EventEditorCursor.class).orElse(null);
         Specification<EventEditor> spec = EventEditorSpec.buildSpec(eventId, decodedCursor);
 
         List<EventEditor> results = editorRepository.findBy(spec, query -> query
@@ -144,7 +144,7 @@ public class EditorServices {
                 .collect(Collectors.toMap(UserSummaryView::getId, Function.identity(), (user1, user2) -> user1));
 
         String nextCursor = hasNext && !page.isEmpty()
-                ? CursorCodec.encode(new EventEditorCursor(page.getLast().getAssignedAt(), page.getLast().getId()))
+                ? CursorUtils.encode(new EventEditorCursor(page.getLast().getAssignedAt(), page.getLast().getId()))
                 : null;
 
         List<EventEditorListItem> contents = page.stream()
