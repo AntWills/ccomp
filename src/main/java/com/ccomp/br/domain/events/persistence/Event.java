@@ -57,6 +57,8 @@ public class Event {
     @Column(name = "format", columnDefinition = "varchar(20)", nullable = false)
     private EnumEventFormat format;
 
+    private String coverImageUrl;
+
     @OneToMany(mappedBy = "event")
     private Set<Enrollment> enrollments = new HashSet<>();
 
