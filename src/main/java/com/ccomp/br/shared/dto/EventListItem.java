@@ -10,6 +10,7 @@ public record EventListItem (
         String title,
         String slug,
         String summary,
+        String coverImageUrl,
         EnumEventFormat format,
         EnumEventCategory category,
         LocalDateTime startDate,
