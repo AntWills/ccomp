@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.audit.web;
 
 import com.ccomp.br.domain.audit.application.AuditService;
-import com.ccomp.br.domain.audit.dto.AuditLogResponse;
+import com.ccomp.br.domain.audit.dto.AuditLogResponseView;
 import com.ccomp.br.domain.audit.dto.AuditLogSearchFilter;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,7 +29,7 @@ public class AuditLogController {
             summary = "Listar todos os logs",
             description = "Retorna uma lista, junto com o cursor, de todos os logs da aplicação. Requer permissão ADMIN."
     )
-    public ResponseEntity<CursorPage<AuditLogResponse>> getAuditLogs(
+    public ResponseEntity<CursorPage<AuditLogResponseView>> getAuditLogs(
             @Valid @RequestBody AuditLogSearchFilter filter,
             @RequestParam(required = false) String nextCursor,
             @RequestParam(defaultValue = "10") int pageSize
