@@ -134,12 +134,13 @@ public class AdminServices {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário com id [%s] não encontrado.".formatted(userId)));
 
+        EnumRoles oldRole = user.getRole().getRole();
         rolesServices.changeRole(user, role);
 
         auditExternal.userChangeRole(AuditChangerRoleDTO.builder()
                         .adminId(adminId)
                         .targetId(userId)
-                        .previousStatus(user.getRole().getRole().name())
+                        .previousStatus(oldRole.name())
                         .newStatus(role.name())
                 .build());
     }
