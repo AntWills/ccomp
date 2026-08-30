@@ -11,6 +11,7 @@ public record EventDTO(
         String slug,
         String summary,
         String content,
+        String coverImageUrl,
         EnumEventFormat format,
         EnumEventCategory category,
         LocalDateTime startDate,

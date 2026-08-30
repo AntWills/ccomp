@@ -4,6 +4,8 @@ import com.ccomp.br.domain.events.persistence.Event;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Table(name = "tb_event_activities")
 @Entity
 @AllArgsConstructor
@@ -20,8 +22,16 @@ public class EventActivity {
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;
 
+    @Column(nullable = false)
     private String title;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(nullable = false)
+    @Builder.Default
+    private Long displayOrder = 0L;
+
+    @Column(columnDefinition = "TEXT", length = 1000)
     private String description;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 }
