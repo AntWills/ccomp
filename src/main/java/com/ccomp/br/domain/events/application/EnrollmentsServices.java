@@ -1,18 +1,27 @@
 package com.ccomp.br.domain.events.application;
 
+import com.ccomp.br.domain.events.dto.enrollments.EnrollmentListItem;
+import com.ccomp.br.domain.events.dto.enrollments.EnrollmentsCursor;
 import com.ccomp.br.domain.events.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.events.enums.EnumEnrollmentStatus;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.persistence.enrollments.Enrollment;
+import com.ccomp.br.domain.events.persistence.enrollments.EnrollmentBlaze;
 import com.ccomp.br.domain.events.persistence.enrollments.EnrollmentRepository;
+import com.ccomp.br.domain.events.util.EnrollmentMapper;
+import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.MessageResponse;
+import com.ccomp.br.shared.dto.UserSummaryView;
 import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
+import com.ccomp.br.shared.utils.CursorPage;
+import com.ccomp.br.shared.utils.CursorUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,10 +29,35 @@ import java.util.UUID;
 public class EnrollmentsServices {
     private final EventRepository eventRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final EnrollmentBlaze enrollmentBlaze;
+    private final UserManagement userManagement;
+    private final EnrollmentMapper enrollmentMapper;
 
-    public EnrollmentsServices(EventRepository eventRepository, EnrollmentRepository enrollmentRepository) {
+    public EnrollmentsServices(EventRepository eventRepository, EnrollmentRepository enrollmentRepository, EnrollmentBlaze enrollmentBlaze, UserManagement userManagement, EnrollmentMapper enrollmentMapper) {
         this.eventRepository = eventRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.enrollmentBlaze = enrollmentBlaze;
+        this.userManagement = userManagement;
+        this.enrollmentMapper = enrollmentMapper;
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPage<EnrollmentListItem> searchEnrollments(Long eventId, String cursor, int pageSize) {
+        int finalPageSize = pageSize > 50 ? 50 : pageSize;
+
+        EnrollmentsCursor cursorDecoded = CursorUtils.decode(cursor, EnrollmentsCursor.class).orElse(null);
+
+        List<Enrollment> results = enrollmentBlaze.findByCursor(eventId, cursorDecoded, finalPageSize);
+
+        List<UserSummaryView> userSummaryViews = userManagement.findAllSummaryByIds(results
+                .stream()
+                .map(Enrollment::getUserId)
+                .toList());
+
+        // Realiza o de-para de Enrollment -> EnrollmentListItem
+        List<EnrollmentListItem> items = enrollmentMapper.toListItemList(results, userSummaryViews);
+
+        return CursorUtils.buildPage(items, finalPageSize, i -> new EnrollmentsCursor(i.createdAt(), i.id()));
     }
 
     @Transactional
