@@ -22,17 +22,10 @@ public record UpdateEventDTO(
         EnumEventCategory category,
         EnumEventFormat format,
         LocalDateTime startDate,
-        LocalDateTime endDate
+        LocalDateTime endDate,
+        LocalDateTime enrollmentStartDate,
+        LocalDateTime enrollmentEndDate,
+        Boolean enrollmentPaused
 ) {
-    public Optional<String> optionalTitle() { return Optional.ofNullable(title); }
-
-    public Optional<EnumEventCategory> optionalEnumEventCategory() { return Optional.ofNullable(category); }
-
-    public Optional<LocalDateTime> optionalStartDate() {
-        return Optional.ofNullable(startDate);
-    }
-
-    public Optional<LocalDateTime> optionalEndDate() {
-        return Optional.ofNullable(endDate);
-    }
+    public Optional<String> titleOpt() { return Optional.ofNullable(title); }
 }

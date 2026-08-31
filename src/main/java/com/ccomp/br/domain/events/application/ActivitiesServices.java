@@ -50,7 +50,7 @@ public class ActivitiesServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        boolean allowed = event.isOpen()
+        boolean allowed = event.isPubliclyAccessible()
                 || event.isOwner(userId)
                 || (userId != null && editorRepository.existsByEventIdAndUserId(event.getId(), userId))
                 || SecurityUtils.isAdmin();
