@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.events.persistence.editors;
 
-import com.ccomp.br.domain.events.dto.EventEditorCursor;
+import com.ccomp.br.domain.events.dto.editors.EventEditorCursor;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;

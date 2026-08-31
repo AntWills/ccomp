@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.events.dto;
+package com.ccomp.br.domain.events.dto.activities;
 
 import com.blazebit.persistence.view.EntityView;
 import com.blazebit.persistence.view.IdMapping;

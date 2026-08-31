@@ -1,11 +1,10 @@
 package com.ccomp.br.domain.events.web;
 
 import com.ccomp.br.domain.events.application.ActivitiesServices;
-import com.ccomp.br.domain.events.dto.ActivityDTO;
-import com.ccomp.br.domain.events.dto.CreateActivityRequest;
-import com.ccomp.br.domain.events.dto.UpdateActivityRequest;
-import com.ccomp.br.domain.events.dto.EventActivityView;
-import com.ccomp.br.domain.events.persistence.activities.EventActivity;
+import com.ccomp.br.domain.events.dto.activities.ActivityDTO;
+import com.ccomp.br.domain.events.dto.activities.CreateActivityDTO;
+import com.ccomp.br.domain.events.dto.activities.UpdateActivityDTO;
+import com.ccomp.br.domain.events.dto.activities.EventActivityView;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -57,7 +56,7 @@ public class ActivitiesController {
     @PostMapping("/{eventId}/activities")
     public ResponseEntity<ActivityDTO> createActivity(
             @PathVariable Long eventId,
-            @Valid @RequestBody CreateActivityRequest request, @AuthenticationPrincipal Jwt jwt){
+            @Valid @RequestBody CreateActivityDTO request, @AuthenticationPrincipal Jwt jwt){
         UUID userId = Optional.ofNullable(jwt)
                 .map(Jwt::getSubject)
                 .map(UUID::fromString)
@@ -96,7 +95,7 @@ public class ActivitiesController {
     @PatchMapping("/activities/{id}")
     public ResponseEntity<ActivityDTO> updateActivity(
             @PathVariable Long id,
-            @Valid @RequestBody UpdateActivityRequest request,
+            @Valid @RequestBody UpdateActivityDTO request,
             @AuthenticationPrincipal Jwt jwt
     ) {
         UUID userId = Optional.ofNullable(jwt)

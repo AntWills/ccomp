@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.events.dto;
+package com.ccomp.br.domain.events.dto.activities;
 
 import java.time.LocalDateTime;
 

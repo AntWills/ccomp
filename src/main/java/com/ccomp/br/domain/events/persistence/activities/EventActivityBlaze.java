@@ -1,8 +1,8 @@
 package com.ccomp.br.domain.events.persistence.activities;
 
 import com.blazebit.persistence.CriteriaBuilderFactory;
-import com.ccomp.br.domain.events.dto.EventActivityCursor;
-import com.ccomp.br.domain.events.dto.EventActivityView;
+import com.ccomp.br.domain.events.dto.activities.EventActivityCursor;
+import com.ccomp.br.domain.events.dto.activities.EventActivityView;
 import com.ccomp.br.shared.utils.BlazeQueryExecutor;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.metamodel.Attribute;

@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.application;
 
-import com.ccomp.br.domain.events.dto.*;
+import com.ccomp.br.domain.events.dto.events.*;
+import com.ccomp.br.domain.events.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.persistence.EventSpecification;
 import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.domain.news.util.SlugUtils;
@@ -34,7 +35,6 @@ public class EventsServices {
     private final EventRepository eventRepository;
     private final UserManagement userManagement;
     private final EventMapper eventMapper;
-
     private final EditorServices editorServices;
 
     public EventsServices(EventRepository eventRepository, UserManagement userManagement, EventMapper eventMapper, EditorServices editorServices) {
@@ -44,32 +44,35 @@ public class EventsServices {
         this.editorServices = editorServices;
     }
 
-    // ---- Queries ----
+    // ---- Consultas ----
     @Transactional(readOnly = true)
     public Optional<EventDTO> getById(Long eventId, UUID userId) {
         return eventRepository.findById(eventId)
                 .map(event -> {
-                    boolean allowed = event.isOpen()
-                                    || Optional.ofNullable(userId).filter(event::isOwner).isPresent()
-                                    || SecurityUtils.isAdmin();
+                    // O evento pode ser acessado se estiver publicado/unlisted OU se o usuário for dono/editor/admin
+                    boolean allowed = event.isPubliclyAccessible()
+                            || (userId != null && event.isOwner(userId))
+                            || (userId != null && editorServices.isEditor(event, userId))
+                            || SecurityUtils.isAdmin();
 
                     if (allowed) return eventMapper.eventToEventDTO(event);
 
-                    throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+                    throw new AccessDeniedException("Você não possui permissão para visualizar este evento.");
                 });
     }
 
     @Transactional(readOnly = true)
     public Optional<EventDTO> getBySlug(String slug) {
+        // A busca direta por slug público exige obrigatoriamente que o status seja PUBLISHED
         return eventRepository.findBySlug(slug)
-                .filter(Event::isOpen)
+                .filter(Event::isPublished)
                 .map(eventMapper::eventToEventDTO);
     }
 
     @Transactional(readOnly = true)
     public CursorPage<EventListItem> searchEventsWithFilters(
             EventsFilterRequest filter, String cursor, int pageSize) {
-        if(pageSize > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
+        if (pageSize > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 
         Specification<Event> spec = EventSpecification.buildSpecByCursor(filter,
                 CursorUtils.decode(cursor, EventCursor.class).orElse(null));
@@ -79,13 +82,13 @@ public class EventsServices {
                 .as(EventListItem.class)
                 .sortBy(Sort.by(
                         Sort.Order.desc("startDate"),
-                        Sort.Order.desc("id")   // tiebreaker precisa ter a MESMA direção do startDate
+                        Sort.Order.desc("id")
                 ))
                 .limit(finalPageSize + 1)
                 .all());
 
-        log.info("Tamanho da lista: {}", events.size());
-        log.info("Hora agora: {}", LocalDateTime.now());
+        log.info("Quantidade de eventos retornados: {}", events.size());
+        log.info("Horário da consulta: {}", LocalDateTime.now());
 
         boolean hasNext = events.size() > pageSize;
         List<EventListItem> page = hasNext ? events.subList(0, pageSize) : events;
@@ -97,28 +100,30 @@ public class EventsServices {
         return new CursorPage<>(page, nextCursor, null);
     }
 
-    // ---- Commands ----
+    // ---- Comandos ----
     @Transactional
-    public EventDTO create(UUID ownerId, CreateEventRequestDTO dto){
+    public EventDTO create(UUID ownerId, CreateEventDTO dto) {
         UserDTO userDTO = userManagement.findById(ownerId)
-                .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
+                .orElseThrow(() -> new UserNotFoundException("Usuário responsável não encontrado no sistema."));
 
-        if (!userDTO.isTeamMember()) {
-            throw new AccessDeniedException("Apenas membros da equipe (STAFF, MODERATOR ou ADMIN) podem ser adicionados como editores.");
-        }
+        if (!userDTO.isTeamMember())
+            throw new AccessDeniedException("Apenas membros da equipe (STAFF, MODERATOR ou ADMIN) podem criar novos eventos.");
+
 
         var eventModel = Event.builder()
                 .title(dto.title())
                 .slug(generateSlug(dto.title()))
-                .summary("exemplo de sumário")
+                .summary("Exemplo de sumário")
                 .category(dto.category())
                 .format(dto.format())
-                .ownerId(ownerId).build();
+                .status(EnumEventStatus.DRAFT) // Todo evento nasce como rascunho por padrão
+                .ownerId(ownerId)
+                .build();
 
-        log.info("Salvando evento: {}", DebugUtils.printJson(eventModel));
+        log.info("Registrando novo evento: {}", DebugUtils.printJson(eventModel));
 
-        dto.optionalStartDate().ifPresent(eventModel::setStart);
-        dto.optionalEndDate().ifPresent(eventModel::setEnd);
+        dto.optionalStartDate().ifPresent(eventModel::setStartDate);
+        dto.optionalEndDate().ifPresent(eventModel::setEndDate);
 
         var savedEvent = eventRepository.save(eventModel);
 
@@ -139,29 +144,28 @@ public class EventsServices {
     }
 
     @Transactional
-    public EventDTO update(UpdateEventRequest request, Long eventId, UUID userId) {
+    public EventDTO update(UpdateEventDTO request, Long eventId, UUID userId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-
 
         boolean canEdit = SecurityUtils.isAdmin()
                 || event.isOwner(userId)
                 || editorServices.isEditor(event, userId);
 
         if (!canEdit)
-            throw new AccessDeniedException("Você não tem permissão para alterar este evento.");
+            throw new AccessDeniedException("Você não tem permissão para alterar as configurações deste evento.");
 
 
-        request.optionalTitle().ifPresent(title -> {
+        request.titleOpt().ifPresent(title -> {
             event.setTitle(title);
             event.setSlug(generateSlug(title));
         });
 
-       eventMapper.updateEntityFromDto(request, event);
+        eventMapper.updateEntityFromDto(request, event);
 
-       eventRepository.save(event);
+        eventRepository.save(event);
 
-       return eventMapper.eventToEventDTO(event);
+        return eventMapper.eventToEventDTO(event);
     }
 
     @Transactional
@@ -169,11 +173,11 @@ public class EventsServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        boolean canEdit = SecurityUtils.isAdmin()
-                || event.isOwner(userId);
+        boolean canEdit = SecurityUtils.isAdmin() || event.isOwner(userId);
 
-        if (!canEdit)
-            throw new AccessDeniedException("Você não tem permissão para deletar este evento.");
+        if (!canEdit) {
+            throw new AccessDeniedException("Você não tem permissão para remover este evento.");
+        }
 
         eventRepository.delete(event);
     }

@@ -17,8 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.ccomp.br.domain.events.dto.EventEditorCursor;
-import com.ccomp.br.domain.events.dto.EventEditorListItem;
+import com.ccomp.br.domain.events.dto.editors.EventEditorCursor;
+import com.ccomp.br.domain.events.dto.editors.EventEditorListItem;
 import com.ccomp.br.domain.events.persistence.editors.EventEditorSpec;
 import com.ccomp.br.domain.security.SecurityUtils;
 import com.ccomp.br.shared.utils.CursorUtils;

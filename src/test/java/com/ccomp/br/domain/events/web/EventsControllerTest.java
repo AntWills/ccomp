@@ -3,8 +3,8 @@ package com.ccomp.br.domain.events.web;
 import com.ccomp.br.domain.events.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.enums.EnumEventFormat;
 import com.ccomp.br.domain.security.jwt.application.JwtService;
-import com.ccomp.br.domain.events.dto.CreateActivityRequest;
-import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
+import com.ccomp.br.domain.events.dto.activities.CreateActivityDTO;
+import com.ccomp.br.domain.events.dto.events.CreateEventDTO;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.persistence.activities.EventActivity;
@@ -82,7 +82,7 @@ class EventsControllerTest {
         void create() throws Exception {
         log.info("===== INÍCIO TESTE: criar evento =====");
 
-        var eventDto = new CreateEventRequestDTO("Evento Teste 1",
+        var eventDto = new CreateEventDTO("Evento Teste 1",
                 EnumEventCategory.ACADEMIC_EDUCATIONAL,
                 EnumEventFormat.IN_PERSON,
                 null,
@@ -222,7 +222,7 @@ class EventsControllerTest {
                 .map(Enum::name)
                 .toList());
 
-        CreateActivityRequest requestDto = new CreateActivityRequest("Minha atividade1", "Com ou sem descrição?");
+        CreateActivityDTO requestDto = new CreateActivityDTO("Minha atividade1", "Com ou sem descrição?");
         String requestJson = objectMapper.writeValueAsString(requestDto);
 
 

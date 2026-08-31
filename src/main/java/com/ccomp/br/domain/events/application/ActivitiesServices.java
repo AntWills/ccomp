@@ -1,10 +1,10 @@
 package com.ccomp.br.domain.events.application;
 
-import com.ccomp.br.domain.events.dto.ActivityDTO;
-import com.ccomp.br.domain.events.dto.CreateActivityRequest;
-import com.ccomp.br.domain.events.dto.EventActivityCursor;
-import com.ccomp.br.domain.events.dto.UpdateActivityRequest;
-import com.ccomp.br.domain.events.dto.EventActivityView;
+import com.ccomp.br.domain.events.dto.activities.ActivityDTO;
+import com.ccomp.br.domain.events.dto.activities.CreateActivityDTO;
+import com.ccomp.br.domain.events.dto.activities.EventActivityCursor;
+import com.ccomp.br.domain.events.dto.activities.UpdateActivityDTO;
+import com.ccomp.br.domain.events.dto.activities.EventActivityView;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.persistence.activities.EventActivity;
@@ -23,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -51,7 +50,7 @@ public class ActivitiesServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        boolean allowed = event.isOpen()
+        boolean allowed = event.isPubliclyAccessible()
                 || event.isOwner(userId)
                 || (userId != null && editorRepository.existsByEventIdAndUserId(event.getId(), userId))
                 || SecurityUtils.isAdmin();
@@ -66,7 +65,7 @@ public class ActivitiesServices {
     }
 
     @Transactional
-    public ActivityDTO createActivity(UUID userId, Long eventId, CreateActivityRequest request) {
+    public ActivityDTO createActivity(UUID userId, Long eventId, CreateActivityDTO request) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -86,7 +85,7 @@ public class ActivitiesServices {
     }
 
     @Transactional
-    public ActivityDTO updateActivity(UUID userId, Long activityId, UpdateActivityRequest request) {
+    public ActivityDTO updateActivity(UUID userId, Long activityId, UpdateActivityDTO request) {
         EventActivity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não existe."));
 
