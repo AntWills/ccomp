@@ -1,35 +1,49 @@
 package com.ccomp.br.domain.events.management;
 
+import com.ccomp.br.domain.events.dto.events.EventCursor;
+import com.ccomp.br.domain.events.persistence.EventBlaze;
 import com.ccomp.br.domain.events.persistence.enrollments.EnrollmentRepository;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.util.EventMapper;
-import com.ccomp.br.shared.dto.EventListItem;
+import com.ccomp.br.shared.dto.EventListItemView;
+import com.ccomp.br.shared.utils.CursorPage;
+import com.ccomp.br.shared.utils.CursorUtils;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
 @Component
 public class EventsManagement {
-    private final EventRepository eventRepository;
-    private final EnrollmentRepository enrollmentRepository;
-    private final EventMapper eventMapper;
+    private final int MAX_PAGE_SIZE = 50;
 
-    public EventsManagement(EventRepository eventRepository, EnrollmentRepository enrollmentRepository, EventMapper eventMapper) {
-        this.eventRepository = eventRepository;
-        this.enrollmentRepository = enrollmentRepository;
-        this.eventMapper = eventMapper;
+    private final EventBlaze eventBlaze;
+
+    public EventsManagement(EventBlaze eventBlaze) {
+        this.eventBlaze = eventBlaze;
     }
 
-    public List<EventListItem> findAllByOwnerId(UUID ownerId){
-        return eventRepository.findAllByOwnerId(ownerId)
-                .stream().map(eventMapper::eventToEventResponse)
-                .toList();
+    @Transactional(readOnly = true)
+    public CursorPage<EventListItemView> findAllByOwnerId(UUID ownerId, String cursor, int pageSize) {
+        int finalPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
+        EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class).orElse(null);
+
+        // Busca N + 1 registros para verificar existência de próxima página
+        List<EventListItemView> events = eventBlaze.findAllByOwnerId(ownerId, decodedCursor, finalPageSize + 1);
+
+
+        return CursorUtils.buildPage(events, finalPageSize, e -> new EventCursor(e.getStartDate(), e.getId()));
     }
 
-    public List<EventListItem> findAllSubscriptions(UUID participantId) {
-        return enrollmentRepository.findAllByUserIdWithEvent(participantId)
-                .stream().map(enrollmentsModel -> eventMapper.eventToEventResponse(enrollmentsModel.getEvent())
-                ).toList();
+    @Transactional(readOnly = true)
+    public CursorPage<EventListItemView> findAllSubscriptions(UUID participantId, String cursor, int pageSize) {
+        int finalPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
+        EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class).orElse(null);
+
+        List<EventListItemView> events = eventBlaze.findAllSubscriptions(participantId, decodedCursor, finalPageSize + 1);
+
+
+        return CursorUtils.buildPage(events, finalPageSize, e -> new EventCursor(e.getStartDate(), e.getId()));
     }
 }

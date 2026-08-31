@@ -232,4 +232,42 @@ public class Event {
         this.enrollmentEndDate = end;
         verifyEnrollmentDates();
     }
+
+    public void publish() {
+        if (this.startDate == null || this.endDate == null) {
+            throw new DomainException("Não é possível publicar um evento sem definir as datas de início e término.");
+        }
+        if (this.getExecutionStatus() == EnumEventExecutionStatus.FINISHED) {
+            throw new DomainException("Não é possível publicar um evento que já foi finalizado.");
+        }
+        this.status = EnumEventStatus.PUBLISHED;
+    }
+
+    public void unlist() {
+        if (this.startDate == null || this.endDate == null) {
+            throw new DomainException("Não é possível tornar um evento não listado sem definir as datas de início e término.");
+        }
+        if (this.getExecutionStatus() == EnumEventExecutionStatus.FINISHED) {
+            throw new DomainException("Não é possível alterar para não listado um evento que já foi finalizado.");
+        }
+        this.status = EnumEventStatus.UNLISTED;
+    }
+
+    public void cancel() {
+        if (this.getExecutionStatus() == EnumEventExecutionStatus.FINISHED) {
+            throw new DomainException("Não é possível cancelar um evento que já foi finalizado.");
+        }
+        this.status = EnumEventStatus.CANCELED;
+    }
+
+    public void moveToDraft() {
+        // Exemplo: impede voltar para rascunho se já existirem inscrições ativas
+        boolean hasActiveEnrollments = this.enrollments != null &&
+                this.enrollments.stream().anyMatch(Enrollment::isActive);
+
+        if (hasActiveEnrollments) {
+            throw new DomainException("Não é possível alterar para Rascunho um evento que já possui participantes inscritos.");
+        }
+        this.status = EnumEventStatus.DRAFT;
+    }
 }

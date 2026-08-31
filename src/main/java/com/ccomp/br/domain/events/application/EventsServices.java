@@ -2,14 +2,15 @@ package com.ccomp.br.domain.events.application;
 
 import com.ccomp.br.domain.events.dto.events.*;
 import com.ccomp.br.domain.events.enums.EnumEventStatus;
-import com.ccomp.br.domain.events.persistence.EventSpecification;
+import com.ccomp.br.domain.events.persistence.EventBlaze;
 import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.domain.news.util.SlugUtils;
 import com.ccomp.br.domain.security.SecurityUtils;
-import com.ccomp.br.shared.dto.EventListItem;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
+import com.ccomp.br.shared.dto.EventListItemView;
+import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
@@ -17,8 +18,6 @@ import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.DebugUtils;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,12 +35,14 @@ public class EventsServices {
     private final UserManagement userManagement;
     private final EventMapper eventMapper;
     private final EditorServices editorServices;
+    private final EventBlaze eventBlaze;
 
-    public EventsServices(EventRepository eventRepository, UserManagement userManagement, EventMapper eventMapper, EditorServices editorServices) {
+    public EventsServices(EventRepository eventRepository, UserManagement userManagement, EventMapper eventMapper, EditorServices editorServices, EventBlaze eventBlaze) {
         this.eventRepository = eventRepository;
         this.userManagement = userManagement;
         this.eventMapper = eventMapper;
         this.editorServices = editorServices;
+        this.eventBlaze = eventBlaze;
     }
 
     // ---- Consultas ----
@@ -70,34 +71,30 @@ public class EventsServices {
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<EventListItem> searchEventsWithFilters(
+    public CursorPage<EventListItemView> searchEventsWithFilters(
             EventsFilterRequest filter, String cursor, int pageSize) {
-        if (pageSize > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
+        int finalPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
 
-        Specification<Event> spec = EventSpecification.buildSpecByCursor(filter,
-                CursorUtils.decode(cursor, EventCursor.class).orElse(null));
-
-        int finalPageSize = pageSize;
-        List<EventListItem> events = eventRepository.findBy(spec, query -> query
-                .as(EventListItem.class)
-                .sortBy(Sort.by(
-                        Sort.Order.desc("startDate"),
-                        Sort.Order.desc("id")
-                ))
-                .limit(finalPageSize + 1)
-                .all());
+        EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class).orElse(null);
+        List<EventListItemView> events = eventBlaze.findByCursor(filter, decodedCursor, finalPageSize + 1);
 
         log.info("Quantidade de eventos retornados: {}", events.size());
         log.info("Horário da consulta: {}", LocalDateTime.now());
 
-        boolean hasNext = events.size() > pageSize;
-        List<EventListItem> page = hasNext ? events.subList(0, pageSize) : events;
+//        if (events.isEmpty()) {
+//            return new CursorPage<>(List.of(), null, null);
+//        }
+//
+//        boolean hasNext = events.size() > finalPageSize;
+//        List<EventListItemView> page = hasNext ? events.subList(0, finalPageSize) : events;
+//
+//        // Geração do próximo cursor baseado no último item da página atual
+//        EventListItemView lastItem = page.getLast();
+//        String nextCursor = hasNext
+//                ? CursorUtils.encode(new EventCursor(lastItem.startDate(), lastItem.id()))
+//                : null;
 
-        String nextCursor = hasNext
-                ? CursorUtils.encode(new EventCursor(page.getLast().startDate(), page.getLast().id()))
-                : null;
-
-        return new CursorPage<>(page, nextCursor, null);
+        return CursorUtils.buildPage(events, finalPageSize, e -> new EventCursor(e.getStartDate(), e.getId()));
     }
 
     // ---- Comandos ----
@@ -153,7 +150,7 @@ public class EventsServices {
                 || editorServices.isEditor(event, userId);
 
         if (!canEdit)
-            throw new AccessDeniedException("Você não tem permissão para alterar as configurações deste evento.");
+            throw new AccessDeniedException("Você não tem permissão para alterar o status deste evento.");
 
 
         request.titleOpt().ifPresent(title -> {
@@ -166,6 +163,32 @@ public class EventsServices {
         eventRepository.save(event);
 
         return eventMapper.eventToEventDTO(event);
+    }
+
+    @Transactional
+    public MessageResponse updateEventStatus(Long eventId, EnumEventStatus newStatus, UUID userId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        boolean canEdit = SecurityUtils.isAdmin()
+                || event.isOwner(userId)
+                || editorServices.isEditor(event, userId);
+
+        if (!canEdit) {
+            throw new AccessDeniedException("Você não tem permissão para alterar o status deste evento.");
+        }
+
+        // Executa a transição através dos métodos de domínio encapsulados
+        switch (newStatus) {
+            case PUBLISHED -> event.publish();
+            case CANCELED -> event.cancel();
+            case DRAFT -> event.moveToDraft();
+            case UNLISTED -> event.unlist();
+        }
+
+        eventRepository.save(event);
+
+        return new MessageResponse("Status do evento alterado para: " + newStatus.name());
     }
 
     @Transactional
