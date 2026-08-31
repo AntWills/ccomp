@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.events.dto;
+package com.ccomp.br.domain.events.dto.events;
 
 import com.ccomp.br.domain.events.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.enums.EnumEventFormat;

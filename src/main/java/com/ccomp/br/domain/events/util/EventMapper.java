@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.events.util;
 
-import com.ccomp.br.domain.events.dto.EventDTO;
-import com.ccomp.br.domain.events.dto.UpdateEventRequest;
+import com.ccomp.br.domain.events.dto.events.EventDTO;
+import com.ccomp.br.domain.events.dto.events.UpdateEventDTO;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.shared.dto.EventListItem;
 import org.mapstruct.*;
@@ -11,7 +11,7 @@ import org.mapstruct.*;
         collectionMappingStrategy = CollectionMappingStrategy.SETTER_PREFERRED
 )
 public interface EventMapper {
-    com.ccomp.br.shared.dto.EventListItem eventToEventResponse(Event event);
+    EventListItem eventToEventResponse(Event event);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "ownerId", ignore = true)
@@ -19,7 +19,7 @@ public interface EventMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "slug", ignore = true)
     @Mapping(target = "title", ignore = true)
-    void updateEntityFromDto(UpdateEventRequest dto, @MappingTarget Event entity);
+    void updateEntityFromDto(UpdateEventDTO dto, @MappingTarget Event entity);
 
     EventDTO eventToEventDTO(Event event);
 

@@ -1,6 +1,5 @@
-package com.ccomp.br.domain.events.dto;
+package com.ccomp.br.domain.events.dto.editors;
 
-import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.dto.UserSummaryView;
 import lombok.Builder;
 

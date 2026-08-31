@@ -3,7 +3,7 @@ package com.ccomp.br.domain.highlights.web;
 import com.ccomp.br.domain.clubs.application.ClubService;
 import com.ccomp.br.domain.clubs.dto.ClubResponseDTO;
 import com.ccomp.br.domain.events.application.EventsServices;
-import com.ccomp.br.domain.events.dto.EventsFilterRequest;
+import com.ccomp.br.domain.events.dto.events.EventsFilterRequest;
 import com.ccomp.br.domain.highlights.dto.AllHighlights;
 import com.ccomp.br.domain.news.application.NewsApplication;
 import com.ccomp.br.domain.news.dto.NewsFilter;

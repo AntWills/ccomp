@@ -1,10 +1,10 @@
 package com.ccomp.br.domain.events.web;
 
 import com.ccomp.br.domain.events.application.EventsServices;
-import com.ccomp.br.domain.events.dto.CreateEventRequestDTO;
-import com.ccomp.br.domain.events.dto.EventDTO;
-import com.ccomp.br.domain.events.dto.EventsFilterRequest;
-import com.ccomp.br.domain.events.dto.UpdateEventRequest;
+import com.ccomp.br.domain.events.dto.events.CreateEventDTO;
+import com.ccomp.br.domain.events.dto.events.EventDTO;
+import com.ccomp.br.domain.events.dto.events.EventsFilterRequest;
+import com.ccomp.br.domain.events.dto.events.UpdateEventDTO;
 import com.ccomp.br.shared.dto.EventListItem;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -182,7 +182,7 @@ public class EventsController {
             )
     })
     public ResponseEntity<EventDTO> create(
-            @Valid @RequestBody CreateEventRequestDTO dto,
+            @Valid @RequestBody CreateEventDTO dto,
             @AuthenticationPrincipal Jwt jwt
     ) {
         return ResponseEntity.status(HttpStatus.CREATED).body(eventsServices.create(extractUserId(jwt), dto));
@@ -232,7 +232,7 @@ public class EventsController {
             )
     })
     public ResponseEntity<EventDTO> updateEvent(
-            @Valid @RequestBody UpdateEventRequest request,
+            @Valid @RequestBody UpdateEventDTO request,
             @PathVariable Long eventId,
             @AuthenticationPrincipal Jwt jwt
     ) {

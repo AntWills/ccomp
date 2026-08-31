@@ -14,7 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import com.ccomp.br.domain.events.dto.EventEditorListItem;
+import com.ccomp.br.domain.events.dto.editors.EventEditorListItem;
 import com.ccomp.br.shared.utils.CursorPage;
 
 import java.util.UUID;

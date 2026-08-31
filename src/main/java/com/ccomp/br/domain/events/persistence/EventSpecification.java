@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.events.persistence;
 
-import com.ccomp.br.domain.events.dto.EventCursor;
-import com.ccomp.br.domain.events.dto.EventsFilterRequest;
+import com.ccomp.br.domain.events.dto.events.EventCursor;
+import com.ccomp.br.domain.events.dto.events.EventsFilterRequest;
 import com.ccomp.br.domain.events.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.enums.EnumEventFormat;
 import org.springframework.data.jpa.domain.Specification;

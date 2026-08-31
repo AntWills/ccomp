@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.events.application;
 
-import com.ccomp.br.domain.events.dto.*;
+import com.ccomp.br.domain.events.dto.events.*;
 import com.ccomp.br.domain.events.persistence.EventSpecification;
 import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.domain.news.util.SlugUtils;
@@ -99,7 +99,7 @@ public class EventsServices {
 
     // ---- Commands ----
     @Transactional
-    public EventDTO create(UUID ownerId, CreateEventRequestDTO dto){
+    public EventDTO create(UUID ownerId, CreateEventDTO dto){
         UserDTO userDTO = userManagement.findById(ownerId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
 
@@ -139,7 +139,7 @@ public class EventsServices {
     }
 
     @Transactional
-    public EventDTO update(UpdateEventRequest request, Long eventId, UUID userId) {
+    public EventDTO update(UpdateEventDTO request, Long eventId, UUID userId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
