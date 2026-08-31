@@ -3,7 +3,6 @@ package com.ccomp.br.domain.events.util;
 import com.ccomp.br.domain.events.dto.events.EventDTO;
 import com.ccomp.br.domain.events.dto.events.UpdateEventDTO;
 import com.ccomp.br.domain.events.persistence.Event;
-import com.ccomp.br.shared.dto.EventListItem;
 import org.mapstruct.*;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING,
@@ -11,7 +10,7 @@ import org.mapstruct.*;
         collectionMappingStrategy = CollectionMappingStrategy.SETTER_PREFERRED
 )
 public interface EventMapper {
-    EventListItem eventToEventResponse(Event event);
+//    EventListItem eventToEventResponse(Event event);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "ownerId", ignore = true)
@@ -22,6 +21,4 @@ public interface EventMapper {
     void updateEntityFromDto(UpdateEventDTO dto, @MappingTarget Event entity);
 
     EventDTO eventToEventDTO(Event event);
-
-    EventListItem eventToEventListItem(Event event);
 }

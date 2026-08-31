@@ -1,11 +1,10 @@
 package com.ccomp.br.domain.events.web;
 
 import com.ccomp.br.domain.events.application.EventsServices;
-import com.ccomp.br.domain.events.dto.events.CreateEventDTO;
-import com.ccomp.br.domain.events.dto.events.EventDTO;
-import com.ccomp.br.domain.events.dto.events.EventsFilterRequest;
-import com.ccomp.br.domain.events.dto.events.UpdateEventDTO;
-import com.ccomp.br.shared.dto.EventListItem;
+import com.ccomp.br.domain.events.dto.events.*;
+import com.ccomp.br.domain.events.enums.EnumEventStatus;
+import com.ccomp.br.shared.dto.EventListItemView;
+import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -134,7 +133,7 @@ public class EventsController {
     })
     @SecurityRequirements
     @PostMapping("search")
-    public ResponseEntity<CursorPage<EventListItem>> searchEvents(
+    public ResponseEntity<CursorPage<EventListItemView>> searchEvents(
             @Valid @RequestBody EventsFilterRequest filter,
             @Parameter(description = "Cursor para carregar a próxima página")
             @RequestParam(required = false) String nextCursor,
@@ -214,6 +213,51 @@ public class EventsController {
             @AuthenticationPrincipal Jwt jwt
     ) {
         return ResponseEntity.ok(eventsServices.update(request, eventId, extractUserId(jwt)));
+    }
+
+    @PatchMapping("{eventId}/status/{status}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @Operation(
+            summary = "Atualiza o status de publicação de um evento",
+            description = """
+        Altera o estado de publicação do evento (`DRAFT`, `PUBLISHED`, `UNLISTED`, `CANCELED`).
+
+        ### Requisitos de Permissão:
+        - Requer que o usuário autenticado seja um **ADMIN**, o **Proprietário** do evento ou um **Editor** atribuído.
+        """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Status do evento alterado com sucesso"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Status informado é inválido",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Usuário não autenticado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Acesso negado (Usuário não possui permissão de edição no evento)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Evento não encontrado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    public ResponseEntity<MessageResponse> updateEventStatus(
+            @PathVariable Long eventId,
+            @PathVariable EnumEventStatus status,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ResponseEntity.ok(eventsServices.updateEventStatus(eventId, status, extractUserId(jwt)));
     }
 
     @DeleteMapping("/{eventId}")
