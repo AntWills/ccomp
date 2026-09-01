@@ -95,7 +95,7 @@ public class ClubService {
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
 
         if (!userDTO.isTeamMember())
-            throw new AccessDeniedException("Apenas membros da equipe (STAFF, MODERATOR ou ADMIN) podem ser adicionados como editores.");
+            throw new AccessDeniedException("Apenas membros da equipe (STAFF, MODERATOR ou ADMIN) podem criar clubes.");
 
 
         Club club = Club.builder()

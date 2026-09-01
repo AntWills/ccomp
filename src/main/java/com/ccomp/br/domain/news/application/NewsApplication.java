@@ -116,7 +116,7 @@ public class NewsApplication {
         News entity = newsRepository.findById(newsId)
                 .orElseThrow(() -> new ResourceNotFoundException("Notícia não encontrada."));
 
-        if(entity.isAuthor(userId))
+        if(!entity.isAuthor(userId))
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         newsRepository.deleteById(newsId);
