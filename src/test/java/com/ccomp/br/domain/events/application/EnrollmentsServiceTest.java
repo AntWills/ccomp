@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.application;
 
+import com.ccomp.br.domain.events.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.events.enums.EnumEnrollmentStatus;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
@@ -9,6 +10,7 @@ import com.ccomp.br.domain.events.persistence.enrollments.EnrollmentRepository;
 import com.ccomp.br.domain.events.util.EnrollmentMapper;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.MessageResponse;
+import com.ccomp.br.shared.exceptions.DomainException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -111,6 +113,57 @@ public class EnrollmentsServiceTest {
             assertThat(response).isNotNull();
             assertThat(response.response()).isEqualTo("Inscrição realizada com sucesso.");
 
+            verify(enrollmentRepository, never()).save(any(Enrollment.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("Unsubscribe - Cenários de Exceção")
+    class Unsubscribe {
+        @Test
+        @DisplayName("Desativa a inscrição de um usuário")
+        void unsubscribe_returnMessage_whenIsSubscriber() {
+            UUID userId = UUID.randomUUID();
+
+            var enrollment = Enrollment.builder()
+                    .id(eventId)
+                    .status(EnumEnrollmentState.CONFIRMED)
+                    .event(existingEvent)
+                    .userId(userId)
+                    .build();
+
+            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
+            when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(enrollment));
+
+            MessageResponse response = enrollmentsServices.unsubscribe(userId, eventId);
+
+            assertThat(response).isNotNull();
+            assertThat(response.response()).isEqualTo("Inscrição removida com sucesso.");
+            assertThat(enrollment.getStatus()).isEqualTo(EnumEnrollmentState.CANCELED);
+
+            verify(enrollmentRepository).save(enrollment);
+        }
+
+        @Test
+        @DisplayName("Deve lançar DomainException e NÃO chamar o save() se o usuário já fez CHECK_IN")
+        void unsubscribe_WhenCheckedIn_ShouldNotSaveAndThrowException() {
+            UUID userId = UUID.randomUUID();
+
+            var enrollment = Enrollment.builder()
+                    .id(eventId)
+                    .status(EnumEnrollmentState.CHECKED_IN)
+                    .event(existingEvent)
+                    .userId(userId)
+                    .build();
+
+            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
+            when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(enrollment));
+
+            DomainException exception = assertThrows(DomainException.class, () ->
+                    enrollmentsServices.unsubscribe(userId, eventId)
+            );
+
+            assertThat(exception.getMessage()).isEqualTo("Não é possível cancelar uma inscrição que já possui presença confirmada.");
             verify(enrollmentRepository, never()).save(any(Enrollment.class));
         }
     }

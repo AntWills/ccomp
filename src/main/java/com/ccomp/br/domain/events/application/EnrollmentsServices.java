@@ -110,9 +110,6 @@ public class EnrollmentsServices {
         Enrollment enrollment = enrollmentRepository.findByUserIdAndEvent(userId, event)
                 .orElseThrow(() -> new ResourceNotFoundException("Você não possui uma inscrição neste evento."));
 
-        if (enrollment.getStatus() == EnumEnrollmentState.CANCELED)
-            throw new ConflictException("Sua inscrição neste evento já se encontra cancelada.");
-
         enrollment.cancel();
         enrollmentRepository.save(enrollment);
 
