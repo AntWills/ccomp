@@ -265,7 +265,7 @@ class NewsApplicationTest {
             NewsUpdateDto dto = mock(NewsUpdateDto.class);
             when(newsRepository.findById(1L)).thenReturn(Optional.of(existingNews));
             when(existingNews.getAuthorId()).thenReturn(authorId);
-            when(existingNews.getTitle()).thenReturn("Título antigo");
+//            when(existingNews.getTitle()).thenReturn("Título antigo");
             when(dto.title()).thenReturn(null); // sem mudança de título neste teste
             NewsResponse response = mock(NewsResponse.class);
             when(newsMapper.newsToNewsResponse(existingNews)).thenReturn(response);
