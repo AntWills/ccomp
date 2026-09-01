@@ -184,7 +184,7 @@ public class EventsController {
     }
 
     @PatchMapping("{eventId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+//    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     @Operation(
             summary = "Atualiza parcialmente um evento existente",
             description = """
