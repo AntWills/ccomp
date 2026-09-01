@@ -81,9 +81,9 @@ public class EnrollmentsServices {
         if (existingEnrollment.isPresent()) {
             Enrollment enrollment = existingEnrollment.get();
 
-            if (enrollment.isActive()) {
-                throw new ConflictException("Você já está inscrito neste evento.");
-            }
+            if (enrollment.isActive())
+                return new MessageResponse("Inscrição realizada com sucesso.");
+
 
             // Se a inscrição estava cancelada previamente, reativa mantendo o mesmo registro no banco
             enrollment.setStatus(EnumEnrollmentState.CONFIRMED);
