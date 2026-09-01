@@ -88,6 +88,7 @@ public class EnrollmentsServices {
             // Se a inscrição estava cancelada previamente, reativa mantendo o mesmo registro no banco
             enrollment.setStatus(EnumEnrollmentState.CONFIRMED);
             enrollmentRepository.save(enrollment);
+            return new MessageResponse("Inscrição realizada com sucesso.");
         }
 
         Enrollment newEnrollment = Enrollment.builder()
