@@ -62,9 +62,9 @@ public class EditorServices {
             throw new UserBlockedException("O usuário informado está inativo ou bloqueado.");
         }
 
-        if (!userDTO.isTeamMember()) {
-            throw new AccessDeniedException("Apenas membros da equipe (STAFF, MODERATOR ou ADMIN) podem ser adicionados como editores.");
-        }
+//        if (!userDTO.isTeamMember()) {
+//            throw new AccessDeniedException("Apenas membros da equipe (STAFF, MODERATOR ou ADMIN) podem ser adicionados como editores.");
+//        }
 
         if (editorRepository.existsByEventIdAndUserId(event.getId(), userDTO.id())) {
             return new MessageResponse("Este usuário já é um editor deste evento.");
