@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.users.web;
 
-import com.ccomp.br.domain.events.management.EventsManagement;
+import com.ccomp.br.domain.events.external.EventsManagement;
 import com.ccomp.br.shared.dto.EventListItemView;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.utils.CursorPage;

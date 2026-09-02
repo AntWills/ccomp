@@ -51,6 +51,22 @@ public class EditorsController {
     }
 
     @Operation(
+            summary = "Aceita o convite de editor",
+            description = "Valida o código de convite enviado por e-mail e ativa o usuário como editor do evento."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Convite aceito com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Código expirado"),
+            @ApiResponse(responseCode = "404", description = "Código não encontrado")
+    })
+    @GetMapping("/editors/accept")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<MessageResponse> acceptEditorInvitation(@RequestParam String code) {
+        MessageResponse response = editorServices.acceptInvitation(code);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
             summary = "Remove um editor do evento",
             description = "Remove as permissões de edição de um usuário sobre um evento. **Restrito a membros da equipe (ADMIN, STAFF ou MODERATOR)** que também sejam os proprietários do evento."
     )
