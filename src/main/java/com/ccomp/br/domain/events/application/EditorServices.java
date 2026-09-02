@@ -76,7 +76,6 @@ public class EditorServices {
         Optional<EventEditor> editorOpt = editorRepository.findByEventIdAndUserId(event.getId(), userDTO.id());
 
         EventEditor editor;
-        boolean isReinvite = false;
 
         if (editorOpt.isPresent()) {
             editor = editorOpt.get();
