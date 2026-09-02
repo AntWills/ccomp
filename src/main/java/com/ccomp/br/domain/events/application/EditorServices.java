@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.application;
 
+import com.ccomp.br.domain.events.enums.editors.EnumEditorsStatus;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
@@ -29,9 +30,15 @@ import org.springframework.data.jpa.domain.Specification;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.context.ApplicationEventPublisher;
+import com.ccomp.br.domain.events.persistence.editors.validation.EditorValidationCodeRepository;
+import com.ccomp.br.domain.events.persistence.editors.validation.EditorValidationCode;
+import com.ccomp.br.domain.events.external.dto.EditorAddedEvent;
+import com.ccomp.br.shared.exceptions.DomainException;
 
 @Service
 @Slf4j
@@ -39,11 +46,15 @@ public class EditorServices {
     private final EventRepository eventRepository;
     private final EventEditorRepository editorRepository;
     private final UserManagement userManagement;
+    private final ApplicationEventPublisher eventPublisher;
+    private final EditorValidationCodeRepository validationCodeRepository;
 
-    public EditorServices(EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement) {
+    public EditorServices(EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement, ApplicationEventPublisher eventPublisher, EditorValidationCodeRepository validationCodeRepository) {
         this.eventRepository = eventRepository;
         this.editorRepository = editorRepository;
         this.userManagement = userManagement;
+        this.eventPublisher = eventPublisher;
+        this.validationCodeRepository = validationCodeRepository;
     }
 
     @Transactional
@@ -62,21 +73,69 @@ public class EditorServices {
             throw new UserBlockedException("O usuário informado está inativo ou bloqueado.");
         }
 
-//        if (!userDTO.isTeamMember()) {
-//            throw new AccessDeniedException("Apenas membros da equipe (STAFF, MODERATOR ou ADMIN) podem ser adicionados como editores.");
-//        }
+        Optional<EventEditor> editorOpt = editorRepository.findByEventIdAndUserId(event.getId(), userDTO.id());
 
-        if (editorRepository.existsByEventIdAndUserId(event.getId(), userDTO.id())) {
-            return new MessageResponse("Este usuário já é um editor deste evento.");
+        EventEditor editor;
+        boolean isReinvite = false;
+
+        if (editorOpt.isPresent()) {
+            editor = editorOpt.get();
+
+            if (editor.isActive()) {
+                return new MessageResponse("Este usuário já é um editor ativo deste evento.");
+            }
+
+            // Caso seja PENDING ou REVOKED, reativa/mantém como PENDING e indica o reenvio
+            editor.setStatus(EnumEditorsStatus.PENDING);
+            editor = editorRepository.save(editor);
+
+            validationCodeRepository.deleteByEventEditor(editor);
+        } else {
+            editor = editorRepository.save(EventEditor.builder()
+                    .event(event)
+                    .userId(userDTO.id())
+                    .status(EnumEditorsStatus.PENDING)
+                    .assignedAt(LocalDateTime.now())
+                    .build());
         }
 
-        editorRepository.save(EventEditor.builder()
-                .event(event)
-                .userId(userDTO.id())
-                .assignedAt(LocalDateTime.now())
-                .build());
+        String code = UUID.randomUUID().toString();
 
-        return new MessageResponse("Usuário adicionado como editor com sucesso.");
+        EditorValidationCode validationCode = EditorValidationCode.builder()
+                .code(code)
+                .eventEditor(editor)
+                .expiresAt(LocalDateTime.now().plusHours(24))
+                .build();
+
+        validationCodeRepository.save(validationCode);
+
+        eventPublisher.publishEvent(new EditorAddedEvent(event.getId(), event.getTitle(), code, userDTO, editor.getId()));
+
+        return new MessageResponse("Usuário adicionado como editor com sucesso. Um e-mail de convite foi enviado.");
+    }
+
+    @Transactional
+    public MessageResponse acceptInvitation(String code) {
+        EditorValidationCode validationCode = validationCodeRepository.findByCode(code)
+                .orElseThrow(() -> new ResourceNotFoundException("Código de convite inválido ou não encontrado."));
+
+        if (validationCode.isExpired()) {
+            throw new DomainException("O código de convite expirou.");
+        }
+
+        EventEditor editor = validationCode.getEventEditor();
+
+        if (editor.isActive()) {
+            validationCodeRepository.delete(validationCode);
+            return new MessageResponse("Você já é um editor ativo deste evento.");
+        }
+
+        editor.setStatus(EnumEditorsStatus.ACTIVE);
+        editorRepository.save(editor);
+
+        validationCodeRepository.deleteByEventEditor(editor);
+
+        return new MessageResponse("Convite aceito com sucesso. Você agora é um editor do evento.");
     }
 
     @Transactional
@@ -101,8 +160,11 @@ public class EditorServices {
     }
 
     @Transactional(readOnly = true)
-    boolean isEditor(Event event, UUID userId) {
-        return editorRepository.existsByEventIdAndUserId(event.getId(), userId);
+    public boolean hasPermissionEdit(Event event, UUID userId) {
+        return editorRepository
+                .findByEventIdAndUserId(event.getId(), userId)
+                .map(EventEditor::isActive)
+                .orElse(false);
     }
 
     @Transactional(readOnly = true)
@@ -112,7 +174,7 @@ public class EditorServices {
 
         boolean canAccess = SecurityUtils.isAdmin()
                 || event.isOwner(requesterId)
-                || isEditor(event, requesterId);
+                || hasPermissionEdit(event, requesterId);
 
         if (!canAccess) {
             throw new AccessDeniedException("Você não tem permissão para visualizar os editores deste evento.");
@@ -154,7 +216,7 @@ public class EditorServices {
                         .user(userMap.get(ee.getUserId()))
                         .assignedAt(ee.getAssignedAt())
                         .revokedAt(ee.getRevokedAt())
-                        .active(ee.isActive())
+                        .status(ee.getStatus())
                         .build())
                 .toList();
 

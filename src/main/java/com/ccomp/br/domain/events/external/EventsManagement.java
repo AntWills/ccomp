@@ -1,10 +1,7 @@
-package com.ccomp.br.domain.events.management;
+package com.ccomp.br.domain.events.external;
 
 import com.ccomp.br.domain.events.dto.events.EventCursor;
 import com.ccomp.br.domain.events.persistence.EventBlaze;
-import com.ccomp.br.domain.events.persistence.enrollments.EnrollmentRepository;
-import com.ccomp.br.domain.events.persistence.EventRepository;
-import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.shared.dto.EventListItemView;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.CursorUtils;
