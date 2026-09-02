@@ -8,7 +8,10 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Table(name = "tb_event_editors")
+@Table(name = "tb_event_editors",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_tb_event_editors_event_user", columnNames = {"event_id", "userId"})
+        })
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor

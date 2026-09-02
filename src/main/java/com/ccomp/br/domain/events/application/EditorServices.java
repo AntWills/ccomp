@@ -30,6 +30,7 @@ import org.springframework.data.jpa.domain.Specification;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -72,28 +73,43 @@ public class EditorServices {
             throw new UserBlockedException("O usuário informado está inativo ou bloqueado.");
         }
 
-        if (editorRepository.existsByEventIdAndUserId(event.getId(), userDTO.id())) {
-            return new MessageResponse("Este usuário já é um editor deste evento.");
-        }
+        Optional<EventEditor> editorOpt = editorRepository.findByEventIdAndUserId(event.getId(), userDTO.id());
 
-        EventEditor savedEditor = editorRepository.save(EventEditor.builder()
-                .event(event)
-                .userId(userDTO.id())
-                .status(EnumEditorsStatus.PENDING)
-                .assignedAt(LocalDateTime.now())
-                .build());
+        EventEditor editor;
+        boolean isReinvite = false;
+
+        if (editorOpt.isPresent()) {
+            editor = editorOpt.get();
+
+            if (editor.isActive()) {
+                return new MessageResponse("Este usuário já é um editor ativo deste evento.");
+            }
+
+            // Caso seja PENDING ou REVOKED, reativa/mantém como PENDING e indica o reenvio
+            editor.setStatus(EnumEditorsStatus.PENDING);
+            editor = editorRepository.save(editor);
+
+            validationCodeRepository.deleteByEventEditor(editor);
+        } else {
+            editor = editorRepository.save(EventEditor.builder()
+                    .event(event)
+                    .userId(userDTO.id())
+                    .status(EnumEditorsStatus.PENDING)
+                    .assignedAt(LocalDateTime.now())
+                    .build());
+        }
 
         String code = UUID.randomUUID().toString();
 
         EditorValidationCode validationCode = EditorValidationCode.builder()
                 .code(code)
-                .eventEditor(savedEditor)
+                .eventEditor(editor)
                 .expiresAt(LocalDateTime.now().plusHours(24))
                 .build();
 
         validationCodeRepository.save(validationCode);
 
-        eventPublisher.publishEvent(new EditorAddedEvent(event.getId(), event.getTitle(), code, userDTO, savedEditor.getId()));
+        eventPublisher.publishEvent(new EditorAddedEvent(event.getId(), event.getTitle(), code, userDTO, editor.getId()));
 
         return new MessageResponse("Usuário adicionado como editor com sucesso. Um e-mail de convite foi enviado.");
     }
@@ -108,10 +124,16 @@ public class EditorServices {
         }
 
         EventEditor editor = validationCode.getEventEditor();
+
+        if (editor.isActive()) {
+            validationCodeRepository.delete(validationCode);
+            return new MessageResponse("Você já é um editor ativo deste evento.");
+        }
+
         editor.setStatus(EnumEditorsStatus.ACTIVE);
         editorRepository.save(editor);
 
-        validationCodeRepository.delete(validationCode);
+        validationCodeRepository.deleteByEventEditor(editor);
 
         return new MessageResponse("Convite aceito com sucesso. Você agora é um editor do evento.");
     }

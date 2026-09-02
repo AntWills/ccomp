@@ -24,10 +24,10 @@ public class EditorAddedEventListener {
     public void onEditorAdded(EditorAddedEvent event) {
 
         String subject = "[CONVITE] Editor para: " + event.eventTitle();
-        String acceptUrl = "http://localhost:8080/api/events/editors/accept?code=" + event.code();
-
+//        String acceptUrl = "Ajustar Depois -> 8080/api/events/editors/accept?code=" + event.code();
+        String acceptUrl = "https://example.com";
         // Logotipo simulado ou URL do logotipo real
-        String logoUrl = "https://via.placeholder.com/60/0047AB/FFFFFF?text=C";
+        String logoUrl = "https://cdn-icons-png.flaticon.com/512/888/888879.png";
 
         // HTML robusto para e-mails (com CSS inline)
         String htmlContent = String.format(
@@ -94,7 +94,7 @@ public class EditorAddedEventListener {
         );
 
         // Envia o e-mail como HTML (garanta que seu SendMailDTO e EmailService suportem isso)
-        emailService.send(new SendMailDTO(event.editorUser().emailAddress(), subject, htmlContent));
+        emailService.send(new SendMailDTO(event.editorUser().emailAddress(), subject, htmlContent, true));
         log.info("E-mail de convite (HTML) enviado para {} com o código {}", event.editorUser().emailAddress().getValue(), event.code());
     }
 }
