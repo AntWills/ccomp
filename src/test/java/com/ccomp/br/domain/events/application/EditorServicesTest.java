@@ -196,12 +196,10 @@ public class EditorServicesTest {
         void acceptInvitation_throw_whenCodeInvalid() {
             UUID code = UUID.randomUUID();
 
-            EventEditor editor = mock(EventEditor.class);
             EditorValidationCode editorValidation = mock(EditorValidationCode.class);
 
             when(validationCodeRepository.findByCode(code)).thenReturn(Optional.of(editorValidation));
-            when(editorValidation.isExpired()).thenReturn(false); // O código é valido
-            when(editor.isActive()).thenReturn(true);
+            when(editorValidation.isExpired()).thenReturn(true); // O código é invalido
 
             DomainException exception = assertThrows(DomainException.class, () ->
                 editorServices.acceptInvitation(code)
