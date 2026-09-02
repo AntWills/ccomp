@@ -29,16 +29,16 @@ import java.util.UUID;
 @Slf4j
 public class ActivitiesServices {
     private final EventRepository eventRepository;
-    private final EventEditorRepository editorRepository;
+    private final EditorServices editorServices;
     private final EventActivityRepository activityRepository;
     private final ActivityMapper activityMapper;
     private final EventActivityBlaze eventActivityBlaze;
 
-    public ActivitiesServices(EventRepository eventRepository, EventEditorRepository editorRepository,
-            EventActivityRepository activityRepository, ActivityMapper activityMapper,
-            EventActivityBlaze eventActivityBlaze) {
+    public ActivitiesServices(EventRepository eventRepository, EventEditorRepository editorRepository, EditorServices editorServices,
+                              EventActivityRepository activityRepository, ActivityMapper activityMapper,
+                              EventActivityBlaze eventActivityBlaze) {
         this.eventRepository = eventRepository;
-        this.editorRepository = editorRepository;
+        this.editorServices = editorServices;
         this.activityRepository = activityRepository;
         this.activityMapper = activityMapper;
         this.eventActivityBlaze = eventActivityBlaze;
@@ -52,7 +52,7 @@ public class ActivitiesServices {
 
         boolean allowed = event.isPubliclyAccessible()
                 || event.isOwner(userId)
-                || (userId != null && editorRepository.existsByEventIdAndUserId(event.getId(), userId))
+                || (userId != null && editorServices.hasPermissionEdit(event, userId))
                 || SecurityUtils.isAdmin();
 
         if (!allowed)
@@ -69,7 +69,7 @@ public class ActivitiesServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if (!event.isOwner(userId) && !editorRepository.existsByEventIdAndUserId(event.getId(), userId))
+        if (!event.isOwner(userId) && !editorServices.hasPermissionEdit(event, userId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         EventActivity activity = EventActivity.builder()
@@ -92,7 +92,7 @@ public class ActivitiesServices {
         Event event = activity.getEvent();
 
         boolean allowed = event.isOwner(userId)
-                || editorRepository.existsByEventIdAndUserId(event.getId(), userId);
+                || editorServices.hasPermissionEdit(event, userId);
 
         if (!allowed)
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
@@ -112,7 +112,7 @@ public class ActivitiesServices {
         Event event = activity.getEvent();
 
         boolean allowed = event.isOwner(userId)
-                || editorRepository.existsByEventIdAndUserId(event.getId(), userId);
+                || editorServices.hasPermissionEdit(event, userId);
 
         if (!allowed)
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
