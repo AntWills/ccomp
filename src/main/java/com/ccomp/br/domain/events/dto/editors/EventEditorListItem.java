@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.dto.editors;
 
+import com.ccomp.br.domain.events.enums.editors.EnumEditorsStatus;
 import com.ccomp.br.shared.dto.UserSummaryView;
 import lombok.Builder;
 
@@ -12,6 +13,6 @@ public record EventEditorListItem(
         UserSummaryView user,
         LocalDateTime assignedAt,
         LocalDateTime revokedAt,
-        boolean active
+        EnumEditorsStatus status
 ) {
 }

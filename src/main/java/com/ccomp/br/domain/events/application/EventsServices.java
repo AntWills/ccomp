@@ -53,7 +53,7 @@ public class EventsServices {
                     // O evento pode ser acessado se estiver publicado/unlisted OU se o usuário for dono/editor/admin
                     boolean allowed = event.isPubliclyAccessible()
                             || (userId != null && event.isOwner(userId))
-                            || (userId != null && editorServices.isEditor(event, userId))
+                            || (userId != null && editorServices.hasPermissionEdit(event, userId))
                             || SecurityUtils.isAdmin();
 
                     if (allowed) return eventMapper.eventToEventDTO(event);
@@ -147,7 +147,7 @@ public class EventsServices {
 
         boolean canEdit = SecurityUtils.isAdmin()
                 || event.isOwner(userId)
-                || editorServices.isEditor(event, userId);
+                || editorServices.hasPermissionEdit(event, userId);
 
         if (!canEdit)
             throw new AccessDeniedException("Você não tem permissão para alterar o status deste evento.");
@@ -172,7 +172,7 @@ public class EventsServices {
 
         boolean canEdit = SecurityUtils.isAdmin()
                 || event.isOwner(userId)
-                || editorServices.isEditor(event, userId);
+                || editorServices.hasPermissionEdit(event, userId);
 
         if (!canEdit) {
             throw new AccessDeniedException("Você não tem permissão para alterar o status deste evento.");

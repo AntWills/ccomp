@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.persistence.editors;
 
+import com.ccomp.br.domain.events.enums.editors.EnumEditorsStatus;
 import com.ccomp.br.domain.events.persistence.Event;
 import jakarta.persistence.*;
 import lombok.*;
@@ -31,6 +32,11 @@ public class EventEditor {
 
     private LocalDateTime revokedAt;
 
-    @Column(nullable = false)
-    private boolean active = true;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", columnDefinition = "varchar(20)", nullable = false)
+    private EnumEditorsStatus status;
+
+    public boolean isActive() {
+        return status == EnumEditorsStatus.ACTIVE;
+    }
 }
