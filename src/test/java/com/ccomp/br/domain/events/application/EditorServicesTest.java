@@ -12,6 +12,7 @@ import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
+import com.ccomp.br.shared.exceptions.DomainException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -22,6 +23,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -159,6 +161,80 @@ public class EditorServicesTest {
             verify(editorRepository).save(inactiveEditor);
             verify(validationCodeRepository).save(any(EditorValidationCode.class));
             verify(eventPublisher).publishEvent(any(EditorAddedEvent.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("Aceitar Contive - Cenário de Exceção")
+    class AcceptInvitation {
+        @Test
+        @DisplayName("Aceita o usuário quando o convite é valido")
+        void acceptInvitation_acceptUser_whenCodeValid() {
+            UUID code = UUID.randomUUID();
+
+            EventEditor editor = mock(EventEditor.class);
+
+            EditorValidationCode editorValidation = mock(EditorValidationCode.class);
+
+            when(validationCodeRepository.findByCode(code)).thenReturn(Optional.of(editorValidation));
+            when(editorValidation.isExpired()).thenReturn(false); // O código é valido
+            when(editorValidation.getEventEditor()).thenReturn(editor);
+            when(editor.isActive()).thenReturn(false); // Não é um editor ativo
+
+            MessageResponse message = editorServices.acceptInvitation(code);
+
+            assertThat(message).isNotNull();
+            assertThat(message.response())
+                    .isEqualTo("Convite aceito com sucesso. Você agora é um editor do evento.");
+
+            verify(editorRepository).save(any(EventEditor.class));
+            verify(validationCodeRepository).deleteByEventEditor(any(EventEditor.class));
+        }
+
+        @Test
+        @DisplayName("Rejeita o usuário quando o convite é invalido")
+        void acceptInvitation_throw_whenCodeInvalid() {
+            UUID code = UUID.randomUUID();
+
+            EventEditor editor = mock(EventEditor.class);
+            EditorValidationCode editorValidation = mock(EditorValidationCode.class);
+
+            when(validationCodeRepository.findByCode(code)).thenReturn(Optional.of(editorValidation));
+            when(editorValidation.isExpired()).thenReturn(false); // O código é valido
+            when(editor.isActive()).thenReturn(true);
+
+            DomainException exception = assertThrows(DomainException.class, () ->
+                editorServices.acceptInvitation(code)
+            );
+
+            assertThat(exception.getMessage())
+                    .isEqualTo("O código de convite expirou.");
+
+            verify(editorRepository, never()).save(any(EventEditor.class));
+            verify(validationCodeRepository, never()).deleteByEventEditor(any(EventEditor.class));
+        }
+
+        @Test
+        @DisplayName("Se o usuário já for editor, emite erro")
+        void acceptInvitation_acceptUser_whenUserIsEditor() {
+            UUID code = UUID.randomUUID();
+
+            EventEditor editor = mock(EventEditor.class);
+            EditorValidationCode editorValidation = mock(EditorValidationCode.class);
+
+            when(validationCodeRepository.findByCode(code)).thenReturn(Optional.of(editorValidation));
+            when(editorValidation.isExpired()).thenReturn(false); // O código é invalido
+            when(editorValidation.getEventEditor()).thenReturn(editor);
+            when(editor.isActive()).thenReturn(true); // É um editor ativo
+
+            MessageResponse message = editorServices.acceptInvitation(code);
+
+            assertThat(message).isNotNull();
+            assertThat(message.response())
+                    .isEqualTo("Você já é um editor ativo deste evento.");
+
+            verify(editorRepository, never()).save(any(EventEditor.class));
+            verify(validationCodeRepository).delete(any(EditorValidationCode.class));
         }
     }
 
