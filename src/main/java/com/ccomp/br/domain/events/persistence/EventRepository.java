@@ -10,4 +10,5 @@ import java.util.UUID;
 public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecificationExecutor<Event> {
     List<Event> findAllByOwnerId(UUID ownerId);
     Optional<Event> findBySlug(String slug);
+    boolean existsBySlug(String slug);
 }
