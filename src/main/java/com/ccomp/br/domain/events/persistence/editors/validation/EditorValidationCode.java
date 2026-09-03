@@ -7,6 +7,7 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Table(name = "tb_event_editor_validations")
 @Entity
@@ -21,7 +22,7 @@ public class EditorValidationCode {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String code;
+    private UUID code;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "event_editor_id", nullable = false)

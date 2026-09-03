@@ -81,19 +81,6 @@ public class EventsServices {
         log.info("Quantidade de eventos retornados: {}", events.size());
         log.info("Horário da consulta: {}", LocalDateTime.now());
 
-//        if (events.isEmpty()) {
-//            return new CursorPage<>(List.of(), null, null);
-//        }
-//
-//        boolean hasNext = events.size() > finalPageSize;
-//        List<EventListItemView> page = hasNext ? events.subList(0, finalPageSize) : events;
-//
-//        // Geração do próximo cursor baseado no último item da página atual
-//        EventListItemView lastItem = page.getLast();
-//        String nextCursor = hasNext
-//                ? CursorUtils.encode(new EventCursor(lastItem.startDate(), lastItem.id()))
-//                : null;
-
         return CursorUtils.buildPage(events, finalPageSize, e -> new EventCursor(e.getStartDate(), e.getId()));
     }
 
@@ -134,7 +121,7 @@ public class EventsServices {
             String suffix = UUID.randomUUID().toString().substring(0, 6);
             String slug = base + "-" + suffix;
 
-            if (eventRepository.findBySlug(slug).isEmpty()) {
+            if (!eventRepository.existsBySlug(slug)) {
                 return slug;
             }
         }

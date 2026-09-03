@@ -76,7 +76,6 @@ public class EditorServices {
         Optional<EventEditor> editorOpt = editorRepository.findByEventIdAndUserId(event.getId(), userDTO.id());
 
         EventEditor editor;
-        boolean isReinvite = false;
 
         if (editorOpt.isPresent()) {
             editor = editorOpt.get();
@@ -99,7 +98,7 @@ public class EditorServices {
                     .build());
         }
 
-        String code = UUID.randomUUID().toString();
+        UUID code = UUID.randomUUID();
 
         EditorValidationCode validationCode = EditorValidationCode.builder()
                 .code(code)
@@ -115,7 +114,7 @@ public class EditorServices {
     }
 
     @Transactional
-    public MessageResponse acceptInvitation(String code) {
+    public MessageResponse acceptInvitation(UUID code) {
         EditorValidationCode validationCode = validationCodeRepository.findByCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Código de convite inválido ou não encontrado."));
 
