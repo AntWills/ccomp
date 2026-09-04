@@ -45,6 +45,24 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+  postgres-db-test:
+    image: postgres:17-alpine
+    profiles: [ test ]
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ccomp-db-test
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+
   minio:
     image: minio/minio
     profiles: [all, infra]
