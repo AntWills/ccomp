@@ -235,6 +235,19 @@
             <version>${hibernate.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- Traz a integração com o Spring Boot + flyway-core automaticamente -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+
+        <!-- Adiciona o suporte do Flyway ao PostgreSQL (obrigatório a partir do Flyway 10+) -->
+
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
     </dependencies>
 
 	<build>
