@@ -6,7 +6,7 @@ import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
-import com.ccomp.br.domain.events.persistence.editors.validation.EditorValidationCode;
+import com.ccomp.br.domain.events.persistence.editors.validation.EventEditorInvitations;
 import com.ccomp.br.domain.events.persistence.editors.validation.EditorValidationCodeRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
@@ -23,11 +23,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -98,7 +96,7 @@ public class EditorServicesTest {
                     .isEqualTo("Usuário adicionado como editor com sucesso. Um e-mail de convite foi enviado.");
 
             verify(editorRepository).save(any(EventEditor.class));
-            verify(validationCodeRepository).save(any(EditorValidationCode.class));
+            verify(validationCodeRepository).save(any(EventEditorInvitations.class));
             verify(eventPublisher).publishEvent(any(EditorAddedEvent.class));
         }
 
@@ -159,7 +157,7 @@ public class EditorServicesTest {
 
             verify(validationCodeRepository).deleteByEventEditor(inactiveEditor);
             verify(editorRepository).save(inactiveEditor);
-            verify(validationCodeRepository).save(any(EditorValidationCode.class));
+            verify(validationCodeRepository).save(any(EventEditorInvitations.class));
             verify(eventPublisher).publishEvent(any(EditorAddedEvent.class));
         }
     }
@@ -174,7 +172,7 @@ public class EditorServicesTest {
 
             EventEditor editor = mock(EventEditor.class);
 
-            EditorValidationCode editorValidation = mock(EditorValidationCode.class);
+            EventEditorInvitations editorValidation = mock(EventEditorInvitations.class);
 
             when(validationCodeRepository.findByCode(code)).thenReturn(Optional.of(editorValidation));
             when(editorValidation.isExpired()).thenReturn(false); // O código é valido
@@ -196,7 +194,7 @@ public class EditorServicesTest {
         void acceptInvitation_throw_whenCodeInvalid() {
             UUID code = UUID.randomUUID();
 
-            EditorValidationCode editorValidation = mock(EditorValidationCode.class);
+            EventEditorInvitations editorValidation = mock(EventEditorInvitations.class);
 
             when(validationCodeRepository.findByCode(code)).thenReturn(Optional.of(editorValidation));
             when(editorValidation.isExpired()).thenReturn(true); // O código é invalido
@@ -218,7 +216,7 @@ public class EditorServicesTest {
             UUID code = UUID.randomUUID();
 
             EventEditor editor = mock(EventEditor.class);
-            EditorValidationCode editorValidation = mock(EditorValidationCode.class);
+            EventEditorInvitations editorValidation = mock(EventEditorInvitations.class);
 
             when(validationCodeRepository.findByCode(code)).thenReturn(Optional.of(editorValidation));
             when(editorValidation.isExpired()).thenReturn(false); // O código é invalido
@@ -232,7 +230,7 @@ public class EditorServicesTest {
                     .isEqualTo("Você já é um editor ativo deste evento.");
 
             verify(editorRepository, never()).save(any(EventEditor.class));
-            verify(validationCodeRepository).delete(any(EditorValidationCode.class));
+            verify(validationCodeRepository).delete(any(EventEditorInvitations.class));
         }
     }
 

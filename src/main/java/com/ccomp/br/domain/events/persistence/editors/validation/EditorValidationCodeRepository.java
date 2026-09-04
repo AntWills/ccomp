@@ -5,8 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface EditorValidationCodeRepository extends JpaRepository<EditorValidationCode, Long> {
-    Optional<EditorValidationCode> findByCode(UUID code);
+public interface EditorValidationCodeRepository extends JpaRepository<EventEditorInvitations, Long> {
+    Optional<EventEditorInvitations> findByCode(UUID code);
 
     void deleteByEventEditor(EventEditor eventEditor);
 }

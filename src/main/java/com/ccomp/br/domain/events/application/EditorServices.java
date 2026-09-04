@@ -5,6 +5,7 @@ import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
+import com.ccomp.br.domain.events.persistence.editors.validation.EventEditorInvitations;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
@@ -36,7 +37,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.context.ApplicationEventPublisher;
 import com.ccomp.br.domain.events.persistence.editors.validation.EditorValidationCodeRepository;
-import com.ccomp.br.domain.events.persistence.editors.validation.EditorValidationCode;
 import com.ccomp.br.domain.events.external.dto.EditorAddedEvent;
 import com.ccomp.br.shared.exceptions.DomainException;
 
@@ -100,7 +100,7 @@ public class EditorServices {
 
         UUID code = UUID.randomUUID();
 
-        EditorValidationCode validationCode = EditorValidationCode.builder()
+        EventEditorInvitations validationCode = EventEditorInvitations.builder()
                 .code(code)
                 .eventEditor(editor)
                 .expiresAt(LocalDateTime.now().plusHours(24))
@@ -115,7 +115,7 @@ public class EditorServices {
 
     @Transactional
     public MessageResponse acceptInvitation(UUID code) {
-        EditorValidationCode validationCode = validationCodeRepository.findByCode(code)
+        EventEditorInvitations validationCode = validationCodeRepository.findByCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Código de convite inválido ou não encontrado."));
 
         if (validationCode.isExpired()) {
