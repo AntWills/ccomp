@@ -2,6 +2,7 @@ package com.ccomp.br.domain.users.application;
 
 import com.ccomp.br.domain.audit.external.AuditExternal;
 import com.ccomp.br.domain.audit.external.dto.AuditCommand;
+import com.ccomp.br.domain.audit.external.enums.EnumActionType;
 import com.ccomp.br.domain.audit.external.enums.EnumActorType;
 import com.ccomp.br.domain.audit.external.enums.EnumTargetType;
 import com.ccomp.br.domain.security.jwt.application.JwtService;
@@ -142,6 +143,7 @@ public class AdminServices {
 
         auditExternal.registerLog(AuditCommand.builder()
                 .targetType(EnumTargetType.USER)
+                .actionType(EnumActionType.USER_CHANGE_ROLE)
                 .targetId(userId)
                 .actorType(EnumActorType.USER)
                 .adminId(adminId)
