@@ -5,15 +5,13 @@ import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
+import com.ccomp.br.domain.events.persistence.editors.validation.EventEditorInvitations;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.dto.UserSummaryView;
-import com.ccomp.br.shared.exceptions.AccessDeniedException;
-import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
-import com.ccomp.br.shared.exceptions.UserBlockedException;
-import com.ccomp.br.shared.exceptions.UserNotFoundException;
+import com.ccomp.br.shared.exceptions.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,10 +33,8 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.context.ApplicationEventPublisher;
-import com.ccomp.br.domain.events.persistence.editors.validation.EditorValidationCodeRepository;
-import com.ccomp.br.domain.events.persistence.editors.validation.EditorValidationCode;
+import com.ccomp.br.domain.events.persistence.editors.validation.EventEditorInvitationsRepository;
 import com.ccomp.br.domain.events.external.dto.EditorAddedEvent;
-import com.ccomp.br.shared.exceptions.DomainException;
 
 @Service
 @Slf4j
@@ -47,111 +43,82 @@ public class EditorServices {
     private final EventEditorRepository editorRepository;
     private final UserManagement userManagement;
     private final ApplicationEventPublisher eventPublisher;
-    private final EditorValidationCodeRepository validationCodeRepository;
+    private final EventEditorInvitationsRepository invitationsRepository;
 
-    public EditorServices(EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement, ApplicationEventPublisher eventPublisher, EditorValidationCodeRepository validationCodeRepository) {
+    public EditorServices(EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement, ApplicationEventPublisher eventPublisher, EventEditorInvitationsRepository invitationsRepository) {
         this.eventRepository = eventRepository;
         this.editorRepository = editorRepository;
         this.userManagement = userManagement;
         this.eventPublisher = eventPublisher;
-        this.validationCodeRepository = validationCodeRepository;
+        this.invitationsRepository = invitationsRepository;
     }
 
     @Transactional
     public MessageResponse addEditor(Long eventId, UUID ownerId, EmailAddress emailAddress) {
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        Event event = getEventAndValidateOwnership(eventId, ownerId);
+        Optional<UserDTO> userDtoOpt = userManagement.findByEmailAddress(emailAddress);
 
-        if (!event.isOwner(ownerId)) {
-            throw new AccessDeniedException("Você não tem permissão para gerenciar os editores deste evento.");
+        if (userDtoOpt.isPresent()) {
+            UserDTO user = userDtoOpt.get();
+
+            if (!user.isActive()) {
+                throw new UserBlockedException("O usuário informado está inativo ou bloqueado.");
+            }
+
+            if (editorRepository.existsByEventIdAndUserId(eventId, user.id())) {
+                return new MessageResponse("Este usuário já é um editor ativo deste evento.");
+            }
         }
 
-        UserDTO userDTO = userManagement.findByEmailAddress(emailAddress)
-                .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado para o e-mail: %s".formatted(emailAddress)));
+        reissueInvitation(event, emailAddress);
+        return new MessageResponse("Um e-mail de convite foi enviado.");
+    }
+
+    @Transactional
+    public MessageResponse acceptInvitation(UUID code, UUID userId) {
+        EventEditorInvitations invitation = getInviteAndValid(code);
+
+        UserDTO userDTO = userManagement.findByEmailAddress(invitation.getEmailAddress())
+                .orElseThrow(() -> new UserNotFoundException("Usuário deve estar cadastrado no sistema."));
 
         if (!userDTO.isActive()) {
             throw new UserBlockedException("O usuário informado está inativo ou bloqueado.");
         }
 
-        Optional<EventEditor> editorOpt = editorRepository.findByEventIdAndUserId(event.getId(), userDTO.id());
+        if(!userDTO.id().equals(userId))
+            throw new AccessDeniedException("Este convite foi enviado para outro e-mail e não pertence à sua conta.");
 
-        EventEditor editor;
-
-        if (editorOpt.isPresent()) {
-            editor = editorOpt.get();
-
-            if (editor.isActive()) {
-                return new MessageResponse("Este usuário já é um editor ativo deste evento.");
-            }
-
-            // Caso seja PENDING ou REVOKED, reativa/mantém como PENDING e indica o reenvio
-            editor.setStatus(EnumEditorsStatus.PENDING);
-            editor = editorRepository.save(editor);
-
-            validationCodeRepository.deleteByEventEditor(editor);
-        } else {
-            editor = editorRepository.save(EventEditor.builder()
-                    .event(event)
-                    .userId(userDTO.id())
-                    .status(EnumEditorsStatus.PENDING)
-                    .assignedAt(LocalDateTime.now())
-                    .build());
-        }
-
-        UUID code = UUID.randomUUID();
-
-        EditorValidationCode validationCode = EditorValidationCode.builder()
-                .code(code)
-                .eventEditor(editor)
-                .expiresAt(LocalDateTime.now().plusHours(24))
-                .build();
-
-        validationCodeRepository.save(validationCode);
-
-        eventPublisher.publishEvent(new EditorAddedEvent(event.getId(), event.getTitle(), code, userDTO, editor.getId()));
-
-        return new MessageResponse("Usuário adicionado como editor com sucesso. Um e-mail de convite foi enviado.");
-    }
-
-    @Transactional
-    public MessageResponse acceptInvitation(UUID code) {
-        EditorValidationCode validationCode = validationCodeRepository.findByCode(code)
-                .orElseThrow(() -> new ResourceNotFoundException("Código de convite inválido ou não encontrado."));
-
-        if (validationCode.isExpired()) {
-            throw new DomainException("O código de convite expirou.");
-        }
-
-        EventEditor editor = validationCode.getEventEditor();
-
-        if (editor.isActive()) {
-            validationCodeRepository.delete(validationCode);
+        if (editorRepository.existsByEventIdAndUserId(invitation.getEventId(), userDTO.id())) {
+            invitationsRepository.delete(invitation);
             return new MessageResponse("Você já é um editor ativo deste evento.");
         }
 
-        editor.setStatus(EnumEditorsStatus.ACTIVE);
+        Event event = eventRepository.findById(invitation.getEventId())
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        EventEditor editor = EventEditor.builder()
+                .userId(userDTO.id())
+                .event(event)
+                .status(EnumEditorsStatus.ACTIVE)
+                .assignedAt(LocalDateTime.now())
+                .build();
+
         editorRepository.save(editor);
+        invitationsRepository.delete(invitation);
 
-        validationCodeRepository.deleteByEventEditor(editor);
-
-        return new MessageResponse("Convite aceito com sucesso. Você agora é um editor do evento.");
+        return new MessageResponse("Convite aceito com sucesso. Você agora é um editor do evento %s.".formatted(event.getTitle()));
     }
 
     @Transactional
     public MessageResponse removeEditor(Long eventId, UUID ownerId, EmailAddress emailAddress){
-//        log.info("removerEditor chamado | eventId={}, ownerId={}, userId={}",
-//                eventId, ownerId, userId);
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-
-        if(!event.isOwner(ownerId))
-            throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
+        Event event = getEventAndValidateOwnership(eventId, ownerId);
 
         UserDTO userDTO = userManagement.findByEmailAddress(emailAddress)
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado para o e-mail: %s".formatted(emailAddress)));
 
-        if(!editorRepository.existsByEventIdAndUserId(event.getId(), userDTO.id()))
+        if (!editorRepository.existsByEventIdAndUserId(event.getId(), userDTO.id())) {
             return new MessageResponse("O usuário não é editor deste evento.");
+        }
 
         editorRepository.deleteByEventIdAndUserId(event.getId(), userDTO.id());
 
@@ -220,5 +187,41 @@ public class EditorServices {
                 .toList();
 
         return new CursorPage<>(contents, nextCursor, null);
+    }
+
+    // ====================================================================================
+    // MÉTODOS PRIVADOS
+    // ====================================================================================
+
+    private Event getEventAndValidateOwnership(Long eventId, UUID ownerId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        if (!event.isOwner(ownerId)) {
+            throw new AccessDeniedException("Você não tem permissão para gerenciar os editores deste evento.");
+        }
+        return event;
+    }
+
+    private EventEditorInvitations getInviteAndValid(UUID code) {
+        return invitationsRepository.findByCode(code)
+                .filter(inv -> !inv.isExpired())
+                .orElseThrow(() -> new ResourceNotFoundException("Código de convite inválido ou expirado."));
+    }
+
+    private void reissueInvitation(Event event, EmailAddress emailAddress) {
+        invitationsRepository.findByEmailAddressAndEventId(emailAddress, event.getId())
+                .ifPresent(invitationsRepository::delete);
+
+        UUID code = UUID.randomUUID();
+        EventEditorInvitations newInvite = EventEditorInvitations.builder()
+                .code(code)
+                .eventId(event.getId())
+                .emailAddress(emailAddress)
+                .expiresAt(LocalDateTime.now().plusHours(24))
+                .build();
+
+        invitationsRepository.save(newInvite);
+        eventPublisher.publishEvent(new EditorAddedEvent(event.getId(), event.getTitle(), code, emailAddress));
     }
 }

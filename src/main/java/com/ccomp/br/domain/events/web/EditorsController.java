@@ -61,8 +61,10 @@ public class EditorsController {
     })
     @GetMapping("/editors/accept")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<MessageResponse> acceptEditorInvitation(@RequestParam UUID code) {
-        MessageResponse response = editorServices.acceptInvitation(code);
+    public ResponseEntity<MessageResponse> acceptEditorInvitation(
+            @RequestParam UUID code,
+            @AuthenticationPrincipal Jwt jwt) {
+        MessageResponse response = editorServices.acceptInvitation(code, extractUserId(jwt));
         return ResponseEntity.ok(response);
     }
 

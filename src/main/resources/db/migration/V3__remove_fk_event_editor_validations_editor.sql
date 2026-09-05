@@ -1,0 +1,8 @@
+ALTER TABLE tb_event_editor_invitations
+DROP CONSTRAINT fk_event_editor_validations_editor;
+
+ALTER TABLE tb_event_editor_invitations
+DROP COLUMN event_editor_id;
+
+ALTER TABLE tb_event_editor_invitations
+ADD COLUMN event_id bigint;
