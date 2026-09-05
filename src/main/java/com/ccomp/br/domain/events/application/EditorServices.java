@@ -11,10 +11,7 @@ import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.dto.UserSummaryView;
-import com.ccomp.br.shared.exceptions.AccessDeniedException;
-import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
-import com.ccomp.br.shared.exceptions.UserBlockedException;
-import com.ccomp.br.shared.exceptions.UserNotFoundException;
+import com.ccomp.br.shared.exceptions.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -78,7 +75,7 @@ public class EditorServices {
     }
 
     @Transactional
-    public MessageResponse acceptInvitation(UUID code) {
+    public MessageResponse acceptInvitation(UUID code, UUID userId) {
         EventEditorInvitations invitation = getInviteAndValid(code);
 
         UserDTO userDTO = userManagement.findByEmailAddress(invitation.getEmailAddress())
@@ -87,6 +84,9 @@ public class EditorServices {
         if (!userDTO.isActive()) {
             throw new UserBlockedException("O usuário informado está inativo ou bloqueado.");
         }
+
+        if(!userDTO.id().equals(userId))
+            throw new AccessDeniedException("Este convite foi enviado para outro e-mail e não pertence à sua conta.");
 
         if (editorRepository.existsByEventIdAndUserId(invitation.getEventId(), userDTO.id())) {
             invitationsRepository.delete(invitation);
