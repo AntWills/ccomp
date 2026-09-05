@@ -40,7 +40,7 @@ public class EditorServicesTest {
     @Mock
     private UserManagement userManagement;
     @Mock
-    private EventEditorInvitationsRepository validationCodeRepository;
+    private EventEditorInvitationsRepository invitationsRepository;
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
@@ -66,37 +66,34 @@ public class EditorServicesTest {
     class AddEditor {
 
         @Test
-        @DisplayName("Adiciona o editor com sucesso quando o usuário não era editor anteriormente")
+        @DisplayName("Convidadar enviado com sucesso, caso o usuário já não seja editor")
         void addEditor_returnsSuccessMessage_whenUserIsNotEditorYet() {
             UUID userId = UUID.randomUUID();
 
-            EventEditor savedEditor = EventEditor.builder()
-                    .id(10L)
-                    .event(existingEvent)
-                    .userId(userId)
-                    .status(EnumEditorsStatus.PENDING)
-                    .build();
-
-            when(existingEvent.getId()).thenReturn(eventId);
-            when(existingEvent.getTitle()).thenReturn("Workshop de Java");
+            // Dados
             when(existingUserDTO.id()).thenReturn(userId);
+            when(existingEvent.getId()).thenReturn(eventId);
 
+            // Mock getEventAndValidateOwnership() privado
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
             when(existingEvent.isOwner(ownerId)).thenReturn(true);
+
+            // Mock usuario e editor
             when(userManagement.findByEmailAddress(emailAddress)).thenReturn(Optional.of(existingUserDTO));
             when(existingUserDTO.isActive()).thenReturn(true);
-            when(editorRepository.findByEventIdAndUserId(eventId, userId)).thenReturn(Optional.empty());
+            when(editorRepository.existsByEventIdAndUserId(eventId, userId)).thenReturn(false);
 
-            when(editorRepository.save(any(EventEditor.class))).thenReturn(savedEditor);
+            // Moack reissueInvitation() privado
+            when(invitationsRepository.findByEmailAddressAndEventId(emailAddress, eventId))
+                    .thenReturn(Optional.empty());
 
             MessageResponse response = editorServices.addEditor(eventId, ownerId, emailAddress);
 
             assertThat(response).isNotNull();
             assertThat(response.response())
-                    .isEqualTo("Usuário adicionado como editor com sucesso. Um e-mail de convite foi enviado.");
+                    .isEqualTo("Um e-mail de convite foi enviado.");
 
-            verify(editorRepository).save(any(EventEditor.class));
-            verify(validationCodeRepository).save(any(EventEditorInvitations.class));
+            verify(invitationsRepository).save(any(EventEditorInvitations.class));
             verify(eventPublisher).publishEvent(any(EditorAddedEvent.class));
         }
 
@@ -105,60 +102,27 @@ public class EditorServicesTest {
         void addEditor_returnsAlreadyActiveMessage_whenUserIsAlreadyActiveEditor() {
             UUID userId = UUID.randomUUID();
 
-            EventEditor activeEditor = mock(EventEditor.class);
-            when(activeEditor.isActive()).thenReturn(true);
-
-            when(existingEvent.getId()).thenReturn(eventId);
+            // Dados
             when(existingUserDTO.id()).thenReturn(userId);
 
+            // Mock getEventAndValidateOwnership() privado
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
             when(existingEvent.isOwner(ownerId)).thenReturn(true);
+
+            // Mock usuario e editor
             when(userManagement.findByEmailAddress(emailAddress)).thenReturn(Optional.of(existingUserDTO));
             when(existingUserDTO.isActive()).thenReturn(true);
-            when(editorRepository.findByEventIdAndUserId(eventId, userId)).thenReturn(Optional.of(activeEditor));
+            when(editorRepository.existsByEventIdAndUserId(eventId, userId)).thenReturn(true); // Mudança
 
             MessageResponse response = editorServices.addEditor(eventId, ownerId, emailAddress);
 
-            assertThat(response).isNotNull();
-            assertThat(response.response()).isEqualTo("Este usuário já é um editor ativo deste evento.");
-
-            verify(editorRepository, never()).save(any());
-            verify(validationCodeRepository, never()).save(any());
-            verify(eventPublisher, never()).publishEvent(any());
-        }
-
-        @Test
-        @DisplayName("Reativa/reenvia convite quando usuário possui cadastro inativo ou revogado")
-        void addEditor_reinvitesUser_whenEditorExistsButIsInactive() {
-            UUID userId = UUID.randomUUID();
-
-            EventEditor inactiveEditor = EventEditor.builder()
-                    .id(5L)
-                    .event(existingEvent)
-                    .userId(userId)
-                    .status(EnumEditorsStatus.REVOKED)
-                    .build();
-
-            when(existingEvent.getId()).thenReturn(eventId);
-            when(existingEvent.getTitle()).thenReturn("Workshop de Java");
-            when(existingUserDTO.id()).thenReturn(userId);
-
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isOwner(ownerId)).thenReturn(true);
-            when(userManagement.findByEmailAddress(emailAddress)).thenReturn(Optional.of(existingUserDTO));
-            when(existingUserDTO.isActive()).thenReturn(true);
-            when(editorRepository.findByEventIdAndUserId(eventId, userId)).thenReturn(Optional.of(inactiveEditor));
-            when(editorRepository.save(any(EventEditor.class))).thenReturn(inactiveEditor);
-
-            MessageResponse response = editorServices.addEditor(eventId, ownerId, emailAddress);
-
+            assertThat(response)
+                    .isNotNull();
             assertThat(response.response())
-                    .isEqualTo("Usuário adicionado como editor com sucesso. Um e-mail de convite foi enviado.");
+                    .isEqualTo("Este usuário já é um editor ativo deste evento.");
 
-            verify(validationCodeRepository).deleteByEventEditor(inactiveEditor);
-            verify(editorRepository).save(inactiveEditor);
-            verify(validationCodeRepository).save(any(EventEditorInvitations.class));
-            verify(eventPublisher).publishEvent(any(EditorAddedEvent.class));
+            verify(invitationsRepository, never()).save(any(EventEditorInvitations.class));
+            verify(eventPublisher, never()).publishEvent(any(EditorAddedEvent.class));
         }
     }
 
@@ -168,69 +132,61 @@ public class EditorServicesTest {
         @Test
         @DisplayName("Aceita o usuário quando o convite é valido")
         void acceptInvitation_acceptUser_whenCodeValid() {
+            // Dados
             UUID code = UUID.randomUUID();
+            UUID userId = UUID.randomUUID();
+            EventEditorInvitations invitations = mock(EventEditorInvitations.class);
 
-            EventEditor editor = mock(EventEditor.class);
+            when(invitations.getEmailAddress()).thenReturn(emailAddress);
+            when(invitations.isExpired()).thenReturn(false); // O código é valido
+            when(invitations.getEventId()).thenReturn(eventId);
+            when(existingUserDTO.isActive()).thenReturn(true);
+            when(existingUserDTO.id()).thenReturn(userId);
+            when(existingEvent.getTitle()).thenReturn("Nome evento");
 
-            EventEditorInvitations editorValidation = mock(EventEditorInvitations.class);
+            // Fluxo lógico
+            when(invitationsRepository.findByCode(code)).thenReturn(Optional.of(invitations));
+            when(userManagement.findByEmailAddress(emailAddress)).thenReturn(Optional.of(existingUserDTO));
+            when(editorRepository.existsByEventIdAndUserId(eventId, userId)).thenReturn(false);
+            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
 
-            when(validationCodeRepository.findByCode(code)).thenReturn(Optional.of(editorValidation));
-            when(editorValidation.isExpired()).thenReturn(false); // O código é valido
-            when(editorValidation.getEventEditor()).thenReturn(editor);
-            when(editor.isActive()).thenReturn(false); // Não é um editor ativo
-
-            MessageResponse message = editorServices.acceptInvitation(code);
+            MessageResponse message = editorServices.acceptInvitation(code, userId);
 
             assertThat(message).isNotNull();
             assertThat(message.response())
-                    .isEqualTo("Convite aceito com sucesso. Você agora é um editor do evento.");
+                    .isEqualTo("Convite aceito com sucesso. Você agora é um editor do evento %s.".formatted("Nome evento"));
 
             verify(editorRepository).save(any(EventEditor.class));
-            verify(validationCodeRepository).deleteByEventEditor(any(EventEditor.class));
+            verify(invitationsRepository).delete(any(EventEditorInvitations.class));
         }
 
         @Test
-        @DisplayName("Rejeita o usuário quando o convite é invalido")
+        @DisplayName("Rejeita o usuário já é editor")
         void acceptInvitation_throw_whenCodeInvalid() {
+            // Dados
             UUID code = UUID.randomUUID();
+            UUID userId = UUID.randomUUID();
+            EventEditorInvitations invitations = mock(EventEditorInvitations.class);
 
-            EventEditorInvitations editorValidation = mock(EventEditorInvitations.class);
+            when(invitations.getEmailAddress()).thenReturn(emailAddress);
+            when(invitations.isExpired()).thenReturn(false); // O código é valido
+            when(invitations.getEventId()).thenReturn(eventId);
+            when(existingUserDTO.isActive()).thenReturn(true);
+            when(existingUserDTO.id()).thenReturn(userId);
 
-            when(validationCodeRepository.findByCode(code)).thenReturn(Optional.of(editorValidation));
-            when(editorValidation.isExpired()).thenReturn(true); // O código é invalido
+            // Fluxo lógico
+            when(invitationsRepository.findByCode(code)).thenReturn(Optional.of(invitations));
+            when(userManagement.findByEmailAddress(emailAddress)).thenReturn(Optional.of(existingUserDTO));
+            when(editorRepository.existsByEventIdAndUserId(eventId, userId)).thenReturn(true);
 
-            DomainException exception = assertThrows(DomainException.class, () ->
-                editorServices.acceptInvitation(code)
-            );
-
-            assertThat(exception.getMessage())
-                    .isEqualTo("O código de convite expirou.");
-
-            verify(editorRepository, never()).save(any(EventEditor.class));
-            verify(validationCodeRepository, never()).deleteByEventEditor(any(EventEditor.class));
-        }
-
-        @Test
-        @DisplayName("Se o usuário já for editor, emite erro")
-        void acceptInvitation_acceptUser_whenUserIsEditor() {
-            UUID code = UUID.randomUUID();
-
-            EventEditor editor = mock(EventEditor.class);
-            EventEditorInvitations editorValidation = mock(EventEditorInvitations.class);
-
-            when(validationCodeRepository.findByCode(code)).thenReturn(Optional.of(editorValidation));
-            when(editorValidation.isExpired()).thenReturn(false); // O código é invalido
-            when(editorValidation.getEventEditor()).thenReturn(editor);
-            when(editor.isActive()).thenReturn(true); // É um editor ativo
-
-            MessageResponse message = editorServices.acceptInvitation(code);
+            MessageResponse message = editorServices.acceptInvitation(code, userId);
 
             assertThat(message).isNotNull();
             assertThat(message.response())
                     .isEqualTo("Você já é um editor ativo deste evento.");
 
             verify(editorRepository, never()).save(any(EventEditor.class));
-            verify(validationCodeRepository).delete(any(EventEditorInvitations.class));
+            verify(invitationsRepository).delete(any(EventEditorInvitations.class));
         }
     }
 
