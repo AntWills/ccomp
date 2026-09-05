@@ -7,7 +7,7 @@ import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
 import com.ccomp.br.domain.events.persistence.editors.validation.EventEditorInvitations;
-import com.ccomp.br.domain.events.persistence.editors.validation.EditorValidationCodeRepository;
+import com.ccomp.br.domain.events.persistence.editors.validation.EventEditorInvitationsRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
@@ -40,7 +40,7 @@ public class EditorServicesTest {
     @Mock
     private UserManagement userManagement;
     @Mock
-    private EditorValidationCodeRepository validationCodeRepository;
+    private EventEditorInvitationsRepository validationCodeRepository;
     @Mock
     private ApplicationEventPublisher eventPublisher;
 

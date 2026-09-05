@@ -59,7 +59,7 @@ public class EditorAddedEventListener {
                         "                                    </td>" +
                         "                                    <td valign='top' style='padding-left: 20px;'>" +
                         "                                        <h1 style='margin: 0; font-size: 18px; color: #000000; font-weight: bold;'>[CONVITE] %s</h1>" +
-                        "                                        <p style='margin: 10px 0 0; font-size: 14px; color: #333333;'>Olá, %s!</p>" +
+                        "                                        <p style='margin: 10px 0 0; font-size: 14px; color: #333333;'>Olá!</p>" +
                         "                                        <p style='margin: 5px 0 0; font-size: 14px; color: #555555;'>Você foi convidado para ser Editor no evento acima.</p>" +
                         "                                        <p style='margin: 5px 0 0; font-size: 12px; color: #777777; background-color: #fff9db; padding: 5px; border-radius: 4px; display: inline-block;'>Você tem até 24 horas para aceitar.</p>" +
                         "                                    </td>" +
@@ -89,12 +89,11 @@ public class EditorAddedEventListener {
                         "</html>",
                 logoUrl,
                 event.eventTitle(),
-                event.editorUser().name(),
                 acceptUrl
         );
 
         // Envia o e-mail como HTML (garanta que seu SendMailDTO e EmailService suportem isso)
-        emailService.send(new SendMailDTO(event.editorUser().emailAddress(), subject, htmlContent, true));
-        log.info("E-mail de convite (HTML) enviado para {} com o código {}", event.editorUser().emailAddress().getValue(), event.code());
+        emailService.send(new SendMailDTO(event.emailAddress(), subject, htmlContent, true));
+        log.info("E-mail de convite (HTML) enviado para {} com o código {}", event.emailAddress().getValue(), event.code());
     }
 }
