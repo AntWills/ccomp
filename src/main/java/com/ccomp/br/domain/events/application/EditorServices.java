@@ -149,7 +149,7 @@ public class EditorServices {
         int maxPageSize = 50;
         int finalPageSize = pageSize > maxPageSize ? maxPageSize : pageSize;
 
-        EventEditorCursor decodedCursor = CursorUtils.decode(cursor, EventEditorCursor.class).orElse(null);
+        EventEditorCursor decodedCursor = CursorUtils.decode(cursor, EventEditorCursor.class);
         Specification<EventEditor> spec = EventEditorSpec.buildSpec(eventId, decodedCursor);
 
         List<EventEditor> results = editorRepository.findBy(spec, query -> query

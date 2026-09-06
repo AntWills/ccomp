@@ -53,7 +53,7 @@ public class AdminServices {
         if(pageSize > 50) pageSize = 50;
         int finalPageSize = pageSize;
 
-        UserCursor cursorDecoded = CursorUtils.decode(cursor, UserCursor.class).orElse(null);
+        UserCursor cursorDecoded = CursorUtils.decode(cursor, UserCursor.class);
 
         List<UserItemView> results = userBlaze.findByCursor(filter, cursorDecoded, finalPageSize + 1);
 

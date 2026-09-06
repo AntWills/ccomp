@@ -13,7 +13,6 @@ import com.ccomp.br.domain.events.util.EnrollmentMapper;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserSummaryView;
-import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -45,7 +44,7 @@ public class EnrollmentsServices {
     public CursorPage<EnrollmentListItem> searchEnrollments(Long eventId, String cursor, int pageSize) {
         int finalPageSize = pageSize > 50 ? 50 : pageSize;
 
-        EnrollmentsCursor cursorDecoded = CursorUtils.decode(cursor, EnrollmentsCursor.class).orElse(null);
+        EnrollmentsCursor cursorDecoded = CursorUtils.decode(cursor, EnrollmentsCursor.class);
 
         List<Enrollment> results = enrollmentBlaze.findByCursor(eventId, cursorDecoded, finalPageSize);
 

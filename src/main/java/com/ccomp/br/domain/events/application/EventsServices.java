@@ -75,7 +75,8 @@ public class EventsServices {
             EventsFilterRequest filter, String cursor, int pageSize) {
         int finalPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
 
-        EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class).orElse(null);
+        EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class);
+
         List<EventListItemView> events = eventBlaze.findByCursor(filter, decodedCursor, finalPageSize + 1);
 
         log.info("Quantidade de eventos retornados: {}", events.size());

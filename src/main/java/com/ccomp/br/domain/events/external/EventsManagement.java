@@ -24,7 +24,7 @@ public class EventsManagement {
     @Transactional(readOnly = true)
     public CursorPage<EventListItemView> findAllByOwnerId(UUID ownerId, String cursor, int pageSize) {
         int finalPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
-        EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class).orElse(null);
+        EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class);
 
         // Busca N + 1 registros para verificar existência de próxima página
         List<EventListItemView> events = eventBlaze.findAllByOwnerId(ownerId, decodedCursor, finalPageSize + 1);
@@ -36,7 +36,7 @@ public class EventsManagement {
     @Transactional(readOnly = true)
     public CursorPage<EventListItemView> findAllSubscriptions(UUID participantId, String cursor, int pageSize) {
         int finalPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
-        EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class).orElse(null);
+        EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class);
 
         List<EventListItemView> events = eventBlaze.findAllSubscriptions(participantId, decodedCursor, finalPageSize + 1);
 

@@ -3,6 +3,9 @@ package com.ccomp.br.shared.utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
@@ -17,7 +20,7 @@ public final class CursorUtils {
     private CursorUtils() {
     }
 
-    public static <K> String encode(K cursor) {
+    public static <K> @Nullable String encode(@Nullable K cursor) {
         if (cursor == null) {
             return null;
         }
@@ -31,20 +34,20 @@ public final class CursorUtils {
         }
     }
 
-    public static <K> Optional<K> decode(String encoded, Class<K> type) {
+    public static <K> @Nullable K decode(String encoded, Class<K> type) {
         if (encoded == null || encoded.isBlank()) {
-            return Optional.empty();
+            return null;
         }
         try {
             String json = new String(Base64.getUrlDecoder().decode(encoded), StandardCharsets.UTF_8);
-            return Optional.of(MAPPER.readValue(json, type));
+            return MAPPER.readValue(json, type);
         } catch (Exception e) {
             throw new IllegalArgumentException("Cursor inválido ou corrompido", e);
         }
     }
 
-    public static <T, C> CursorPage<T> buildPage(
-            List<T> results, int pageSize, Function<T, C> cursorExtractor) {
+    public static <T, C> @NonNull CursorPage<T> buildPage(
+            @NonNull List<T> results, int pageSize, @NonNull Function<T, C> cursorExtractor) {
 
         boolean hasNext = results.size() > pageSize;
         List<T> page = hasNext ? results.subList(0, pageSize) : results;
