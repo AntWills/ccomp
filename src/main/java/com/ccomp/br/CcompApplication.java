@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 // - Criar usuarios admin e roles.
 // - Terminar as tabelas do banco.
 // - Integrar com email e whatsapp. Obs: Colocar a lógica nos modulos.
-// - Conectar a um banco postgree usando dados do .env.prod.
+// - Conectar a um banco postgree usando dados do .env.
 // - Paginação é necessario.
 
 // Executar via terminal:  ./mvnw spring-boot:run
