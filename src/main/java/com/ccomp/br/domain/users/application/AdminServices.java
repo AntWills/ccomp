@@ -9,9 +9,9 @@ import com.ccomp.br.domain.security.jwt.application.JwtService;
 import com.ccomp.br.domain.users.dto.*;
 import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.external.RolesServices;
+import com.ccomp.br.domain.users.persistence.UserBlaze;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
-import com.ccomp.br.domain.users.persistence.UserSpec;
 import com.ccomp.br.domain.users.util.UserMapper;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -21,12 +21,9 @@ import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,41 +34,35 @@ public class AdminServices {
     private final UserModelRepository userModelRepository;
     private final JwtService jwtService;
     private final UserMapper userMapper;
+    private final UserBlaze userBlaze;
     private final RolesServices rolesServices;
     private final AuditExternal auditExternal;
 
     @Autowired
-    public AdminServices(UserModelRepository userModelRepository, JwtService jwtService, UserMapper userMapper, RolesServices rolesServices, AuditExternal auditExternal){
+    public AdminServices(UserModelRepository userModelRepository, JwtService jwtService, UserMapper userMapper, UserBlaze userBlaze, RolesServices rolesServices, AuditExternal auditExternal){
         this.userModelRepository = userModelRepository;
         this.jwtService = jwtService;
         this.userMapper = userMapper;
+        this.userBlaze = userBlaze;
         this.rolesServices = rolesServices;
         this.auditExternal = auditExternal;
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<UserItem> searchUsers(UserSearchFilter filter, String cursor, int pageSize){
+    public CursorPage<UserItemView> searchUsers(UserSearchFilter filter, String cursor, int pageSize){
         if(pageSize > 50) pageSize = 50;
-
-        Specification<UserModel> spec = UserSpec.buildSpecByCursor(filter,
-                        CursorUtils.decode(cursor, LocalDateTime.class).orElse(null));
-
         int finalPageSize = pageSize;
-        List<UserModel> results = userModelRepository.findBy(spec, query -> query
-                .sortBy(Sort.by(Sort.Direction.DESC, "createdAt"))
-                .limit(finalPageSize + 1)
-                .all());
 
-        boolean hasNext = results.size() > finalPageSize;
-        List<UserModel> page = hasNext ? results.subList(0, finalPageSize) : results;
+        UserCursor cursorDecoded = CursorUtils.decode(cursor, UserCursor.class).orElse(null);
 
-        List<UserItem> items = page.stream()
-                .map(userMapper::userToItem)
-                .toList();
+        List<UserItemView> results = userBlaze.findByCursor(filter, cursorDecoded, finalPageSize + 1);
 
-        String nextCursor = hasNext ? CursorUtils.encode(page.getLast().getCreatedAt()) : null;
 
-        return new CursorPage<>(items, nextCursor, null);
+        return CursorUtils.buildPage(
+                results,
+                finalPageSize,
+                e -> new UserCursor(e.getCreatedAt(), e.getId())
+        );
     }
 
     @Transactional(readOnly = true)

@@ -3,7 +3,7 @@ package com.ccomp.br.domain.users.web;
 import com.ccomp.br.domain.users.application.AdminServices;
 import com.ccomp.br.domain.users.application.UserApplication;
 import com.ccomp.br.domain.users.dto.BlockAccountReq;
-import com.ccomp.br.domain.users.dto.UserItem;
+import com.ccomp.br.domain.users.dto.UserItemView;
 import com.ccomp.br.domain.users.dto.UserSearchFilter;
 import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.module.email.EmailAddress;
@@ -52,7 +52,7 @@ public class UserAdminController {
             @ApiResponse(responseCode = "401", description = "Requisição não autenticada"),
             @ApiResponse(responseCode = "403", description = "Acesso negado — Requer perfil ADMIN")
     })
-    public ResponseEntity<CursorPage<UserItem>> searchUsers(
+    public ResponseEntity<CursorPage<UserItemView>> searchUsers(
             @Valid @RequestBody UserSearchFilter filter,
             @RequestParam(required = false) String nextCursor,
             @RequestParam(defaultValue = "10") int pageSize) {
