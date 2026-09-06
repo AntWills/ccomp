@@ -22,14 +22,21 @@ public class RabbitMQConfig {
     public static final String DLQ_USER_CREATED = "ccomp.user-created.dlq";
     public static final String DLQ_ROUTING_KEY_USER_CREATED = "user.created.dlq";
 
-    // --- 1. PROCESSO: ENVIO DE CONVITE PARA SER EDITOR (E-mail) ---
+    // --- 2. PROCESSO: ENVIO DE CONVITE PARA SER EDITOR (E-mail) ---
     public static final String QUEUE_EDITOR_INVITATION = "ccomp.editor-invitation.queue";
     public static final String ROUTING_KEY_EDITOR_INVITATION = "editor.invitation";
 
     public static final String DLQ_EDITOR_INVITATION = "ccomp.editor-invitation.dlq";
     public static final String DLQ_ROUTING_KEY_EDITOR_INVITATION = "editor.invitation.dlq";
 
-    // --- 2. PROCESSO: GERAÇÃO DE CERTIFICADO ---
+    // --- 3. PROCESSO: RESET / RESTAURAÇÃO DE SENHA (E-mail) ---
+    public static final String QUEUE_PASSWORD_RESET = "ccomp.password-reset.queue";
+    public static final String ROUTING_KEY_PASSWORD_RESET = "password.reset";
+
+    public static final String DLQ_PASSWORD_RESET = "ccomp.password-reset.dlq";
+    public static final String DLQ_ROUTING_KEY_PASSWORD_RESET = "password.reset.dlq";
+
+    // --- 4. PROCESSO: GERAÇÃO DE CERTIFICADO ---
     public static final String QUEUE_CERTIFICATE = "ccomp.certificate-generate.queue";
     public static final String ROUTING_KEY_CERTIFICATE = "certificate.generate";
 
@@ -96,6 +103,33 @@ public class RabbitMQConfig {
     @Bean
     public Binding bindingEditorInvitationDlq(Queue editorInvitationDlq, TopicExchange appExchange) {
         return BindingBuilder.bind(editorInvitationDlq).to(appExchange).with(DLQ_ROUTING_KEY_EDITOR_INVITATION);
+    }
+
+    // ==========================================
+    // CONFIGURAÇÃO: PASSWORD RESET
+    // ==========================================
+
+    @Bean
+    public Queue passwordResetQueue() {
+        Map<String, Object> args = new HashMap<>();
+        args.put("x-dead-letter-exchange", EXCHANGE_NAME);
+        args.put("x-dead-letter-routing-key", DLQ_ROUTING_KEY_PASSWORD_RESET);
+        return QueueBuilder.durable(QUEUE_PASSWORD_RESET).withArguments(args).build();
+    }
+
+    @Bean
+    public Queue passwordResetDlq() {
+        return QueueBuilder.durable(DLQ_PASSWORD_RESET).build();
+    }
+
+    @Bean
+    public Binding bindingPasswordReset(Queue passwordResetQueue, TopicExchange appExchange) {
+        return BindingBuilder.bind(passwordResetQueue).to(appExchange).with(ROUTING_KEY_PASSWORD_RESET);
+    }
+
+    @Bean
+    public Binding bindingPasswordResetDlq(Queue passwordResetDlq, TopicExchange appExchange) {
+        return BindingBuilder.bind(passwordResetDlq).to(appExchange).with(DLQ_ROUTING_KEY_PASSWORD_RESET);
     }
 
     // ==========================================

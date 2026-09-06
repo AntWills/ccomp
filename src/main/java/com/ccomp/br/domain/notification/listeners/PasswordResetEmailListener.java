@@ -1,11 +1,11 @@
 package com.ccomp.br.domain.notification.listeners;
 
-import com.ccomp.br.domain.auth.external.dto.PasswordResetRequestedEvent;
+import com.ccomp.br.config.RabbitMQConfig;
+import com.ccomp.br.domain.auth.external.dto.PasswordResetMessageDTO;
 import com.ccomp.br.module.email.EmailService;
 import com.ccomp.br.shared.dto.SendMailDTO;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,9 +18,8 @@ public class PasswordResetEmailListener {
         this.emailService = emailService;
     }
 
-    @Async
-    @EventListener
-    public void handler(PasswordResetRequestedEvent event) {
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_PASSWORD_RESET)
+    public void handler(PasswordResetMessageDTO event) {
         // Complete os demais passos.
         String subject = "Redefinir Senha da plataforma CCOMP";
         String resetLink = frontendResetUrl + "?token=" + event.token();
