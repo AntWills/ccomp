@@ -45,7 +45,7 @@ public class ClubService {
     public CursorPage<ClubResponseDTO> search(String cursor, int pageSize) {
         if(pageSize > 50) pageSize = 50;
 
-        Specification<Club> spec = ClubSpec.buildSpecByCursor(CursorUtils.decode(cursor, LocalDateTime.class).orElse(null));
+        Specification<Club> spec = ClubSpec.buildSpecByCursor(CursorUtils.decode(cursor, LocalDateTime.class));
 
         int finalPageSize = pageSize;
         List<ClubResponseDTO> results = clubRepository.findBy(spec, query -> query
@@ -66,7 +66,7 @@ public class ClubService {
         if (pageSize > 50) pageSize = 50;
 
         Specification<Club> spec = ClubSpec.buildSpecByInvolvedUserAndCursor(userId, role,
-                CursorUtils.decode(cursor, LocalDateTime.class).orElse(null));
+                CursorUtils.decode(cursor, LocalDateTime.class));
 
         int finalPageSize = pageSize;
         List<ClubResponseDTO> results = clubRepository.findBy(spec, query -> query

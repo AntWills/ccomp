@@ -10,7 +10,6 @@ import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.persistence.activities.EventActivity;
 import com.ccomp.br.domain.events.persistence.activities.EventActivityBlaze;
 import com.ccomp.br.domain.events.persistence.activities.EventActivityRepository;
-import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
 import com.ccomp.br.domain.events.util.ActivityMapper;
 import com.ccomp.br.domain.security.SecurityUtils;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
@@ -34,7 +33,7 @@ public class ActivitiesServices {
     private final ActivityMapper activityMapper;
     private final EventActivityBlaze eventActivityBlaze;
 
-    public ActivitiesServices(EventRepository eventRepository, EventEditorRepository editorRepository, EditorServices editorServices,
+    public ActivitiesServices(EventRepository eventRepository, EditorServices editorServices,
                               EventActivityRepository activityRepository, ActivityMapper activityMapper,
                               EventActivityBlaze eventActivityBlaze) {
         this.eventRepository = eventRepository;
@@ -58,7 +57,7 @@ public class ActivitiesServices {
         if (!allowed)
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
-        EventActivityCursor cursorDecoded = CursorUtils.decode(cursor, EventActivityCursor.class).orElse(null);
+        EventActivityCursor cursorDecoded = CursorUtils.decode(cursor, EventActivityCursor.class);
         List<EventActivityView> results = eventActivityBlaze.findByCursor(eventId, cursorDecoded, pageSize + 1);
 
         return CursorUtils.buildPage(results, pageSize, e -> new EventActivityCursor(e.getCreatedAt(), e.getId()));

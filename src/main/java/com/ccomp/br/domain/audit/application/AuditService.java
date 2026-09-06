@@ -25,7 +25,7 @@ public class AuditService {
 
         int finalPageSize = pageSize;
 
-        AuditLogCursor decodedCursor = CursorUtils.decode(cursor, AuditLogCursor.class).orElse(null);
+        AuditLogCursor decodedCursor = CursorUtils.decode(cursor, AuditLogCursor.class);
 
         List<AuditLogResponseView> results = auditLogBlaze.findByCursor(filter, decodedCursor, finalPageSize + 1);
 

@@ -38,7 +38,7 @@ public class NewsApplication {
         if(pageSize > 50) pageSize = 50;
 
         Specification<News> spec = NewsSpecs.buildSpecByCursor(filter,
-                CursorUtils.decode(cursor, LocalDateTime.class).orElse(null));
+                CursorUtils.decode(cursor, LocalDateTime.class));
 
         int finalPageSize = pageSize;
         List<NewsItem> results = newsRepository.findBy(spec, query -> query

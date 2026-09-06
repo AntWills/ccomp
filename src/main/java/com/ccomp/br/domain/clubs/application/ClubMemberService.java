@@ -58,7 +58,7 @@ public class ClubMemberService {
         if (pageSize > 50) pageSize = 50;
 
         Specification<ClubMember> spec = ClubMemberSpec.filterByAndCursor(clubId, filter,
-                CursorUtils.decode(cursor, LocalDateTime.class).orElse(null));
+                CursorUtils.decode(cursor, LocalDateTime.class));
 
         int finalPageSize = pageSize;
         List<ClubMember> results = clubMemberRepository.findBy(spec, query -> query

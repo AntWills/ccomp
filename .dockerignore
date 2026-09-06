@@ -6,5 +6,5 @@ target/
 *.class
 *.log
 docker-compose.yml
-.env.prod
+.env
 .env.dev
