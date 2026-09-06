@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.events.application;
 
-import com.ccomp.br.domain.events.enums.editors.EnumEditorsStatus;
-import com.ccomp.br.domain.events.external.dto.EditorAddedEvent;
+import com.ccomp.br.config.RabbitMQConfig;
+import com.ccomp.br.domain.events.external.dto.EditorAddedMessageDTO;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
@@ -12,7 +12,6 @@ import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
-import com.ccomp.br.shared.exceptions.DomainException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -21,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Optional;
@@ -42,7 +42,7 @@ public class EditorServicesTest {
     @Mock
     private EventEditorInvitationsRepository invitationsRepository;
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private RabbitTemplate rabbitTemplate;
 
     @InjectMocks
     EditorServices editorServices;
@@ -94,7 +94,11 @@ public class EditorServicesTest {
                     .isEqualTo("Um e-mail de convite foi enviado.");
 
             verify(invitationsRepository).save(any(EventEditorInvitations.class));
-            verify(eventPublisher).publishEvent(any(EditorAddedEvent.class));
+            verify(rabbitTemplate).convertAndSend(
+                    eq(RabbitMQConfig.EXCHANGE_NAME),
+                    eq(RabbitMQConfig.ROUTING_KEY_EDITOR_INVITATION),
+                    any(EditorAddedMessageDTO.class)
+            );
         }
 
         @Test
@@ -122,7 +126,11 @@ public class EditorServicesTest {
                     .isEqualTo("Este usuário já é um editor ativo deste evento.");
 
             verify(invitationsRepository, never()).save(any(EventEditorInvitations.class));
-            verify(eventPublisher, never()).publishEvent(any(EditorAddedEvent.class));
+            verify(rabbitTemplate, never()).convertAndSend(
+                    eq(RabbitMQConfig.EXCHANGE_NAME),
+                    eq(RabbitMQConfig.ROUTING_KEY_EDITOR_INVITATION),
+                    any(EditorAddedMessageDTO.class)
+            );
         }
     }
 
