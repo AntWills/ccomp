@@ -94,6 +94,22 @@ services:
       /usr/bin/mc anonymous set public myminio/images;
       exit 0;
       "
+  rabbitmq:
+    image: rabbitmq:4.3.5-management-alpine
+    container_name: ccomp-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   keygen:
     image: alpine/openssl
@@ -125,3 +141,4 @@ services:
 volumes:
   postgres-data:
   minio-data:
+  rabbitmq_data:
