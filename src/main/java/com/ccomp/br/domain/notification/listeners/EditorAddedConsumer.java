@@ -1,27 +1,24 @@
 package com.ccomp.br.domain.notification.listeners;
 
-import com.ccomp.br.domain.events.external.dto.EditorAddedEvent;
+import com.ccomp.br.config.RabbitMQConfig;
+import com.ccomp.br.domain.events.external.dto.EditorAddedMessageDTO;
 import com.ccomp.br.module.email.EmailService;
 import com.ccomp.br.shared.dto.SendMailDTO;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
-
-import java.util.UUID;
 
 @Component
 @Slf4j
-public class EditorAddedEventListener {
+public class EditorAddedConsumer {
     private final EmailService emailService;
 
-    public EditorAddedEventListener(EmailService emailService) {
+    public EditorAddedConsumer(EmailService emailService) {
         this.emailService = emailService;
     }
 
-    @Async
-    @EventListener
-    public void onEditorAdded(EditorAddedEvent event) {
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_EDITOR_INVITATION)
+    public void onEditorAdded(EditorAddedMessageDTO event) {
 
         String subject = "[CONVITE] Editor para: " + event.eventTitle();
 //        String acceptUrl = "Ajustar Depois -> 8080/api/events/editors/accept?code=" + event.code();

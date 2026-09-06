@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.application;
 
+import com.ccomp.br.config.RabbitMQConfig;
 import com.ccomp.br.domain.events.enums.editors.EnumEditorsStatus;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
@@ -13,6 +14,7 @@ import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.dto.UserSummaryView;
 import com.ccomp.br.shared.exceptions.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +36,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.context.ApplicationEventPublisher;
 import com.ccomp.br.domain.events.persistence.editors.validation.EventEditorInvitationsRepository;
-import com.ccomp.br.domain.events.external.dto.EditorAddedEvent;
+import com.ccomp.br.domain.events.external.dto.EditorAddedMessageDTO;
 
 @Service
 @Slf4j
@@ -42,14 +44,14 @@ public class EditorServices {
     private final EventRepository eventRepository;
     private final EventEditorRepository editorRepository;
     private final UserManagement userManagement;
-    private final ApplicationEventPublisher eventPublisher;
+    private final RabbitTemplate rabbitTemplate;
     private final EventEditorInvitationsRepository invitationsRepository;
 
-    public EditorServices(EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement, ApplicationEventPublisher eventPublisher, EventEditorInvitationsRepository invitationsRepository) {
+    public EditorServices(EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement, ApplicationEventPublisher eventPublisher, RabbitTemplate rabbitTemplate, EventEditorInvitationsRepository invitationsRepository) {
         this.eventRepository = eventRepository;
         this.editorRepository = editorRepository;
         this.userManagement = userManagement;
-        this.eventPublisher = eventPublisher;
+        this.rabbitTemplate = rabbitTemplate;
         this.invitationsRepository = invitationsRepository;
     }
 
@@ -222,6 +224,10 @@ public class EditorServices {
                 .build();
 
         invitationsRepository.save(newInvite);
-        eventPublisher.publishEvent(new EditorAddedEvent(event.getId(), event.getTitle(), code, emailAddress));
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE_NAME,
+                RabbitMQConfig.ROUTING_KEY_EDITOR_INVITATION,
+                new EditorAddedMessageDTO(event.getId(), event.getTitle(), code, emailAddress)
+        );
     }
 }

@@ -1,7 +1,8 @@
 package com.ccomp.br.domain.auth.application;
 
+import com.ccomp.br.config.RabbitMQConfig;
 import com.ccomp.br.domain.auth.dto.*;
-import com.ccomp.br.domain.auth.external.dto.PasswordResetRequestedEvent;
+import com.ccomp.br.domain.auth.external.dto.PasswordResetMessageDTO;
 import com.ccomp.br.domain.security.jwt.application.JwtService;
 import com.ccomp.br.domain.security.passwordreset.application.PasswordResetService;
 import com.ccomp.br.domain.users.external.UserManagement;
@@ -10,6 +11,7 @@ import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
@@ -31,15 +33,20 @@ public class AuthApplication {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final PasswordResetService passwordResetService;
-    private final ApplicationEventPublisher eventPublisher;
+    private final RabbitTemplate rabbitTemplate;
 
     @Autowired
-    public AuthApplication(UserManagement userManagement, JwtService jwtService, AuthenticationManager authenticationManager, PasswordResetService passwordResetService, ApplicationEventPublisher eventPublisher) {
+    public AuthApplication(
+            UserManagement userManagement,
+            JwtService jwtService,
+            AuthenticationManager authenticationManager,
+            PasswordResetService passwordResetService,
+            RabbitTemplate rabbitTemplate) {
         this.userManagement = userManagement;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
         this.passwordResetService = passwordResetService;
-        this.eventPublisher = eventPublisher;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     @Transactional
@@ -89,7 +96,11 @@ public class AuthApplication {
 
         String token = passwordResetService.issuePasswordResetToken(user.id());
 
-        eventPublisher.publishEvent(new PasswordResetRequestedEvent(user.emailAddress(), token));
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE_NAME,
+                RabbitMQConfig.ROUTING_KEY_PASSWORD_RESET,
+                new PasswordResetMessageDTO(user.emailAddress(), token)
+        );
     }
 
     @Transactional
