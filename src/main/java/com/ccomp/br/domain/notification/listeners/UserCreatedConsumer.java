@@ -1,28 +1,28 @@
 package com.ccomp.br.domain.notification.listeners;
 
-import com.ccomp.br.domain.users.external.dto.UserCreatedEvent;
+import com.ccomp.br.config.RabbitMQConfig;
+import com.ccomp.br.domain.users.external.dto.UserCreatedMessageDTO;
+import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.module.email.EmailService;
 import com.ccomp.br.shared.dto.SendMailDTO;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 @Component
-public class UserCreatedListener {
+public class UserCreatedConsumer {
     private final EmailService emailService;
 
-    public UserCreatedListener(EmailService emailService) {
+    public UserCreatedConsumer(EmailService emailService) {
         this.emailService = emailService;
     }
 
-    @Async
-    @EventListener
-    public void handler(UserCreatedEvent event){
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_USER_CREATED)
+    public void handler(UserCreatedMessageDTO message){
         String subject = "Bem-vindo à CComp - Sua conta foi criada com sucesso";
-        String body = buildPlainTextWelcomeEmail(event.name());
+        String body = buildPlainTextWelcomeEmail(message.name());
 
         SendMailDTO dto = new SendMailDTO(
-                event.emailAddress(),
+                new EmailAddress(message.email()),
                 subject,
                 body
         );

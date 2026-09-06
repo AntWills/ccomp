@@ -1,7 +1,8 @@
 package com.ccomp.br.domain.users.external;
 
+import com.ccomp.br.config.RabbitMQConfig;
 import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
-import com.ccomp.br.domain.users.external.dto.UserCreatedEvent;
+import com.ccomp.br.domain.users.external.dto.UserCreatedMessageDTO;
 import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
@@ -12,8 +13,8 @@ import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.dto.UserSummaryView;
 import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,15 +26,15 @@ import java.util.UUID;
 
 @Component
 public class UserManagement {
-    private final ApplicationEventPublisher eventPublisher;
+    private final RabbitTemplate rabbitTemplate;
     private final RolesServices rolesServices;
     private final UserModelRepository userModelRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
 
     @Autowired
-    public UserManagement(ApplicationEventPublisher eventPublisher, RolesServices rolesServices, UserModelRepository userModelRepository, PasswordEncoder passwordEncoder, UserMapper userMapper){
-        this.eventPublisher = eventPublisher;
+    public UserManagement(RabbitTemplate rabbitTemplate, RolesServices rolesServices, UserModelRepository userModelRepository, PasswordEncoder passwordEncoder, UserMapper userMapper){
+        this.rabbitTemplate = rabbitTemplate;
         this.rolesServices = rolesServices;
         this.userModelRepository = userModelRepository;
         this.passwordEncoder = passwordEncoder;
@@ -59,7 +60,12 @@ public class UserManagement {
         UserModel userSaved = userModelRepository.save(user);
         rolesServices.initRole(userSaved, EnumRoles.USER);
 
-        eventPublisher.publishEvent(new UserCreatedEvent(dto.name(), dto.email()));
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE_NAME,
+                RabbitMQConfig.ROUTING_KEY_USER_CREATED,
+                new UserCreatedMessageDTO(dto.name(), dto.email().getValue())
+        );
+//        eventPublisher.publishEvent(new UserCreatedEvent(dto.name(), dto.email().getValue()));
     }
 
     @Transactional
