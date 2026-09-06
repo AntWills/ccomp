@@ -89,6 +89,11 @@ public class SecurityConfig {
             "/v3/api-docs"
     };
 
+    private static final String[] ACTUATOR_ROUTES = {
+            "/actuator/health",
+            "/actuator/health/**"
+    };
+
     @Bean
     @Order(1)
     public SecurityFilterChain swaggerFilterChain(HttpSecurity http, UserDetailsService userDetailsService) throws Exception {
@@ -117,6 +122,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> {
                             authorize.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
                             authorize.requestMatchers("/error").permitAll();
+
+                            authorize.requestMatchers(ACTUATOR_ROUTES).permitAll();
+
                             // Auth
                             authorize.requestMatchers(PUBLIC_AUTH_ROUTES).permitAll();
                             // Clubs
