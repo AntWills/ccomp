@@ -19,18 +19,17 @@ Este repositório contém o **backend** do projeto, desenvolvido em
 - [Execução Local](#execução-local)
     - [Via Docker Compose (Recomendado)](#via-docker-compose-recomendado)
     - [Execução Local (Shell)](#via-shell)
-- [Documentação da API](#documentação-da-api-)
+- [Documentação da API](#documentação-da-api)
 - [Infraestrutura em Produção](#infraestrutura-em-produção)
 
 ## Execução Local
 
 ### Via Docker Compose (Recomendado)
 
-Esta é a maneira mais rápida e prática de rodar o projeto em 
-desenvolvimento. Todos os serviços necessários já vêm 
-orquestrados e configurados nos arquivos `docker-compose.yml` 
+Esta é a maneira mais rápida e prática de rodar o projeto em
+desenvolvimento. Todos os serviços necessários já vêm
+orquestrados e configurados nos arquivos `docker-compose.yml`
 e `docker-compose.dev.yml`.
-
 Crie um arquivo `.env.dev` na raiz do projeto com as variáveis abaixo:
 
 ```dotenv
@@ -135,17 +134,56 @@ openssl rsa -pubout -in keys/private.key -out keys/public.key
 chmod 600 keys/private.key
 chmod 644 keys/public.key
 ```
-Também é necessário um arquivo `.env.prod` na raiz do projeto,
-com as credenciais de banco, storage e demais variáveis
-sensíveis.
+Também é necessário um arquivo `.env` na raiz do projeto,
+na raiz do projeto, contendo as configurações do perfil e 
+as credenciais de infraestrutura orquestradas 
+pelo `docker-compose.prod.yml`:
 
-Com as chaves e o `.env.prod` criados, o ambiente é subido com:
+```dotenv
+SPRING_PROFILES_ACTIVE=prod
 
-```shell
-docker compose --env-file .env.prod -f docker-compose.prod.yml --profile all up -d --build
+# Dados da aplicação em produção
+FRONTEND_PASSWORD_RESET_URL=localhost:4321/reset-password
+PUBLIC_KEY=file:./keys/public.key
+PRIVITE_KEY=file:./keys/private.key
+
+POSTGRES_URL=jdbc:postgresql://postgres-db:5432/ccomp-db
+POSTGRES_USER=user # usuário rela
+POSTGRES_PASSWORD=password # Senha real
+POSTGRES_DB=ccomp-db
+POSTGRES_DRIVER=org.postgresql.Driver
+POSTGRES_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+USERNAME=seu@email.com
+MAIL_PASSWORD=senha
+MAIL_SMTP_AUTH=true
+MAIL_SMTP_STARTTLS_ENABLE=true
+
+# Só descomente se for rodar a aplicação no docker
+OTEL_OTLP_ENDPOINT=http://grafana-lgtm:4318
+
+# Ajustar para o verdadeiro em produção
+STORAGE_ENDPOINT=http://minio:9000
+STORAGE_USER=minioadmin
+STORAGE_PASSWORD=minioadmin # Senha real
+STORAGE_BUCKET=images
+STORAGE_REGION=us-east-1
 ```
 
-O `--profile all` garante que todos os serviços sejam incluídos.
+Com as chaves e o `.env` criados, o ambiente é subido com:
+
+```shell
+docker compose -f docker-compose.prod.yml --profile all up --build
+```
+
+- (Adicione `-d` ao final do comando para rodar em background/daemon mode).
+
+O `--profile all` garante que todos os serviços 
+(`proxy`, `ccomp-backend`, `postgres-db`, `minio`, 
+`minio-setup`, `grafana-lgtm`) sejam inicializados 
+corretamente conforme mapeado na rede.
 
 ### Acessando serviços internos localmente (túnel SSH)
 
