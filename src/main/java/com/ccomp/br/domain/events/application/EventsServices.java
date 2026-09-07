@@ -18,6 +18,7 @@ import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.DebugUtils;
+import org.jspecify.annotations.Nullable;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -72,7 +73,7 @@ public class EventsServices {
 
     @Transactional(readOnly = true)
     public CursorPage<EventListItemView> searchEventsWithFilters(
-            EventsFilterRequest filter, String cursor, int pageSize) {
+            EventsFilterRequest filter, @Nullable String cursor, int pageSize) {
         int finalPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
 
         EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class);
@@ -83,6 +84,44 @@ public class EventsServices {
         log.info("Horário da consulta: {}", LocalDateTime.now());
 
         return CursorUtils.buildPage(events, finalPageSize, e -> new EventCursor(e.getStartDate(), e.getId()));
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPage<EventListItemView> findAllByOwnerId(UUID ownerId, @Nullable String cursor, int pageSize) {
+        int finalPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
+        EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class);
+
+        List<EventListItemView> events = eventBlaze
+                .findAllByOwnerId(ownerId, decodedCursor, finalPageSize + 1);
+
+
+        return CursorUtils.buildPage(events, finalPageSize,
+                e -> new EventCursor(e.getStartDate(), e.getId()));
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPage<EventListItemView> findAllSubscriptions(UUID participantId, @Nullable String cursor, int pageSize) {
+        int finalPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
+        EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class);
+
+        List<EventListItemView> events = eventBlaze
+                .findAllSubscriptions(participantId, decodedCursor, finalPageSize + 1);
+
+
+        return CursorUtils.buildPage(events, finalPageSize,
+                e -> new EventCursor(e.getStartDate(), e.getId()));
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPage<EventListItemView> findMyEditableEvents(UUID editorId, @Nullable String cursor, int pageSize) {
+        int finalPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
+        EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class);
+
+        List<EventListItemView> events = eventBlaze
+                .findAllWhereUserIsEditor(editorId, decodedCursor, finalPageSize + 1);
+
+        return CursorUtils.buildPage(events, finalPageSize,
+                e -> new EventCursor(e.getStartDate(), e.getId()));
     }
 
     // ---- Comandos ----
