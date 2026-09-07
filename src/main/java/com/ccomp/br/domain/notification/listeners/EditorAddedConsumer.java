@@ -24,8 +24,9 @@ public class EditorAddedConsumer {
     public void onEditorAdded(EditorAddedMessageDTO event) {
 
         String subject = "[CONVITE] Editor para: " + event.eventTitle();
-//        String acceptUrl = "Ajustar Depois -> 8080/api/events/editors/accept?code=" + event.code();
-        String acceptUrl = "https://example.com";
+
+        String acceptUrl = frontendAcceptEditorInviteUrl + event.code();
+
         // Logotipo simulado ou URL do logotipo real
         String logoUrl = "https://cdn-icons-png.flaticon.com/512/888/888879.png";
 
