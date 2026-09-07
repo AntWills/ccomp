@@ -123,6 +123,11 @@ public class EventBlaze {
 
         return blazeQueryExecutor.fetchList(cb, EventListItemView.class);
     }
+
+    public List<EventListItemView> findAllWhereUserIsEditorDsl(UUID editorId, EventCursor cursor, int limit) {
+
+    }
+
     private String path(Attribute<?, ?> attribute) {
         return ALIAS + "." + attribute.getName();
     }

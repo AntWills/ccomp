@@ -1,35 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.1</version>
-		<relativePath/> <!-- lookup parent from repository -->
-	</parent>
-	<groupId>com.ccomp</groupId>
-	<artifactId>ccomp-backend</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>ccomp</name>
-	<description>Site do curso Ciencia da Computação do IFMA</description>
-	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
-	<properties>
-		<java.version>25</java.version>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.0.1</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>com.ccomp</groupId>
+    <artifactId>ccomp-backend</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>ccomp</name>
+    <description>Site do curso Ciencia da Computação do IFMA</description>
+    <url/>
+    <licenses>
+        <license/>
+    </licenses>
+    <developers>
+        <developer/>
+    </developers>
+    <scm>
+        <connection/>
+        <developerConnection/>
+        <tag/>
+        <url/>
+    </scm>
+    <properties>
+        <java.version>25</java.version>
         <blaze-persistence.version>1.6.20</blaze-persistence.version>
-	</properties>
+        <!-- Fork ativo do QueryDSL (io.github.openfeign.querydsl), pois o grupo
+             original com.querydsl está parado. Ver https://github.com/OpenFeign/querydsl
+             IMPORTANTE: NÃO usar o nome "querydsl.version" aqui — o próprio
+             spring-boot-dependencies já usa essa property para seu import legado
+             de com.querydsl:querydsl-bom, e sobrescrevê-la quebra esse import
+             (ele tenta baixar com.querydsl:querydsl-bom com a versão nova, que
+             nunca existiu nesse groupId). Nome próprio evita a colisão. -->
+        <openfeign-querydsl.version>7.6</openfeign-querydsl.version>
+    </properties>
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -39,28 +47,28 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-<!--            <dependency>-->
-<!--                <groupId>com.blazebit</groupId>-->
-<!--                <artifactId>blaze-persistence-bom</artifactId>-->
-<!--                <version>${blaze-persistence.version}</version>-->
-<!--                <type>pom</type>-->
-<!--                <scope>import</scope>-->
-<!--            </dependency>-->
+            <!--            <dependency>-->
+            <!--                <groupId>com.blazebit</groupId>-->
+            <!--                <artifactId>blaze-persistence-bom</artifactId>-->
+            <!--                <version>${blaze-persistence.version}</version>-->
+            <!--                <type>pom</type>-->
+            <!--                <scope>import</scope>-->
+            <!--            </dependency>-->
         </dependencies>
     </dependencyManagement>
-	<dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-h2console</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webmvc</artifactId>
-		</dependency>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-h2console</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
@@ -92,40 +100,40 @@
             <scope>compile</scope>
         </dependency>
 
-		<dependency>
-			<groupId>com.h2database</groupId>
-			<artifactId>h2</artifactId>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.postgresql</groupId>
-			<artifactId>postgresql</artifactId>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<optional>true</optional>
-		</dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa-test</artifactId>
-			<scope>test</scope>
-		</dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security-test</artifactId>
             <scope>test</scope>
         </dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webmvc-test</artifactId>
-			<scope>test</scope>
-		</dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.springdoc</groupId>
@@ -221,16 +229,53 @@
             <version>${blaze-persistence.version}</version>
             <scope>runtime</scope>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>com.blazebit</groupId>-->
-<!--            <artifactId>blaze-persistence-integration-entity-view-spring-6</artifactId>-->
-<!--            <version>${blaze-persistence.version}</version>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>com.blazebit</groupId>-->
+        <!--            <artifactId>blaze-persistence-integration-entity-view-spring-6</artifactId>-->
+        <!--            <version>${blaze-persistence.version}</version>-->
+        <!--        </dependency>-->
         <dependency>
             <groupId>com.blazebit</groupId>
             <artifactId>blaze-persistence-integration-spring-data-4.0</artifactId>
             <version>${blaze-persistence.version}</version>
             <scope>compile</scope>
+        </dependency>
+
+        <!-- Módulo Oficial de Integração Blaze-Persistence + QueryDSL.
+             Esse módulo declara com.querydsl:querydsl-jpa (grupo original, sem
+             manutenção ativa) como dependência transitiva. Excluímos e trazemos
+             no lugar o fork ativo io.github.openfeign.querydsl, que mantém os
+             mesmos pacotes com.querydsl.* — drop-in replacement, sem mudar código. -->
+        <dependency>
+            <groupId>com.blazebit</groupId>
+            <artifactId>blaze-persistence-integration-querydsl-expressions-jakarta</artifactId>
+            <version>${blaze-persistence.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.querydsl</groupId>
+                    <artifactId>querydsl-jpa</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- QueryDSL JPA Core (fork mantido pela OpenFeign; não precisa mais de
+             classifier "jakarta" — a partir do fork, jakarta.persistence é o
+             único suporte, sem variante javax). Use apenas nos pontos em que
+             a navegação tipada realmente compensa (ex.: filtros com EXISTS
+             sobre coleções), não como substituto geral do Blaze Criteria API. -->
+        <dependency>
+            <groupId>io.github.openfeign.querydsl</groupId>
+            <artifactId>querydsl-jpa</artifactId>
+            <version>${openfeign-querydsl.version}</version>
+        </dependency>
+
+        <!-- Gerador dos tipos Q* (QEvent, QEventEditor, etc.) a partir das
+             entidades @Entity. Só é necessário em tempo de build. -->
+        <dependency>
+            <groupId>io.github.openfeign.querydsl</groupId>
+            <artifactId>querydsl-apt</artifactId>
+            <version>${openfeign-querydsl.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -266,17 +311,17 @@
 
     </dependencies>
 
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<annotationProcessorPaths>
-						<path>
-							<groupId>org.projectlombok</groupId>
-							<artifactId>lombok</artifactId>
-						</path>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </path>
 
                         <path>
                             <groupId>org.mapstruct</groupId>
@@ -289,9 +334,66 @@
                             <artifactId>hibernate-jpamodelgen</artifactId>
                             <version>${hibernate.version}</version>
                         </path>
-					</annotationProcessorPaths>
-				</configuration>
-			</plugin>
+                    </annotationProcessorPaths>
+                </configuration>
+                <executions>
+                    <!-- Execução isolada só para o QueryDSL: o jar querydsl-apt
+                         de propósito NÃO se registra via META-INF/services
+                         (empacota vários processors: JPA, JDO, bean genérico),
+                         então precisa do processor explícito. Se isso fosse
+                         declarado na execução default acima, desligaria a
+                         auto-descoberta do Lombok/MapStruct/Hibernate também —
+                         por isso roda à parte, na fase generate-sources. -->
+                    <execution>
+                        <id>generate-querydsl-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <proc>only</proc>
+                            <generatedSourcesDirectory>${project.build.directory}/generated-sources/querydsl</generatedSourcesDirectory>
+                            <annotationProcessorPaths>
+                                <path>
+                                    <groupId>io.github.openfeign.querydsl</groupId>
+                                    <artifactId>querydsl-apt</artifactId>
+                                    <version>${openfeign-querydsl.version}</version>
+                                </path>
+                                <path>
+                                    <groupId>jakarta.persistence</groupId>
+                                    <artifactId>jakarta.persistence-api</artifactId>
+                                </path>
+                            </annotationProcessorPaths>
+                            <annotationProcessors>
+                                <annotationProcessor>com.querydsl.apt.jpa.JPAAnnotationProcessor</annotationProcessor>
+                            </annotationProcessors>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Garante que target/generated-sources/querydsl seja tratado
+                 como pasta de código-fonte (algumas versões/IDEs não pegam
+                 automaticamente uma generatedSourcesDirectory customizada
+                 vinda de uma execução separada do compiler plugin). -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>add-querydsl-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources/querydsl</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
@@ -313,19 +415,19 @@
                     </execution>
                 </executions>
             </plugin>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-				<configuration>
-					<excludes>
-						<exclude>
-							<groupId>org.projectlombok</groupId>
-							<artifactId>lombok</artifactId>
-						</exclude>
-					</excludes>
-				</configuration>
-			</plugin>
-		</plugins>
-	</build>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>
