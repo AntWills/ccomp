@@ -54,6 +54,12 @@ MAIL_PASSWORD=senha
 MAIL_SMTP_AUTH=true
 MAIL_SMTP_STARTTLS_ENABLE=true
 
+# Rabbit
+RABBITMQ_HOST=rabbitmq
+RABBITMQ_PORT=5672
+RABBITMQ_USER=admin
+RABBITMQ_PASSWORD=admin
+
 STORAGE_ENDPOINT=http://minio:9000
 STORAGE_ACCESS_KEY=minioadmin
 STORAGE_SECRET_KEY=minioadmin
@@ -143,7 +149,8 @@ pelo `docker-compose.prod.yml`:
 SPRING_PROFILES_ACTIVE=prod
 
 # Dados da aplicação em produção
-FRONTEND_PASSWORD_RESET_URL=localhost:4321/reset-password
+FRONTEND_PASSWORD_RESET_URL=https://frontend.com/reset-password
+FRONTEND_ACCEPT_EDITOR_INVITE_URL=https://frontend.com/accept-editor-invite
 PUBLIC_KEY=file:./keys/public.key
 PRIVITE_KEY=file:./keys/private.key
 
@@ -160,6 +167,12 @@ USERNAME=seu@email.com
 MAIL_PASSWORD=senha
 MAIL_SMTP_AUTH=true
 MAIL_SMTP_STARTTLS_ENABLE=true
+
+# Rabbit
+RABBITMQ_HOST=rabbitmq
+RABBITMQ_PORT=5672
+RABBITMQ_USER=seu_usuario_seguro_aqui
+RABBITMQ_PASSWORD=sua_senha_segura_aqui
 
 # Só descomente se for rodar a aplicação no docker
 OTEL_OTLP_ENDPOINT=http://grafana-lgtm:4318
