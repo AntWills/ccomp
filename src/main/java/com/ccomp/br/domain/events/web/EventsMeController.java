@@ -1,6 +1,6 @@
-package com.ccomp.br.domain.users.web;
+package com.ccomp.br.domain.events.web;
 
-import com.ccomp.br.domain.events.external.EventsManagement;
+import com.ccomp.br.domain.events.application.EventsServices;
 import com.ccomp.br.shared.dto.EventListItemView;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -21,20 +21,18 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-@Tag(name = "Usuários / Eventos",
-        description = "Endpoints para gerenciamento e consulta de eventos vinculados ao usuário autenticado.")
+@Tag(name = "Gerir Eventos (Me)")
 @RestController
-@RequestMapping("api/users/me")
-public class UserEventsGateway {
+@RequestMapping("api/events/me")
+public class EventsMeController {
+    private final EventsServices eventsServices;
 
-    private final EventsManagement eventsManagement;
-
-    public UserEventsGateway(EventsManagement eventsManagement) {
-        this.eventsManagement = eventsManagement;
+    public EventsMeController(EventsServices eventsServices) {
+        this.eventsServices = eventsServices;
     }
 
     @Operation(
-            summary = "Lista os eventos criados pelo usuário com paginação por cursor",
+            summary = "Lista os eventos criados pelo usuário",
             description = "Retorna uma página contendo os eventos organizados/criados pelo usuário autenticado.",
             responses = {
                     @ApiResponse(
@@ -51,7 +49,7 @@ public class UserEventsGateway {
                     )
             }
     )
-    @GetMapping("created-events")
+    @GetMapping("created")
     public ResponseEntity<CursorPage<EventListItemView>> getCreatedEvents(
             @Parameter(description = "Cursor para carregar a próxima página")
             @RequestParam(required = false) String nextCursor,
@@ -60,11 +58,13 @@ public class UserEventsGateway {
             @AuthenticationPrincipal Jwt jwt
     ) {
         UUID ownerId = UUID.fromString(jwt.getSubject());
-        return ResponseEntity.ok(eventsManagement.findAllByOwnerId(ownerId, nextCursor, pageSize));
+        return ResponseEntity.ok(eventsServices.findAllByOwnerId(ownerId, nextCursor, pageSize));
     }
 
+
+    @GetMapping("/subscriptions")
     @Operation(
-            summary = "Lista as inscrições do usuário em eventos com paginação por cursor",
+            summary = "Lista as inscrições do usuário em eventos",
             description = "Retorna uma página contendo todos os eventos nos quais o usuário logado se inscreveu como participante.",
             responses = {
                     @ApiResponse(
@@ -81,7 +81,6 @@ public class UserEventsGateway {
                     )
             }
     )
-    @GetMapping("/events-subscriptions")
     public ResponseEntity<CursorPage<EventListItemView>> getSubscriptions(
             @Parameter(description = "Cursor para carregar a próxima página")
             @RequestParam(required = false) String nextCursor,
@@ -90,6 +89,39 @@ public class UserEventsGateway {
             @AuthenticationPrincipal Jwt jwt
     ) {
         UUID participantId = UUID.fromString(jwt.getSubject());
-        return ResponseEntity.ok(eventsManagement.findAllSubscriptions(participantId, nextCursor, pageSize));
+        return ResponseEntity.ok(eventsServices.findAllSubscriptions(participantId, nextCursor, pageSize));
+    }
+
+    @GetMapping("/editors")
+    @Operation(
+            summary = "Lista todos os eventos onde o usuário é editor",
+            description = "Retorna uma página contendo todos os eventos nos quais o usuário logado se inscreveu como participante.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Página de edições encontrada com sucesso."
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "Não autorizado - Token ausente, inválido ou expirado.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
+                    )
+            }
+    )
+    public ResponseEntity<CursorPage<EventListItemView>> getMeEventsEditors(
+            @Parameter(description = "Cursor para carregar a próxima página")
+            @RequestParam(required = false) String nextCursor,
+            @Parameter(description = "Quantidade de registros por página (Padrão: 10, Máximo: 50)")
+            @RequestParam(defaultValue = "10") int pageSize,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ResponseEntity.ok(eventsServices.findMyEditableEvents(extractUserId(jwt), nextCursor, pageSize));
+    }
+
+    private UUID extractUserId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
     }
 }

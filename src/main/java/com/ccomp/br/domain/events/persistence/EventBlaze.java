@@ -3,6 +3,8 @@ package com.ccomp.br.domain.events.persistence;
 import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.ccomp.br.domain.events.dto.events.EventCursor;
 import com.ccomp.br.domain.events.enums.EnumEnrollmentState;
+import com.ccomp.br.domain.events.enums.editors.EnumEditorsStatus;
+import com.ccomp.br.domain.events.persistence.editors.EventEditor_;
 import com.ccomp.br.shared.dto.EventListItemView;
 import com.ccomp.br.domain.events.dto.events.EventsFilterRequest;
 import com.ccomp.br.domain.events.enums.EnumEventStatus;
@@ -100,7 +102,32 @@ public class EventBlaze {
         return blazeQueryExecutor.fetchList(cb, EventListItemView.class);
     }
 
+    public List<EventListItemView> findAllWhereUserIsEditor(UUID editorId, EventCursor cursor, int limit) {
+        var cb = cbf.create(em, Event.class, ALIAS)
+                    .innerJoin(path(Event_.editors), "editor")
+                    .where(path(Event_.editors, EventEditor_.userId)).eq(editorId)
+                    .where(path(Event_.editors, EventEditor_.status)).eq(EnumEditorsStatus.ACTIVE)
+                .orderByDesc(path(Event_.startDate))
+                .orderByDesc(path(Event_.id))
+                .setMaxResults(limit);
+
+        if (cursor != null && cursor.id() != null && cursor.startDate() != null) {
+            cb.whereOr()
+                    .where(path(Event_.startDate)).lt(cursor.startDate())
+                        .whereAnd()
+                        .where(path(Event_.startDate)).eq(cursor.startDate())
+                        .where(path(Event_.id)).lt(cursor.id())
+                    .endAnd()
+                    .endOr();
+        }
+
+        return blazeQueryExecutor.fetchList(cb, EventListItemView.class);
+    }
     private String path(Attribute<?, ?> attribute) {
         return ALIAS + "." + attribute.getName();
+    }
+
+    private String path(Attribute<?, ?> relation, Attribute<?, ?> attribute) {
+        return ALIAS + "." + relation.getName() + "." + attribute.getName();
     }
 }
