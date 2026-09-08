@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,8 +99,11 @@ public class AuthController {
             }
     )
     @PostMapping("/sign-in")
-    public AccessTokenResponse login(@Valid @RequestBody LoginRequestDTO dto) {
-        return authApplication.signIn(dto);
+    public AccessTokenResponse login(@Valid @RequestBody LoginRequestDTO dto, HttpServletRequest request) {
+        return authApplication.signIn(dto, ClientMetadataDTO.builder()
+                        .ipAddress(request.getRemoteAddr())
+                        .userAgent(request.getHeader("User-Agent"))
+                .build());
     }
 
     @Operation(
@@ -127,8 +131,11 @@ public class AuthController {
             }
     )
     @PostMapping("/refresh")
-    public ResponseEntity<RefreshTokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
-        return authApplication.refresh(request)
+    public ResponseEntity<RefreshTokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request, HttpServletRequest metadata) {
+        return authApplication.refresh(request, ClientMetadataDTO.builder()
+                        .ipAddress(metadata.getRemoteAddr())
+                        .userAgent(metadata.getHeader("User-Agent"))
+                        .build())
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }

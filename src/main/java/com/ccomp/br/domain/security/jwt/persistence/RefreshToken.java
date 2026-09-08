@@ -27,10 +27,10 @@ public class RefreshToken {
     @Column(name = "expiry_date", nullable = false)
     private Instant expiryDate;
 
-    @Column(name = "user_agent")
+    @Column(name = "user_agent", length = 500)
     private String userAgent;
 
-    @Column(name = "ip_address")
+    @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
     public boolean isTokenExpired() {
