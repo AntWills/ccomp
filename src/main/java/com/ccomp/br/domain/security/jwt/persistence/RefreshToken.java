@@ -18,16 +18,22 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false, unique = true)
+    @Column(name = "user_id", nullable = false)
     private UUID userId;
 
     @Column(nullable = false, unique = true)
-    private String token;
+    private UUID token;
 
     @Column(name = "expiry_date", nullable = false)
     private Instant expiryDate;
 
-    public boolean isTokenExpired(){
+    @Column(name = "user_agent", length = 500)
+    private String userAgent;
+
+    @Column(name = "ip_address", length = 45)
+    private String ipAddress;
+
+    public boolean isTokenExpired() {
         return expiryDate.isBefore(Instant.now());
     }
 }

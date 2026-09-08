@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.security.jwt.application;
 
+import com.ccomp.br.domain.auth.dto.ClientMetadataDTO;
 import com.ccomp.br.domain.auth.dto.RefreshTokenRequest;
 import com.ccomp.br.domain.security.jwt.persistence.RefreshToken;
 import com.ccomp.br.domain.security.jwt.persistence.RefreshTokenRepository;
@@ -53,12 +54,25 @@ public class JwtService {
     }
 
     @Transactional
-    public RefreshToken getRefreshToken(UUID userId){
-        refreshTokenRepository.deleteByUserId(userId);
+    public RefreshToken createRefreshToken(UUID userId, ClientMetadataDTO clientMetadata){
+        String rawUserAgent = clientMetadata.userAgent();
+        String safeUserAgent = (rawUserAgent != null && rawUserAgent.length() > 500)
+                ? rawUserAgent.substring(0, 500)
+                : rawUserAgent;
+
+        List<RefreshToken> activeTokens = refreshTokenRepository.findAllByUserId(userId).stream()
+                .filter(ac -> ac.getIpAddress().equals(clientMetadata.ipAddress())
+                        && ac.getUserAgent().equals(safeUserAgent))
+                .toList();
+
+        refreshTokenRepository.deleteAll(activeTokens);
+        refreshTokenRepository.flush();
 
         RefreshToken refreshToken = RefreshToken.builder()
                 .userId(userId)
-                .token(UUID.randomUUID().toString())
+                .token(UUID.randomUUID())
+                .ipAddress(clientMetadata.ipAddress())
+                .userAgent(safeUserAgent)
                 .expiryDate(Instant.now().plusSeconds(refreshExpirationInSeconds))
                 .build();
 
@@ -66,7 +80,7 @@ public class JwtService {
     }
 
     @Transactional
-    public Optional<String> validRefreshToken(RefreshTokenRequest request) {
+    public Optional<String> validRefreshToken(RefreshTokenRequest request, ClientMetadataDTO clientMetadata) {
         RefreshToken refresh = refreshTokenRepository.findByToken(request.refreshToken())
                         .orElseThrow(() -> new InvalidTokenException("Tempo de acesso expirado."));
 
@@ -78,6 +92,13 @@ public class JwtService {
         if (refresh.isTokenExpired()) {
             refreshTokenRepository.delete(refresh);
             return Optional.empty();
+        }
+
+        if (!refresh.getIpAddress().equals(clientMetadata.ipAddress()) ||
+                !refresh.getUserAgent().equals(clientMetadata.userAgent())) {
+
+            refreshTokenRepository.delete(refresh);
+            throw new InvalidTokenException("Dispositivo não reconhecido. Faça login novamente.");
         }
 
         List<String> roles = rolesServices.loadRolesByUserID(refresh.getUserId()).stream()
