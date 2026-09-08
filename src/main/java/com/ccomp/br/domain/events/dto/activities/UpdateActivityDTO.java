@@ -5,9 +5,11 @@ import com.ccomp.br.domain.events.enums.activities.EnumActivityRegistrationRequi
 import com.ccomp.br.domain.events.enums.activities.EnumActivityType;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Size;
+import lombok.Builder;
 
 import java.time.LocalDateTime;
 
+@Builder
 public record UpdateActivityDTO(
         @Size(max = 255)
         String title,
