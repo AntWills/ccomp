@@ -1,7 +1,8 @@
 package com.ccomp.br.domain.events.persistence.activities;
 
-import com.ccomp.br.domain.events.enums.activities.ActivityAccessPolicy;
-import com.ccomp.br.domain.events.enums.activities.ActivityRegistrationRequirement;
+import com.ccomp.br.domain.events.enums.activities.EnumActivityAccessPolicy;
+import com.ccomp.br.domain.events.enums.activities.EnumActivityRegistrationRequirement;
+import com.ccomp.br.domain.events.enums.activities.EnumActivityType;
 import com.ccomp.br.domain.events.persistence.Event;
 import jakarta.persistence.*;
 import lombok.*;
@@ -31,6 +32,10 @@ public class EventActivity {
     @Column(columnDefinition = "TEXT", length = 1000)
     private String description;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false)
+    private EnumActivityType type;
+
     @Column(name = "display_order", nullable = false)
     @Builder.Default
     private Long displayOrder = 0L;
@@ -46,12 +51,20 @@ public class EventActivity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "registration_requirement", nullable = false)
-    private ActivityRegistrationRequirement registrationRequirement;
+    private EnumActivityRegistrationRequirement registrationRequirement;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "access_policy", nullable = false)
-    private ActivityAccessPolicy accessPolicy;
+    private EnumActivityAccessPolicy accessPolicy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @PrePersist
+    @PreUpdate
+    private void validateDates() {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("A data de início não pode ser posterior à data de término.");
+        }
+    }
 }

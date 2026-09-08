@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.events.enums.activities;
 
-public enum ActivityRegistrationRequirement {
+public enum EnumActivityRegistrationRequirement {
     NOT_REQUIRED,
     REQUIRED
 }
