@@ -13,7 +13,6 @@ import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -54,7 +53,7 @@ public class AuthApplication {
         userManagement.register(dto);
     }
 
-    public AccessTokenResponse signIn(LoginRequestDTO dto) {
+    public AccessTokenResponse signIn(LoginRequestDTO dto, ClientMetadataDTO metaDTO) {
         var authToken = new UsernamePasswordAuthenticationToken(
                 dto.email().getValue(), dto.password()
         );
@@ -73,11 +72,11 @@ public class AuthApplication {
 
         return new AccessTokenResponse(
                 jwtService.generateAccessToken(userDetails.getId(), roles),
-                jwtService.getRefreshToken(userDetails.getId()).getToken());
+                jwtService.createRefreshToken(userDetails.getId(), metaDTO).getToken());
     }
 
-    public Optional<RefreshTokenResponse> refresh(RefreshTokenRequest request){
-        return jwtService.validRefreshToken(request)
+    public Optional<RefreshTokenResponse> refresh(RefreshTokenRequest request, ClientMetadataDTO clientMetadata){
+        return jwtService.validRefreshToken(request, clientMetadata)
                 .map(RefreshTokenResponse::new);
     }
 

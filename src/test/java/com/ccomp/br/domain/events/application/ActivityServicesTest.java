@@ -128,7 +128,11 @@ public class ActivityServicesTest {
         @Test
         @DisplayName("Atualiza atividade com sucesso quando o usuário tem permissão")
         void updateActivity_returnsUpdatedActivityDTO_whenUserHasPermission() {
-            UpdateActivityDTO request = new UpdateActivityDTO("Novo Título", "Nova Descrição", null);
+            UpdateActivityDTO request = UpdateActivityDTO.builder()
+                    .title("Novo titulo")
+                    .description("nova descrição")
+                    .build();
+
             ActivityDTO expectedDTO = mock(ActivityDTO.class);
 
             when(existingActivity.getEvent()).thenReturn(existingEvent);
@@ -149,7 +153,10 @@ public class ActivityServicesTest {
         @Test
         @DisplayName("Lança ResourceNotFoundException quando a atividade não existe")
         void updateActivity_throwsResourceNotFoundException_whenActivityDoesNotExist() {
-            UpdateActivityDTO request = new UpdateActivityDTO("Novo Título", "Nova Descrição", null);
+            UpdateActivityDTO request = UpdateActivityDTO.builder()
+                    .title("Novo titulo")
+                    .description("nova descrição")
+                    .build();
 
             when(activityRepository.findById(activityId)).thenReturn(Optional.empty());
 

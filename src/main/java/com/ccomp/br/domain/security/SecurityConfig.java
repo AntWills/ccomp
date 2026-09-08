@@ -80,13 +80,14 @@ public class SecurityConfig {
             "/api/news"
     };
 
-    private static final String[] SWAGGER_ROUTES = {
+    private static final String[] DOCS_UI_ROUTES = {
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/webjars/**",
             "/favicon.ico",
             "/v3/api-docs/**",
-            "/v3/api-docs"
+            "/v3/api-docs",
+            "/scalar.html"
     };
 
     private static final String[] ACTUATOR_ROUTES = {
@@ -101,7 +102,7 @@ public class SecurityConfig {
         swaggerProvider.setPasswordEncoder(this.passwordEncoder());
         AuthenticationManager swaggerAuthManager = new ProviderManager(swaggerProvider);
 
-        http.securityMatcher(SWAGGER_ROUTES)
+        http.securityMatcher(DOCS_UI_ROUTES)
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())

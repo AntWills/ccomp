@@ -12,6 +12,7 @@ import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
+import io.swagger.v3.oas.models.tags.Tag;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -21,6 +22,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Configuration
 public class OpenApiConfig {
@@ -97,5 +100,22 @@ public class OpenApiConfig {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
         return new ModelResolver(objectMapper);
+    }
+
+    @Bean
+    public OpenApiCustomizer sortTagsAlphabetically() {
+        return openApi -> {
+            if (openApi.getPaths() != null) {
+                var sortedTags = openApi.getPaths().values().stream()
+                        .flatMap(pathItem -> pathItem.readOperations().stream())
+                        .flatMap(operation -> operation.getTags() != null ? operation.getTags().stream() : Stream.empty())
+                        .distinct()
+                        .sorted(String::compareToIgnoreCase)
+                        .map(tagName -> new Tag().name(tagName))
+                        .collect(Collectors.toList());
+
+                openApi.setTags(sortedTags);
+            }
+        };
     }
 }
