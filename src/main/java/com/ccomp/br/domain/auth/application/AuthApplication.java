@@ -13,7 +13,6 @@ import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -73,7 +72,7 @@ public class AuthApplication {
 
         return new AccessTokenResponse(
                 jwtService.generateAccessToken(userDetails.getId(), roles),
-                jwtService.getRefreshToken(userDetails.getId()).getToken());
+                jwtService.createRefreshToken(userDetails.getId()).getToken());
     }
 
     public Optional<RefreshTokenResponse> refresh(RefreshTokenRequest request){

@@ -53,12 +53,16 @@ public class JwtService {
     }
 
     @Transactional
-    public RefreshToken getRefreshToken(UUID userId){
-        refreshTokenRepository.deleteByUserId(userId);
+    public RefreshToken createRefreshToken(UUID userId){
+        refreshTokenRepository.findByUserId(userId)
+                        .ifPresent(refreshTokenRepository::delete);
+//        refreshTokenRepository.deleteByUserId(userId);
+
+        refreshTokenRepository.flush();
 
         RefreshToken refreshToken = RefreshToken.builder()
                 .userId(userId)
-                .token(UUID.randomUUID().toString())
+                .token(UUID.randomUUID())
                 .expiryDate(Instant.now().plusSeconds(refreshExpirationInSeconds))
                 .build();
 
