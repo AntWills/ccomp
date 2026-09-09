@@ -308,6 +308,14 @@
             <artifactId>spring-boot-starter-amqp-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Source: https://mvnrepository.com/artifact/io.github.openfeign.querydsl/querydsl-core -->
+        <dependency>
+            <groupId>io.github.openfeign.querydsl</groupId>
+            <artifactId>querydsl-jpa</artifactId>
+            <version>${openfeign-querydsl.version}</version>
+        </dependency>
+
+
 
     </dependencies>
 
@@ -316,84 +324,42 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
                 <configuration>
                     <annotationProcessorPaths>
+                        <!-- 1. Lombok -->
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                         </path>
-
+                        <!-- 2. MapStruct -->
                         <path>
                             <groupId>org.mapstruct</groupId>
                             <artifactId>mapstruct-processor</artifactId>
                             <version>1.6.3</version>
                         </path>
-
+                        <!-- 3. JPA Model Gen (Opcional, se ainda for usar metamodel do Hibernate) -->
                         <path>
                             <groupId>org.hibernate.orm</groupId>
                             <artifactId>hibernate-jpamodelgen</artifactId>
                             <version>${hibernate.version}</version>
                         </path>
+                        <!-- 4. QueryDSL APT (Gera as classes Q) -->
+                        <path>
+                            <groupId>io.github.openfeign.querydsl</groupId>
+                            <artifactId>querydsl-apt</artifactId>
+                            <version>${openfeign-querydsl.version}</version>
+                            <classifier>jpa</classifier>
+                        </path>
+                        <path>
+                            <groupId>jakarta.persistence</groupId>
+                            <artifactId>jakarta.persistence-api</artifactId>
+                            <version>3.1.0</version>
+                        </path>
                     </annotationProcessorPaths>
                 </configuration>
-                <executions>
-                    <!-- Execução isolada só para o QueryDSL: o jar querydsl-apt
-                         de propósito NÃO se registra via META-INF/services
-                         (empacota vários processors: JPA, JDO, bean genérico),
-                         então precisa do processor explícito. Se isso fosse
-                         declarado na execução default acima, desligaria a
-                         auto-descoberta do Lombok/MapStruct/Hibernate também —
-                         por isso roda à parte, na fase generate-sources. -->
-                    <execution>
-                        <id>generate-querydsl-sources</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
-                        <configuration>
-                            <proc>only</proc>
-                            <generatedSourcesDirectory>${project.build.directory}/generated-sources/querydsl</generatedSourcesDirectory>
-                            <annotationProcessorPaths>
-                                <path>
-                                    <groupId>io.github.openfeign.querydsl</groupId>
-                                    <artifactId>querydsl-apt</artifactId>
-                                    <version>${openfeign-querydsl.version}</version>
-                                </path>
-                                <path>
-                                    <groupId>jakarta.persistence</groupId>
-                                    <artifactId>jakarta.persistence-api</artifactId>
-                                </path>
-                            </annotationProcessorPaths>
-                            <annotationProcessors>
-                                <annotationProcessor>com.querydsl.apt.jpa.JPAAnnotationProcessor</annotationProcessor>
-                            </annotationProcessors>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
-            <!-- Garante que target/generated-sources/querydsl seja tratado
-                 como pasta de código-fonte (algumas versões/IDEs não pegam
-                 automaticamente uma generatedSourcesDirectory customizada
-                 vinda de uma execução separada do compiler plugin). -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.6.0</version>
-                <executions>
-                    <execution>
-                        <id>add-querydsl-source</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>${project.build.directory}/generated-sources/querydsl</source>
-                            </sources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>

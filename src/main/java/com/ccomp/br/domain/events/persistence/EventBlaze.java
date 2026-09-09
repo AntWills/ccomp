@@ -9,12 +9,17 @@ import com.ccomp.br.shared.dto.EventListItemView;
 import com.ccomp.br.domain.events.dto.events.EventsFilterRequest;
 import com.ccomp.br.domain.events.enums.EnumEventStatus;
 import com.ccomp.br.shared.utils.BlazeQueryExecutor;
+import com.querydsl.core.BooleanBuilder;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.metamodel.Attribute;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.UUID;
+
+import static com.ccomp.br.domain.events.persistence.QEvent.event;
+import static com.ccomp.br.domain.events.persistence.editors.QEventEditor.eventEditor;
 
 @Component
 public class EventBlaze {
@@ -23,11 +28,14 @@ public class EventBlaze {
     private final EntityManager em;
     private final CriteriaBuilderFactory cbf;
     private final BlazeQueryExecutor blazeQueryExecutor;
+    private final JPAQueryFactory queryFactory;
 
-    public EventBlaze(EntityManager em, CriteriaBuilderFactory cbf, BlazeQueryExecutor blazeQueryExecutor) {
+
+    public EventBlaze(EntityManager em, CriteriaBuilderFactory cbf, BlazeQueryExecutor blazeQueryExecutor, JPAQueryFactory queryFactory) {
         this.em = em;
         this.cbf = cbf;
         this.blazeQueryExecutor = blazeQueryExecutor;
+        this.queryFactory = queryFactory;
     }
 
     public List<EventListItemView> findByCursor(EventsFilterRequest filter, EventCursor cursor, int limit) {
@@ -124,8 +132,30 @@ public class EventBlaze {
         return blazeQueryExecutor.fetchList(cb, EventListItemView.class);
     }
 
-    public List<EventListItemView> findAllWhereUserIsEditorDsl(UUID editorId, EventCursor cursor, int limit) {
+    public List<Event> findAllWhereUserIsEditorDsl(UUID editorId, EventCursor cursor, int limit) {
+        BooleanBuilder whereClause = new BooleanBuilder();
 
+        whereClause.and(eventEditor.userId.eq(editorId));
+        whereClause.and(eventEditor.status.eq(EnumEditorsStatus.ACTIVE));
+
+        // Condição do Cursor (Keyset Pagination)
+        if (cursor != null && cursor.id() != null && cursor.startDate() != null) {
+            whereClause.and(
+                    event.startDate.lt(cursor.startDate())
+                            .or(
+                                    event.startDate.eq(cursor.startDate())
+                                            .and(event.id.lt(cursor.id()))
+                            )
+            );
+        }
+
+        return queryFactory
+                .selectFrom(event)
+                .innerJoin(event.editors, eventEditor)
+                .where(whereClause)
+                .orderBy(event.startDate.desc(), event.id.desc())
+                .limit(limit)
+                .fetch();
     }
 
     private String path(Attribute<?, ?> attribute) {
