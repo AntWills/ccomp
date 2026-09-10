@@ -60,7 +60,7 @@ public class EnrollmentsServices {
     }
 
     @Transactional
-    public MessageResponse subscribe(UUID userId, Long eventId) {
+    public Enrollment subscribe(UUID userId, Long eventId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -81,13 +81,13 @@ public class EnrollmentsServices {
             Enrollment enrollment = existingEnrollment.get();
 
             if (enrollment.isActive())
-                return new MessageResponse("Inscrição realizada com sucesso.");
+                return enrollment;
 
 
             // Se a inscrição estava cancelada previamente, reativa mantendo o mesmo registro no banco
             enrollment.setStatus(EnumEnrollmentState.CONFIRMED);
             enrollmentRepository.save(enrollment);
-            return new MessageResponse("Inscrição realizada com sucesso.");
+            return enrollment;
         }
 
         Enrollment newEnrollment = Enrollment.builder()
@@ -96,9 +96,7 @@ public class EnrollmentsServices {
                 .status(EnumEnrollmentState.CONFIRMED)
                 .build();
 
-        enrollmentRepository.save(newEnrollment);
-
-        return new MessageResponse("Inscrição realizada com sucesso.");
+        return enrollmentRepository.save(newEnrollment);
     }
 
     @Transactional

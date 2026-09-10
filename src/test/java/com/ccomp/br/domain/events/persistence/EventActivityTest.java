@@ -6,7 +6,7 @@ import com.ccomp.br.domain.events.dto.activities.EventActivityView;
 import com.ccomp.br.domain.events.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.enums.EnumEventFormat;
 import com.ccomp.br.domain.events.enums.EnumEventStatus;
-import com.ccomp.br.domain.events.enums.activities.EnumActivityAccessPolicy;
+import com.ccomp.br.domain.events.enums.activities.EnumActivityRegistrationPolicy;
 import com.ccomp.br.domain.events.enums.activities.EnumActivityRegistrationRequirement;
 import com.ccomp.br.domain.events.enums.activities.EnumActivityType;
 import com.ccomp.br.domain.events.persistence.activities.EventActivity;
@@ -49,8 +49,7 @@ public class EventActivityTest {
                 .event(evento)
                 .title("Palestra de Abertura")
                 .type(EnumActivityType.LECTURE)
-                .registrationRequirement(EnumActivityRegistrationRequirement.REQUIRED)
-                .accessPolicy(EnumActivityAccessPolicy.PUBLIC)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
                 .startDate(LocalDateTime.of(2026, 10, 20, 15, 0))
                 .endDate(LocalDateTime.of(2026, 10, 20, 14, 0)) // Data final anterior
                 .build();
@@ -105,8 +104,7 @@ public class EventActivityTest {
                 .event(event)
                 .title(title)
                 .type(EnumActivityType.LECTURE)
-                .registrationRequirement(EnumActivityRegistrationRequirement.REQUIRED)
-                .accessPolicy(EnumActivityAccessPolicy.PUBLIC)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
                 .displayOrder(0L)
                 .createdAt(createdAt) // Necessário para a ordenação/cursor do Blaze
                 .build();

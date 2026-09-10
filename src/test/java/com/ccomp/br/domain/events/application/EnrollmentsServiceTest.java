@@ -72,10 +72,9 @@ public class EnrollmentsServiceTest {
             when(existingEvent.getEnrollmentStatus()).thenReturn(EnumEnrollmentStatus.OPEN);
             when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.empty());
 
-            MessageResponse response = enrollmentsServices.subscribe(userId, eventId);
+            var enrollment = enrollmentsServices.subscribe(userId, eventId);
 
-            assertThat(response).isNotNull();
-            assertThat(response.response()).isEqualTo("Inscrição realizada com sucesso.");
+            assertThat(enrollment).isNotNull();
 
             verify(enrollmentRepository).save(any(Enrollment.class));
         }
@@ -90,10 +89,9 @@ public class EnrollmentsServiceTest {
             when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(existingEnrollment));
             when(existingEnrollment.isActive()).thenReturn(false);
 
-            MessageResponse response = enrollmentsServices.subscribe(userId, eventId);
+            var enrollment = enrollmentsServices.subscribe(userId, eventId);
 
-            assertThat(response).isNotNull();
-            assertThat(response.response()).isEqualTo("Inscrição realizada com sucesso.");
+            assertThat(enrollment).isNotNull();
 
             verify(enrollmentRepository).save(any(Enrollment.class));
         }
@@ -108,10 +106,9 @@ public class EnrollmentsServiceTest {
             when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(existingEnrollment));
             when(existingEnrollment.isActive()).thenReturn(true); // Indica que u usuário tem inscrição ativa.
 
-            MessageResponse response = enrollmentsServices.subscribe(userId, eventId);
+            var enrollment = enrollmentsServices.subscribe(userId, eventId);
 
-            assertThat(response).isNotNull();
-            assertThat(response.response()).isEqualTo("Inscrição realizada com sucesso.");
+            assertThat(enrollment).isNotNull();
 
             verify(enrollmentRepository, never()).save(any(Enrollment.class));
         }

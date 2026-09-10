@@ -1,7 +1,6 @@
 package com.ccomp.br.domain.events.persistence.activities;
 
-import com.ccomp.br.domain.events.enums.activities.EnumActivityAccessPolicy;
-import com.ccomp.br.domain.events.enums.activities.EnumActivityRegistrationRequirement;
+import com.ccomp.br.domain.events.enums.activities.EnumActivityRegistrationPolicy;
 import com.ccomp.br.domain.events.enums.activities.EnumActivityType;
 import com.ccomp.br.domain.events.persistence.Event;
 import jakarta.persistence.*;
@@ -48,12 +47,8 @@ public class EventActivity {
     private LocalDateTime endDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "registration_requirement", nullable = false)
-    private EnumActivityRegistrationRequirement registrationRequirement;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "access_policy", nullable = false)
-    private EnumActivityAccessPolicy accessPolicy;
+    @Column(name = "registration_policy", nullable = false)
+    private EnumActivityRegistrationPolicy registrationPolicy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -80,5 +75,13 @@ public class EventActivity {
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
             throw new IllegalArgumentException("A data de início não pode ser posterior à data de término.");
         }
+    }
+
+    public boolean isPublic() {
+        return registrationPolicy == EnumActivityRegistrationPolicy.PUBLIC;
+    }
+
+    public boolean requireRegistrationEvent() {
+        return registrationPolicy == EnumActivityRegistrationPolicy.EVENT_REGISTRANTS_ONLY;
     }
 }

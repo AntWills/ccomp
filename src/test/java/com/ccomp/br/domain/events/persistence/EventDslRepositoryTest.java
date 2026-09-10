@@ -1,6 +1,5 @@
 package com.ccomp.br.domain.events.persistence;
 
-import com.ccomp.br.config.BlazePersistenceConfig;
 import com.ccomp.br.config.QueryDslConfig;
 import com.ccomp.br.domain.events.dto.events.EventCursor;
 import com.ccomp.br.domain.events.dto.events.EventListItemDTO;
@@ -10,7 +9,6 @@ import com.ccomp.br.domain.events.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.enums.editors.EnumEditorsStatus;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
-import com.ccomp.br.shared.utils.BlazeQueryExecutor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,12 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import({
-        BlazePersistenceConfig.class,
-        EventDslRepository.class,
-        BlazeQueryExecutor.class,
-        QueryDslConfig.class
-})
+@Import({QueryDslConfig.class, EventDslRepository.class})
 public class EventDslRepositoryTest {
     @Autowired
     private EventRepository eventRepository;

@@ -2,6 +2,7 @@ package com.ccomp.br.domain.events.web;
 
 import com.ccomp.br.domain.events.application.EnrollmentsServices;
 import com.ccomp.br.domain.events.dto.enrollments.EnrollmentListItem;
+import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -90,14 +91,16 @@ public class EnrollmentsController {
             @ApiResponse(responseCode = "404", description = "Evento não encontrado")
     })
     @PostMapping("/{eventId}/subscribe")
-    public ResponseEntity<?> subscribe(@PathVariable Long eventId, @AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<MessageResponse> subscribe(@PathVariable Long eventId, @AuthenticationPrincipal Jwt jwt) {
         UUID userId = Optional.ofNullable(jwt)
                 .map(Jwt::getSubject)
                 .map(UUID::fromString)
                 .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
 
+        enrollmentsServices.subscribe(userId, eventId);
+
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(enrollmentsServices.subscribe(userId, eventId));
+                .body(new MessageResponse("Inscrição realizada com sucesso."));
     }
 
     @Operation(summary = "Cancela inscrição em um evento", description = "Remove a inscrição do usuário autenticado no evento informado.")
