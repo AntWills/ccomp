@@ -2,6 +2,7 @@ package com.ccomp.br.domain.events.persistence.enrollments;
 
 import com.ccomp.br.domain.events.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.events.persistence.Event;
+import com.ccomp.br.domain.events.persistence.activities.EnrollmentActivity;
 import com.ccomp.br.shared.exceptions.DomainException;
 import jakarta.persistence.*;
 import lombok.*;
@@ -9,6 +10,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Table(
@@ -38,10 +41,6 @@ public class Enrollment {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "events_id", nullable = false)
-    private Event event;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "status", columnDefinition = "varchar(20)", nullable = false)
     @Builder.Default
@@ -57,6 +56,21 @@ public class Enrollment {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "events_id",
+            foreignKey = @ForeignKey(name = "fk_event_enrollments_event")
+    )
+    private Event event;
+
+    @OneToMany(
+            mappedBy = "enrollment",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @Builder.Default
+    private Set<EnrollmentActivity> activities = new HashSet<>();
 
     public Enrollment(UUID userId, Event event) {
         this.userId = userId;

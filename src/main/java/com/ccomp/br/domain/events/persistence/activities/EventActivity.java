@@ -8,6 +8,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Table(name = "tb_event_activities")
 @Entity
@@ -21,10 +23,6 @@ public class EventActivity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "event_id", nullable = false)
-    private Event event;
 
     @Column(nullable = false)
     private String title;
@@ -59,6 +57,22 @@ public class EventActivity {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "event_id",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_event_activities_event")
+    )
+    private Event event;
+
+    @OneToMany(
+            mappedBy = "activity",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @Builder.Default
+    private Set<EnrollmentActivity> activities = new HashSet<>();
 
     @PrePersist
     @PreUpdate
