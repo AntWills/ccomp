@@ -133,7 +133,7 @@ public class EventsController {
     })
     @SecurityRequirements
     @PostMapping("search")
-    public ResponseEntity<CursorPage<EventListItemView>> searchEvents(
+    public ResponseEntity<CursorPage<EventListItemDTO>> searchEvents(
             @Valid @RequestBody EventsFilterRequest filter,
             @Parameter(description = "Cursor para carregar a próxima página")
             @RequestParam(required = false) String nextCursor,

@@ -3,6 +3,7 @@ package com.ccomp.br.domain.highlights.web;
 import com.ccomp.br.domain.clubs.application.ClubService;
 import com.ccomp.br.domain.clubs.dto.ClubResponseDTO;
 import com.ccomp.br.domain.events.application.EventsServices;
+import com.ccomp.br.domain.events.dto.events.EventListItemDTO;
 import com.ccomp.br.shared.dto.EventListItemView;
 import com.ccomp.br.domain.events.dto.events.EventsFilterRequest;
 import com.ccomp.br.domain.highlights.dto.AllHighlights;
@@ -94,7 +95,7 @@ public class HighlightsController {
     })
     @SecurityRequirements
     @GetMapping("events")
-    public ResponseEntity<List<EventListItemView>> highlightsEvents() {
+    public ResponseEntity<List<EventListItemDTO>> highlightsEvents() {
         return ResponseEntity.ok(
                 eventsServices.searchEventsWithFilters(new EventsFilterRequest(null, null), null, 3).content()
         );
