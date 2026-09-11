@@ -5,6 +5,8 @@ import com.ccomp.br.domain.events.dto.activities.CreateActivityDTO;
 import com.ccomp.br.domain.events.dto.activities.EventActivityCursor;
 import com.ccomp.br.domain.events.dto.activities.UpdateActivityDTO;
 import com.ccomp.br.domain.events.dto.activities.EventActivityView;
+import com.ccomp.br.domain.events.enums.activities.EnumActivityRegistrationPolicy;
+import com.ccomp.br.domain.events.enums.activities.EnumActivityType;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.persistence.activities.EventActivity;
@@ -75,6 +77,8 @@ public class ActivitiesServices {
                 .event(event)
                 .title(request.title())
                 .description(request.description())
+                .registrationPolicy(EnumActivityRegistrationPolicy.EVENT_REGISTRANTS_ONLY)
+                .type(EnumActivityType.OTHER)
                 .createdAt(LocalDateTime.now())
                 .build();
 

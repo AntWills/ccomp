@@ -37,15 +37,6 @@ public class EnrollmentsServiceTest {
     @Mock
     private EnrollmentRepository enrollmentRepository;
 
-    @Mock
-    private EnrollmentBlaze enrollmentBlaze;
-
-    @Mock
-    private UserManagement userManagement;
-
-    @Mock
-    private EnrollmentMapper enrollmentMapper;
-
     @InjectMocks
     private EnrollmentsServices enrollmentsServices;
 
@@ -68,14 +59,21 @@ public class EnrollmentsServiceTest {
         void subscribe_returnSuccess_whenNotSubscriber() {
             UUID userId = UUID.randomUUID();
 
+            var savedEnrollment = Enrollment.builder()
+                    .userId(userId)
+                    .event(existingEvent)
+                    .status(EnumEnrollmentState.CONFIRMED)
+                    .build();
+
+
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
             when(existingEvent.getEnrollmentStatus()).thenReturn(EnumEnrollmentStatus.OPEN);
             when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.empty());
+            when(enrollmentRepository.save(any(Enrollment.class))).thenReturn(existingEnrollment);
 
-            MessageResponse response = enrollmentsServices.subscribe(userId, eventId);
+            var enrollment = enrollmentsServices.subscribe(userId, eventId);
 
-            assertThat(response).isNotNull();
-            assertThat(response.response()).isEqualTo("Inscrição realizada com sucesso.");
+            assertThat(enrollment).isNotNull();
 
             verify(enrollmentRepository).save(any(Enrollment.class));
         }
@@ -90,10 +88,9 @@ public class EnrollmentsServiceTest {
             when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(existingEnrollment));
             when(existingEnrollment.isActive()).thenReturn(false);
 
-            MessageResponse response = enrollmentsServices.subscribe(userId, eventId);
+            var enrollment = enrollmentsServices.subscribe(userId, eventId);
 
-            assertThat(response).isNotNull();
-            assertThat(response.response()).isEqualTo("Inscrição realizada com sucesso.");
+            assertThat(enrollment).isNotNull();
 
             verify(enrollmentRepository).save(any(Enrollment.class));
         }
@@ -108,10 +105,9 @@ public class EnrollmentsServiceTest {
             when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(existingEnrollment));
             when(existingEnrollment.isActive()).thenReturn(true); // Indica que u usuário tem inscrição ativa.
 
-            MessageResponse response = enrollmentsServices.subscribe(userId, eventId);
+            var enrollment = enrollmentsServices.subscribe(userId, eventId);
 
-            assertThat(response).isNotNull();
-            assertThat(response.response()).isEqualTo("Inscrição realizada com sucesso.");
+            assertThat(enrollment).isNotNull();
 
             verify(enrollmentRepository, never()).save(any(Enrollment.class));
         }

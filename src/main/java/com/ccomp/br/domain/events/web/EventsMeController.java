@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.web;
 
 import com.ccomp.br.domain.events.application.EventsServices;
+import com.ccomp.br.domain.events.dto.events.EventListItemDTO;
 import com.ccomp.br.shared.dto.EventListItemView;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -50,7 +51,7 @@ public class EventsMeController {
             }
     )
     @GetMapping("created")
-    public ResponseEntity<CursorPage<EventListItemView>> getCreatedEvents(
+    public ResponseEntity<CursorPage<EventListItemDTO>> getCreatedEvents(
             @Parameter(description = "Cursor para carregar a próxima página")
             @RequestParam(required = false) String nextCursor,
             @Parameter(description = "Quantidade de registros por página (Padrão: 10, Máximo: 50)")
@@ -81,7 +82,7 @@ public class EventsMeController {
                     )
             }
     )
-    public ResponseEntity<CursorPage<EventListItemView>> getSubscriptions(
+    public ResponseEntity<CursorPage<EventListItemDTO>> getSubscriptions(
             @Parameter(description = "Cursor para carregar a próxima página")
             @RequestParam(required = false) String nextCursor,
             @Parameter(description = "Quantidade de registros por página (Padrão: 10, Máximo: 50)")
@@ -111,7 +112,7 @@ public class EventsMeController {
                     )
             }
     )
-    public ResponseEntity<CursorPage<EventListItemView>> getMeEventsEditors(
+    public ResponseEntity<CursorPage<EventListItemDTO>> getMeEventsEditors(
             @Parameter(description = "Cursor para carregar a próxima página")
             @RequestParam(required = false) String nextCursor,
             @Parameter(description = "Quantidade de registros por página (Padrão: 10, Máximo: 50)")

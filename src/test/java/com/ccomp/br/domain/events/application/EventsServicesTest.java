@@ -5,15 +5,13 @@ import com.ccomp.br.domain.events.dto.events.EventDTO;
 import com.ccomp.br.domain.events.dto.events.UpdateEventDTO;
 import com.ccomp.br.domain.events.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.persistence.Event;
-import com.ccomp.br.domain.events.persistence.EventBlaze;
+import com.ccomp.br.domain.events.persistence.EventDslRepository;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
-import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
-import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -48,7 +46,7 @@ public class EventsServicesTest {
     private EditorServices editorServices;
 
     @Mock
-    private EventBlaze eventBlaze;
+    private EventDslRepository eventDslRepository;
 
     @InjectMocks
     private EventsServices eventsServices;

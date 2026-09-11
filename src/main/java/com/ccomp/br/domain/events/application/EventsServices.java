@@ -2,14 +2,13 @@ package com.ccomp.br.domain.events.application;
 
 import com.ccomp.br.domain.events.dto.events.*;
 import com.ccomp.br.domain.events.enums.EnumEventStatus;
-import com.ccomp.br.domain.events.persistence.EventBlaze;
+import com.ccomp.br.domain.events.persistence.EventDslRepository;
 import com.ccomp.br.domain.events.util.EventMapper;
 import com.ccomp.br.domain.news.util.SlugUtils;
 import com.ccomp.br.domain.security.SecurityUtils;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
-import com.ccomp.br.shared.dto.EventListItemView;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
@@ -36,14 +35,14 @@ public class EventsServices {
     private final UserManagement userManagement;
     private final EventMapper eventMapper;
     private final EditorServices editorServices;
-    private final EventBlaze eventBlaze;
+    private final EventDslRepository eventDslRepository;
 
-    public EventsServices(EventRepository eventRepository, UserManagement userManagement, EventMapper eventMapper, EditorServices editorServices, EventBlaze eventBlaze) {
+    public EventsServices(EventRepository eventRepository, UserManagement userManagement, EventMapper eventMapper, EditorServices editorServices, EventDslRepository eventDslRepository) {
         this.eventRepository = eventRepository;
         this.userManagement = userManagement;
         this.eventMapper = eventMapper;
         this.editorServices = editorServices;
-        this.eventBlaze = eventBlaze;
+        this.eventDslRepository = eventDslRepository;
     }
 
     // ---- Consultas ----
@@ -72,56 +71,60 @@ public class EventsServices {
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<EventListItemView> searchEventsWithFilters(
+    public CursorPage<EventListItemDTO> searchEventsWithFilters(
             EventsFilterRequest filter, @Nullable String cursor, int pageSize) {
         int finalPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
 
         EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class);
 
-        List<EventListItemView> events = eventBlaze.findByCursor(filter, decodedCursor, finalPageSize + 1);
+//        List<EventListItemView> events = eventBlaze.findByCursor(filter, decodedCursor, finalPageSize + 1);
+        List<EventListItemDTO> events = eventDslRepository.findByCursor(filter, decodedCursor, finalPageSize + 1);
 
         log.info("Quantidade de eventos retornados: {}", events.size());
         log.info("Horário da consulta: {}", LocalDateTime.now());
 
-        return CursorUtils.buildPage(events, finalPageSize, e -> new EventCursor(e.getStartDate(), e.getId()));
+        return CursorUtils.buildPage(
+                events,
+                finalPageSize,
+                e -> new EventCursor(e.startDate(), e.id()));
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<EventListItemView> findAllByOwnerId(UUID ownerId, @Nullable String cursor, int pageSize) {
+    public CursorPage<EventListItemDTO> findAllByOwnerId(UUID ownerId, @Nullable String cursor, int pageSize) {
         int finalPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
         EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class);
 
-        List<EventListItemView> events = eventBlaze
-                .findAllByOwnerId(ownerId, decodedCursor, finalPageSize + 1);
-
+//        List<EventListItemView> events = eventBlaze
+//                .findAllByOwnerId(ownerId, decodedCursor, finalPageSize + 1);
+        List<EventListItemDTO> events = eventDslRepository.findAllByOwnerId(ownerId, decodedCursor, finalPageSize + 1);
 
         return CursorUtils.buildPage(events, finalPageSize,
-                e -> new EventCursor(e.getStartDate(), e.getId()));
+                e -> new EventCursor(e.startDate(), e.id()));
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<EventListItemView> findAllSubscriptions(UUID participantId, @Nullable String cursor, int pageSize) {
+    public CursorPage<EventListItemDTO> findAllSubscriptions(UUID participantId, @Nullable String cursor, int pageSize) {
         int finalPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
         EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class);
 
-        List<EventListItemView> events = eventBlaze
+        List<EventListItemDTO> events = eventDslRepository
                 .findAllSubscriptions(participantId, decodedCursor, finalPageSize + 1);
 
 
         return CursorUtils.buildPage(events, finalPageSize,
-                e -> new EventCursor(e.getStartDate(), e.getId()));
+                e -> new EventCursor(e.startDate(), e.id()));
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<EventListItemView> findMyEditableEvents(UUID editorId, @Nullable String cursor, int pageSize) {
+    public CursorPage<EventListItemDTO> findMyEditableEvents(UUID editorId, @Nullable String cursor, int pageSize) {
         int finalPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
         EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class);
 
-        List<EventListItemView> events = eventBlaze
+        List<EventListItemDTO> events = eventDslRepository
                 .findAllWhereUserIsEditor(editorId, decodedCursor, finalPageSize + 1);
 
         return CursorUtils.buildPage(events, finalPageSize,
-                e -> new EventCursor(e.getStartDate(), e.getId()));
+                e -> new EventCursor(e.startDate(), e.id()));
     }
 
     // ---- Comandos ----
