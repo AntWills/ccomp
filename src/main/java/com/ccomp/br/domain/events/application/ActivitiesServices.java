@@ -6,7 +6,6 @@ import com.ccomp.br.domain.events.dto.activities.EventActivityCursor;
 import com.ccomp.br.domain.events.dto.activities.UpdateActivityDTO;
 import com.ccomp.br.domain.events.dto.activities.EventActivityView;
 import com.ccomp.br.domain.events.enums.activities.EnumActivityRegistrationPolicy;
-import com.ccomp.br.domain.events.enums.activities.EnumActivityRegistrationRequirement;
 import com.ccomp.br.domain.events.enums.activities.EnumActivityType;
 import com.ccomp.br.domain.events.persistence.Event;
 import com.ccomp.br.domain.events.persistence.EventRepository;

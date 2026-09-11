@@ -9,6 +9,7 @@ CREATE TABLE tb_event_enrollment_activities (
 
     enrollment_id BIGINT NOT NULL,
     activity_id BIGINT NOT NULL,
+    created_at TIMESTAMP(6) NOT NULL,
 
     CONSTRAINT pk_event_enrollment_activities
         PRIMARY KEY (id),
@@ -32,6 +33,9 @@ CREATE INDEX idx_enrollment_activity_enrollment
 
 CREATE INDEX idx_enrollment_activity_activity
     ON tb_event_enrollment_activities (activity_id);
+
+CREATE INDEX idx_enrollment_activity_created_at
+    ON tb_event_enrollment_activities (created_at);
 
 
 

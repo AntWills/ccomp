@@ -3,6 +3,9 @@ package com.ccomp.br.domain.events.persistence.activities;
 import com.ccomp.br.domain.events.persistence.enrollments.Enrollment;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(
@@ -21,6 +24,10 @@ import lombok.*;
                 @Index(
                         name = "idx_enrollment_activity_activity",
                         columnList = "activity_id"
+                ),
+                @Index(
+                        name = "idx_enrollment_activity_created_at",
+                        columnList = "created_at"
                 )
         }
 )
@@ -49,6 +56,10 @@ public class EnrollmentActivity {
             foreignKey = @ForeignKey(name = "fk_enrollment_activity_activity")
     )
     private EventActivity activity;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     public EnrollmentActivity(Enrollment enrollment, EventActivity activity) {
         this.enrollment = enrollment;

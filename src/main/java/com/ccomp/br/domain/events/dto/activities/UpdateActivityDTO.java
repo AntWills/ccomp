@@ -1,7 +1,6 @@
 package com.ccomp.br.domain.events.dto.activities;
 
 import com.ccomp.br.domain.events.enums.activities.EnumActivityRegistrationPolicy;
-import com.ccomp.br.domain.events.enums.activities.EnumActivityRegistrationRequirement;
 import com.ccomp.br.domain.events.enums.activities.EnumActivityType;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Size;
@@ -25,8 +24,6 @@ public record UpdateActivityDTO(
         LocalDateTime startDate,
 
         LocalDateTime endDate,
-
-        EnumActivityRegistrationRequirement registrationRequirement,
 
         EnumActivityRegistrationPolicy registrationPolicy,
 

@@ -7,7 +7,6 @@ import com.ccomp.br.domain.events.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.enums.EnumEventFormat;
 import com.ccomp.br.domain.events.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.enums.activities.EnumActivityRegistrationPolicy;
-import com.ccomp.br.domain.events.enums.activities.EnumActivityRegistrationRequirement;
 import com.ccomp.br.domain.events.enums.activities.EnumActivityType;
 import com.ccomp.br.domain.events.persistence.activities.EventActivity;
 import com.ccomp.br.domain.events.persistence.activities.EventActivityBlaze;
