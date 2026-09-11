@@ -25,17 +25,10 @@ import static com.ccomp.br.domain.events.persistence.enrollments.QEnrollment.enr
 @Component
 public class EventDslRepository {
     private static final String ALIAS = "event";
-
-    private final EntityManager em;
-    private final CriteriaBuilderFactory cbf;
-    private final BlazeQueryExecutor blazeQueryExecutor;
     private final JPAQueryFactory queryFactory;
 
 
-    public EventDslRepository(EntityManager em, CriteriaBuilderFactory cbf, BlazeQueryExecutor blazeQueryExecutor, JPAQueryFactory queryFactory) {
-        this.em = em;
-        this.cbf = cbf;
-        this.blazeQueryExecutor = blazeQueryExecutor;
+    public EventDslRepository(JPAQueryFactory queryFactory) {
         this.queryFactory = queryFactory;
     }
 

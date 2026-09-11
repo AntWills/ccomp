@@ -37,15 +37,6 @@ public class EnrollmentsServiceTest {
     @Mock
     private EnrollmentRepository enrollmentRepository;
 
-    @Mock
-    private EnrollmentBlaze enrollmentBlaze;
-
-    @Mock
-    private UserManagement userManagement;
-
-    @Mock
-    private EnrollmentMapper enrollmentMapper;
-
     @InjectMocks
     private EnrollmentsServices enrollmentsServices;
 
@@ -68,9 +59,17 @@ public class EnrollmentsServiceTest {
         void subscribe_returnSuccess_whenNotSubscriber() {
             UUID userId = UUID.randomUUID();
 
+            var savedEnrollment = Enrollment.builder()
+                    .userId(userId)
+                    .event(existingEvent)
+                    .status(EnumEnrollmentState.CONFIRMED)
+                    .build();
+
+
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
             when(existingEvent.getEnrollmentStatus()).thenReturn(EnumEnrollmentStatus.OPEN);
             when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.empty());
+            when(enrollmentRepository.save(any(Enrollment.class))).thenReturn(existingEnrollment);
 
             var enrollment = enrollmentsServices.subscribe(userId, eventId);
 
