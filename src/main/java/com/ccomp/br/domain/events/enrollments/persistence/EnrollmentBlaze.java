@@ -2,7 +2,6 @@ package com.ccomp.br.domain.events.enrollments.persistence;
 
 import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentsCursor;
-import com.ccomp.br.domain.events.persistence.enrollments.Enrollment_;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.metamodel.Attribute;
 import org.springframework.stereotype.Component;

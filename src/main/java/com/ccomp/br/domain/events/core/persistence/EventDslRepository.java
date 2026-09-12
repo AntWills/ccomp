@@ -16,9 +16,10 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.UUID;
 
-import static com.ccomp.br.domain.events.persistence.QEvent.event;
-import static com.ccomp.br.domain.events.persistence.editors.QEventEditor.eventEditor;
-import static com.ccomp.br.domain.events.persistence.enrollments.QEnrollment.enrollment;
+import static com.ccomp.br.domain.events.core.persistence.QEvent.event;
+import static com.ccomp.br.domain.events.editors.persistence.QEventEditor.eventEditor;
+import static com.ccomp.br.domain.events.enrollments.persistence.QEnrollment.enrollment;
+
 
 @Repository
 public class EventDslRepository {

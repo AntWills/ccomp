@@ -4,10 +4,10 @@ import com.ccomp.br.domain.events.core.persistence.Event;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.stereotype.Repository;
 
-import static com.ccomp.br.domain.events.persistence.QEvent.event;
-import static com.ccomp.br.domain.events.persistence.QEventActivity.eventActivity;
-
 import java.util.Optional;
+
+import static com.ccomp.br.domain.events.activities.persistence.QEventActivity.eventActivity;
+import static com.ccomp.br.domain.events.core.persistence.QEvent.event;
 
 @Repository
 public class EventActivityDslRepository {

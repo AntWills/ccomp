@@ -12,8 +12,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.ccomp.br.domain.events.persistence.QEnrollmentActivity.enrollmentActivity;
-import static com.ccomp.br.domain.events.persistence.enrollments.QEnrollment.enrollment;
+import static com.ccomp.br.domain.events.enrollments.persistence.QEnrollment.enrollment;
+import static com.ccomp.br.domain.events.enrollments.persistence.QEnrollmentActivity.enrollmentActivity;
 import static com.ccomp.br.domain.users.persistence.QUserModel.userModel;
 
 @Component
