@@ -9,13 +9,16 @@ import com.ccomp.br.domain.events.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.enums.editors.EnumEditorsStatus;
 import com.ccomp.br.domain.events.persistence.editors.EventEditor;
 import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.util.StopWatch;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -48,7 +51,7 @@ public class EventDslRepositoryTest {
 
     @Test
     void shouldPaginateWhereUserIsEditorUsingQueryDsl() {
-        // Setup: Inserir 3 eventos com datas crescentes
+        // Setup:    Inserir 3 eventos com datas crescentes
         Event event1 = persistEventWithEditor("Evento DSL 1", baseTime);
         Event event2 = persistEventWithEditor("Evento DSL 2", baseTime.plusDays(1));
         Event event3 = persistEventWithEditor("Evento DSL 3", baseTime.plusDays(2));

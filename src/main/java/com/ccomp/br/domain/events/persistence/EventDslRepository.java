@@ -1,19 +1,17 @@
 package com.ccomp.br.domain.events.persistence;
 
-import com.blazebit.persistence.CriteriaBuilderFactory;
 import com.ccomp.br.domain.events.dto.events.EventCursor;
 import com.ccomp.br.domain.events.dto.events.EventListItemDTO;
 import com.ccomp.br.domain.events.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.events.enums.editors.EnumEditorsStatus;
 import com.ccomp.br.domain.events.dto.events.EventsFilterRequest;
 import com.ccomp.br.domain.events.enums.EnumEventStatus;
-import com.ccomp.br.shared.utils.BlazeQueryExecutor;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.metamodel.Attribute;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,11 +20,9 @@ import static com.ccomp.br.domain.events.persistence.QEvent.event;
 import static com.ccomp.br.domain.events.persistence.editors.QEventEditor.eventEditor;
 import static com.ccomp.br.domain.events.persistence.enrollments.QEnrollment.enrollment;
 
-@Component
+@Repository
 public class EventDslRepository {
-    private static final String ALIAS = "event";
     private final JPAQueryFactory queryFactory;
-
 
     public EventDslRepository(JPAQueryFactory queryFactory) {
         this.queryFactory = queryFactory;
@@ -211,13 +207,14 @@ public class EventDslRepository {
 
         // Condição do Cursor (Keyset Pagination)
         if (cursor != null && cursor.id() != null && cursor.startDate() != null) {
-            whereClause.and(
-                    event.startDate.lt(cursor.startDate())
-                            .or(
-                                    event.startDate.eq(cursor.startDate())
-                                            .and(event.id.lt(cursor.id()))
-                            )
+            BooleanExpression cursorCondition = Expressions.booleanTemplate(
+                    "( {0}, {1} ) < ( {2}, {3} )",
+                    event.startDate,
+                    event.id,
+                    cursor.startDate(),
+                    cursor.id()
             );
+            whereClause.and(cursorCondition);
         }
 
         return queryFactory
@@ -250,14 +247,5 @@ public class EventDslRepository {
                 )
                 .limit(limit)
                 .fetch();
-    }
-
-
-    private String path(Attribute<?, ?> attribute) {
-        return ALIAS + "." + attribute.getName();
-    }
-
-    private String path(Attribute<?, ?> relation, Attribute<?, ?> attribute) {
-        return ALIAS + "." + relation.getName() + "." + attribute.getName();
     }
 }

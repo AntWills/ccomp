@@ -4,7 +4,7 @@ import com.ccomp.br.domain.users.dto.UserSearchFilter;
 import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.domain.users.external.RolesServices;
-import com.ccomp.br.domain.users.persistence.UserBlaze;
+import com.ccomp.br.domain.users.persistence.UserDslRepository;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.module.email.EmailAddress;
@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
 public class DataInitializerConfig {
     @Bean
     CommandLineRunner initUserAdmin(UserModelRepository userModelRepository,
-                                    UserBlaze userBlaze,
+                                    UserDslRepository userDslRepository,
                                     RolesServices rolesServices,
                                     PasswordEncoder encoder) {
         return args -> {
@@ -34,7 +34,7 @@ public class DataInitializerConfig {
                     .role(EnumRoles.ADMIN)
                     .build();
 
-            if(userBlaze.findByCursor(filter, null, 1).isEmpty()) {
+            if(userDslRepository.findByCursor(filter, null, 1).isEmpty()) {
                 var userSaved = userModelRepository.save(UserModel.builder()
                         .name("admin")
                         .emailAddress(emailAddress)

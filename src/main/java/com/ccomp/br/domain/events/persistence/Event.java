@@ -25,7 +25,7 @@ import java.util.UUID;
         @Index(name = "idx_events_category", columnList = "category"),
         @Index(name = "idx_events_format", columnList = "format"),
         @Index(name = "idx_events_status", columnList = "status"),
-        @Index(name = "idx_events_start_date", columnList = "start_date"),
+        @Index(name = "idx_events_start_date_id", columnList = "start_date DESC, id DESC"),
         @Index(name = "idx_events_location", columnList = "latitude, longitude")
 })
 @Entity
