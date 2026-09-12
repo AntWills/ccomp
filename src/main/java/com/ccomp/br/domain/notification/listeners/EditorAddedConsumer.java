@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.notification.listeners;
 
 import com.ccomp.br.config.RabbitMQConfig;
-import com.ccomp.br.domain.events.external.dto.EditorAddedMessageDTO;
+import com.ccomp.br.domain.events.core.external.EditorAddedMessageDTO;
 import com.ccomp.br.module.email.EmailService;
 import com.ccomp.br.shared.dto.SendMailDTO;
 import lombok.extern.slf4j.Slf4j;

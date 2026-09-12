@@ -1,14 +1,12 @@
 package com.ccomp.br.domain.events.application;
 
-import com.ccomp.br.domain.events.enums.EnumEnrollmentState;
-import com.ccomp.br.domain.events.enums.EnumEnrollmentStatus;
-import com.ccomp.br.domain.events.persistence.Event;
-import com.ccomp.br.domain.events.persistence.EventRepository;
-import com.ccomp.br.domain.events.persistence.enrollments.Enrollment;
-import com.ccomp.br.domain.events.persistence.enrollments.EnrollmentBlaze;
-import com.ccomp.br.domain.events.persistence.enrollments.EnrollmentRepository;
-import com.ccomp.br.domain.events.util.EnrollmentMapper;
-import com.ccomp.br.domain.users.external.UserManagement;
+import com.ccomp.br.domain.events.enrollments.application.EnrollmentsServices;
+import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
+import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentStatus;
+import com.ccomp.br.domain.events.core.persistence.Event;
+import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
+import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.DomainException;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +21,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;

@@ -2,10 +2,10 @@ package com.ccomp.br.shared.dto;
 
 import com.blazebit.persistence.view.EntityView;
 import com.blazebit.persistence.view.IdMapping;
-import com.ccomp.br.domain.events.enums.EnumEventCategory;
-import com.ccomp.br.domain.events.enums.EnumEventFormat;
-import com.ccomp.br.domain.events.enums.EnumEventStatus;
-import com.ccomp.br.domain.events.persistence.Event;
+import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
+import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
+import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
+import com.ccomp.br.domain.events.core.persistence.Event;
 
 import java.time.LocalDateTime;
 

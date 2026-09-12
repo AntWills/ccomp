@@ -1,24 +1,24 @@
 package com.ccomp.br.domain.events.persistence;
 
 import com.ccomp.br.config.QueryDslConfig;
-import com.ccomp.br.domain.events.dto.events.EventCursor;
-import com.ccomp.br.domain.events.dto.events.EventListItemDTO;
-import com.ccomp.br.domain.events.enums.EnumEventCategory;
-import com.ccomp.br.domain.events.enums.EnumEventFormat;
-import com.ccomp.br.domain.events.enums.EnumEventStatus;
-import com.ccomp.br.domain.events.enums.editors.EnumEditorsStatus;
-import com.ccomp.br.domain.events.persistence.editors.EventEditor;
-import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
-import jakarta.persistence.EntityManager;
+import com.ccomp.br.domain.events.core.dto.EventCursor;
+import com.ccomp.br.domain.events.core.dto.EventListItemDTO;
+import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
+import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
+import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
+import com.ccomp.br.domain.events.core.persistence.Event;
+import com.ccomp.br.domain.events.core.persistence.EventDslRepository;
+import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.editors.enums.EnumEditorsStatus;
+import com.ccomp.br.domain.events.editors.persistence.EventEditor;
+import com.ccomp.br.domain.events.editors.persistence.EventEditorRepository;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.util.StopWatch;
 
 import java.time.LocalDateTime;
 import java.util.List;
