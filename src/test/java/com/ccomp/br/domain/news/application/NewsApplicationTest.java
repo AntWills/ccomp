@@ -1,7 +1,5 @@
 package com.ccomp.br.domain.news.application;
 
-import com.ccomp.br.domain.news.dto.NewsFilter;
-import com.ccomp.br.domain.news.dto.NewsItem;
 import com.ccomp.br.domain.news.dto.NewsResponse;
 import com.ccomp.br.domain.news.dto.NewsUpdateDto;
 import com.ccomp.br.domain.news.persistence.News;
@@ -9,7 +7,6 @@ import com.ccomp.br.domain.news.persistence.NewsRepository;
 import com.ccomp.br.domain.news.util.NewsMapper;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
-import com.ccomp.br.shared.utils.CursorPage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -18,12 +15,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.repository.query.FluentQuery;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;

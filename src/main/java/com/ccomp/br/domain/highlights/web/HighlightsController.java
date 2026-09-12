@@ -4,11 +4,10 @@ import com.ccomp.br.domain.clubs.application.ClubService;
 import com.ccomp.br.domain.clubs.dto.ClubResponseDTO;
 import com.ccomp.br.domain.events.application.EventsServices;
 import com.ccomp.br.domain.events.dto.events.EventListItemDTO;
-import com.ccomp.br.shared.dto.EventListItemView;
 import com.ccomp.br.domain.events.dto.events.EventsFilterRequest;
 import com.ccomp.br.domain.highlights.dto.AllHighlights;
 import com.ccomp.br.domain.news.application.NewsApplication;
-import com.ccomp.br.domain.news.dto.NewsFilter;
+import com.ccomp.br.domain.news.dto.NewsSearchFilter;
 import com.ccomp.br.domain.news.dto.NewsItem;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -50,7 +49,7 @@ public class HighlightsController {
         return ResponseEntity.ok(
                 new AllHighlights(
                         clubService.search(null, 3).content(),
-                        newsApplication.searchNewsWithFilters(new NewsFilter(null), null, 3).content(),
+                        newsApplication.searchNewsWithFilters(new NewsSearchFilter(null), null, 3).content(),
                         eventsServices.searchEventsWithFilters(new EventsFilterRequest(null, null), null, 3).content()
                 )
         );
@@ -82,7 +81,7 @@ public class HighlightsController {
     @GetMapping("news")
     public ResponseEntity<List<NewsItem>> highlightsNews() {
         return ResponseEntity.ok(
-                newsApplication.searchNewsWithFilters(new NewsFilter(null), null, 3).content()
+                newsApplication.searchNewsWithFilters(new NewsSearchFilter(null), null, 3).content()
         );
     }
 
