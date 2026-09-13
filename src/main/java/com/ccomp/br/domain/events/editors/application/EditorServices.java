@@ -5,13 +5,13 @@ import com.ccomp.br.domain.events.editors.enums.EnumEditorsStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.editors.persistence.EventEditor;
+import com.ccomp.br.domain.events.editors.persistence.EventEditorDslRepository;
 import com.ccomp.br.domain.events.editors.persistence.EventEditorRepository;
 import com.ccomp.br.domain.events.editors.persistence.validation.EventEditorInvitations;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
-import com.ccomp.br.shared.dto.UserSummaryView;
 import com.ccomp.br.shared.exceptions.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -20,20 +20,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ccomp.br.domain.events.editors.dto.EventEditorCursor;
 import com.ccomp.br.domain.events.editors.dto.EventEditorListItem;
-import com.ccomp.br.domain.events.editors.persistence.EventEditorSpec;
 import com.ccomp.br.domain.security.SecurityUtils;
 import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+
 import org.springframework.context.ApplicationEventPublisher;
 import com.ccomp.br.domain.events.editors.persistence.validation.EventEditorInvitationsRepository;
 import com.ccomp.br.domain.events.core.external.EditorAddedMessageDTO;
@@ -43,14 +38,16 @@ import com.ccomp.br.domain.events.core.external.EditorAddedMessageDTO;
 public class EditorServices {
     private final EventRepository eventRepository;
     private final EventEditorRepository editorRepository;
+    private final EventEditorDslRepository editorDslRepository;
     private final UserManagement userManagement;
     private final RabbitTemplate rabbitTemplate;
     private final EventEditorInvitationsRepository invitationsRepository;
 
-    public EditorServices(EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement, ApplicationEventPublisher eventPublisher, RabbitTemplate rabbitTemplate, EventEditorInvitationsRepository invitationsRepository) {
+    public EditorServices(EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement, ApplicationEventPublisher eventPublisher, EventEditorDslRepository editorDslRepository, RabbitTemplate rabbitTemplate, EventEditorInvitationsRepository invitationsRepository) {
         this.eventRepository = eventRepository;
         this.editorRepository = editorRepository;
         this.userManagement = userManagement;
+        this.editorDslRepository = editorDslRepository;
         this.rabbitTemplate = rabbitTemplate;
         this.invitationsRepository = invitationsRepository;
     }
@@ -148,47 +145,17 @@ public class EditorServices {
             throw new AccessDeniedException("Você não tem permissão para visualizar os editores deste evento.");
         }
 
-        int maxPageSize = 50;
-        int finalPageSize = pageSize > maxPageSize ? maxPageSize : pageSize;
+        int finalPageSize = Math.min(pageSize, 50);
 
         EventEditorCursor decodedCursor = CursorUtils.decode(cursor, EventEditorCursor.class);
-        Specification<EventEditor> spec = EventEditorSpec.buildSpec(eventId, decodedCursor);
+        List<EventEditorListItem> results = editorDslRepository
+                .findAllWithCursor(eventId, decodedCursor, finalPageSize + 1);
 
-        List<EventEditor> results = editorRepository.findBy(spec, query -> query
-                .limit(finalPageSize + 1)
-                .sortBy(Sort.by(
-                        Sort.Order.desc("assignedAt"),
-                        Sort.Order.desc("id")
-                ))
-                .all());
-
-        boolean hasNext = results.size() > finalPageSize;
-        List<EventEditor> page = hasNext ? results.subList(0, finalPageSize) : results;
-
-        List<UUID> ids = page.stream()
-                .map(EventEditor::getUserId)
-                .toList();
-
-        Map<UUID, UserSummaryView> userMap = userManagement.findAllSummaryByIds(ids)
-                .stream()
-                .collect(Collectors.toMap(UserSummaryView::getId, Function.identity(), (user1, user2) -> user1));
-
-        String nextCursor = hasNext && !page.isEmpty()
-                ? CursorUtils.encode(new EventEditorCursor(page.getLast().getAssignedAt(), page.getLast().getId()))
-                : null;
-
-        List<EventEditorListItem> contents = page.stream()
-                .map(ee -> EventEditorListItem.builder()
-                        .id(ee.getId())
-                        .eventId(ee.getEvent().getId())
-                        .user(userMap.get(ee.getUserId()))
-                        .assignedAt(ee.getAssignedAt())
-                        .revokedAt(ee.getRevokedAt())
-                        .status(ee.getStatus())
-                        .build())
-                .toList();
-
-        return new CursorPage<>(contents, nextCursor, null);
+        return CursorUtils.buildPage(
+                results,
+                finalPageSize,
+                ee -> new EventEditorCursor(ee.assignedAt(), ee.id())
+        );
     }
 
     // ====================================================================================

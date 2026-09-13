@@ -11,6 +11,9 @@ import java.util.UUID;
 @Table(name = "tb_event_editors",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_tb_event_editors_event_user", columnNames = {"event_id", "userId"})
+        },
+        indexes = {
+                @Index(name = "idx_event_editors_assigned_at_id", columnList = "assigned_at DESC, id DESC")
         })
 @Entity
 @AllArgsConstructor
@@ -30,9 +33,10 @@ public class EventEditor {
     @Column(nullable = false)
     private UUID userId;
 
-    @Column(nullable = false)
+    @Column(name = "assigned_at", nullable = false)
     private LocalDateTime assignedAt;
 
+    @Column(name = "revoked_at")
     private LocalDateTime revokedAt;
 
     @Enumerated(EnumType.STRING)

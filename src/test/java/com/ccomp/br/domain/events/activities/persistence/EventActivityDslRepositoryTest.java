@@ -94,7 +94,7 @@ class EventActivityDslRepositoryTest {
 
         // Construção do cursor com base no último item da primeira página
         EventActivityDTO lastItem = page1.getLast();
-        EventActivityCursor cursor = new EventActivityCursor(lastItem.displayOrder(), lastItem.createdAt(), lastItem.id());
+        EventActivityCursor cursor = new EventActivityCursor(lastItem.displayOrder(), lastItem.id());
 
         // Ação: Segunda página utilizando o cursor (limite = 2)
         List<EventActivityDTO> page2 = eventActivityDslRepository.findAllByEventIdWithCursor(event.getId(), cursor, 2);
