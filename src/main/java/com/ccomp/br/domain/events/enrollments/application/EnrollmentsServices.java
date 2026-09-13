@@ -7,12 +7,9 @@ import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
-import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentBlaze;
+import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
-import com.ccomp.br.domain.events.enrollments.util.EnrollmentMapper;
-import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.MessageResponse;
-import com.ccomp.br.shared.dto.UserSummaryView;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -28,16 +25,13 @@ import java.util.UUID;
 public class EnrollmentsServices {
     private final EventRepository eventRepository;
     private final EnrollmentRepository enrollmentRepository;
-    private final EnrollmentBlaze enrollmentBlaze;
-    private final UserManagement userManagement;
-    private final EnrollmentMapper enrollmentMapper;
+    private final EnrollmentDslRepository enrollmentDslRepository;
 
-    public EnrollmentsServices(EventRepository eventRepository, EnrollmentRepository enrollmentRepository, EnrollmentBlaze enrollmentBlaze, UserManagement userManagement, EnrollmentMapper enrollmentMapper) {
+    public EnrollmentsServices(EventRepository eventRepository, EnrollmentRepository enrollmentRepository,
+                               EnrollmentDslRepository enrollmentDslRepository) {
         this.eventRepository = eventRepository;
         this.enrollmentRepository = enrollmentRepository;
-        this.enrollmentBlaze = enrollmentBlaze;
-        this.userManagement = userManagement;
-        this.enrollmentMapper = enrollmentMapper;
+        this.enrollmentDslRepository = enrollmentDslRepository;
     }
 
     @Transactional(readOnly = true)
@@ -45,18 +39,14 @@ public class EnrollmentsServices {
         int finalPageSize = Math.min(pageSize, 50);
 
         EnrollmentsCursor cursorDecoded = CursorUtils.decode(cursor, EnrollmentsCursor.class);
+        List<EnrollmentListItem> results = enrollmentDslRepository
+                .findAllWithCursor(eventId, cursorDecoded, finalPageSize + 1);
 
-        List<Enrollment> results = enrollmentBlaze.findByCursor(eventId, cursorDecoded, finalPageSize);
-
-        List<UserSummaryView> userSummaryViews = userManagement.findAllSummaryByIds(results
-                .stream()
-                .map(Enrollment::getUserId)
-                .toList());
-
-        // Realiza o de-para de Enrollment -> EnrollmentListItem
-        List<EnrollmentListItem> items = enrollmentMapper.toListItemList(results, userSummaryViews);
-
-        return CursorUtils.buildPage(items, finalPageSize, i -> new EnrollmentsCursor(i.createdAt(), i.id()));
+        return CursorUtils.buildPage(
+                results,
+                finalPageSize,
+                i -> new EnrollmentsCursor(i.createdAt(), i.id())
+        );
     }
 
     @Transactional

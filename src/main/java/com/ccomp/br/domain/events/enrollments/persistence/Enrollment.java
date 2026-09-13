@@ -23,7 +23,8 @@ import java.util.UUID;
         },
         indexes = {
                 @Index(name = "idx_enrollment_user", columnList = "user_id"),
-                @Index(name = "idx_enrollment_event_status", columnList = "events_id, status")
+                @Index(name = "idx_enrollment_event_status", columnList = "events_id, status"),
+                @Index(name = "idx_event_enrollment_created_at_id", columnList = "created_at DESC, id DESC")
         }
 )
 @Entity
