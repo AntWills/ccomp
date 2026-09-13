@@ -1,97 +1,69 @@
 package com.ccomp.br.domain.clubs.application;
 
+import com.ccomp.br.domain.clubs.dto.ClubMemberCursor;
 import com.ccomp.br.domain.clubs.dto.ClubMemberFilter;
 import com.ccomp.br.domain.clubs.dto.ClubMemberListItem;
 import com.ccomp.br.domain.clubs.enums.EnumClubMemberStatus;
 import com.ccomp.br.domain.clubs.enums.EnumClubMemberRole;
 import com.ccomp.br.domain.clubs.persistence.ClubRepository;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMember;
+import com.ccomp.br.domain.clubs.persistence.members.ClubMemberDslRepository;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMemberRepository;
-import com.ccomp.br.domain.clubs.persistence.members.ClubMemberSpec;
 import com.ccomp.br.domain.security.SecurityUtils;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
-import com.ccomp.br.shared.dto.UserSummaryView;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 public class ClubMemberService {
     private final ClubRepository clubRepository;
     private final ClubMemberRepository clubMemberRepository;
+    private final ClubMemberDslRepository clubMemberDslRepository;
     private final ClubAccessPolicy clubAccessPolicy;
     private final UserManagement userManagement;
 
-    public ClubMemberService(ClubRepository clubRepository, ClubMemberRepository clubMemberRepository, ClubAccessPolicy clubAccessPolicy, UserManagement userManagement) {
+    public ClubMemberService(ClubRepository clubRepository, ClubMemberRepository clubMemberRepository, ClubMemberDslRepository clubMemberDslRepository, ClubAccessPolicy clubAccessPolicy, UserManagement userManagement) {
         this.clubRepository = clubRepository;
         this.clubMemberRepository = clubMemberRepository;
+        this.clubMemberDslRepository = clubMemberDslRepository;
         this.clubAccessPolicy = clubAccessPolicy;
         this.userManagement = userManagement;
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<ClubMemberListItem> searchMembers(UUID userId, Long clubId, ClubMemberFilter filter, String cursor, int pageSize) {
-        boolean canAccess = clubAccessPolicy.isInstructor(clubId, userId)
-                || SecurityUtils.isAdmin();
+    public CursorPage<ClubMemberListItem> searchMembers(UUID userId, Long clubId,
+                                                        ClubMemberFilter filter, String cursor, int pageSize) {
+        boolean canAccess =  SecurityUtils.isAdmin()
+                || clubAccessPolicy.isInstructor(clubId, userId);
 
         if (!canAccess)
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         if (pageSize > 50) pageSize = 50;
 
-        Specification<ClubMember> spec = ClubMemberSpec.filterByAndCursor(clubId, filter,
-                CursorUtils.decode(cursor, LocalDateTime.class));
+        ClubMemberCursor cursorDecoded = CursorUtils.decode(cursor, ClubMemberCursor.class);
+        List<ClubMemberListItem> results = clubMemberDslRepository
+                .findAllWithCursor(clubId, filter, cursorDecoded, pageSize + 1);
 
-        int finalPageSize = pageSize;
-        List<ClubMember> results = clubMemberRepository.findBy(spec, query -> query
-                .limit(finalPageSize + 1)
-                .sortBy(Sort.by(Sort.Direction.DESC, "joinedAt"))
-                .all());
-
-        boolean hasNext = results.size() > finalPageSize;
-        List<ClubMember> page = hasNext ? results.subList(0, finalPageSize) : results;
-
-        List<UUID> ids = page.stream()
-                .map(ClubMember::getUserId)
-                .toList();
-
-        Map<UUID, UserSummaryView> userMap = userManagement.findAllSummaryByIds(ids)
-                .stream()
-                .collect(Collectors.toMap(UserSummaryView::getId, Function.identity(), (user1, user2) -> user1));
-
-        String nextCursor = hasNext && !page.isEmpty() ? CursorUtils.encode(page.getLast().getJoinedAt()) : null;
-
-        List<ClubMemberListItem> contents = page.stream()
-                .map(cm -> ClubMemberListItem.builder()
-                        .id(cm.getId())
-                        .clubId(cm.getClub().getId())
-                        .user(userMap.get(cm.getUserId()))
-                        .role(cm.getRole())
-                        .status(cm.getStatus())
-                        .joinedAt(cm.getJoinedAt())
-                        .leftAt(cm.getLeftAt())
-                        .build())
-                .toList();
-
-        return new CursorPage<>(contents, nextCursor, null);
+        return CursorUtils.buildPage(
+                results,
+                pageSize,
+                cm -> new ClubMemberCursor(cm.id(), cm.joinedAt())
+        );
     }
 
 //    @Transactional(readOnly = true)

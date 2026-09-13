@@ -13,7 +13,8 @@ import java.util.UUID;
 @Table(name = "tb_club_members",
         indexes = {
             @Index(name = "idx_club_members_user_id", columnList = "user_id"),
-            @Index(name = "idx_club_members_club_id", columnList = "club_id")
+            @Index(name = "idx_club_members_club_id", columnList = "club_id"),
+            @Index(name = "idx_club_members_joined_at_id", columnList = "joined_at DESC, id DESC")
         },
         uniqueConstraints = {
                 @UniqueConstraint(

@@ -63,9 +63,6 @@ public class ClubController {
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
     })
     public ResponseEntity<CursorPage<ClubResponseDTO>> findMyClubs(
-            @Parameter(description = "Filtro opcional pelo papel do usuário no clube (INSTRUCTOR ou MEMBER)")
-            @RequestParam(required = false) EnumClubMemberRole role,
-
             @Parameter(description = "Cursor para a próxima página (codificado)")
             @RequestParam(required = false) String nextCursor,
 
@@ -75,7 +72,7 @@ public class ClubController {
             @AuthenticationPrincipal Jwt jwt
     ) {
         UUID userId = extractUserId(jwt);
-        return ResponseEntity.ok(clubService.findByUserInvolved(userId, role, nextCursor, pageSize));
+        return ResponseEntity.ok(clubService.findByUserInvolved(userId, nextCursor, pageSize));
     }
 
     @GetMapping("/{clubId}")
