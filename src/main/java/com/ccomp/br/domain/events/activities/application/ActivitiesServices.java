@@ -1,17 +1,13 @@
 package com.ccomp.br.domain.events.activities.application;
 
+import com.ccomp.br.domain.events.activities.dto.*;
+import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
 import com.ccomp.br.domain.events.editors.application.EditorServices;
-import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
-import com.ccomp.br.domain.events.activities.dto.CreateActivityDTO;
-import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
-import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
-import com.ccomp.br.domain.events.activities.dto.EventActivityView;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
-import com.ccomp.br.domain.events.activities.persistence.EventActivityBlaze;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.activities.util.ActivityMapper;
 import com.ccomp.br.domain.security.SecurityUtils;
@@ -33,21 +29,21 @@ public class ActivitiesServices {
     private final EventRepository eventRepository;
     private final EditorServices editorServices;
     private final EventActivityRepository activityRepository;
+    private final EventActivityDslRepository activityDslRepository;
     private final ActivityMapper activityMapper;
-    private final EventActivityBlaze eventActivityBlaze;
 
     public ActivitiesServices(EventRepository eventRepository, EditorServices editorServices,
-                              EventActivityRepository activityRepository, ActivityMapper activityMapper,
-                              EventActivityBlaze eventActivityBlaze) {
+                              EventActivityRepository activityRepository,
+                              EventActivityDslRepository activityDslRepository, ActivityMapper activityMapper) {
         this.eventRepository = eventRepository;
         this.editorServices = editorServices;
         this.activityRepository = activityRepository;
+        this.activityDslRepository = activityDslRepository;
         this.activityMapper = activityMapper;
-        this.eventActivityBlaze = eventActivityBlaze;
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<EventActivityView> searchByCursor(Long eventId, String cursor, UUID userId) {
+    public CursorPage<EventActivityDTO> searchByCursor(Long eventId, String cursor, UUID userId) {
         int pageSize = 50;
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
@@ -61,9 +57,13 @@ public class ActivitiesServices {
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         EventActivityCursor cursorDecoded = CursorUtils.decode(cursor, EventActivityCursor.class);
-        List<EventActivityView> results = eventActivityBlaze.findByCursor(eventId, cursorDecoded, pageSize + 1);
+        List<EventActivityDTO> results = activityDslRepository
+                .findAllByEventIdWithCursor(eventId, cursorDecoded, pageSize + 1);
 
-        return CursorUtils.buildPage(results, pageSize, e -> new EventActivityCursor(e.getCreatedAt(), e.getId()));
+        return CursorUtils.buildPage(
+                results,
+                pageSize,
+                e -> new EventActivityCursor(e.displayOrder(), e.id()));
     }
 
     @Transactional

@@ -1,11 +1,8 @@
 package com.ccomp.br.domain.events.activities.web;
 
+import com.ccomp.br.domain.events.activities.dto.*;
 import com.ccomp.br.domain.events.shared.application.ActivitiesEnrollmentsServices;
 import com.ccomp.br.domain.events.activities.application.ActivitiesServices;
-import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
-import com.ccomp.br.domain.events.activities.dto.CreateActivityDTO;
-import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
-import com.ccomp.br.domain.events.activities.dto.EventActivityView;
 import com.ccomp.br.domain.events.enrollments.dto.UserActivitySummaryDTO;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
@@ -43,7 +40,7 @@ public class ActivitiesController {
             @ApiResponse(responseCode = "404", description = "Evento não encontrado")
     })
     @GetMapping("/{eventId}/activities")
-    public ResponseEntity<CursorPage<EventActivityView>> getActivities(
+    public ResponseEntity<CursorPage<EventActivityDTO>> getActivities(
             @PathVariable Long eventId,
             @RequestParam(required = false) String cursor,
             @AuthenticationPrincipal Jwt jwt) {
