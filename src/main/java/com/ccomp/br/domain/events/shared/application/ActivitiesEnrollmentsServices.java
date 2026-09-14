@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.shared.application;
 
 import com.ccomp.br.domain.events.activities.dto.EventActivityConflictCursor;
+import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
 import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentsCursor;
 import com.ccomp.br.domain.events.enrollments.dto.UserActivitySummaryDTO;
@@ -77,6 +78,25 @@ public class ActivitiesEnrollmentsServices {
         return new MessageResponse("Inscrição na atividade realizada com sucesso.");
     }
 
+    @Transactional(readOnly = true)
+    public CursorPage<EventActivityDTO> listSubscriptionsByCursor(
+            UUID userId, Long eventId, String cursor, int pageLimit
+    ) {
+        int finalPageLimit = Math.min(pageLimit, 50);
+
+        EventActivityCursor cursorDecoded = CursorUtils.decode(cursor, EventActivityCursor.class);
+
+        List<EventActivityDTO> results = eventActivityDslRepository
+                .findSubscriptionsWithCursor(userId, eventId, cursorDecoded, finalPageLimit + 1);
+
+        return CursorUtils.buildPage(
+                results,
+                finalPageLimit,
+                ea -> new EventActivityCursor(ea.displayOrder(), ea.id())
+        );
+    }
+
+    @Transactional(readOnly = true)
     public CursorPage<EventActivityDTO> listConflictingActivities(
             UUID userId, Long activityId, String cursor, int pageLimit
     ) {
