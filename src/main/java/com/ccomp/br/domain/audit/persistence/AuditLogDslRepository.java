@@ -6,6 +6,7 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -20,7 +21,7 @@ public class AuditLogDslRepository {
         this.queryFactory = queryFactory;
     }
 
-    public List<AuditLog> findAllWithCursor(AuditLogSearchFilter filter, AuditLogCursor cursor, int limit) {
+    public List<AuditLog> findAllWithCursor(AuditLogSearchFilter filter, @Nullable AuditLogCursor cursor, int limit) {
         BooleanBuilder whereClause = new BooleanBuilder();
 
         filter.optActorId().ifPresent(id -> whereClause.and(auditLog.actorId.eq(id)));

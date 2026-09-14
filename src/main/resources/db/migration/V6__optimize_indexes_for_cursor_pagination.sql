@@ -28,8 +28,13 @@ CREATE INDEX idx_club_members_joined_at_id
     ON tb_club_members (joined_at DESC, id DESC);
 
 -- tb_events
-
 DROP INDEX IF EXISTS idx_events_start_date;
 
 CREATE INDEX idx_events_start_date_id
     ON tb_events (start_date DESC, id DESC);
+
+-- tb_audit_logs
+DROP INDEX IF EXISTS idx_audit_log_timestamp;
+
+CREATE INDEX idx_audit_log_timestamp_id
+    ON tb_audit_log (timestamp DESC, id DESC);
