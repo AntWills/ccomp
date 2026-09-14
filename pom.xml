@@ -28,7 +28,6 @@
     </scm>
     <properties>
         <java.version>25</java.version>
-        <blaze-persistence.version>1.6.20</blaze-persistence.version>
         <!-- Fork ativo do QueryDSL (io.github.openfeign.querydsl), pois o grupo
              original com.querydsl está parado. Ver https://github.com/OpenFeign/querydsl
              IMPORTANTE: NÃO usar o nome "querydsl.version" aqui — o próprio
@@ -47,13 +46,6 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <!--            <dependency>-->
-            <!--                <groupId>com.blazebit</groupId>-->
-            <!--                <artifactId>blaze-persistence-bom</artifactId>-->
-            <!--                <version>${blaze-persistence.version}</version>-->
-            <!--                <type>pom</type>-->
-            <!--                <scope>import</scope>-->
-            <!--            </dependency>-->
         </dependencies>
     </dependencyManagement>
     <dependencies>
@@ -200,69 +192,7 @@
             <scope>compile</scope>
         </dependency>
 
-        <!-- Blaze Persistence (Compatível com Jakarta EE / Spring Boot 3+ e 4+) -->
-        <dependency>
-            <groupId>com.blazebit</groupId>
-            <artifactId>blaze-persistence-core-api-jakarta</artifactId>
-            <version>${blaze-persistence.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.blazebit</groupId>
-            <artifactId>blaze-persistence-core-impl-jakarta</artifactId>
-            <version>${blaze-persistence.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.blazebit</groupId>
-            <artifactId>blaze-persistence-integration-hibernate-7.2</artifactId>
-            <version>${blaze-persistence.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.blazebit</groupId>
-            <artifactId>blaze-persistence-entity-view-api-jakarta</artifactId>
-            <version>${blaze-persistence.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.blazebit</groupId>
-            <artifactId>blaze-persistence-entity-view-impl-jakarta</artifactId>
-            <version>${blaze-persistence.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <!--        <dependency>-->
-        <!--            <groupId>com.blazebit</groupId>-->
-        <!--            <artifactId>blaze-persistence-integration-entity-view-spring-6</artifactId>-->
-        <!--            <version>${blaze-persistence.version}</version>-->
-        <!--        </dependency>-->
-        <dependency>
-            <groupId>com.blazebit</groupId>
-            <artifactId>blaze-persistence-integration-spring-data-4.0</artifactId>
-            <version>${blaze-persistence.version}</version>
-            <scope>compile</scope>
-        </dependency>
-
-        <!-- Módulo Oficial de Integração Blaze-Persistence + QueryDSL.
-             Esse módulo declara com.querydsl:querydsl-jpa (grupo original, sem
-             manutenção ativa) como dependência transitiva. Excluímos e trazemos
-             no lugar o fork ativo io.github.openfeign.querydsl, que mantém os
-             mesmos pacotes com.querydsl.* — drop-in replacement, sem mudar código. -->
-        <dependency>
-            <groupId>com.blazebit</groupId>
-            <artifactId>blaze-persistence-integration-querydsl-expressions-jakarta</artifactId>
-            <version>${blaze-persistence.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.querydsl</groupId>
-                    <artifactId>querydsl-jpa</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <!-- QueryDSL JPA Core (fork mantido pela OpenFeign; não precisa mais de
-             classifier "jakarta" — a partir do fork, jakarta.persistence é o
-             único suporte, sem variante javax). Use apenas nos pontos em que
-             a navegação tipada realmente compensa (ex.: filtros com EXISTS
-             sobre coleções), não como substituto geral do Blaze Criteria API. -->
+        <!-- QueryDSL JPA Core (fork mantido pela OpenFeign) -->
         <dependency>
             <groupId>io.github.openfeign.querydsl</groupId>
             <artifactId>querydsl-jpa</artifactId>
@@ -292,7 +222,6 @@
         </dependency>
 
         <!-- Adiciona o suporte do Flyway ao PostgreSQL (obrigatório a partir do Flyway 10+) -->
-
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
@@ -308,15 +237,6 @@
             <artifactId>spring-boot-starter-amqp-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Source: https://mvnrepository.com/artifact/io.github.openfeign.querydsl/querydsl-core -->
-        <dependency>
-            <groupId>io.github.openfeign.querydsl</groupId>
-            <artifactId>querydsl-jpa</artifactId>
-            <version>${openfeign-querydsl.version}</version>
-        </dependency>
-
-
-
     </dependencies>
 
     <build>

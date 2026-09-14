@@ -3,7 +3,6 @@ package com.ccomp.br.domain.users.web;
 import com.ccomp.br.domain.users.application.AdminServices;
 import com.ccomp.br.domain.users.application.UserApplication;
 import com.ccomp.br.domain.users.dto.BlockAccountReq;
-import com.ccomp.br.domain.users.dto.UserItemView;
 import com.ccomp.br.domain.users.dto.UserSearchFilter;
 import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.module.email.EmailAddress;
