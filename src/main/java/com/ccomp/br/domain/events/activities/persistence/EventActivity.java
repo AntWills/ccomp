@@ -68,7 +68,7 @@ public class EventActivity {
             orphanRemoval = true
     )
     @Builder.Default
-    private Set<EnrollmentActivity> activities = new HashSet<>();
+    private Set<EnrollmentActivity> enrollmentsActivities = new HashSet<>();
 
     @PrePersist
     @PreUpdate
