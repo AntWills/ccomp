@@ -16,9 +16,9 @@ services:
     depends_on:
       grafana-lgtm:
         condition: service_started
-      minio:
+      seaweeds:
         condition: service_healthy
-      minio-setup:
+      seaweeds-setup:
         condition: service_completed_successfully
       postgres-db:
         condition: service_healthy
@@ -43,34 +43,44 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
-  minio:
-    image: minio/minio
+  seaweeds:
+    image: chrislusf/seaweedfs:latest
     profiles: [ all, infra ]
-    command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${STORAGE_USER}
-      MINIO_ROOT_PASSWORD: ${STORAGE_PASSWORD}
+      STORAGE_USER: ${STORAGE_USER}
+      STORAGE_PASSWORD: ${STORAGE_PASSWORD}
+    entrypoint: >
+      sh -c "
+      mkdir -p /etc/seaweedfs &&
+      printf '{\"identities\":[{\"name\":\"%s\",\"credentials\":[{\"accessKey\":\"%s\",\"secretKey\":\"%s\"}],\"actions\":[\"Admin\",\"Read\",\"Write\"]}]}' \"$$STORAGE_USER\" \"$$STORAGE_USER\" \"$$STORAGE_PASSWORD\" > /etc/seaweedfs/s3.json &&
+      weed server -s3 -s3.port=9000 -s3.config=/etc/seaweedfs/s3.json -dir=/data
+      "
     volumes:
-      - minio-data:/data
+      - seaweed-data:/data
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:9333/cluster/status" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  minio-setup:
-    image: minio/mc
+  seaweeds-setup:
+    image: amazon/aws-cli
     profiles: [ all, infra ]
     depends_on:
-      minio:
+      seaweeds:
         condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      /usr/bin/mc alias set myminio http://minio:9000 ${STORAGE_USER} ${STORAGE_PASSWORD};
-      /usr/bin/mc mb --ignore-existing myminio/images;
-      /usr/bin/mc anonymous set public myminio/images;
-      exit 0;
+    environment:
+      AWS_ACCESS_KEY_ID: ${STORAGE_USER}
+      AWS_SECRET_ACCESS_KEY: ${STORAGE_PASSWORD}
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: /bin/sh
+    command: >
+      -c "
+      until curl -s http://seaweeds:9000 > /dev/null; do echo 'Aguardando S3 API...'; sleep 2; done;
+      aws --endpoint-url http://seaweeds:9000 s3 mb s3://images || true;
+      aws --endpoint-url http://seaweeds:9000 s3api put-bucket-policy --bucket images --policy '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::images/*\"}]}';
       "
+
   rabbitmq:
     image: rabbitmq:4.3.5-management-alpine
     container_name: ccomp-rabbitmq
@@ -93,8 +103,7 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
 
-
 volumes:
   postgres-data:
-  minio-data:
+  seaweed-data:
   rabbitmq_data:
