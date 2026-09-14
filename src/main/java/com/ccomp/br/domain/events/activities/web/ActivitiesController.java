@@ -8,6 +8,9 @@ import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -170,6 +173,73 @@ public class ActivitiesController {
 
         return ResponseEntity.ok(
                 activitiesEnrollmentsServices.findAllUsersFromActivity(userId, activityId, cursor, pageSize)
+        );
+    }
+
+    @Operation(
+            summary = "Lista as atividades do evento nas quais o usuário autenticado está inscrito",
+            description = "Retorna uma lista paginada por cursor de todas as atividades de um determinado evento nas quais o usuário logado possui inscrição ativa."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Lista de atividades inscritas retornada com sucesso"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Usuário não autenticado"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Evento não encontrado"
+            )
+    })
+    @GetMapping("/{eventId}/activities/my-subscriptions")
+    public ResponseEntity<CursorPage<EventActivityDTO>> getMySubscribedActivities(
+            @Parameter(description = "ID do evento", example = "1")
+            @PathVariable Long eventId,
+
+            @Parameter(description = "Cursor codificado em Base64 para paginação", example = "eyJkaXNwbGF5T3JkZXIiOjEsImlkIjo1fQ==")
+            @RequestParam(required = false) String cursor,
+
+            @Parameter(description = "Quantidade máxima de registros por página (máximo 50)", example = "10")
+            @RequestParam(defaultValue = "10") int pageSize,
+
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID userId = Optional.ofNullable(jwt)
+                .map(Jwt::getSubject)
+                .map(UUID::fromString)
+                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
+
+        return ResponseEntity.ok(
+                activitiesEnrollmentsServices.listSubscriptionsByCursor(userId, eventId, cursor, pageSize)
+        );
+    }
+
+    @Operation(
+            summary = "Lista atividades do usuário em conflito de horário",
+            description = "Retorna uma lista paginada (por cursor) das atividades nas quais o usuário autenticado já está inscrito e que possuem sobreposição de horário com a atividade especificada."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de atividades conflitantes retornada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "404", description = "Atividade não encontrada")
+    })
+    @GetMapping("/activities/{activityId}/conflicts")
+    public ResponseEntity<CursorPage<EventActivityDTO>> getConflictingActivities(
+            @PathVariable Long activityId,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID userId = Optional.ofNullable(jwt)
+                .map(Jwt::getSubject)
+                .map(UUID::fromString)
+                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
+
+        return ResponseEntity.ok(
+                activitiesEnrollmentsServices.listConflictingActivities(userId, activityId, cursor, pageSize)
         );
     }
 }
