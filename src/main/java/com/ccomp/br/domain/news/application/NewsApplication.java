@@ -1,24 +1,18 @@
 package com.ccomp.br.domain.news.application;
 
-import com.ccomp.br.domain.news.dto.NewsFilter;
-import com.ccomp.br.domain.news.dto.NewsItem;
-import com.ccomp.br.domain.news.dto.NewsResponse;
-import com.ccomp.br.domain.news.dto.NewsUpdateDto;
+import com.ccomp.br.domain.news.dto.*;
 import com.ccomp.br.domain.news.persistence.News;
+import com.ccomp.br.domain.news.persistence.NewsDslRepository;
 import com.ccomp.br.domain.news.persistence.NewsRepository;
-import com.ccomp.br.domain.news.persistence.NewsSpecs;
 import com.ccomp.br.domain.news.util.NewsMapper;
 import com.ccomp.br.domain.news.util.SlugUtils;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,32 +20,27 @@ import java.util.UUID;
 @Service
 public class NewsApplication {
     private final NewsRepository newsRepository;
+    private final NewsDslRepository newsDslRepository;
     private final NewsMapper newsMapper;
 
-    public NewsApplication(NewsRepository newsRepository, NewsMapper newsMapper) {
+    public NewsApplication(NewsRepository newsRepository, NewsDslRepository newsDslRepository, NewsMapper newsMapper) {
         this.newsRepository = newsRepository;
+        this.newsDslRepository = newsDslRepository;
         this.newsMapper = newsMapper;
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<NewsItem> searchNewsWithFilters(NewsFilter filter, String cursor, int pageSize) {
-        if(pageSize > 50) pageSize = 50;
+    public CursorPage<NewsItem> searchNewsWithFilters(NewsSearchFilter filter, String cursor, int pageSize) {
+        int finalPageSize = Math.min(pageSize, 50);
 
-        Specification<News> spec = NewsSpecs.buildSpecByCursor(filter,
-                CursorUtils.decode(cursor, LocalDateTime.class));
+        NewsCursor cursorDecoded = CursorUtils.decode(cursor, NewsCursor.class);
+        List<NewsItem> result = newsDslRepository.findByCursor(filter, cursorDecoded, finalPageSize + 1);
 
-        int finalPageSize = pageSize;
-        List<NewsItem> results = newsRepository.findBy(spec, query -> query
-                .as(NewsItem.class)
-                .limit(finalPageSize + 1)
-                .sortBy(Sort.by(Sort.Direction.DESC, "publishedAt"))
-                .all());
-
-        boolean hasNext = results.size() > finalPageSize;
-        List<NewsItem> page = hasNext ? results.subList(0, finalPageSize) : results;
-        String nextCursor = hasNext ? CursorUtils.encode(page.getLast().publishedAt()) : null;
-
-        return new CursorPage<>(page, nextCursor, null);
+        return CursorUtils.buildPage(
+                result,
+                finalPageSize,
+                ni -> new NewsCursor(ni.publishedAt(), ni.id())
+        );
     }
 
     @Transactional(readOnly = true)

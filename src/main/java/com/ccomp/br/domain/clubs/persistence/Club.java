@@ -12,7 +12,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "tb_clubs", indexes = {
-//        @Index(name = "idx_slug", columnList = "slug")
+        @Index(name = "idx_clubs_published_at_id", columnList = "published_at DESC, id DESC"),
+        @Index(name = "idx_clubs_created_at_id", columnList = "created_at DESC, id DESC")
 })
 @Getter
 @Setter

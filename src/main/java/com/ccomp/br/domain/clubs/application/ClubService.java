@@ -1,12 +1,10 @@
 package com.ccomp.br.domain.clubs.application;
 
-import com.ccomp.br.domain.clubs.dto.CreateClubRequestDTO;
-import com.ccomp.br.domain.clubs.dto.ClubResponseDTO;
-import com.ccomp.br.domain.clubs.dto.UpdateClubRequestDTO;
+import com.ccomp.br.domain.clubs.dto.*;
 import com.ccomp.br.domain.clubs.enums.EnumClubMemberRole;
 import com.ccomp.br.domain.clubs.persistence.Club;
+import com.ccomp.br.domain.clubs.persistence.ClubDslRepository;
 import com.ccomp.br.domain.clubs.persistence.ClubRepository;
-import com.ccomp.br.domain.clubs.persistence.ClubSpec;
 import com.ccomp.br.domain.clubs.util.ClubMapper;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -15,12 +13,9 @@ import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,13 +23,15 @@ import java.util.UUID;
 @Service
 public class ClubService {
     private final ClubRepository clubRepository;
+    private final ClubDslRepository clubDslRepository;
     private final ClubMemberService clubMemberService;
     private final ClubAccessPolicy clubAccessPolicy;
     private final ClubMapper clubMapper;
     private final UserManagement userManagement;
 
-    public ClubService(ClubRepository clubRepository, ClubMemberService clubMemberService, ClubAccessPolicy clubAccessPolicy, ClubMapper clubMapper, UserManagement userManagement) {
+    public ClubService(ClubRepository clubRepository, ClubDslRepository clubDslRepository, ClubMemberService clubMemberService, ClubAccessPolicy clubAccessPolicy, ClubMapper clubMapper, UserManagement userManagement) {
         this.clubRepository = clubRepository;
+        this.clubDslRepository = clubDslRepository;
         this.clubMemberService = clubMemberService;
         this.clubAccessPolicy = clubAccessPolicy;
         this.clubMapper = clubMapper;
@@ -43,43 +40,32 @@ public class ClubService {
 
     @Transactional(readOnly = true)
     public CursorPage<ClubResponseDTO> search(String cursor, int pageSize) {
-        if(pageSize > 50) pageSize = 50;
+        int finalPageSize = Math.min(pageSize, 50);
 
-        Specification<Club> spec = ClubSpec.buildSpecByCursor(CursorUtils.decode(cursor, LocalDateTime.class));
+        ClubPublishedCursor cursorDecoded = CursorUtils.decode(cursor, ClubPublishedCursor.class);
+        List<ClubResponseDTO> results = clubDslRepository
+                .findAllPublishedWithCursor(cursorDecoded, finalPageSize + 1);
 
-        int finalPageSize = pageSize;
-        List<ClubResponseDTO> results = clubRepository.findBy(spec, query -> query
-                .as(ClubResponseDTO.class)
-                .limit(finalPageSize + 1)
-                .sortBy(Sort.by(Sort.Direction.DESC, "publishedAt"))
-                .all());
-
-        boolean hasNext = results.size() > finalPageSize;
-        List<ClubResponseDTO> page = hasNext ? results.subList(0, finalPageSize) : results;
-        String nextCursor = hasNext ? CursorUtils.encode(page.getLast().publishedAt()) : null;
-
-        return new CursorPage<>(page, nextCursor, null);
+        return CursorUtils.buildPage(
+                results,
+                finalPageSize,
+                cr -> new ClubPublishedCursor(cr.id(), cr.publishedAt())
+        );
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<ClubResponseDTO> findByUserInvolved(UUID userId, EnumClubMemberRole role, String cursor, int pageSize) {
-        if (pageSize > 50) pageSize = 50;
+    public CursorPage<ClubResponseDTO> findByUserInvolved(UUID userId, String cursor, int pageSize) {
+        int finalPageSize = Math.min(pageSize, 50);
 
-        Specification<Club> spec = ClubSpec.buildSpecByInvolvedUserAndCursor(userId, role,
-                CursorUtils.decode(cursor, LocalDateTime.class));
+        ClubCreatedCursor cursorDecoded = CursorUtils.decode(cursor, ClubCreatedCursor.class);
+        List<ClubResponseDTO> results = clubDslRepository
+                .findByUserInvolvedWithCursor(userId, cursorDecoded, finalPageSize + 1);
 
-        int finalPageSize = pageSize;
-        List<ClubResponseDTO> results = clubRepository.findBy(spec, query -> query
-                .as(ClubResponseDTO.class)
-                .limit(finalPageSize + 1)
-                .sortBy(Sort.by(Sort.Direction.DESC, "createdAt"))
-                .all());
-
-        boolean hasNext = results.size() > finalPageSize;
-        List<ClubResponseDTO> page = hasNext ? results.subList(0, finalPageSize) : results;
-        String nextCursor = hasNext ? CursorUtils.encode(page.getLast().createdAt()) : null;
-
-        return new CursorPage<>(page, nextCursor, null);
+        return CursorUtils.buildPage(
+                results,
+                finalPageSize,
+                cr -> new ClubCreatedCursor(cr.id(), cr.createdAt())
+        );
     }
 
     @Transactional(readOnly = true)

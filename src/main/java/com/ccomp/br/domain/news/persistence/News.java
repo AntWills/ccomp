@@ -13,7 +13,8 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "tb_news", indexes = {
-        @Index(name = "idx_slug", columnList = "slug")
+        @Index(name = "idx_news_slug", columnList = "slug"),
+        @Index(name = "idx_news_published_at_id", columnList = "published_at DESC, id DESC")
 })
 @Getter
 @Setter

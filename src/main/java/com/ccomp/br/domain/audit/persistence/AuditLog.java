@@ -18,7 +18,7 @@ import java.util.UUID;
         indexes = {
                 @Index(name = "idx_audit_log_actor_id", columnList = "actor_id"),
                 @Index(name = "idx_audit_log_target_id", columnList = "target_id"),
-                @Index(name = "idx_audit_log_timestamp", columnList = "timestamp") // Para busca em larga escala.
+                @Index(name = "idx_audit_log_timestamp_id", columnList = "timestamp DESC, id DESC")
         }
 )
 @Entity

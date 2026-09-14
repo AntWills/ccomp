@@ -1,14 +1,16 @@
 package com.ccomp.br.domain.events.application;
 
-import com.ccomp.br.domain.events.dto.activities.ActivityDTO;
-import com.ccomp.br.domain.events.dto.activities.CreateActivityDTO;
-import com.ccomp.br.domain.events.dto.activities.UpdateActivityDTO;
-import com.ccomp.br.domain.events.persistence.Event;
-import com.ccomp.br.domain.events.persistence.EventRepository;
-import com.ccomp.br.domain.events.persistence.activities.EventActivity;
-import com.ccomp.br.domain.events.persistence.activities.EventActivityRepository;
+import com.ccomp.br.domain.events.activities.application.ActivitiesServices;
+import com.ccomp.br.domain.events.editors.application.EditorServices;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.CreateActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
+import com.ccomp.br.domain.events.core.persistence.Event;
+import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.activities.persistence.EventActivity;
+import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 
-import com.ccomp.br.domain.events.util.ActivityMapper;
+import com.ccomp.br.domain.events.activities.util.ActivityMapper;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;

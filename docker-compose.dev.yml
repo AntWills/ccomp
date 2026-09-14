@@ -62,6 +62,10 @@ services:
       - "5433:5432"
     tmpfs:
       - /var/lib/postgresql/data
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=auto_explain"
 
   minio:
     image: minio/minio

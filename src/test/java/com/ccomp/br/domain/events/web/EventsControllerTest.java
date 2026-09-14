@@ -1,36 +1,9 @@
 package com.ccomp.br.domain.events.web;
 
-import com.ccomp.br.domain.events.enums.EnumEventCategory;
-import com.ccomp.br.domain.events.enums.EnumEventFormat;
-import com.ccomp.br.domain.security.jwt.application.JwtService;
-import com.ccomp.br.domain.events.dto.activities.CreateActivityDTO;
-import com.ccomp.br.domain.events.dto.events.CreateEventDTO;
-import com.ccomp.br.domain.events.persistence.Event;
-import com.ccomp.br.domain.events.persistence.EventRepository;
-import com.ccomp.br.domain.events.persistence.activities.EventActivity;
-import com.ccomp.br.domain.events.persistence.activities.EventActivityRepository;
-import com.ccomp.br.domain.events.persistence.editors.EventEditor;
-import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
-import com.ccomp.br.domain.users.external.RolesServices;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.jdbc.Sql;
-import org.springframework.test.web.servlet.MockMvc;
-import tools.jackson.databind.ObjectMapper;
-
-import java.time.LocalDateTime;
-import java.util.UUID;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc

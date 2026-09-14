@@ -1,13 +1,14 @@
 package com.ccomp.br.domain.events.application;
 
 import com.ccomp.br.config.RabbitMQConfig;
-import com.ccomp.br.domain.events.external.dto.EditorAddedMessageDTO;
-import com.ccomp.br.domain.events.persistence.Event;
-import com.ccomp.br.domain.events.persistence.EventRepository;
-import com.ccomp.br.domain.events.persistence.editors.EventEditor;
-import com.ccomp.br.domain.events.persistence.editors.EventEditorRepository;
-import com.ccomp.br.domain.events.persistence.editors.validation.EventEditorInvitations;
-import com.ccomp.br.domain.events.persistence.editors.validation.EventEditorInvitationsRepository;
+import com.ccomp.br.domain.events.editors.application.EditorServices;
+import com.ccomp.br.domain.events.core.external.EditorAddedMessageDTO;
+import com.ccomp.br.domain.events.core.persistence.Event;
+import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.editors.persistence.EventEditor;
+import com.ccomp.br.domain.events.editors.persistence.EventEditorRepository;
+import com.ccomp.br.domain.events.editors.persistence.validation.EventEditorInvitations;
+import com.ccomp.br.domain.events.editors.persistence.validation.EventEditorInvitationsRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
@@ -21,7 +22,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Optional;
 import java.util.UUID;

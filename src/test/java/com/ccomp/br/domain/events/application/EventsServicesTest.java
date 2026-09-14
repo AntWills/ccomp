@@ -1,13 +1,15 @@
 package com.ccomp.br.domain.events.application;
 
-import com.ccomp.br.domain.events.dto.events.CreateEventDTO;
-import com.ccomp.br.domain.events.dto.events.EventDTO;
-import com.ccomp.br.domain.events.dto.events.UpdateEventDTO;
-import com.ccomp.br.domain.events.enums.EnumEventStatus;
-import com.ccomp.br.domain.events.persistence.Event;
-import com.ccomp.br.domain.events.persistence.EventDslRepository;
-import com.ccomp.br.domain.events.persistence.EventRepository;
-import com.ccomp.br.domain.events.util.EventMapper;
+import com.ccomp.br.domain.events.editors.application.EditorServices;
+import com.ccomp.br.domain.events.core.application.EventsServices;
+import com.ccomp.br.domain.events.core.dto.CreateEventDTO;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.dto.UpdateEventDTO;
+import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
+import com.ccomp.br.domain.events.core.persistence.Event;
+import com.ccomp.br.domain.events.core.persistence.EventDslRepository;
+import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.core.util.EventMapper;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;

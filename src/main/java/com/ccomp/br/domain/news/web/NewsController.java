@@ -6,23 +6,19 @@ import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Notícias", description = "Operações relacionadas ao gerenciamento de notícias.")
@@ -72,7 +68,7 @@ public class NewsController {
     )
     @SecurityRequirements
     public ResponseEntity<CursorPage<NewsItem>> searchNews(
-            @Valid @RequestBody NewsFilter filter,
+            @Valid @RequestBody NewsSearchFilter filter,
             @RequestParam(required = false) String nextCursor,
             @RequestParam(defaultValue = "10") int pageSize) {
         return ResponseEntity.ok(

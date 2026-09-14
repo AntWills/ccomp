@@ -1,5 +1,7 @@
 package com.ccomp.br.domain.audit.dto;
 
+import com.ccomp.br.domain.audit.external.enums.EnumActionType;
+
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -7,7 +9,7 @@ import java.util.UUID;
 public record AuditLogSearchFilter(
         UUID actorId,
         UUID targetId,
-        String action,
+        EnumActionType action,
         LocalDateTime startDate,
         LocalDateTime endDate
 ) {
@@ -19,9 +21,8 @@ public record AuditLogSearchFilter(
         return Optional.ofNullable(targetId);
     }
 
-    public Optional<String> optAction() {
-        return Optional.ofNullable(action)
-                .filter(s -> !s.isBlank());
+    public Optional<EnumActionType> optAction() {
+        return Optional.ofNullable(action);
     }
 
     public Optional<LocalDateTime> optStartDate() {

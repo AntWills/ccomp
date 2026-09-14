@@ -9,7 +9,9 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Table(name = "tb_users")
+@Table(name = "tb_users", indexes = {
+        @Index(name = "idx_users_created_at_id", columnList = "created_at DESC, id DESC")
+})
 @Entity(name = "UserModel")
 @Getter
 @Setter
@@ -38,10 +40,10 @@ public class UserModel {
     @Column(name = "status_account", columnDefinition = "varchar(25)", nullable = false)
     private EnumUserStatusAccount statusAccount;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
