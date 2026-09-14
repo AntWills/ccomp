@@ -172,4 +172,30 @@ public class ActivitiesController {
                 activitiesEnrollmentsServices.findAllUsersFromActivity(userId, activityId, cursor, pageSize)
         );
     }
+
+    @Operation(
+            summary = "Lista atividades do usuário em conflito de horário",
+            description = "Retorna uma lista paginada (por cursor) das atividades nas quais o usuário autenticado já está inscrito e que possuem sobreposição de horário com a atividade especificada."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de atividades conflitantes retornada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "404", description = "Atividade não encontrada")
+    })
+    @GetMapping("/activities/{activityId}/conflicts")
+    public ResponseEntity<CursorPage<EventActivityDTO>> getConflictingActivities(
+            @PathVariable Long activityId,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID userId = Optional.ofNullable(jwt)
+                .map(Jwt::getSubject)
+                .map(UUID::fromString)
+                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
+
+        return ResponseEntity.ok(
+                activitiesEnrollmentsServices.listConflictingActivities(userId, activityId, cursor, pageSize)
+        );
+    }
 }

@@ -272,4 +272,8 @@ public class Event {
         }
         this.status = EnumEventStatus.DRAFT;
     }
+
+    public boolean isSchedulerPrevent() {
+        return scheduleConflictPolicy == EnumScheduleConflictPolicy.PREVENT;
+    }
 }

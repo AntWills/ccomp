@@ -1,5 +1,7 @@
 package com.ccomp.br.domain.events.shared.application;
 
+import com.ccomp.br.domain.events.activities.dto.EventActivityConflictCursor;
+import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentsCursor;
 import com.ccomp.br.domain.events.enrollments.dto.UserActivitySummaryDTO;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentActivityCursor;
@@ -62,6 +64,10 @@ public class ActivitiesEnrollmentsServices {
         var enrollment = enrollmentRepository.findByUserIdAndEvent(userId, event)
                 .orElseThrow(() -> new ConflictException("Você precisa estar inscrito no evento."));
 
+        if(event.isSchedulerPrevent()
+                && eventActivityDslRepository.existsSchedulingConflict(userId, activity))
+            throw new ConflictException("Você já está inscrito em outras atividades");
+
         enrollmentActivityRepository.save(EnrollmentActivity.builder()
                         .activity(activity)
                         .enrollment(enrollment)
@@ -69,6 +75,25 @@ public class ActivitiesEnrollmentsServices {
         );
 
         return new MessageResponse("Inscrição na atividade realizada com sucesso.");
+    }
+
+    public CursorPage<EventActivityDTO> listConflictingActivities(
+            UUID userId, Long activityId, String cursor, int pageLimit
+    ) {
+        EventActivity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+
+        int finalPageLimit = Math.min(pageLimit, 50);
+
+        EventActivityConflictCursor cursorDecoded = CursorUtils.decode(cursor, EventActivityConflictCursor.class);
+        List<EventActivityDTO> results = eventActivityDslRepository
+                .findConflictingActivities(userId, activity, cursorDecoded, finalPageLimit + 1);
+
+        return CursorUtils.buildPage(
+                results,
+                finalPageLimit,
+                ea -> new EventActivityConflictCursor(ea.id(), ea.startDate())
+        );
     }
 
     public MessageResponse unsubscribe(UUID userId, Long activityId) {
