@@ -2,6 +2,7 @@ package com.ccomp.br.domain.events.core.dto;
 
 import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
+import com.ccomp.br.domain.events.core.enums.EnumScheduleConflictPolicy;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
@@ -21,6 +22,7 @@ public record UpdateEventDTO(
 
         EnumEventCategory category,
         EnumEventFormat format,
+        EnumScheduleConflictPolicy scheduleConflictPolicy,
         LocalDateTime startDate,
         LocalDateTime endDate,
         LocalDateTime enrollmentStartDate,

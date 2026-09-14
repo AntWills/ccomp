@@ -1,9 +1,6 @@
 package com.ccomp.br.domain.events.core.persistence;
 
-import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
-import com.ccomp.br.domain.events.core.enums.EnumEventExecutionStatus;
-import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
-import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
+import com.ccomp.br.domain.events.core.enums.*;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentStatus;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.editors.persistence.EventEditor;
@@ -64,6 +61,11 @@ public class Event {
     @Column(name = "status", columnDefinition = "varchar(20)", nullable = false)
     @Builder.Default
     private EnumEventStatus status = EnumEventStatus.DRAFT;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "schedule_conflict_policy", columnDefinition = "varchar(20)", nullable = false)
+    @Builder.Default
+    private EnumScheduleConflictPolicy scheduleConflictPolicy = EnumScheduleConflictPolicy.PREVENT;
 
     private String coverImageUrl;
 
