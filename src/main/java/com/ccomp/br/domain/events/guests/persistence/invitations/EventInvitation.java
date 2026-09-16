@@ -1,0 +1,67 @@
+package com.ccomp.br.domain.events.guests.persistence.invitations;
+
+import com.ccomp.br.domain.events.core.enums.EnumInvitationStatus;
+import com.ccomp.br.domain.events.core.persistence.Event;
+import com.ccomp.br.module.email.EmailAddress;
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Entity
+@Table(
+        name = "tb_event_invitations",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_event_invitations_event_email",
+                        columnNames = {"event_id", "email"}
+                )
+        },
+        indexes = {
+                @Index(name = "idx_event_invitations_event", columnList = "event_id"),
+                @Index(name = "idx_event_invitations_invited_id", columnList = "invited_at DESC, id DESC")
+        }
+)
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class EventInvitation {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "event_id",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_event_invitations_event")
+    )
+    private Event event;
+
+    @Column(name = "user_id")
+    private UUID userId;
+
+    @Column(name = "email_address", nullable = false)
+    private EmailAddress emailAddress;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EnumInvitationStatus status;
+
+    @Column(name = "invited_at", nullable = false)
+    private LocalDateTime invitedAt;
+
+    private LocalDateTime acceptedAt;
+
+    public boolean notIsAccepted() {
+        return status != EnumInvitationStatus.ACCEPTED;
+    }
+
+    public void cancel() {
+        status = EnumInvitationStatus.CANCELLED;
+    }
+}
