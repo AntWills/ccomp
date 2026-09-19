@@ -4,6 +4,7 @@ import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolic
 import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivity;
+import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -69,6 +70,14 @@ public class EventActivity {
     )
     @Builder.Default
     private Set<EnrollmentActivity> enrollments = new HashSet<>();
+
+    @OneToMany(
+            mappedBy = "activity",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @Builder.Default
+    private Set<ActivityGuest> guests = new HashSet<>();
 
     @PrePersist
     @PreUpdate

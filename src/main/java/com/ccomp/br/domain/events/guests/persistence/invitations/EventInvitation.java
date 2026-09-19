@@ -34,6 +34,9 @@ public class EventInvitation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, nullable = false)
+    private UUID code;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "event_id",
@@ -55,10 +58,31 @@ public class EventInvitation {
     @Column(name = "invited_at", nullable = false)
     private LocalDateTime invitedAt;
 
+    @Column(name = "expires_at", nullable = false)
+    private LocalDateTime expiresAt;
+
     private LocalDateTime acceptedAt;
 
     public boolean notIsAccepted() {
         return status != EnumInvitationStatus.ACCEPTED;
+    }
+
+    public boolean isValid() {
+        if(status != EnumInvitationStatus.PENDING)
+            return false;
+        return !isExpired();
+    }
+
+    public boolean isSameEmail(EmailAddress other) {
+        return other.equals(emailAddress);
+    }
+
+    public boolean isExpired() {
+        return LocalDateTime.now().isAfter(expiresAt);
+    }
+
+    public void accept() {
+        status = EnumInvitationStatus.ACCEPTED;
     }
 
     public void cancel() {
