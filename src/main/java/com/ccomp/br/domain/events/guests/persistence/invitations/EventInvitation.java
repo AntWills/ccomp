@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.events.guests.persistence.invitations;
 
-import com.ccomp.br.domain.events.core.enums.EnumInvitationStatus;
+import com.ccomp.br.domain.events.shared.enums.EnumInvitationStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.module.email.EmailAddress;
 import jakarta.persistence.*;
@@ -12,12 +12,6 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "tb_event_invitations",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_event_invitations_event_email",
-                        columnNames = {"event_id", "email"}
-                )
-        },
         indexes = {
                 @Index(name = "idx_event_invitations_event", columnList = "event_id"),
                 @Index(name = "idx_event_invitations_invited_id", columnList = "invited_at DESC, id DESC")
@@ -48,7 +42,11 @@ public class EventInvitation {
     @Column(name = "user_id")
     private UUID userId;
 
-    @Column(name = "email_address", nullable = false)
+    @Embedded
+    @AttributeOverride(
+            name = "value",
+            column = @Column(name = "email_address", nullable = false)
+    )
     private EmailAddress emailAddress;
 
     @Enumerated(EnumType.STRING)
@@ -82,10 +80,15 @@ public class EventInvitation {
     }
 
     public void accept() {
-        status = EnumInvitationStatus.ACCEPTED;
+        this.status = EnumInvitationStatus.ACCEPTED;
+        this.acceptedAt = LocalDateTime.now();
     }
 
     public void cancel() {
         status = EnumInvitationStatus.CANCELLED;
+    }
+
+    public void refuse() {
+        status = EnumInvitationStatus.DECLINED;
     }
 }

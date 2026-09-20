@@ -3,10 +3,16 @@ package com.ccomp.br.domain.events.guests.persistence;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
-import java.util.UUID;
+import java.time.LocalDateTime;
 
-@Table(name = "tb_activity_guests")
+@Table(
+        name = "tb_activity_guests",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_activity_guest", columnNames = {"activity_id", "event_guest_id"})
+        }
+        )
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
@@ -19,13 +25,14 @@ public class ActivityGuest {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "activity_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_guests_activity")
-    )
+    @JoinColumn(name = "activity_id", nullable = false)
     private EventActivity activity;
 
-    @Column(nullable = false)
-    private UUID userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "event_guest_id", nullable = false)
+    private EventGuest eventGuest;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 }

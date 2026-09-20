@@ -1,9 +1,13 @@
 package com.ccomp.br.domain.events.guests.persistence;
 
 import com.ccomp.br.domain.events.core.persistence.Event;
+import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
+import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Table(name = "tb_event_guests", indexes = {
@@ -30,4 +34,26 @@ public class EventGuest {
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private EnumGuestStatus status = EnumGuestStatus.CONFIRMED;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private EnumGuestVisibility visibility = EnumGuestVisibility.PUBLIC;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    public boolean isPublic() {
+        return this.visibility == EnumGuestVisibility.PUBLIC;
+    }
+
+    public boolean isConfirmed() {
+        return this.status == EnumGuestStatus.CONFIRMED;
+    }
 }

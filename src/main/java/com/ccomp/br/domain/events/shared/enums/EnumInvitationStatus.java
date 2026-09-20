@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.events.core.enums;
+package com.ccomp.br.domain.events.shared.enums;
 
 public enum EnumInvitationStatus {
     PENDING,

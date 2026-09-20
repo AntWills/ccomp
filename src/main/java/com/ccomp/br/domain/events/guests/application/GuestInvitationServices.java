@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.events.guests.application;
 
-import com.ccomp.br.domain.events.core.enums.EnumInvitationStatus;
+import com.ccomp.br.domain.events.shared.enums.EnumInvitationStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.guests.dto.EventInvitationCursor;
@@ -30,7 +30,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-public class GuestServices {
+public class GuestInvitationServices {
     private final EventGuestRepository eventGuestRepository;
     private final EventInvitationRepository eventInvitationRepository;
     private final EventInvitationDspRepository eventInvitationDspRepository;
@@ -38,7 +38,7 @@ public class GuestServices {
     private final EventEditorRepository editorRepository;
     private final UserManagement userManagement;
 
-    public GuestServices(EventGuestRepository eventGuestRepository, EventInvitationRepository eventInvitationRepository, EventInvitationDspRepository eventInvitationDspRepository, EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement) {
+    public GuestInvitationServices(EventGuestRepository eventGuestRepository, EventInvitationRepository eventInvitationRepository, EventInvitationDspRepository eventInvitationDspRepository, EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement) {
         this.eventGuestRepository = eventGuestRepository;
         this.eventInvitationRepository = eventInvitationRepository;
         this.eventInvitationDspRepository = eventInvitationDspRepository;
@@ -55,7 +55,7 @@ public class GuestServices {
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         if(!canManageEvent(userId, event))
-            throw new AccessDeniedException("Você não tem permissão para acessar convites neste evento.");
+            throw new AccessDeniedException("Você não tem permissão para gerenciar/enviar convites neste evento.");
 
         EventInvitationCursor cursorDecoded = CursorUtils.decode(cursor, EventInvitationCursor.class);
         List<EventInvitation> results = eventInvitationDspRepository
@@ -81,7 +81,7 @@ public class GuestServices {
                 throw new UserBlockedException("O usuário informado está inativo ou bloqueado.");
             }
 
-            if (eventGuestRepository.existsByUserIdAndEvent(userId, event)) {
+            if (eventGuestRepository.existsByUserIdAndEvent(user.id(), event)) {
                 return new MessageResponse("Este usuário já é um convidado deste evento.");
             }
         }
@@ -111,7 +111,7 @@ public class GuestServices {
         return new MessageResponse("Um e-mail de convite foi enviado.");
     }
 
-    public MessageResponse acceptInvite(UUID userId, UUID code) {
+    public MessageResponse acceptInvite(UUID userId, UUID code, boolean accept) {
         EventInvitation invitation = eventInvitationRepository.findByCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Código não encontrado."));
 
@@ -121,9 +121,15 @@ public class GuestServices {
         UserDTO userDTO = userManagement.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não cadastrado na plataforma"));
 
-        if(invitation.isSameEmail(userDTO.emailAddress()))
+        if(!invitation.isSameEmail(userDTO.emailAddress()))
             throw new AccessDeniedException("Usuário não autorizado.");
 
+        if(!accept) {
+            invitation.refuse();
+            eventInvitationRepository.save(invitation);
+
+            return new MessageResponse("Convite recusado.");
+        }
         invitation.accept();
         EventGuest guest = EventGuest.builder()
                 .userId(userId)
@@ -134,6 +140,22 @@ public class GuestServices {
         eventGuestRepository.save(guest);
 
         return new MessageResponse("Convite aceito com sucesso.");
+    }
+
+    public MessageResponse cancelInvitation(UUID userId, Long invitationId) {
+        EventInvitation invitation = eventInvitationRepository.findById(invitationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Convite não encontrado."));
+
+        Event event = invitation.getEvent();
+
+        if(!canManageEvent(userId, event))
+            throw new AccessDeniedException("Você não tem permissão para editar convites neste evento.");
+
+        invitation.cancel();
+
+        eventInvitationRepository.save(invitation);
+
+        return new MessageResponse("Convite cancelado com sucesso.");
     }
 
     private Event getManageableEvent(UUID userId, Long eventId) {
