@@ -15,12 +15,11 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/events")
-@Tag(name = "Convidados", description = "Gestão da lista de convidados de eventos e atividades")
+@Tag(name = "Gerir Eventos (Convidados)", description = "Gestão da lista de convidados de eventos e atividades")
 public class GuestController {
 
     private final GuestService guestService;
