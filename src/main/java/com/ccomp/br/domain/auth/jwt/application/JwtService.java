@@ -105,7 +105,8 @@ public class JwtService {
 
     @Transactional
     public void deleteRefreshToken(RefreshTokenRequest request){
-        refreshTokenRepository.deleteByToken(request.refreshToken());
+        String hash = TokenHasher.hash(request.refreshToken());
+        refreshTokenRepository.deleteByTokenHash(hash);
     }
 
     @Transactional
