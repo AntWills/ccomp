@@ -5,6 +5,7 @@ import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentStatus;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.editors.persistence.EventEditor;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
+import com.ccomp.br.domain.events.guests.persistence.EventGuest;
 import com.ccomp.br.shared.exceptions.DomainException;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
@@ -86,6 +87,14 @@ public class Event {
     @OneToMany(mappedBy = "event")
     @Builder.Default
     private Set<Enrollment> enrollments = new HashSet<>();
+
+    @OneToMany(
+            mappedBy = "event",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @Builder.Default
+    private Set<EventGuest> guests = new HashSet<>();
 
     @OneToMany(mappedBy = "event")
     private Set<EventEditor> editors;
