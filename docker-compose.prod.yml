@@ -13,6 +13,8 @@ services:
     profiles: [all]
     env_file:
       - .env
+    deploy:
+      replicas: 2
     depends_on:
       grafana-lgtm:
         condition: service_started
