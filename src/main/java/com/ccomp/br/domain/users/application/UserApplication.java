@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.users.application;
 
-import com.ccomp.br.domain.security.jwt.application.JwtService;
+import com.ccomp.br.domain.auth.jwt.application.JwtService;
 import com.ccomp.br.domain.users.dto.UpdateUserDTO;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.util.UserMapper;
@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 

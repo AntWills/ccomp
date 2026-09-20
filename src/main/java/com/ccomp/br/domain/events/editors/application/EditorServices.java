@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ccomp.br.domain.events.editors.dto.EventEditorCursor;
 import com.ccomp.br.domain.events.editors.dto.EventEditorListItem;
-import com.ccomp.br.domain.security.SecurityUtils;
+import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
 

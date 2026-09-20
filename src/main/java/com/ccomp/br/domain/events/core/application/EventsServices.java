@@ -6,7 +6,7 @@ import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.persistence.EventDslRepository;
 import com.ccomp.br.domain.events.core.util.EventMapper;
 import com.ccomp.br.domain.news.util.SlugUtils;
-import com.ccomp.br.domain.security.SecurityUtils;
+import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
