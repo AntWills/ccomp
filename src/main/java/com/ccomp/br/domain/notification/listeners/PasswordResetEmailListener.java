@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.notification.listeners;
 
 import com.ccomp.br.config.RabbitMQConfig;
-import com.ccomp.br.domain.auth.external.dto.PasswordResetMessageDTO;
+import com.ccomp.br.domain.auth.core.external.dto.PasswordResetMessageDTO;
 import com.ccomp.br.module.email.EmailService;
 import com.ccomp.br.shared.dto.SendMailDTO;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;

@@ -9,7 +9,7 @@ import com.ccomp.br.domain.clubs.persistence.ClubRepository;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMember;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMemberDslRepository;
 import com.ccomp.br.domain.clubs.persistence.members.ClubMemberRepository;
-import com.ccomp.br.domain.security.SecurityUtils;
+import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;

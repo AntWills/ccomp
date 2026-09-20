@@ -1,0 +1,112 @@
+package com.ccomp.br.domain.auth.core.application;
+
+import com.ccomp.br.config.RabbitMQConfig;
+import com.ccomp.br.domain.auth.core.dto.*;
+import com.ccomp.br.domain.auth.core.external.dto.PasswordResetMessageDTO;
+import com.ccomp.br.domain.auth.jwt.application.JwtService;
+import com.ccomp.br.domain.auth.passwordreset.application.PasswordResetService;
+import com.ccomp.br.domain.users.external.UserManagement;
+import com.ccomp.br.domain.auth.security.UserDetailsImpl;
+import com.ccomp.br.module.email.EmailAddress;
+import com.ccomp.br.shared.dto.RegisterUserDTO;
+import com.ccomp.br.shared.dto.UserDTO;
+import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+public class AuthApplication {
+    private final UserManagement userManagement;
+//    private final
+    private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager;
+    private final PasswordResetService passwordResetService;
+    private final RabbitTemplate rabbitTemplate;
+
+    @Autowired
+    public AuthApplication(
+            UserManagement userManagement,
+            JwtService jwtService,
+            AuthenticationManager authenticationManager,
+            PasswordResetService passwordResetService,
+            RabbitTemplate rabbitTemplate) {
+        this.userManagement = userManagement;
+        this.jwtService = jwtService;
+        this.authenticationManager = authenticationManager;
+        this.passwordResetService = passwordResetService;
+        this.rabbitTemplate = rabbitTemplate;
+    }
+
+    @Transactional
+    public void signUp(RegisterUserDTO dto) {
+        userManagement.register(dto);
+    }
+
+    public AccessTokenResponse signIn(LoginRequestDTO dto, ClientMetadataDTO metaDTO) {
+        var authToken = new UsernamePasswordAuthenticationToken(
+                dto.email().getValue(), dto.password()
+        );
+
+        Authentication authentication = authenticationManager.authenticate(authToken);
+
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+        if(!userDetails.isEnabled()) {
+            userManagement.reactivateAccount(userDetails.getId());
+        }
+
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+
+        return new AccessTokenResponse(
+                jwtService.generateAccessToken(userDetails.getId(), roles),
+                jwtService.createRefreshToken(userDetails.getId(), metaDTO));
+    }
+
+    public Optional<RefreshTokenResponse> refresh(RefreshTokenRequest request){
+        return jwtService.validRefreshToken(request)
+                .map(RefreshTokenResponse::new);
+    }
+
+    @Async
+    @Transactional
+    public void logout(RefreshTokenRequest request){
+        jwtService.deleteRefreshToken(request);
+    }
+
+    @Transactional
+    public void requestPasswordReset(EmailAddress emailAddress) {
+        Optional<UserDTO> userOpt = userManagement.findByEmailAddress(emailAddress);
+
+        if(userOpt.isEmpty()) return;
+        var user = userOpt.get();
+
+        String token = passwordResetService.issuePasswordResetToken(user.id());
+
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE_NAME,
+                RabbitMQConfig.ROUTING_KEY_PASSWORD_RESET,
+                new PasswordResetMessageDTO(user.emailAddress(), token)
+        );
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequestDTO dto) {
+        UUID userId = passwordResetService.validateAndConsumeToken(dto.token())
+                .orElseThrow(() -> new ResourceNotFoundException("O link para redefinir sua senha é inválido ou expirou. Solicite um novo link e tente novamente."));
+        userManagement.updatePassword(userId, dto.password());
+        jwtService.deleteRefreshTokenByUserId(userId);
+    }
+}

@@ -10,7 +10,7 @@ import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.activities.util.ActivityMapper;
-import com.ccomp.br.domain.security.SecurityUtils;
+import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;

@@ -1,7 +1,7 @@
 package com.ccomp.br.config;
 
-import com.ccomp.br.domain.security.jwt.application.JwtService;
-import com.ccomp.br.domain.security.UserDetailsImpl;
+import com.ccomp.br.domain.auth.jwt.application.JwtService;
+import com.ccomp.br.domain.auth.security.UserDetailsImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import io.swagger.v3.core.jackson.ModelResolver;

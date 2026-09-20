@@ -15,7 +15,7 @@ import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
-import com.ccomp.br.domain.security.SecurityUtils;
+import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;

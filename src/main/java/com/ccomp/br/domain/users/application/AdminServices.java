@@ -5,7 +5,7 @@ import com.ccomp.br.domain.audit.external.dto.AuditCommand;
 import com.ccomp.br.domain.audit.external.enums.EnumActionType;
 import com.ccomp.br.domain.audit.external.enums.EnumActorType;
 import com.ccomp.br.domain.audit.external.enums.EnumTargetType;
-import com.ccomp.br.domain.security.jwt.application.JwtService;
+import com.ccomp.br.domain.auth.jwt.application.JwtService;
 import com.ccomp.br.domain.users.dto.*;
 import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.external.RolesServices;
