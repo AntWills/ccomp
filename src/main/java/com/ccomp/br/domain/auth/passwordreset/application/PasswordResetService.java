@@ -21,8 +21,9 @@ public class PasswordResetService {
 
     @Transactional
     public String issuePasswordResetToken(UUID userId) {
-        String token = TokenGenerator.generateToken();
+        passwordResetTokenRepository.deleteAllByUserId(userId);
 
+        String token = TokenGenerator.generateToken();
         String hash = TokenHasher.hash(token);
 
         passwordResetTokenRepository.save(
@@ -38,6 +39,10 @@ public class PasswordResetService {
 
     @Transactional
     public Optional<UUID> validateAndConsumeToken(String token) {
+        if (token == null || token.isBlank()) {
+            return Optional.empty();
+        }
+
         String hash = TokenHasher.hash(token);
 
         var passwordResetToken = passwordResetTokenRepository.findById(hash);

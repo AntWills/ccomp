@@ -72,11 +72,11 @@ public class AuthApplication {
 
         return new AccessTokenResponse(
                 jwtService.generateAccessToken(userDetails.getId(), roles),
-                jwtService.createRefreshToken(userDetails.getId(), metaDTO).getToken());
+                jwtService.createRefreshToken(userDetails.getId(), metaDTO));
     }
 
-    public Optional<RefreshTokenResponse> refresh(RefreshTokenRequest request, ClientMetadataDTO clientMetadata){
-        return jwtService.validRefreshToken(request, clientMetadata)
+    public Optional<RefreshTokenResponse> refresh(RefreshTokenRequest request){
+        return jwtService.validRefreshToken(request)
                 .map(RefreshTokenResponse::new);
     }
 
@@ -107,5 +107,6 @@ public class AuthApplication {
         UUID userId = passwordResetService.validateAndConsumeToken(dto.token())
                 .orElseThrow(() -> new ResourceNotFoundException("O link para redefinir sua senha é inválido ou expirou. Solicite um novo link e tente novamente."));
         userManagement.updatePassword(userId, dto.password());
+        jwtService.deleteRefreshTokenByUserId(userId);
     }
 }

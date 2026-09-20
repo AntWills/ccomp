@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.UUID;
 
 public final class TokenHasher {
 
@@ -17,5 +18,9 @@ public final class TokenHasher {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 não disponível", e);
         }
+    }
+
+    public static String hash(UUID token) {
+        return hash(token.toString());
     }
 }

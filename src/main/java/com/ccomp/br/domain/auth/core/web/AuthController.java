@@ -132,10 +132,7 @@ public class AuthController {
     )
     @PostMapping("/refresh")
     public ResponseEntity<RefreshTokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request, HttpServletRequest metadata) {
-        return authApplication.refresh(request, ClientMetadataDTO.builder()
-                        .ipAddress(metadata.getRemoteAddr())
-                        .userAgent(metadata.getHeader("User-Agent"))
-                        .build())
+        return authApplication.refresh(request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }

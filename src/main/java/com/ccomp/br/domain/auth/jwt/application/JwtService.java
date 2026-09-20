@@ -4,6 +4,7 @@ import com.ccomp.br.domain.auth.core.dto.ClientMetadataDTO;
 import com.ccomp.br.domain.auth.core.dto.RefreshTokenRequest;
 import com.ccomp.br.domain.auth.jwt.persistence.RefreshToken;
 import com.ccomp.br.domain.auth.jwt.persistence.RefreshTokenRepository;
+import com.ccomp.br.domain.auth.passwordreset.application.TokenHasher;
 import com.ccomp.br.domain.users.external.RolesServices;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.exceptions.InvalidTokenException;
@@ -55,8 +56,9 @@ public class JwtService {
     }
 
     @Transactional
-    public RefreshToken createRefreshToken(UUID userId, ClientMetadataDTO clientMetadata){
-        String safeUserAgent = truncateUserAgent(clientMetadata.userAgent());
+    public UUID createRefreshToken(UUID userId, ClientMetadataDTO clientMetadata){
+        String safeUserAgent = truncate(clientMetadata.userAgent(), 500);
+        String safeIpAddress = truncate(clientMetadata.ipAddress(), 45);
 
         List<RefreshToken> sameDeviceTokens = refreshTokenRepository.findAllByUserId(userId).stream()
                 .filter(t -> Objects.equals(t.getUserAgent(), safeUserAgent))
@@ -65,35 +67,33 @@ public class JwtService {
         refreshTokenRepository.deleteAll(sameDeviceTokens);
         refreshTokenRepository.flush();
 
-        RefreshToken refreshToken = RefreshToken.builder()
+        UUID rawToken = UUID.randomUUID();
+
+        refreshTokenRepository.save(RefreshToken.builder()
                 .userId(userId)
-                .token(UUID.randomUUID())
-                .ipAddress(clientMetadata.ipAddress())
+                .tokenHash(TokenHasher.hash(rawToken))
+                .ipAddress(safeIpAddress)
                 .userAgent(safeUserAgent)
                 .expiryDate(Instant.now().plusSeconds(refreshExpirationInSeconds))
-                .build();
+                .build());
 
-        return refreshTokenRepository.save(refreshToken);
+        return rawToken;
     }
 
     @Transactional
-    public Optional<String> validRefreshToken(RefreshTokenRequest request, ClientMetadataDTO clientMetadata) {
-        RefreshToken refresh = refreshTokenRepository.findByToken(request.refreshToken())
-                        .orElseThrow(() -> new InvalidTokenException("Tempo de acesso expirado."));
-
-        if(!userManagement.isAccountActive(refresh.getUserId())) {
-            refreshTokenRepository.delete(refresh);
-            return Optional.empty();
-        }
+    public Optional<String> validRefreshToken(RefreshTokenRequest request) {
+        String hash = TokenHasher.hash(request.refreshToken());
+        RefreshToken refresh = refreshTokenRepository.findByTokenHash(hash)
+                        .orElseThrow(() -> new InvalidTokenException("Sessão inválida. Faça login novamente."));
 
         if (refresh.isTokenExpired()) {
             refreshTokenRepository.delete(refresh);
             return Optional.empty();
         }
 
-        if (!Objects.equals(refresh.getUserAgent(), truncateUserAgent(clientMetadata.userAgent()))) {
+        if(!userManagement.isAccountActive(refresh.getUserId())) {
             refreshTokenRepository.delete(refresh);
-            throw new InvalidTokenException("Dispositivo não reconhecido. Faça login novamente.");
+            return Optional.empty();
         }
 
         List<String> roles = rolesServices.loadRolesByUserID(refresh.getUserId()).stream()
@@ -113,8 +113,8 @@ public class JwtService {
         refreshTokenRepository.deleteByUserId(userId);
     }
 
-    private String truncateUserAgent(String userAgent) {
-        if (userAgent == null) return null;
-        return userAgent.length() > 500 ? userAgent.substring(0, 500) : userAgent;
+    private String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) return value;
+        return value.substring(0, maxLength);
     }
 }
