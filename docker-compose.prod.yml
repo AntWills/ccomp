@@ -5,12 +5,15 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     profiles: [all]
+    restart: unless-stopped
     depends_on:
-      - ccomp-backend
+      ccomp-backend:
+        condition: service_healthy
 
   ccomp-backend:
     build: .
     profiles: [all]
+    restart: unless-stopped
     env_file:
       - .env
     deploy:
@@ -24,12 +27,21 @@ services:
         condition: service_completed_successfully
       postgres-db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q -O /dev/null http://localhost:8081/actuator/health/liveness || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     volumes:
       - ./keys:/app/keys
 
   postgres-db:
     image: postgres:17-alpine
     profiles: [ all, infra ]
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -48,6 +60,7 @@ services:
   seaweeds:
     image: chrislusf/seaweedfs:latest
     profiles: [ all, infra ]
+    restart: unless-stopped
     environment:
       STORAGE_USER: ${STORAGE_USER}
       STORAGE_PASSWORD: ${STORAGE_PASSWORD}
@@ -86,6 +99,7 @@ services:
   rabbitmq:
     image: rabbitmq:4.3.5-management-alpine
     container_name: ccomp-rabbitmq
+    restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
@@ -102,6 +116,7 @@ services:
   grafana-lgtm:
     image: 'grafana/otel-lgtm:latest'
     profiles: [ all, infra ]
+    restart: unless-stopped
     ports:
       - "127.0.0.1:3000:3000"
 

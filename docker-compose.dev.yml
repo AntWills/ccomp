@@ -74,8 +74,8 @@ services:
       - "9000:9000"
       - "9333:9333"
     environment:
-      AWS_ACCESS_KEY_ID: admin
-      AWS_SECRET_ACCESS_KEY: admin
+      STORAGE_USER: admin
+      STORAGE_PASSWORD: admin
     entrypoint: >
       sh -c "
       mkdir -p /etc/seaweedfs &&
