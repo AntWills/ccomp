@@ -2,6 +2,7 @@ package com.ccomp.br.domain.auth.jwt.application;
 
 import com.ccomp.br.domain.auth.core.dto.ClientMetadataDTO;
 import com.ccomp.br.domain.auth.core.dto.RefreshTokenRequest;
+import com.ccomp.br.domain.auth.core.dto.TokenPair;
 import com.ccomp.br.domain.auth.jwt.persistence.RefreshToken;
 import com.ccomp.br.domain.auth.jwt.persistence.RefreshTokenRepository;
 import com.ccomp.br.domain.auth.passwordreset.application.TokenHasher;
@@ -60,18 +61,13 @@ public class JwtService {
         String safeUserAgent = truncate(clientMetadata.userAgent(), 500);
         String safeIpAddress = truncate(clientMetadata.ipAddress(), 45);
 
-        List<RefreshToken> sameDeviceTokens = refreshTokenRepository.findAllByUserId(userId).stream()
-                .filter(t -> Objects.equals(t.getUserAgent(), safeUserAgent))
-                .toList();
-
-        refreshTokenRepository.deleteAll(sameDeviceTokens);
-        refreshTokenRepository.flush();
-
         UUID rawToken = UUID.randomUUID();
+        UUID familyId = UUID.randomUUID();
 
         refreshTokenRepository.save(RefreshToken.builder()
                 .userId(userId)
                 .tokenHash(TokenHasher.hash(rawToken))
+                .familyId(familyId)
                 .ipAddress(safeIpAddress)
                 .userAgent(safeUserAgent)
                 .expiryDate(Instant.now().plusSeconds(refreshExpirationInSeconds))
@@ -81,10 +77,19 @@ public class JwtService {
     }
 
     @Transactional
-    public Optional<String> validRefreshToken(RefreshTokenRequest request) {
+    public Optional<TokenPair> validRefreshToken(RefreshTokenRequest request, ClientMetadataDTO clientMetadata) {
         String hash = TokenHasher.hash(request.refreshToken());
-        RefreshToken refresh = refreshTokenRepository.findByTokenHash(hash)
-                        .orElseThrow(() -> new InvalidTokenException("Sessão inválida. Faça login novamente."));
+        Optional<RefreshToken> refreshOpt = refreshTokenRepository.findByTokenHash(hash);
+
+        if(refreshOpt.isEmpty())
+            return Optional.empty();
+
+        var refresh = refreshOpt.get();
+
+        if (refresh.isRevoked()) {
+            refreshTokenRepository.deleteByFamilyId(refresh.getFamilyId());
+            return Optional.empty();
+        }
 
         if (refresh.isTokenExpired()) {
             refreshTokenRepository.delete(refresh);
@@ -92,7 +97,7 @@ public class JwtService {
         }
 
         if(!userManagement.isAccountActive(refresh.getUserId())) {
-            refreshTokenRepository.delete(refresh);
+            refreshTokenRepository.deleteByUserId(refresh.getUserId());
             return Optional.empty();
         }
 
@@ -100,7 +105,27 @@ public class JwtService {
                 .map(role -> "ROLE_" + role.name())
                 .toList();
 
-        return Optional.of(generateAccessToken(refresh.getUserId(), roles));
+        refresh.revoke();
+
+        UUID rawToken = UUID.randomUUID();
+        String safeUserAgent = truncate(clientMetadata.userAgent(), 500);
+        String safeIpAddress = truncate(clientMetadata.ipAddress(), 45);
+
+        refreshTokenRepository.save(RefreshToken.builder()
+                .userId(refresh.getUserId())
+                .tokenHash(TokenHasher.hash(rawToken))
+                .familyId(refresh.getFamilyId())
+                .ipAddress(safeIpAddress)
+                .userAgent(safeUserAgent)
+                .expiryDate(Instant.now().plusSeconds(refreshExpirationInSeconds))
+                .build());
+
+        var tokenPair = TokenPair.builder()
+                .accessToken(generateAccessToken(refresh.getUserId(), roles))
+                .refreshToken(rawToken)
+                .build();
+
+        return Optional.of(tokenPair);
     }
 
     @Transactional

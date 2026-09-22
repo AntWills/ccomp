@@ -53,7 +53,7 @@ public class AuthApplication {
         userManagement.register(dto);
     }
 
-    public AccessTokenResponse signIn(LoginRequestDTO dto, ClientMetadataDTO metaDTO) {
+    public TokenPair signIn(LoginRequestDTO dto, ClientMetadataDTO metaDTO) {
         var authToken = new UsernamePasswordAuthenticationToken(
                 dto.email().getValue(), dto.password()
         );
@@ -70,17 +70,17 @@ public class AuthApplication {
                 .map(GrantedAuthority::getAuthority)
                 .toList();
 
-        return new AccessTokenResponse(
+        // Emitir evento de login.
+
+        return new TokenPair(
                 jwtService.generateAccessToken(userDetails.getId(), roles),
                 jwtService.createRefreshToken(userDetails.getId(), metaDTO));
     }
 
-    public Optional<RefreshTokenResponse> refresh(RefreshTokenRequest request){
-        return jwtService.validRefreshToken(request)
-                .map(RefreshTokenResponse::new);
+    public Optional<TokenPair> refresh(RefreshTokenRequest request, ClientMetadataDTO metaDTO){
+        return jwtService.validRefreshToken(request, metaDTO);
     }
 
-    @Async
     @Transactional
     public void logout(RefreshTokenRequest request){
         jwtService.deleteRefreshToken(request);
