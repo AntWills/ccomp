@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-@Tag(name = "Notícias", description = "Operações relacionadas ao gerenciamento de notícias.")
+@Tag(name = "news", description = "Operações relacionadas ao gerenciamento de notícias.")
 @RestController
 @RequestMapping("api/news")
 public class NewsController {

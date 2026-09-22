@@ -19,7 +19,7 @@ import com.ccomp.br.shared.utils.CursorPage;
 
 import java.util.UUID;
 
-@Tag(name = "Gerir Eventos (Editores)")
+@Tag(name = "events/editors (Editores)")
 @RestController
 @RequestMapping("api/events")
 @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")

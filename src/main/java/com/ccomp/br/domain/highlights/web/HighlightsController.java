@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Tag(name = "Em Alta (Highlights)",
+@Tag(name = "highlights",
         description = "Operações relacionadas à busca de nóticias, clubes e eventos em alta.")
 @RestController
 @RequestMapping("api/highlights")

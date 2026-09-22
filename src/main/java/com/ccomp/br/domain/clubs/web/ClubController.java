@@ -24,7 +24,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/clubs")
-@Tag(name = "Club", description = "Endpoints para gerenciamento de clubes")
+@Tag(name = "club", description = "Endpoints para gerenciamento de clubes")
 public class ClubController {
 
     private final ClubService clubService;

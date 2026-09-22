@@ -2,7 +2,6 @@ package com.ccomp.br.domain.news.web;
 
 import com.ccomp.br.domain.news.application.NewsEditorServices;
 import com.ccomp.br.domain.news.dto.UserNewsResponseDTO;
-import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -23,13 +22,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-@Tag(name = "Notícias")
+@Tag(name = "news/editors")
 @RestController
 @RequestMapping("api/news")
-public class EditorController {
+public class NewsEditorController {
     private final NewsEditorServices newsEditorServices;
 
-    public EditorController(NewsEditorServices newsEditorServices) {
+    public NewsEditorController(NewsEditorServices newsEditorServices) {
         this.newsEditorServices = newsEditorServices;
     }
 

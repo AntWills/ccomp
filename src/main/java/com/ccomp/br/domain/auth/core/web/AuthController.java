@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-@Tag(name = "Autenticação", description = "Operações relacionadas ao registro da conta, login e token de acesso.")
+@Tag(name = "auth", description = "Operações relacionadas ao registro da conta, login e token de acesso.")
 @RestController
 @Slf4j
 @SecurityRequirements

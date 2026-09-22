@@ -1,10 +1,7 @@
 package com.ccomp.br.domain.events.core.dto;
 
-import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
-import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
+import com.ccomp.br.domain.events.core.enums.*;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentStatus;
-import com.ccomp.br.domain.events.core.enums.EnumEventExecutionStatus;
-import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -18,6 +15,7 @@ public record EventDTO(
         String coverImageUrl,
         EnumEventCategory category,
         EnumEventFormat format,
+        EnumScheduleConflictPolicy scheduleConflictPolicy,
 
         // Visibilidade e Publicação
         EnumEventStatus status,

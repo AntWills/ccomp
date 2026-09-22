@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-@Tag(name = "Gerir Eventos (Me)")
+@Tag(name = "events/me")
 @RestController
 @RequestMapping("api/events/me")
 public class EventsMeController {
