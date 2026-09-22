@@ -136,7 +136,7 @@ public class ActivitiesController {
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
             @ApiResponse(responseCode = "404", description = "Inscrição na atividade não encontrada")
     })
-    @DeleteMapping("/activities/{activityId}/subscribe")
+    @DeleteMapping("/activities/{activityId}/unsubscribe")
     public ResponseEntity<MessageResponse> unsubscribeFromActivity(
             @PathVariable Long activityId,
             @AuthenticationPrincipal Jwt jwt

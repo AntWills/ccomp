@@ -17,6 +17,7 @@ import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
 import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.shared.dto.MessageResponse;
+import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -135,6 +136,9 @@ public class ActivitiesEnrollmentsServices {
         boolean canEdit = SecurityUtils.isAdmin()
                 || event.isOwner(userId)
                 || editorServices.hasPermissionEdit(event, userId);
+
+        if(!canEdit)
+            throw new AccessDeniedException("Você não possui permissão para visualizar os incritos.");
 
         EnrollmentActivityCursor cursorDecoded = CursorUtils.decode(cursor, EnrollmentActivityCursor.class);
         List<UserActivitySummaryDTO> result = enrollmentActivityDslRepository
