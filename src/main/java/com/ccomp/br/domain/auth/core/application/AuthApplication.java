@@ -3,6 +3,7 @@ package com.ccomp.br.domain.auth.core.application;
 import com.ccomp.br.config.RabbitMQConfig;
 import com.ccomp.br.domain.auth.core.dto.*;
 import com.ccomp.br.domain.auth.core.external.dto.PasswordResetMessageDTO;
+import com.ccomp.br.domain.auth.core.external.dto.UserLoginMessageDTO;
 import com.ccomp.br.domain.auth.jwt.application.JwtService;
 import com.ccomp.br.domain.auth.passwordreset.application.PasswordResetService;
 import com.ccomp.br.domain.users.external.UserManagement;
@@ -13,7 +14,6 @@ import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -21,6 +21,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -70,7 +71,19 @@ public class AuthApplication {
                 .map(GrantedAuthority::getAuthority)
                 .toList();
 
-        // Emitir evento de login.
+        UserLoginMessageDTO loginEvent = new UserLoginMessageDTO(
+                userDetails.getId(),
+                dto.email(),
+                metaDTO.ipAddress(),
+                metaDTO.userAgent(),
+                LocalDateTime.now()
+        );
+
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE_NAME,
+                RabbitMQConfig.ROUTING_KEY_USER_LOGIN,
+                loginEvent
+        );
 
         return new TokenPair(
                 jwtService.generateAccessToken(userDetails.getId(), roles),
