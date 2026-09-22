@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Optional;
 import java.util.UUID;
 
-@Tag(name = "Gerir Eventos (Atividades)")
+@Tag(name = "events/activities (Atividades)")
 @RestController
 @RequestMapping("api/events")
 public class ActivitiesController {
@@ -136,7 +136,7 @@ public class ActivitiesController {
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
             @ApiResponse(responseCode = "404", description = "Inscrição na atividade não encontrada")
     })
-    @DeleteMapping("/activities/{activityId}/subscribe")
+    @DeleteMapping("/activities/{activityId}/unsubscribe")
     public ResponseEntity<MessageResponse> unsubscribeFromActivity(
             @PathVariable Long activityId,
             @AuthenticationPrincipal Jwt jwt

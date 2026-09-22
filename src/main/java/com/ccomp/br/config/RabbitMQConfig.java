@@ -43,6 +43,13 @@ public class RabbitMQConfig {
     public static final String DLQ_CERTIFICATE = "ccomp.certificate-generate.dlq";
     public static final String DLQ_ROUTING_KEY_CERTIFICATE = "certificate.generate.dlq";
 
+    // --- 5. PROCESSO: NOTIFICAÇÃO DE LOGIN (E-mail) ---
+    public static final String QUEUE_USER_LOGIN = "ccomp.user-login.queue";
+    public static final String ROUTING_KEY_USER_LOGIN = "user.login";
+
+    public static final String DLQ_USER_LOGIN = "ccomp.user-login.dlq";
+    public static final String DLQ_ROUTING_KEY_USER_LOGIN = "user.login.dlq";
+
     // --- EXCHANGE PRINCIPAL ---
     @Bean
     public TopicExchange appExchange() {
@@ -157,6 +164,33 @@ public class RabbitMQConfig {
     @Bean
     public Binding bindingCertificateDlq(Queue certificateDlq, TopicExchange appExchange) {
         return BindingBuilder.bind(certificateDlq).to(appExchange).with(DLQ_ROUTING_KEY_CERTIFICATE);
+    }
+
+    // ==========================================
+    // CONFIGURAÇÃO: USER LOGIN
+    // ==========================================
+
+    @Bean
+    public Queue userLoginQueue() {
+        Map<String, Object> args = new HashMap<>();
+        args.put("x-dead-letter-exchange", EXCHANGE_NAME);
+        args.put("x-dead-letter-routing-key", DLQ_ROUTING_KEY_USER_LOGIN);
+        return QueueBuilder.durable(QUEUE_USER_LOGIN).withArguments(args).build();
+    }
+
+    @Bean
+    public Queue userLoginDlq() {
+        return QueueBuilder.durable(DLQ_USER_LOGIN).build();
+    }
+
+    @Bean
+    public Binding bindingUserLogin(Queue userLoginQueue, TopicExchange appExchange) {
+        return BindingBuilder.bind(userLoginQueue).to(appExchange).with(ROUTING_KEY_USER_LOGIN);
+    }
+
+    @Bean
+    public Binding bindingUserLoginDlq(Queue userLoginDlq, TopicExchange appExchange) {
+        return BindingBuilder.bind(userLoginDlq).to(appExchange).with(DLQ_ROUTING_KEY_USER_LOGIN);
     }
 
     // ==========================================

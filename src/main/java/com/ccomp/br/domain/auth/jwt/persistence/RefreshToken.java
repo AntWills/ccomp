@@ -2,13 +2,16 @@ package com.ccomp.br.domain.auth.jwt.persistence;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Table(name = "tb_refresh_token", indexes = {
         @Index(name = "idx_refresh_token_user_id", columnList = "user_id"),
-        @Index(name = "idx_refresh_token_expiry_date", columnList = "expiry_date")
+        @Index(name = "idx_refresh_token_expiry_date", columnList = "expiry_date"),
+        @Index(name = "idx_refresh_token_family_id", columnList = "family_id"),
 })
 @Getter
 @Setter
@@ -33,10 +36,25 @@ public class RefreshToken {
     @Column(name = "user_agent", length = 500)
     private String userAgent;
 
+    @Column(name = "family_id", nullable = false)
+    private UUID familyId;
+
+    @Column(name = "revoked", nullable = false)
+    @Builder.Default
+    private boolean revoked = false;
+
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
     public boolean isTokenExpired() {
         return expiryDate.isBefore(Instant.now());
+    }
+
+    public void revoke() {
+        revoked = true;
     }
 }

@@ -19,7 +19,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/events")
-@Tag(name = "Gerir Eventos (Convidados)", description = "Gestão da lista de convidados de eventos e atividades")
+@Tag(name = "events/guests (convidados)", description = "Gestão da lista de convidados de eventos e atividades")
 public class GuestController {
 
     private final GuestService guestService;

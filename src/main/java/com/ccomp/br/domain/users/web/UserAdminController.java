@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @Tag(
-        name = "Administração de Usuários",
+        name = "users/admins",
         description = "Endpoints de gestão de contas para ADMIN e STAFF")
 @RestController
 @RequestMapping("/api/admin/users")

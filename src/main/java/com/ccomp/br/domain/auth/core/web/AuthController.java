@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-@Tag(name = "Autenticação", description = "Operações relacionadas ao registro da conta, login e token de acesso.")
+@Tag(name = "auth", description = "Operações relacionadas ao registro da conta, login e token de acesso.")
 @RestController
 @Slf4j
 @SecurityRequirements
@@ -85,7 +85,7 @@ public class AuthController {
                             description = "Login realizado com sucesso.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = AccessTokenResponse.class)
+                                    schema = @Schema(implementation = TokenPair.class)
                             )
                     ),
                     @ApiResponse(
@@ -99,7 +99,7 @@ public class AuthController {
             }
     )
     @PostMapping("/sign-in")
-    public AccessTokenResponse login(@Valid @RequestBody LoginRequestDTO dto, HttpServletRequest request) {
+    public TokenPair login(@Valid @RequestBody LoginRequestDTO dto, HttpServletRequest request) {
         return authApplication.signIn(dto, ClientMetadataDTO.builder()
                         .ipAddress(request.getRemoteAddr())
                         .userAgent(request.getHeader("User-Agent"))
@@ -131,8 +131,12 @@ public class AuthController {
             }
     )
     @PostMapping("/refresh")
-    public ResponseEntity<RefreshTokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request, HttpServletRequest metadata) {
-        return authApplication.refresh(request)
+    public ResponseEntity<TokenPair> refresh(@Valid @RequestBody RefreshTokenRequest request, HttpServletRequest metadata) {
+        return authApplication.refresh(request, ClientMetadataDTO.builder()
+                                .ipAddress(metadata.getRemoteAddr())
+                                .userAgent(metadata.getHeader("User-Agent"))
+                                .build()
+                )
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }

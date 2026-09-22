@@ -17,9 +17,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Tag(name = "events/guests/invitations (Convites)", description = "Gerenciamento de convidados e convites para eventos")
 @RestController
 @RequestMapping("/api/events")
-@Tag(name = "Gerir Eventos (Convites)", description = "Gerenciamento de convidados e convites para eventos")
 public class GuestInvitationController {
 
     private final GuestInvitationServices guestInvitationServices;

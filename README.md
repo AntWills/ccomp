@@ -28,8 +28,7 @@ Este repositório contém o **backend** do projeto, desenvolvido em
 
 Esta é a maneira mais rápida e prática de rodar o projeto em
 desenvolvimento. Todos os serviços necessários já vêm
-orquestrados e configurados nos arquivos `docker-compose.yml`
-e `docker-compose.dev.yml`.
+orquestrados e configurados no arquivo `docker-compose.dev.yml`.
 Crie um arquivo `.env.dev` na raiz do projeto com as variáveis abaixo:
 
 ```dotenv
@@ -60,9 +59,9 @@ RABBITMQ_PORT=5672
 RABBITMQ_USER=admin
 RABBITMQ_PASSWORD=admin
 
-STORAGE_ENDPOINT=http://minio:9000
-STORAGE_ACCESS_KEY=minioadmin
-STORAGE_SECRET_KEY=minioadmin
+STORAGE_ENDPOINT=http://seaweeds:9000
+STORAGE_USER=admin
+STORAGE_PASSWORD=admin
 STORAGE_BUCKET=images
 STORAGE_REGION=us-east-1
 ```
@@ -110,7 +109,7 @@ Por fim, execute o comando no terminal na raiz do projeto:
 ./mvnw spring-boot:run 
 ```
 
-## Documentação da API 
+## Documentação da API
 
 Com a aplicação em execução, a documentação interativa (Swagger UI)
 fica disponível em:
@@ -118,6 +117,10 @@ fica disponível em:
 ```
 http://localhost:8080/swagger-ui.html
 ```
+
+A documentação e a especificação OpenAPI (`/v3/api-docs`) são públicas,
+para permitir a integração dos clientes frontend. As rotas de negócio da
+API continuam protegidas conforme suas regras de autenticação.
 
 ## Infraestrutura em Produção
 
@@ -151,8 +154,8 @@ SPRING_PROFILES_ACTIVE=prod
 # Dados da aplicação em produção
 FRONTEND_PASSWORD_RESET_URL=https://frontend.com/reset-password
 FRONTEND_ACCEPT_EDITOR_INVITE_URL=https://frontend.com/accept-editor-invite
-PUBLIC_KEY=file:./keys/public.key
-PRIVITE_KEY=file:./keys/private.key
+PUBLIC_KEY=file:/app/keys/public.key
+PRIVITE_KEY=file:/app/keys/private.key
 
 POSTGRES_URL=jdbc:postgresql://postgres-db:5432/ccomp-db
 POSTGRES_USER=user # usuário rela
@@ -174,13 +177,13 @@ RABBITMQ_PORT=5672
 RABBITMQ_USER=seu_usuario_seguro_aqui
 RABBITMQ_PASSWORD=sua_senha_segura_aqui
 
-# Só descomente se for rodar a aplicação no docker
+# Observabilidade no container
 OTEL_OTLP_ENDPOINT=http://grafana-lgtm:4318
 
-# Ajustar para o verdadeiro em produção
-STORAGE_ENDPOINT=http://minio:9000
-STORAGE_USER=minioadmin
-STORAGE_PASSWORD=minioadmin # Senha real
+# Storage SeaweedFS/S3
+STORAGE_ENDPOINT=http://seaweeds:9000
+STORAGE_USER=usuario-storage-seguro
+STORAGE_PASSWORD=senha-storage-segura
 STORAGE_BUCKET=images
 STORAGE_REGION=us-east-1
 ```
@@ -194,8 +197,8 @@ docker compose -f docker-compose.prod.yml --profile all up --build
 - (Adicione `-d` ao final do comando para rodar em background/daemon mode).
 
 O `--profile all` garante que todos os serviços 
-(`proxy`, `ccomp-backend`, `postgres-db`, `minio`, 
-`minio-setup`, `grafana-lgtm`) sejam inicializados 
+(`proxy`, `ccomp-backend`, `postgres-db`, `seaweeds`,
+`seaweeds-setup`, `rabbitmq`, `grafana-lgtm`) sejam inicializados
 corretamente conforme mapeado na rede.
 
 ### Acessando serviços internos localmente (túnel SSH)

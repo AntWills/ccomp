@@ -12,7 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(
-        name = "Logs para Auditoria",
+        name = "audit-logs",
         description = "Endpoints de gestão de logs")
 @RestController
 @RequestMapping("/api/admin/audit-logs")

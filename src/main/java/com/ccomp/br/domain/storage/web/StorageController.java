@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-@Tag(name = "Storage", description = "Gerenciamento e manipulação de arquivos no S3/MinIO")
+@Tag(name = "storage", description = "Gerenciamento e manipulação de arquivos no S3/MinIO")
 @RestController
 @RequestMapping("api/storage")
 @RequiredArgsConstructor

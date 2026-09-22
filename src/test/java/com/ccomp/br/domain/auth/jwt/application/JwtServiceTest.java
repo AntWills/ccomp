@@ -2,6 +2,7 @@ package com.ccomp.br.domain.auth.jwt.application;
 
 import com.ccomp.br.domain.auth.core.dto.ClientMetadataDTO;
 import com.ccomp.br.domain.auth.core.dto.RefreshTokenRequest;
+import com.ccomp.br.domain.auth.core.dto.TokenPair;
 import com.ccomp.br.domain.auth.jwt.persistence.RefreshToken;
 import com.ccomp.br.domain.auth.jwt.persistence.RefreshTokenRepository;
 import com.ccomp.br.domain.users.enums.EnumRoles;
@@ -158,6 +159,10 @@ public class JwtServiceTest {
         @Test
         @DisplayName("Retorna um novo Access Token quando o refresh token é válido e a conta está ativa")
         void validRefreshToken_returnsNewAccessToken_whenTokenIsValid() {
+            String largeIp = "1".repeat(100); // 100 chars
+            String largeUserAgent = "A".repeat(600); // 600 chars
+            ClientMetadataDTO metadata = new ClientMetadataDTO(largeIp, largeUserAgent);
+
             RefreshTokenRequest request = mock(RefreshTokenRequest.class);
             when(request.refreshToken()).thenReturn(rawToken);
 
@@ -174,35 +179,47 @@ public class JwtServiceTest {
             when(mockJwt.getTokenValue()).thenReturn("new-access-token");
             when(jwtEncoder.encode(any(JwtEncoderParameters.class))).thenReturn(mockJwt);
 
-            Optional<String> result = jwtService.validRefreshToken(request);
+            Optional<TokenPair> result = jwtService.validRefreshToken(request, metadata);
 
-            assertThat(result).isPresent().contains("new-access-token");
+            assertThat(result).isPresent();
+
             verify(refreshTokenRepository, never()).delete(any());
         }
 
         @Test
-        @DisplayName("Lança InvalidTokenException quando o token não é encontrado (hash inexistente)")
+        @DisplayName("Lança empty quando o token não é encontrado (hash inexistente)")
         void validRefreshToken_throwsException_whenTokenIsNotFound() {
+            String largeIp = "1".repeat(100); // 100 chars
+            String largeUserAgent = "A".repeat(600); // 600 chars
+            ClientMetadataDTO metadata = new ClientMetadataDTO(largeIp, largeUserAgent);
+
             RefreshTokenRequest request = mock(RefreshTokenRequest.class);
             when(request.refreshToken()).thenReturn(rawToken);
 
             when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> jwtService.validRefreshToken(request))
-                    .isInstanceOf(InvalidTokenException.class)
-                    .hasMessage("Sessão inválida. Faça login novamente.");
+            Optional<TokenPair> result = jwtService.validRefreshToken(request, metadata);
+
+            assertThat(result).isEmpty();
+            verify(refreshTokenRepository, never()).deleteByFamilyId(any());
+            verify(refreshTokenRepository, never()).deleteByTokenHash(any());
+            verify(refreshTokenRepository, never()).delete(any());
         }
 
         @Test
         @DisplayName("Deleta o token e retorna Optional.empty() quando o token está expirado")
         void validRefreshToken_returnsEmptyAndDeletesToken_whenTokenIsExpired() {
+            String largeIp = "1".repeat(100); // 100 chars
+            String largeUserAgent = "A".repeat(600); // 600 chars
+            ClientMetadataDTO metadata = new ClientMetadataDTO(largeIp, largeUserAgent);
+
             RefreshTokenRequest request = mock(RefreshTokenRequest.class);
             when(request.refreshToken()).thenReturn(rawToken);
 
             existingRefreshToken.setExpiryDate(Instant.now().minusSeconds(100)); // Token expirado no passado
             when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(existingRefreshToken));
 
-            Optional<String> result = jwtService.validRefreshToken(request);
+            Optional<TokenPair> result = jwtService.validRefreshToken(request, metadata);
 
             assertThat(result).isEmpty();
             verify(refreshTokenRepository).delete(existingRefreshToken);

@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-@Tag(name = "Gerir Eventos", description = "Operações relacionadas à criação, busca, atualização e gestão do ciclo de vida dos eventos.")
+@Tag(name = "events", description = "Operações relacionadas à criação, busca, atualização e gestão do ciclo de vida dos eventos.")
 @RestController
 @RequestMapping("api/events")
 public class EventsController {

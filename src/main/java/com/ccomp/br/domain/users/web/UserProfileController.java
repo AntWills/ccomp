@@ -21,9 +21,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+
+@Tag(name = "users/profile", description = "Endpoints para gerenciamento de usuários e controle de permissões (roles)")
 @RestController
 @RequestMapping("api/users")
-@Tag(name = "Perfil do Usuários", description = "Endpoints para gerenciamento de usuários e controle de permissões (roles)")
 public class UserProfileController {
 
     private final UserApplication userApplication;
