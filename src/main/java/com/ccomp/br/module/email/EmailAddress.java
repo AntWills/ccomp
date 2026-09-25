@@ -30,7 +30,7 @@ public class EmailAddress {
         String normalized = value.trim().toLowerCase(Locale.ROOT);
 
         if(!EmailValidator.getInstance().isValid(normalized))
-            throw new IllegalArgumentException("Formato de e-mail inválido: " + value);
+            throw new IllegalArgumentException("Formato de e-mail inválido.");
 
         this.value = normalized;
     }

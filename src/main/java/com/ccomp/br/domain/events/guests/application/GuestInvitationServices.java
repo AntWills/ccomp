@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.guests.application;
 
+import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.domain.events.shared.enums.EnumInvitationStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
@@ -7,7 +8,7 @@ import com.ccomp.br.domain.events.guests.dto.EventInvitationCursor;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitation;
-import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitationDspRepository;
+import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitationDslRepository;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitationRepository;
 import com.ccomp.br.domain.events.editors.persistence.EventEditorRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
@@ -33,12 +34,12 @@ import java.util.UUID;
 public class GuestInvitationServices {
     private final EventGuestRepository eventGuestRepository;
     private final EventInvitationRepository eventInvitationRepository;
-    private final EventInvitationDspRepository eventInvitationDspRepository;
+    private final EventInvitationDslRepository eventInvitationDspRepository;
     private final EventRepository eventRepository;
     private final EventEditorRepository editorRepository;
     private final UserManagement userManagement;
 
-    public GuestInvitationServices(EventGuestRepository eventGuestRepository, EventInvitationRepository eventInvitationRepository, EventInvitationDspRepository eventInvitationDspRepository, EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement) {
+    public GuestInvitationServices(EventGuestRepository eventGuestRepository, EventInvitationRepository eventInvitationRepository, EventInvitationDslRepository eventInvitationDspRepository, EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement) {
         this.eventGuestRepository = eventGuestRepository;
         this.eventInvitationRepository = eventInvitationRepository;
         this.eventInvitationDspRepository = eventInvitationDspRepository;

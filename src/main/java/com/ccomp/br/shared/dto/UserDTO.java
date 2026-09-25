@@ -21,6 +21,7 @@ public record UserDTO(
 ) {
     public boolean isTeamMember() {
         return this.role == EnumRoles.STAFF
+                || this.role == EnumRoles.MODERATOR
                 || this.role == EnumRoles.ADMIN;
     }
 
@@ -28,7 +29,7 @@ public record UserDTO(
         return this.statusAccount == EnumUserStatusAccount.ACTIVE;
     }
 
-    public boolean isAdmin() {
-        return this.role == EnumRoles.ADMIN;
+    public boolean isModeratorOrAdmin() {
+        return this.role == EnumRoles.ADMIN || this.role == EnumRoles.MODERATOR;
     }
 }

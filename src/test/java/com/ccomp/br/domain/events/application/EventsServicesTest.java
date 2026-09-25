@@ -9,7 +9,7 @@ import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventDslRepository;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
-import com.ccomp.br.domain.events.core.util.EventMapper;
+import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;

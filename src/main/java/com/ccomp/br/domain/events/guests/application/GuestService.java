@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.guests.application;
 
+import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.core.persistence.Event;
@@ -105,6 +106,7 @@ public class GuestService {
     }
 
     private boolean canManageEvent(UUID userId, Event event) {
-        return event.isOwner(userId) || editorRepository.existsByEventIdAndUserId(event.getId(), userId);
+        return SecurityUtils.isModeratorOrAdmin() || event.isOwner(userId)
+                || editorRepository.existsByEventIdAndUserId(event.getId(), userId);
     }
 }

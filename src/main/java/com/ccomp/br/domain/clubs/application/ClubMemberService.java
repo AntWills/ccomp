@@ -47,7 +47,7 @@ public class ClubMemberService {
     @Transactional(readOnly = true)
     public CursorPage<ClubMemberListItem> searchMembers(UUID userId, Long clubId,
                                                         ClubMemberFilter filter, String cursor, int pageSize) {
-        boolean canAccess =  SecurityUtils.isAdmin()
+        boolean canAccess =  SecurityUtils.isModeratorOrAdmin()
                 || clubAccessPolicy.isInstructor(clubId, userId);
 
         if (!canAccess)
@@ -123,7 +123,7 @@ public class ClubMemberService {
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado com o e-mail informado."));
 
         boolean canAccess = clubAccessPolicy.isInstructor(clubId, userLoggedId)
-                || SecurityUtils.isAdmin();
+                || SecurityUtils.isModeratorOrAdmin();
 
         if (!canAccess)
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
@@ -160,11 +160,11 @@ public class ClubMemberService {
         ClubMember member = clubMemberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("Membro não encontrado."));
 
-        if(member.getUserId().equals(userLoggedId) && !SecurityUtils.isAdmin())
+        if(member.getUserId().equals(userLoggedId) && !SecurityUtils.isModeratorOrAdmin())
             throw new ConflictException("O usuário não pode alterar o próprio status.");
 
         boolean canAccess = member.isInstructor(clubId)
-                || SecurityUtils.isAdmin();
+                || SecurityUtils.isModeratorOrAdmin();
 
         if (!canAccess)
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");

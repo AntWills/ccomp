@@ -5,6 +5,7 @@ import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
 import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 public record EventListItemDTO(
@@ -26,6 +27,6 @@ public record EventListItemDTO(
         LocalDateTime endDate,
         String address,
         String onlineUrl
-) {
+) implements Serializable {
 }
 

@@ -6,7 +6,7 @@ import com.ccomp.br.domain.events.editors.persistence.EventEditorRepository;
 import com.ccomp.br.domain.events.guests.dto.EventInvitationCursor;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitation;
-import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitationDspRepository;
+import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitationDslRepository;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitationRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
@@ -47,7 +47,7 @@ class GuestInvitationServicesTest {
     private EventInvitationRepository eventInvitationRepository;
 
     @Mock
-    private EventInvitationDspRepository eventInvitationDspRepository;
+    private EventInvitationDslRepository eventInvitationDspRepository;
 
     @Mock
     private EventRepository eventRepository;

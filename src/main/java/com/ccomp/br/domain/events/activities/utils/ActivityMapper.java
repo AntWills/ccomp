@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.events.activities.util;
+package com.ccomp.br.domain.events.activities.utils;
 
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;

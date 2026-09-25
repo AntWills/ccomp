@@ -1,5 +1,14 @@
+name: ccomp
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   proxy:
+    logging: *default-logging
     build:
       context: gateway
     ports:
@@ -9,6 +18,7 @@ services:
       - ccomp-backend
 
   ccomp-backend:
+    logging: *default-logging
     build: .
     profiles: [all]
     env_file:
@@ -24,10 +34,13 @@ services:
         condition: service_healthy
       keygen:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     volumes:
       - ./keys:/app/keys
 
   postgres-db:
+    logging: *default-logging
     image: postgres:17-alpine
     profiles: [all, infra]
     environment:
@@ -46,6 +59,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
 
   postgres-db-test:
+    logging: *default-logging
     image: postgres:17-alpine
     profiles: [ test ]
     environment:
@@ -68,6 +82,7 @@ services:
       - "shared_preload_libraries=auto_explain"
 
   seaweeds:
+    logging: *default-logging
     image: chrislusf/seaweedfs:latest
     profiles: [ all, infra ]
     ports:
@@ -91,6 +106,7 @@ services:
       retries: 5
 
   seaweeds-setup:
+    logging: *default-logging
     image: amazon/aws-cli
     profiles: [ all, infra ]
     depends_on:
@@ -108,7 +124,22 @@ services:
       aws --endpoint-url http://seaweeds:9000 s3api put-bucket-policy --bucket images --policy '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::images/*\"}]}';
       "
 
+  redis:
+    logging: *default-logging
+    image: redis:7-alpine
+    profiles: [all, infra]
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis-data:/data
+
   rabbitmq:
+    logging: *default-logging
     image: rabbitmq:4.3.5-management-alpine
     container_name: ccomp-rabbitmq
     environment:
@@ -126,6 +157,7 @@ services:
       retries: 5
 
   keygen:
+    logging: *default-logging
     image: alpine/openssl
     profiles: [all, infra]
     volumes:
@@ -143,16 +175,38 @@ services:
       fi"
 
   grafana-lgtm:
+    logging: *default-logging
     image: 'grafana/otel-lgtm:latest'
     profiles: [all, infra]
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: false
+      LOKI_EXTRA_ARGS: "-store.retention=720h -compactor.retention-enabled=true -compactor.delete-request-store=filesystem"
+      PROMETHEUS_EXTRA_ARGS: "--storage.tsdb.retention.time=30d"
+    volumes:
+      - grafana-lgtm-data:/data
     ports:
-      - '3000:3000' # UI
-      - '4317:4317'
-      - '4318:4318'
+      - "127.0.0.1:3000:3000" # acesso local; remoto via túnel SSH
+      - '127.0.0.1:4317:4317'
+      - '127.0.0.1:4318:4318'
+
+  alloy:
+    logging: *default-logging
+    image: grafana/alloy:latest
+    profiles: [all, infra]
+    restart: unless-stopped
+    command: ["run", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
+    depends_on:
+      grafana-lgtm:
+        condition: service_started
+    volumes:
+      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy/data
 
 volumes:
   postgres-data:
   seaweed-data:
   rabbitmq_data:
+  redis-data:
+  grafana-lgtm-data:
+  alloy-data:

@@ -108,7 +108,7 @@ public class ClubController {
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
             @ApiResponse(responseCode = "403", description = "Perfil sem permissão para criar clubes")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     public ResponseEntity<ClubResponseDTO> create(
             @Valid @RequestBody CreateClubRequestDTO dto,
             @AuthenticationPrincipal Jwt jwt
@@ -130,7 +130,7 @@ public class ClubController {
             @ApiResponse(responseCode = "403", description = "Acesso negado — usuário não é instrutor do clube"),
             @ApiResponse(responseCode = "404", description = "Clube não encontrado")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     public ResponseEntity<ClubResponseDTO> update(
             @Parameter(description = "ID do clube", required = true)
             @PathVariable Long clubId,
@@ -154,7 +154,7 @@ public class ClubController {
             @ApiResponse(responseCode = "403", description = "Acesso negado — usuário não é instrutor do clube"),
             @ApiResponse(responseCode = "404", description = "Clube não encontrado")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     public ResponseEntity<Void> delete(
             @Parameter(description = "ID do clube", required = true)
             @PathVariable Long clubId,

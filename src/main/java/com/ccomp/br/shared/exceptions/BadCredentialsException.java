@@ -4,6 +4,6 @@ import org.springframework.http.HttpStatus;
 
 public class BadCredentialsException extends ApiException {
     public BadCredentialsException(String message) {
-        super(message, HttpStatus.UNAUTHORIZED, "Bad Credentials");
+        super(message, HttpStatus.UNAUTHORIZED, "Credenciais inválidas");
     }
 }

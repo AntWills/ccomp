@@ -10,7 +10,7 @@ import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 
-import com.ccomp.br.domain.events.activities.util.ActivityMapper;
+import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;

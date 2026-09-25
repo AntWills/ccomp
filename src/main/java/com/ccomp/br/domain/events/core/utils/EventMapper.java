@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.events.core.util;
+package com.ccomp.br.domain.events.core.utils;
 
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.dto.UpdateEventDTO;

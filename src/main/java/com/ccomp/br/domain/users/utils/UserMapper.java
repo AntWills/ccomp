@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.users.util;
+package com.ccomp.br.domain.users.utils;
 
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.shared.dto.UserDTO;

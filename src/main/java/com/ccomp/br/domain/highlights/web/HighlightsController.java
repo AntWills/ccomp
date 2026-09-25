@@ -1,13 +1,9 @@
 package com.ccomp.br.domain.highlights.web;
 
-import com.ccomp.br.domain.clubs.application.ClubService;
 import com.ccomp.br.domain.clubs.dto.ClubResponseDTO;
-import com.ccomp.br.domain.events.core.application.EventsServices;
 import com.ccomp.br.domain.events.core.dto.EventListItemDTO;
-import com.ccomp.br.domain.events.core.dto.EventsFilterRequest;
+import com.ccomp.br.domain.highlights.application.HighlightsApplication;
 import com.ccomp.br.domain.highlights.dto.AllHighlights;
-import com.ccomp.br.domain.news.application.NewsApplication;
-import com.ccomp.br.domain.news.dto.NewsSearchFilter;
 import com.ccomp.br.domain.news.dto.NewsItem;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -26,14 +22,10 @@ import java.util.List;
 @RestController
 @RequestMapping("api/highlights")
 public class HighlightsController {
-    private final ClubService clubService;
-    private final NewsApplication newsApplication;
-    private final EventsServices eventsServices;
+    private final HighlightsApplication highlightsApplication;
 
-    public HighlightsController(ClubService clubService, NewsApplication newsApplication, EventsServices eventsServices) {
-        this.clubService = clubService;
-        this.newsApplication = newsApplication;
-        this.eventsServices = eventsServices;
+    public HighlightsController(HighlightsApplication highlightsApplication) {
+        this.highlightsApplication = highlightsApplication;
     }
 
     @Operation(
@@ -46,13 +38,7 @@ public class HighlightsController {
     @SecurityRequirements
     @GetMapping
     public ResponseEntity<AllHighlights> highlights() {
-        return ResponseEntity.ok(
-                new AllHighlights(
-                        clubService.search(null, 3).content(),
-                        newsApplication.searchNewsWithFilters(new NewsSearchFilter(null), null, 3).content(),
-                        eventsServices.searchEventsWithFilters(new EventsFilterRequest(null, null), null, 3).content()
-                )
-        );
+        return ResponseEntity.ok(highlightsApplication.all());
     }
 
     @Operation(
@@ -65,9 +51,7 @@ public class HighlightsController {
     @SecurityRequirements
     @GetMapping("clubs")
     public ResponseEntity<List<ClubResponseDTO>> highlightsClubs() {
-        return ResponseEntity.ok(
-                clubService.search(null, 3).content()
-        );
+        return ResponseEntity.ok(highlightsApplication.clubs());
     }
 
     @Operation(
@@ -80,9 +64,7 @@ public class HighlightsController {
     @SecurityRequirements
     @GetMapping("news")
     public ResponseEntity<List<NewsItem>> highlightsNews() {
-        return ResponseEntity.ok(
-                newsApplication.searchNewsWithFilters(new NewsSearchFilter(null), null, 3).content()
-        );
+        return ResponseEntity.ok(highlightsApplication.news());
     }
 
     @Operation(
@@ -95,8 +77,6 @@ public class HighlightsController {
     @SecurityRequirements
     @GetMapping("events")
     public ResponseEntity<List<EventListItemDTO>> highlightsEvents() {
-        return ResponseEntity.ok(
-                eventsServices.searchEventsWithFilters(new EventsFilterRequest(null, null), null, 3).content()
-        );
+        return ResponseEntity.ok(highlightsApplication.events());
     }
 }

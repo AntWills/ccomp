@@ -13,6 +13,8 @@ public class ErrorResponse {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime timestamp;
     private int status;
+    private String code;
+    private String message;
     private String error;
     private String route;
     private List<String> messages;
@@ -22,6 +24,8 @@ public class ErrorResponse {
                          List<String> messages, Map<String, String> details) {
         this.timestamp = timestamp;
         this.status = status;
+        this.code = "HTTP_" + status;
+        this.message = (messages != null && !messages.isEmpty()) ? messages.getFirst() : error;
         this.error = error;
         this.route = route;
         this.messages = messages;

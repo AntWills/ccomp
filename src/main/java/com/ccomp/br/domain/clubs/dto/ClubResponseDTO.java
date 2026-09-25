@@ -3,6 +3,7 @@ package com.ccomp.br.domain.clubs.dto;
 import com.ccomp.br.domain.clubs.persistence.Club;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -17,5 +18,5 @@ public record ClubResponseDTO(
         LocalDateTime createdAt,
         LocalDateTime publishedAt,
         LocalDateTime updatedAt
-) {
+) implements Serializable {
 }

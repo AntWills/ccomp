@@ -4,63 +4,36 @@ import com.ccomp.br.config.RabbitMQConfig;
 import com.ccomp.br.domain.users.external.dto.UserCreatedMessageDTO;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.module.email.EmailService;
+import com.ccomp.br.module.email.EmailTemplateService;
 import com.ccomp.br.shared.dto.SendMailDTO;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Component
 public class UserCreatedConsumer {
     private final EmailService emailService;
+    private final EmailTemplateService templateService;
 
-    public UserCreatedConsumer(EmailService emailService) {
+    public UserCreatedConsumer(EmailService emailService, EmailTemplateService templateService) {
         this.emailService = emailService;
+        this.templateService = templateService;
     }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_USER_CREATED)
     public void handler(UserCreatedMessageDTO message){
-        String subject = "Bem-vindo à CComp - Sua conta foi criada com sucesso";
-        String body = buildPlainTextWelcomeEmail(message.name());
+        String subject = "Bem-vindo à CCOMP";
+        String body = templateService.render("welcome", subject, Map.of("name", message.name()));
 
         SendMailDTO dto = new SendMailDTO(
                 new EmailAddress(message.email()),
                 subject,
-                body
+                body,
+                true
         );
 
         emailService.send(dto);
     }
 
-    private String buildPlainTextWelcomeEmail(String userName) {
-        return String.format("""
-        BEM-VINDO À CCOMP
-        
-        Olá %s,
-        
-        É com grande satisfação que confirmamos a criação da sua conta em nossa plataforma.
-        Estamos muito felizes em tê-lo(a) conosco!
-        
-        Sua conta foi criada com sucesso! Agora você pode acessar todos os recursos
-        e benefícios que preparamos para você.
-        
-        Próximos passos:
-        - Complete seu perfil com informações adicionais
-        - Explore nossos serviços e funcionalidades
-        - Entre em contato conosco se precisar de suporte
-        
-        Acesse sua conta: https://www.ccomp.com.br/login
-        
-        Se você tiver alguma dúvida ou precisar de assistência, nossa equipe de suporte
-        está à disposição para ajudá-lo(a).
-        
-        Atenciosamente,
-        Equipe CComp
-        
-        ---
-        📧 suporte@ccomp.com.br
-        🌐 www.ccomp.com.br
-        📍 Av. Principal, 1000 - Centro
-        
-        Este é um e-mail automático, por favor não responda diretamente a esta mensagem.
-        """, userName);
-    }
 }

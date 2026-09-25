@@ -66,6 +66,7 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC_EVENT_ROUTES = {
             "/api/events/{eventId:\\d+}",
+            "/api/events/slug/{slug}",
             "/api/events"
     };
 

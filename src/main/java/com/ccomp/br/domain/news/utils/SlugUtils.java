@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.news.util;
+package com.ccomp.br.domain.news.utils;
 
 import com.ccomp.br.shared.exceptions.DomainException;
 

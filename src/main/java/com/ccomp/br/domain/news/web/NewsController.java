@@ -97,7 +97,7 @@ public class NewsController {
             }
     )
     @GetMapping("/admin/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     public ResponseEntity<?> getById(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         return newsApplication.getById(id)
                 .map(ResponseEntity::ok)
@@ -120,7 +120,7 @@ public class NewsController {
             }
     )
     @PostMapping("/create")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     public ResponseEntity<?> create(@AuthenticationPrincipal Jwt jwt){
         NewsResponse entity = newsApplication.create(UUID.fromString(jwt.getSubject()));
 
@@ -146,6 +146,7 @@ public class NewsController {
             }
     )
     @PostMapping("/{id}/publish")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     public ResponseEntity<?> publish(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         newsApplication.publish(id, UUID.fromString(jwt.getSubject()));
         return ResponseEntity.ok().build();
@@ -181,6 +182,7 @@ public class NewsController {
             }
     )
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     public ResponseEntity<?> update(@PathVariable Long id,
                                     @Valid @RequestBody NewsUpdateDto dto,
                                     @AuthenticationPrincipal Jwt jwt) {
@@ -209,9 +211,9 @@ public class NewsController {
             }
     )
     @DeleteMapping("/{newsId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     public ResponseEntity<MessageResponse> deleteById(@PathVariable Long newsId, @AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.ok(
-                new MessageResponse("Nóticia deletada com sucesso.")
-        );
+        newsApplication.delete(newsId, UUID.fromString(jwt.getSubject()));
+        return ResponseEntity.ok(new MessageResponse("Notícia deletada com sucesso."));
     }
 }

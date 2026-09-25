@@ -143,7 +143,7 @@ public class EventsController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     @Operation(
             summary = "Cria um novo evento",
             description = """
@@ -183,7 +183,7 @@ public class EventsController {
     }
 
     @PatchMapping("{eventId}")
-//    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+//    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     @Operation(
             summary = "Atualiza parcialmente um evento existente",
             description = """
@@ -215,7 +215,7 @@ public class EventsController {
     }
 
     @PatchMapping("{eventId}/status/{status}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     @Operation(
             summary = "Atualiza o status de publicação de um evento",
             description = """
@@ -260,7 +260,7 @@ public class EventsController {
     }
 
     @DeleteMapping("/{eventId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     @Operation(summary = "Exclui um evento por ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Evento excluído com sucesso"),

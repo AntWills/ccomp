@@ -12,7 +12,7 @@ import com.ccomp.br.domain.users.external.RolesServices;
 import com.ccomp.br.domain.users.persistence.UserDslRepository;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
-import com.ccomp.br.domain.users.util.UserMapper;
+import com.ccomp.br.domain.users.utils.UserMapper;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.dto.UserItemDTO;

@@ -137,7 +137,7 @@ public class EditorServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        boolean canAccess = SecurityUtils.isAdmin()
+        boolean canAccess = SecurityUtils.isModeratorOrAdmin()
                 || event.isOwner(requesterId)
                 || hasPermissionEdit(event, requesterId);
 
@@ -166,7 +166,7 @@ public class EditorServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if (!event.isOwner(ownerId)) {
+        if (!SecurityUtils.isModeratorOrAdmin() && !event.isOwner(ownerId)) {
             throw new AccessDeniedException("Você não tem permissão para gerenciar os editores deste evento.");
         }
         return event;

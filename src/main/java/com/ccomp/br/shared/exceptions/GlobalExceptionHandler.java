@@ -4,20 +4,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex, WebRequest request){
         List<String> messages = ex.getBindingResult()
@@ -66,16 +65,33 @@ public class GlobalExceptionHandler {
             WebRequest request) {
 
         String path = request.getDescription(false).replace("uri=", "");
+        log.warn("Entrada inválida em {}: {}", path, ex.getMessage());
+        String message = "Os dados enviados são inválidos.";
 
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.BAD_REQUEST.value(),
-                ex.getMessage(),
+                "Erro de validação",
                 path,
-                List.of(ex.getMessage()),
+                List.of(message),
                 null
         );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception ex, WebRequest request) {
+        String path = request.getDescription(false).replace("uri=", "");
+        log.error("Falha inesperada ao processar {}", path, ex);
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Erro interno",
+                path,
+                List.of("Não foi possível concluir a solicitação. Tente novamente."),
+                null
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 }
