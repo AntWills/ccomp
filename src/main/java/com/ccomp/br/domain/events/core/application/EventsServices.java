@@ -131,7 +131,7 @@ public class EventsServices {
 
     // ---- Comandos ----
     @Transactional
-@CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public EventDTO create(UUID ownerId, CreateEventDTO dto) {
         UserDTO userDTO = userManagement.findById(ownerId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário responsável não encontrado no sistema."));
@@ -174,7 +174,7 @@ public class EventsServices {
     }
 
     @Transactional
-@CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public EventDTO update(UpdateEventDTO request, Long eventId, UUID userId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
@@ -200,7 +200,7 @@ public class EventsServices {
     }
 
     @Transactional
-@CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public MessageResponse updateEventStatus(Long eventId, EnumEventStatus newStatus, UUID userId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
@@ -227,7 +227,7 @@ public class EventsServices {
     }
 
     @Transactional
-@CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public void delete(Long eventId, UUID userId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));

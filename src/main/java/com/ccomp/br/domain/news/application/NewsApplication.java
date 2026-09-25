@@ -59,7 +59,7 @@ public class NewsApplication {
     }
 
     @Transactional
-@CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public NewsResponse create(UUID authorId) {
 //        List<ContentBlock> blocks = List.of(
 //                new ContentBlock(1L, ContentBlockType.HEADING, "News headline", null, null, null, null),
@@ -79,7 +79,7 @@ public class NewsApplication {
     }
 
     @Transactional
-@CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public NewsResponse update(Long id, NewsUpdateDto dto, UUID userId) {
         News entity = newsRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notícia não encontrada."));
@@ -105,7 +105,7 @@ public class NewsApplication {
     }
 
     @Transactional
-@CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public void delete(Long newsId, UUID userId) {
         News entity = newsRepository.findById(newsId)
                 .orElseThrow(() -> new ResourceNotFoundException("Notícia não encontrada."));
@@ -130,7 +130,7 @@ public class NewsApplication {
     }
 
     @Transactional
-@CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public void publish(Long id, UUID userId) {
         News model = newsRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notícia não encontrada."));

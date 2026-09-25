@@ -7,7 +7,6 @@ ALTER TABLE tb_roles
 -- Índices ausentes em relacionamentos consultados por domínio e por proprietários.
 CREATE INDEX idx_events_owner_id ON tb_events (owner_id);
 CREATE INDEX idx_event_activities_event_order ON tb_event_activities (event_id, display_order);
-CREATE INDEX idx_event_editor_validations_editor_id ON tb_event_editor_validations (event_editor_id);
 CREATE INDEX idx_event_guests_event_id ON tb_event_guests (event_id);
 CREATE INDEX idx_activity_guests_event_guest_id ON tb_activity_guests (event_guest_id);
 CREATE INDEX idx_news_editors_news_user ON tb_news_editors (news_id, user_id);

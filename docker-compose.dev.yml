@@ -128,6 +128,8 @@ services:
     logging: *default-logging
     image: redis:7-alpine
     profiles: [all, infra]
+    ports:
+      - "6379:6379"
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
     healthcheck:
