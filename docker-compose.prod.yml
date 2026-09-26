@@ -108,7 +108,6 @@ services:
       -c "
       until curl -s http://seaweeds:9000 > /dev/null; do echo 'Aguardando S3 API...'; sleep 2; done;
       aws --endpoint-url http://seaweeds:9000 s3 mb s3://images || true;
-      aws --endpoint-url http://seaweeds:9000 s3api put-bucket-policy --bucket images --policy '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::images/*\"}]}';
       "
 
   rabbitmq:
