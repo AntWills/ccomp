@@ -68,7 +68,8 @@ public class Event {
     @Builder.Default
     private EnumScheduleConflictPolicy scheduleConflictPolicy = EnumScheduleConflictPolicy.PREVENT;
 
-    private String coverImageUrl;
+    @Column(name = "cover_image_key")
+    private String coverImageKey;
 
     // --- Inscrições e Vagas ---
     @Column(name = "enrollment_start_date")

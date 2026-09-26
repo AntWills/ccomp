@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -75,6 +76,28 @@ public class GlobalExceptionHandler {
                 path,
                 List.of(message),
                 null
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParams(
+            MissingServletRequestParameterException ex,
+            WebRequest request) {
+
+        String path = request.getDescription(false).replace("uri=", "");
+        log.warn("Parâmetro obrigatório ausente em {}: {}", path, ex.getMessage());
+
+        String message = String.format("O parâmetro obrigatório '%s' não foi informado.", ex.getParameterName());
+
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Parâmetro obrigatório ausente",
+                path,
+                List.of(message),
+                Map.of(ex.getParameterName(), "Este parâmetro é obrigatório.")
         );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
