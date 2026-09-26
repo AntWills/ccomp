@@ -31,7 +31,6 @@ public class StorageService {
 
     private final S3Client s3Client;
     private final StorageFileRepository storageFileRepository;
-    private final StorageAccessPolicy storageAccessPolicy;
 
     @Value("${storage.bucket}")
     private String bucket;
@@ -40,7 +39,6 @@ public class StorageService {
     private String endpoint;
 
     public UploadFileResponse upload(MultipartFile file, UUID ownerUserId) {
-        storageAccessPolicy.requireUpload();
         String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
         try {
             s3Client.putObject(
@@ -62,9 +60,8 @@ public class StorageService {
         return new UploadFileResponse(endpoint + "/" + bucket + "/" + fileName, fileName);
     }
 
-    public Optional<Resource> findByFileName(String fileName, UUID userId) {
+    public Optional<Resource> findByFileName(String fileName) {
         Optional<StorageFile> metadata = storageFileRepository.findById(fileName);
-        storageAccessPolicy.requireRead(metadata.orElse(null), userId);
         try {
             ResponseBytes<GetObjectResponse> response = s3Client.getObjectAsBytes(request ->
                     request.bucket(bucket).key(fileName));
@@ -77,9 +74,8 @@ public class StorageService {
         }
     }
 
-    public void delete(String fileName, UUID userId) {
+    public void delete(String fileName) {
         Optional<StorageFile> metadata = storageFileRepository.findById(fileName);
-        storageAccessPolicy.requireDelete(metadata.orElse(null), userId);
         try {
             s3Client.deleteObject(
                     DeleteObjectRequest.builder()
