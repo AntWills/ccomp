@@ -1,6 +1,8 @@
 package com.ccomp.br.domain.storage.application;
 
 import com.ccomp.br.domain.storage.dto.UploadFileResponse;
+import com.ccomp.br.domain.storage.persistence.StorageFile;
+import com.ccomp.br.domain.storage.persistence.StorageFileRepository;
 import com.ccomp.br.shared.exceptions.StorageException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +22,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +30,7 @@ import java.util.UUID;
 public class StorageService {
 
     private final S3Client s3Client;
+    private final StorageFileRepository storageFileRepository;
 
     @Value("${storage.bucket}")
     private String bucket;
@@ -34,7 +38,7 @@ public class StorageService {
     @Value("${storage.endpoint}")
     private String endpoint;
 
-    public UploadFileResponse upload(MultipartFile file) {
+    public UploadFileResponse upload(MultipartFile file, UUID ownerUserId) {
         String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
         try {
             s3Client.putObject(
@@ -46,12 +50,18 @@ public class StorageService {
                     RequestBody.fromBytes(file.getBytes()));
         } catch (IOException | SdkException e) {
             log.error("Não foi possível enviar o arquivo [{}] para o bucket [{}]!", fileName, bucket, e);
-            throw new StorageException("Falha ao salvar arquivo no storage: " + e.getMessage());
+            throw new StorageException("Não foi possível salvar o arquivo. Tente novamente.");
         }
+        storageFileRepository.save(StorageFile.builder()
+                .fileName(fileName)
+                .ownerUserId(ownerUserId)
+                .createdAt(LocalDateTime.now())
+                .build());
         return new UploadFileResponse(endpoint + "/" + bucket + "/" + fileName, fileName);
     }
 
     public Optional<Resource> findByFileName(String fileName) {
+        Optional<StorageFile> metadata = storageFileRepository.findById(fileName);
         try {
             ResponseBytes<GetObjectResponse> response = s3Client.getObjectAsBytes(request ->
                     request.bucket(bucket).key(fileName));
@@ -65,12 +75,14 @@ public class StorageService {
     }
 
     public void delete(String fileName) {
+        Optional<StorageFile> metadata = storageFileRepository.findById(fileName);
         try {
             s3Client.deleteObject(
                     DeleteObjectRequest.builder()
                             .bucket(bucket)
                             .key(fileName)
                             .build());
+            metadata.ifPresent(storageFileRepository::delete);
         } catch (SdkException e) {
             log.error("Não foi possível deletar o arquivo [{}] do bucket [{}]!", fileName, bucket);
             log.error(e.getMessage());

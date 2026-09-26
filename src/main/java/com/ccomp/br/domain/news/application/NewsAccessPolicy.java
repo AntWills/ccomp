@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.news.application;
 
+import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.domain.news.persistence.NewsRepository;
 import com.ccomp.br.domain.news.persistence.editor.NewsEditorsRepository;
 import org.springframework.stereotype.Component;
@@ -17,7 +18,8 @@ public class NewsAccessPolicy {
     }
 
     public boolean hasAccess(UUID userId, Long newsId) {
-        return newsRepository.existsByIdAndAuthorId(newsId, userId)
+        return SecurityUtils.isModeratorOrAdmin()
+                || newsRepository.existsByIdAndAuthorId(newsId, userId)
                 || newsEditorsRepository.existsByNewsIdAndUserId(newsId, userId);
     }
 }

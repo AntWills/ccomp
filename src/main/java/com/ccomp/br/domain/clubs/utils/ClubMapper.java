@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.clubs.util;
+package com.ccomp.br.domain.clubs.utils;
 
 import com.ccomp.br.domain.clubs.dto.ClubResponseDTO;
 import com.ccomp.br.domain.clubs.dto.UpdateClubRequestDTO;

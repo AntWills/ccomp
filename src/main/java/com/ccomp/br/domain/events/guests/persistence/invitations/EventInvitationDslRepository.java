@@ -15,10 +15,10 @@ import java.util.Optional;
 import static com.ccomp.br.domain.events.guests.persistence.invitations.QEventInvitation.eventInvitation;
 
 @Repository
-public class EventInvitationDspRepository {
+public class EventInvitationDslRepository {
     private final JPAQueryFactory queryFactory;
 
-    public EventInvitationDspRepository(JPAQueryFactory queryFactory) {
+    public EventInvitationDslRepository(JPAQueryFactory queryFactory) {
         this.queryFactory = queryFactory;
     }
 

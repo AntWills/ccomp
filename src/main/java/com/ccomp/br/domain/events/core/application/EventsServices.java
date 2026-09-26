@@ -4,8 +4,8 @@ import com.ccomp.br.domain.events.core.dto.*;
 import com.ccomp.br.domain.events.editors.application.EditorServices;
 import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.persistence.EventDslRepository;
-import com.ccomp.br.domain.events.core.util.EventMapper;
-import com.ccomp.br.domain.news.util.SlugUtils;
+import com.ccomp.br.domain.events.core.utils.EventMapper;
+import com.ccomp.br.domain.news.utils.SlugUtils;
 import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
@@ -19,6 +19,7 @@ import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.DebugUtils;
 import org.jspecify.annotations.Nullable;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -55,7 +56,7 @@ public class EventsServices {
                     boolean allowed = event.isPubliclyAccessible()
                             || (userId != null && event.isOwner(userId))
                             || (userId != null && editorServices.hasPermissionEdit(event, userId))
-                            || SecurityUtils.isAdmin();
+                            || SecurityUtils.isModeratorOrAdmin();
 
                     if (allowed) return eventMapper.eventToEventDTO(event);
 
@@ -130,6 +131,7 @@ public class EventsServices {
 
     // ---- Comandos ----
     @Transactional
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public EventDTO create(UUID ownerId, CreateEventDTO dto) {
         UserDTO userDTO = userManagement.findById(ownerId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário responsável não encontrado no sistema."));
@@ -172,11 +174,12 @@ public class EventsServices {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public EventDTO update(UpdateEventDTO request, Long eventId, UUID userId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        boolean canEdit = SecurityUtils.isAdmin()
+        boolean canEdit = SecurityUtils.isModeratorOrAdmin()
                 || event.isOwner(userId)
                 || editorServices.hasPermissionEdit(event, userId);
 
@@ -197,11 +200,12 @@ public class EventsServices {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public MessageResponse updateEventStatus(Long eventId, EnumEventStatus newStatus, UUID userId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        boolean canEdit = SecurityUtils.isAdmin()
+        boolean canEdit = SecurityUtils.isModeratorOrAdmin()
                 || event.isOwner(userId)
                 || editorServices.hasPermissionEdit(event, userId);
 
@@ -223,11 +227,12 @@ public class EventsServices {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public void delete(Long eventId, UUID userId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        boolean canEdit = SecurityUtils.isAdmin() || event.isOwner(userId);
+        boolean canEdit = SecurityUtils.isModeratorOrAdmin() || event.isOwner(userId);
 
         if (!canEdit) {
             throw new AccessDeniedException("Você não tem permissão para remover este evento.");

@@ -1,15 +1,17 @@
 package com.ccomp.br.domain.news.application;
 
+import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.domain.news.dto.*;
 import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.domain.news.persistence.NewsDslRepository;
 import com.ccomp.br.domain.news.persistence.NewsRepository;
-import com.ccomp.br.domain.news.util.NewsMapper;
-import com.ccomp.br.domain.news.util.SlugUtils;
+import com.ccomp.br.domain.news.utils.NewsMapper;
+import com.ccomp.br.domain.news.utils.SlugUtils;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,6 +59,7 @@ public class NewsApplication {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public NewsResponse create(UUID authorId) {
 //        List<ContentBlock> blocks = List.of(
 //                new ContentBlock(1L, ContentBlockType.HEADING, "News headline", null, null, null, null),
@@ -76,11 +79,12 @@ public class NewsApplication {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public NewsResponse update(Long id, NewsUpdateDto dto, UUID userId) {
         News entity = newsRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notícia não encontrada."));
 
-        if(!userId.equals(entity.getAuthorId()))
+        if(!userId.equals(entity.getAuthorId()) && !SecurityUtils.isModeratorOrAdmin())
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         if(Optional.ofNullable(dto.title()).isPresent() && !dto.title().equals(entity.getTitle())) {
@@ -101,11 +105,12 @@ public class NewsApplication {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public void delete(Long newsId, UUID userId) {
         News entity = newsRepository.findById(newsId)
                 .orElseThrow(() -> new ResourceNotFoundException("Notícia não encontrada."));
 
-        if(!entity.isAuthor(userId))
+        if(!entity.isAuthor(userId) && !SecurityUtils.isModeratorOrAdmin())
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         newsRepository.deleteById(newsId);
@@ -125,11 +130,12 @@ public class NewsApplication {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public void publish(Long id, UUID userId) {
         News model = newsRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notícia não encontrada."));
 
-        if(!userId.equals(model.getAuthorId())) throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+        if(!userId.equals(model.getAuthorId()) && !SecurityUtils.isModeratorOrAdmin()) throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         model.publishNow();
 

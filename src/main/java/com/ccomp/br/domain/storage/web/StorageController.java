@@ -20,9 +20,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 @Tag(name = "storage", description = "Gerenciamento e manipulação de arquivos no S3/MinIO")
 @RestController
@@ -44,12 +45,13 @@ public class StorageController {
             @ApiResponse(responseCode = "403", description = "Acesso negado (requer perfil ADMIN ou STAFF)", content = @Content),
             @ApiResponse(responseCode = "500", description = "Erro interno ao salvar o arquivo no storage", content = @Content)
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<UploadFileResponse> uploadFile(
-            @RequestParam("file") MultipartFile file) throws IOException {
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal Jwt jwt) throws IOException {
 
-        return ResponseEntity.ok(storageService.upload(file));
+        return ResponseEntity.ok(storageService.upload(file, UUID.fromString(jwt.getSubject())));
     }
 
     @Operation(
@@ -65,9 +67,9 @@ public class StorageController {
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = MessageResponse.class)))
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     @GetMapping("/{fileName}")
-    public ResponseEntity<?> getImage(@PathVariable String fileName) {
+    public ResponseEntity<?> getImage(@PathVariable String fileName, @AuthenticationPrincipal Jwt jwt) {
         Optional<Resource> resource = storageService.findByFileName(fileName);
 
         return resource.<ResponseEntity<?>>map(res -> {
@@ -93,9 +95,9 @@ public class StorageController {
             @ApiResponse(responseCode = "401", description = "Não autenticado", content = @Content),
             @ApiResponse(responseCode = "403", description = "Acesso negado (requer perfil ADMIN ou STAFF)", content = @Content)
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     @DeleteMapping("/{fileName}")
-    public ResponseEntity<Void> deleteFile(@PathVariable String fileName) {
+    public ResponseEntity<Void> deleteFile(@PathVariable String fileName, @AuthenticationPrincipal Jwt jwt) {
         storageService.delete(fileName);
         return ResponseEntity.noContent().build();
     }

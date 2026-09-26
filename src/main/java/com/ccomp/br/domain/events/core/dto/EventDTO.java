@@ -12,7 +12,7 @@ public record EventDTO(
         String slug,
         String summary,
         String content,
-        String coverImageUrl,
+        String coverImageKey,
         EnumEventCategory category,
         EnumEventFormat format,
         EnumScheduleConflictPolicy scheduleConflictPolicy,

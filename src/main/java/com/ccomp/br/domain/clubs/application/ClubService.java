@@ -5,7 +5,7 @@ import com.ccomp.br.domain.clubs.enums.EnumClubMemberRole;
 import com.ccomp.br.domain.clubs.persistence.Club;
 import com.ccomp.br.domain.clubs.persistence.ClubDslRepository;
 import com.ccomp.br.domain.clubs.persistence.ClubRepository;
-import com.ccomp.br.domain.clubs.util.ClubMapper;
+import com.ccomp.br.domain.clubs.utils.ClubMapper;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
@@ -13,6 +13,7 @@ import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,6 +77,7 @@ public class ClubService {
     }
 
     @Transactional
+@CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public ClubResponseDTO create(CreateClubRequestDTO dto, UUID instructorId) {
         UserDTO userDTO = userManagement.findById(instructorId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
@@ -97,6 +99,7 @@ public class ClubService {
     }
 
     @Transactional
+@CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public ClubResponseDTO update(Long clubId, UpdateClubRequestDTO dto, UUID userId) {
         Club club = clubRepository.findById(clubId)
                 .orElseThrow(() -> new ResourceNotFoundException("Clube não encontrado com o id:" + clubId));
@@ -104,7 +107,7 @@ public class ClubService {
         UserDTO userDTO = userManagement.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
 
-        boolean canEdit = userDTO.isAdmin()
+        boolean canEdit = userDTO.isModeratorOrAdmin()
                 || clubAccessPolicy.isInstructor(clubId, userId);
 
         if (!canEdit)
@@ -118,6 +121,7 @@ public class ClubService {
     }
 
     @Transactional
+@CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public void delete(Long clubId, UUID userId) {
         Club club = clubRepository.findById(clubId)
                 .orElseThrow(() -> new ResourceNotFoundException("Clube não encontrado com o id:" + clubId));
@@ -125,7 +129,7 @@ public class ClubService {
         UserDTO userDTO = userManagement.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
 
-        boolean canEdit = userDTO.isAdmin()
+        boolean canEdit = userDTO.isModeratorOrAdmin()
                 || clubAccessPolicy.isInstructor(clubId, userId);
 
         if (!canEdit)

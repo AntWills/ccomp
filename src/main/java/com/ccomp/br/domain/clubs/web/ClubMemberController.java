@@ -45,7 +45,7 @@ public class ClubMemberController {
             @ApiResponse(responseCode = "403", description = "Acesso negado — apenas instrutores do clube ou administradores"),
             @ApiResponse(responseCode = "404", description = "Clube não encontrado")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     public ResponseEntity<CursorPage<ClubMemberListItem>> search(
             @Parameter(description = "ID do clube", required = true)
             @PathVariable Long clubId,
@@ -119,7 +119,7 @@ public class ClubMemberController {
             @ApiResponse(responseCode = "404", description = "Usuário ou clube não encontrado"),
             @ApiResponse(responseCode = "409", description = "Usuário já faz parte deste clube")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     public ResponseEntity<ClubMember> addMember(
             @Parameter(description = "ID do clube", required = true)
             @PathVariable Long clubId,
@@ -147,7 +147,7 @@ public class ClubMemberController {
             @ApiResponse(responseCode = "403", description = "Acesso negado — apenas instrutores do clube ou administradores"),
             @ApiResponse(responseCode = "404", description = "Registro de membro não encontrado")
     })
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     public ResponseEntity<Void> changeStatus(
             @Parameter(description = "ID do clube", required = true)
             @PathVariable Long clubId,

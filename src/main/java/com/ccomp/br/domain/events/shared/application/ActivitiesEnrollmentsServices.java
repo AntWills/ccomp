@@ -133,7 +133,7 @@ public class ActivitiesEnrollmentsServices {
         Event event = eventActivityDslRepository.findEventByActivityId(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        boolean canEdit = SecurityUtils.isAdmin()
+        boolean canEdit = SecurityUtils.isModeratorOrAdmin()
                 || event.isOwner(userId)
                 || editorServices.hasPermissionEdit(event, userId);
 

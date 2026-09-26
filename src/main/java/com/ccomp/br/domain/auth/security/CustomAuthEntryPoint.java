@@ -15,7 +15,9 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
-import java.util.Map;
+import com.ccomp.br.shared.exceptions.ErrorResponse;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Component
 @Slf4j
@@ -40,22 +42,15 @@ public class CustomAuthEntryPoint implements AuthenticationEntryPoint {
 
         String message = switch (authException) {
             case BadCredentialsException e -> "Email ou senha incorretos.";
-            case UsernameNotFoundException e -> e.getMessage();
-            case LockedException e         -> "Conta bloqueada.";
-            case DisabledException e       -> "Conta desativada.";
-            case InvalidBearerTokenException e   -> {
-                if (e.getMessage().contains("expired")) yield "Token expirado. Faça login novamente.";
-                yield "Token inválido.";
-            }
-            default                        -> "Não autorizado.";
+            case UsernameNotFoundException e -> "Email ou senha incorretos.";
+            case LockedException e -> "Email ou senha incorretos.";
+            case DisabledException e -> "Email ou senha incorretos.";
+            case InvalidBearerTokenException e -> "Token inválido ou expirado. Faça login novamente.";
+            default -> "Não autorizado.";
         };
 
-        var body = Map.of(
-                "statusAccount", 401,
-                "error", "Unauthorized",
-                "message", message
-        );
-
+        var body = new ErrorResponse(LocalDateTime.now(), HttpServletResponse.SC_UNAUTHORIZED,
+                "Não autorizado", request.getRequestURI(), List.of(message), null);
         response.getWriter().write(objectMapper.writeValueAsString(body));
     }
 }

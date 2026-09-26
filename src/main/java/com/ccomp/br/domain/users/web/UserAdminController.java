@@ -31,7 +31,7 @@ import java.util.UUID;
         description = "Endpoints de gestão de contas para ADMIN e STAFF")
 @RestController
 @RequestMapping("/api/admin/users")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
 public class UserAdminController {
     private final AdminServices adminServices;
     private final UserApplication userApplication;
@@ -134,7 +134,7 @@ public class UserAdminController {
     }
 
     @PutMapping("/{userId}/roles/{role}")
-//    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(
             summary = "Mapipular cargos (Roles) de um usuário",
             description = "Alterar um perfil de acesso/role específico a um usuário. Requer permissão ADMIN."

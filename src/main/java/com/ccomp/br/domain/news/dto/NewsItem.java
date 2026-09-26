@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.news.dto;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 public record NewsItem(
@@ -9,5 +10,5 @@ public record NewsItem(
                 String slug,
                 String coverImageUrl,
                 LocalDateTime publishedAt,
-                Boolean featured) {
+                Boolean featured) implements Serializable {
 }

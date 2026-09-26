@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
         description = "Endpoints de gestão de logs")
 @RestController
 @RequestMapping("/api/admin/audit-logs")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
 public class AuditLogController {
     private final AuditService auditService;
 

@@ -6,7 +6,7 @@ import com.ccomp.br.domain.users.external.dto.UserCreatedMessageDTO;
 import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
-import com.ccomp.br.domain.users.util.UserMapper;
+import com.ccomp.br.domain.users.utils.UserMapper;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -44,7 +44,7 @@ public class UserManagement {
     @Transactional
     public void register(RegisterUserDTO dto){
         var exist = userModelRepository.findByEmailAddress(dto.email());
-        if(exist.isPresent()) throw new ConflictException("Exist email!");
+        if(exist.isPresent()) throw new ConflictException("Já existe uma conta com esses dados.");
 
         String encryptedPassword = passwordEncoder.encode(dto.password());
 

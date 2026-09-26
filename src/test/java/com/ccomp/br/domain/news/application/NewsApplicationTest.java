@@ -4,7 +4,7 @@ import com.ccomp.br.domain.news.dto.NewsResponse;
 import com.ccomp.br.domain.news.dto.NewsUpdateDto;
 import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.domain.news.persistence.NewsRepository;
-import com.ccomp.br.domain.news.util.NewsMapper;
+import com.ccomp.br.domain.news.utils.NewsMapper;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;

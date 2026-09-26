@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.news.application;
 
+import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.domain.news.dto.UserNewsResponseDTO;
 import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.domain.news.persistence.NewsRepository;
@@ -64,7 +65,7 @@ public class NewsEditorServices {
         var news = newsRepository.findById(newsId)
                 .orElseThrow(() -> new ResourceNotFoundException("Nóticia não existe."));
 
-        if(!news.isAuthor(ownerId))
+        if(!SecurityUtils.isModeratorOrAdmin() && !news.isAuthor(ownerId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         var user = userManagement.findByEmailAddress(userEmail)
@@ -84,7 +85,7 @@ public class NewsEditorServices {
         var news = newsRepository.findById(newsId)
                 .orElseThrow(() -> new ResourceNotFoundException("Nóticia não existe."));
 
-        if(!news.isAuthor(ownerId))
+        if(!SecurityUtils.isModeratorOrAdmin() && !news.isAuthor(ownerId))
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         var user = userManagement.findByEmailAddress(userEmail)

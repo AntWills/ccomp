@@ -66,7 +66,12 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC_EVENT_ROUTES = {
             "/api/events/{eventId:\\d+}",
+            "/api/events/slug/{slug}",
             "/api/events"
+    };
+
+    private static final String[] PUBLIC_FILES_ROUTES = {
+            "/api/events/{eventId}/images/cover"
     };
 
     private static final String[] PUBLIC_HIGHLIGHTS_ROUTES = {
@@ -143,6 +148,8 @@ public class SecurityConfig {
                             authorize.requestMatchers(HttpMethod.POST, "/api/news/search").permitAll();
                             // Documentação
 //                            authorize.requestMatchers(SWAGGER_ROUTES).permitAll();
+                            // Storage
+                            authorize.requestMatchers(HttpMethod.GET, PUBLIC_FILES_ROUTES).permitAll();
 
                             authorize.anyRequest().authenticated();
                         }

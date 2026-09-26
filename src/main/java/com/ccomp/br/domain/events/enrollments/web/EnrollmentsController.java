@@ -66,7 +66,7 @@ public class EnrollmentsController {
             )
     })
     @GetMapping("/{eventId}/enrollments")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     public ResponseEntity<CursorPage<EnrollmentListItem>> searchEnrollments(
             @PathVariable Long eventId,
             @Parameter(description = "Cursor para carregar a próxima página (retornado em 'nextCursor' na busca anterior)")

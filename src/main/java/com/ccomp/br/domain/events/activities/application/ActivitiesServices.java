@@ -9,7 +9,7 @@ import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
-import com.ccomp.br.domain.events.activities.util.ActivityMapper;
+import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
@@ -51,7 +51,7 @@ public class ActivitiesServices {
         boolean allowed = event.isPubliclyAccessible()
                 || event.isOwner(userId)
                 || (userId != null && editorServices.hasPermissionEdit(event, userId))
-                || SecurityUtils.isAdmin();
+                || SecurityUtils.isModeratorOrAdmin();
 
         if (!allowed)
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
@@ -71,7 +71,7 @@ public class ActivitiesServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if (!event.isOwner(userId) && !editorServices.hasPermissionEdit(event, userId))
+        if (!SecurityUtils.isModeratorOrAdmin() && !event.isOwner(userId) && !editorServices.hasPermissionEdit(event, userId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         EventActivity activity = EventActivity.builder()
@@ -95,7 +95,8 @@ public class ActivitiesServices {
 
         Event event = activity.getEvent();
 
-        boolean allowed = event.isOwner(userId)
+        boolean allowed = SecurityUtils.isModeratorOrAdmin()
+                || event.isOwner(userId)
                 || editorServices.hasPermissionEdit(event, userId);
 
         if (!allowed)
@@ -115,7 +116,8 @@ public class ActivitiesServices {
 
         Event event = activity.getEvent();
 
-        boolean allowed = event.isOwner(userId)
+        boolean allowed = SecurityUtils.isModeratorOrAdmin()
+                || event.isOwner(userId)
                 || editorServices.hasPermissionEdit(event, userId);
 
         if (!allowed)
