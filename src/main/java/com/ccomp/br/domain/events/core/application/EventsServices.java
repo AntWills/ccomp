@@ -5,11 +5,13 @@ import com.ccomp.br.domain.events.editors.application.EditorServices;
 import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.persistence.EventDslRepository;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
+import com.ccomp.br.domain.events.editors.application.EventEditorPermission;
 import com.ccomp.br.domain.news.utils.SlugUtils;
 import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
+import com.ccomp.br.shared.cache.CacheNames;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
@@ -17,9 +19,9 @@ import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
-import com.ccomp.br.shared.utils.DebugUtils;
 import org.jspecify.annotations.Nullable;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,15 +38,20 @@ public class EventsServices {
     private final EventRepository eventRepository;
     private final UserManagement userManagement;
     private final EventMapper eventMapper;
-    private final EditorServices editorServices;
     private final EventDslRepository eventDslRepository;
+    private final EventEditorPermission editorPermission;
 
-    public EventsServices(EventRepository eventRepository, UserManagement userManagement, EventMapper eventMapper, EditorServices editorServices, EventDslRepository eventDslRepository) {
+    public EventsServices(
+            EventRepository eventRepository,
+            UserManagement userManagement,
+            EventMapper eventMapper,
+            EventDslRepository eventDslRepository,
+            EventEditorPermission editorPermission) {
         this.eventRepository = eventRepository;
         this.userManagement = userManagement;
         this.eventMapper = eventMapper;
-        this.editorServices = editorServices;
         this.eventDslRepository = eventDslRepository;
+        this.editorPermission = editorPermission;
     }
 
     // ---- Consultas ----
@@ -55,7 +62,7 @@ public class EventsServices {
                     // O evento pode ser acessado se estiver publicado/unlisted OU se o usuário for dono/editor/admin
                     boolean allowed = event.isPubliclyAccessible()
                             || (userId != null && event.isOwner(userId))
-                            || (userId != null && editorServices.hasPermissionEdit(event, userId))
+                            || (userId != null && editorPermission.hasPermissionEdit(event.getId(), userId))
                             || SecurityUtils.isModeratorOrAdmin();
 
                     if (allowed) return eventMapper.eventToEventDTO(event);
@@ -65,6 +72,7 @@ public class EventsServices {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.EVENTS_BY_SLUG, key = "#slug")
     public Optional<EventDTO> getBySlug(String slug) {
         // A busca direta por slug público exige obrigatoriamente que o status seja PUBLISHED
         return eventRepository.findBySlug(slug)
@@ -150,7 +158,6 @@ public class EventsServices {
                 .ownerId(ownerId)
                 .build();
 
-        log.info("Registrando novo evento: {}", DebugUtils.printJson(eventModel));
 
         dto.optionalStartDate().ifPresent(eventModel::setStartDate);
         dto.optionalEndDate().ifPresent(eventModel::setEndDate);
@@ -181,7 +188,7 @@ public class EventsServices {
 
         boolean canEdit = SecurityUtils.isModeratorOrAdmin()
                 || event.isOwner(userId)
-                || editorServices.hasPermissionEdit(event, userId);
+                || editorPermission.hasPermissionEdit(event.getId(), userId);
 
         if (!canEdit)
             throw new AccessDeniedException("Você não tem permissão para alterar o status deste evento.");
@@ -207,7 +214,7 @@ public class EventsServices {
 
         boolean canEdit = SecurityUtils.isModeratorOrAdmin()
                 || event.isOwner(userId)
-                || editorServices.hasPermissionEdit(event, userId);
+                || editorPermission.hasPermissionEdit(event.getId(), userId);
 
         if (!canEdit) {
             throw new AccessDeniedException("Você não tem permissão para alterar o status deste evento.");

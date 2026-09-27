@@ -19,9 +19,13 @@ public final class CacheNames {
 
     // domain/events
     public static final String EVENTS_BY_ID = "events:by-id";
+    public static final String EVENTS_BY_SLUG = "events:by-slug";
     public static final String EVENTS_LIST = "events:list";
     public static final String EVENTS_SEARCH_BY = "events:search-by";
     public static final String EVENT_ACTIVITIES = "events:activities";
+
+    // domain/events/editors
+    public static final String EVENT_EDITOR_HAS_PERMISSION = "events:editors:has-permission";
 
     // domain/news
     public static final String NEWS_BY_SLUG = "news:by-slug";
@@ -38,9 +42,12 @@ public final class CacheNames {
             Map.entry(CLUB_MEMBERS, SHORT),
 
             Map.entry(EVENTS_BY_ID, SHORT),
+            Map.entry(EVENTS_BY_SLUG, SHORT),
             Map.entry(EVENTS_LIST, VOLATILE),
             Map.entry(EVENTS_SEARCH_BY, VOLATILE),
             Map.entry(EVENT_ACTIVITIES, SHORT),
+
+            Map.entry(EVENT_EDITOR_HAS_PERMISSION, VOLATILE),
 
             Map.entry(NEWS_BY_SLUG, LONG)
     );

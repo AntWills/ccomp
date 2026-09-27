@@ -10,11 +10,13 @@ import com.ccomp.br.domain.events.editors.persistence.EventEditorRepository;
 import com.ccomp.br.domain.events.editors.persistence.validation.EventEditorInvitations;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
+import com.ccomp.br.shared.cache.CacheNames;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,14 +44,16 @@ public class EditorServices {
     private final UserManagement userManagement;
     private final RabbitTemplate rabbitTemplate;
     private final EventEditorInvitationsRepository invitationsRepository;
+    private final EventEditorPermission editorPermission;
 
-    public EditorServices(EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement, ApplicationEventPublisher eventPublisher, EventEditorDslRepository editorDslRepository, RabbitTemplate rabbitTemplate, EventEditorInvitationsRepository invitationsRepository) {
+    public EditorServices(EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement, ApplicationEventPublisher eventPublisher, EventEditorDslRepository editorDslRepository, RabbitTemplate rabbitTemplate, EventEditorInvitationsRepository invitationsRepository, EventEditorPermission editorPermission) {
         this.eventRepository = eventRepository;
         this.editorRepository = editorRepository;
         this.userManagement = userManagement;
         this.editorDslRepository = editorDslRepository;
         this.rabbitTemplate = rabbitTemplate;
         this.invitationsRepository = invitationsRepository;
+        this.editorPermission = editorPermission;
     }
 
     @Transactional
@@ -102,6 +106,7 @@ public class EditorServices {
                 .assignedAt(LocalDateTime.now())
                 .build();
 
+        editorPermission.hasPermissionEditEvict(event.getId(), userDTO.id());
         editorRepository.save(editor);
         invitationsRepository.delete(invitation);
 
@@ -118,18 +123,10 @@ public class EditorServices {
         if (!editorRepository.existsByEventIdAndUserId(event.getId(), userDTO.id())) {
             return new MessageResponse("O usuário não é editor deste evento.");
         }
-
+        editorPermission.hasPermissionEditEvict(event.getId(), userDTO.id());
         editorRepository.deleteByEventIdAndUserId(event.getId(), userDTO.id());
 
         return new MessageResponse("Usuário removido como editor.");
-    }
-
-    @Transactional(readOnly = true)
-    public boolean hasPermissionEdit(Event event, UUID userId) {
-        return editorRepository
-                .findByEventIdAndUserId(event.getId(), userId)
-                .map(EventEditor::isActive)
-                .orElse(false);
     }
 
     @Transactional(readOnly = true)
@@ -139,7 +136,7 @@ public class EditorServices {
 
         boolean canAccess = SecurityUtils.isModeratorOrAdmin()
                 || event.isOwner(requesterId)
-                || hasPermissionEdit(event, requesterId);
+                || editorPermission.hasPermissionEdit(event.getId(), requesterId);
 
         if (!canAccess) {
             throw new AccessDeniedException("Você não tem permissão para visualizar os editores deste evento.");

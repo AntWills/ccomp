@@ -25,7 +25,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     @NonNull
     public UserDetails loadUserByUsername(@NonNull String email) throws UsernameNotFoundException {
-        UserDTO user = userManagement.findByEmailAddress(new EmailAddress(email))
+        UserDTO user = userManagement.findByEmailAddressForAuthentication(new EmailAddress(email))
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + email));
 
         List<EnumRoles> roles = rolesServices.loadRolesByUserID(user.id());

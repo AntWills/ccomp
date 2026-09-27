@@ -13,6 +13,9 @@ import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.dto.UserSummaryView;
 import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
+import com.ccomp.br.shared.cache.CacheNames;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -42,6 +45,7 @@ public class UserManagement {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheNames.USERS_BY_ID, CacheNames.USERS_BY_EMAIL}, allEntries = true)
     public void register(RegisterUserDTO dto){
         var exist = userModelRepository.findByEmailAddress(dto.email());
         if(exist.isPresent()) throw new ConflictException("Já existe uma conta com esses dados.");
@@ -69,6 +73,7 @@ public class UserManagement {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheNames.USERS_BY_ID, CacheNames.USERS_BY_EMAIL}, allEntries = true)
     public void reactivateAccount(UUID userId) {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuario não encontrado."));
@@ -83,6 +88,7 @@ public class UserManagement {
                 .orElse(false);
     }
 
+    @CacheEvict(cacheNames = {CacheNames.USERS_BY_ID, CacheNames.USERS_BY_EMAIL}, allEntries = true)
     public void updatePassword(UUID userId, String password) {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuario não encontrado."));
@@ -92,12 +98,20 @@ public class UserManagement {
         userModelRepository.save(user);
     }
 
+    @Cacheable(cacheNames = CacheNames.USERS_BY_ID, key = "#id")
     public Optional<UserDTO> findById(UUID id){
         return userModelRepository.findById(id)
                 .map(userMapper::userToDto);
     }
 
+    @Cacheable(cacheNames = CacheNames.USERS_BY_EMAIL, key = "#emailAddress.value")
     public Optional<UserDTO> findByEmailAddress(EmailAddress emailAddress){
+        return userModelRepository.findByEmailAddress(emailAddress)
+                .map(userMapper::userToDto);
+    }
+
+    /** Used by Spring Security, which needs the password hash from UserDTO. */
+    public Optional<UserDTO> findByEmailAddressForAuthentication(EmailAddress emailAddress) {
         return userModelRepository.findByEmailAddress(emailAddress)
                 .map(userMapper::userToDto);
     }

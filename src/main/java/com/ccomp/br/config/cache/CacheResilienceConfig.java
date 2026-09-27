@@ -15,19 +15,19 @@ public class CacheResilienceConfig implements CachingConfigurer {
         return new CacheErrorHandler() {
             @Override
             public void handleCacheGetError(RuntimeException e, Cache cache, Object key) {
-                log.warn("Redis indisponível ao ler cache '{}', seguindo sem cache", cache.getName(), e);
+                log.error("Redis indisponível ao ler cache '{}', seguindo sem cache", cache.getName(), e);
             }
             @Override
             public void handleCachePutError(RuntimeException e, Cache cache, Object key, Object value) {
-                log.warn("Redis indisponível ao gravar cache '{}'", cache.getName(), e);
+                log.error("Redis indisponível ao gravar cache '{}'", cache.getName(), e);
             }
             @Override
             public void handleCacheEvictError(RuntimeException e, Cache cache, Object key) {
-                log.warn("Redis indisponível ao invalidar cache '{}'", cache.getName(), e);
+                log.error("Redis indisponível ao invalidar cache '{}'", cache.getName(), e);
             }
             @Override
             public void handleCacheClearError(RuntimeException e, Cache cache) {
-                log.warn("Redis indisponível ao limpar cache '{}'", cache.getName(), e);
+                log.error("Redis indisponível ao limpar cache '{}'", cache.getName(), e);
             }
         };
     }
