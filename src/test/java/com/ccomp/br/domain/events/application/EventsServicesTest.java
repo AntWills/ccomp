@@ -1,15 +1,14 @@
 package com.ccomp.br.domain.events.application;
 
-import com.ccomp.br.domain.events.editors.application.EditorServices;
 import com.ccomp.br.domain.events.core.application.EventsServices;
 import com.ccomp.br.domain.events.core.dto.CreateEventDTO;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.dto.UpdateEventDTO;
 import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
-import com.ccomp.br.domain.events.core.persistence.EventDslRepository;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
+import com.ccomp.br.domain.events.editors.application.EventEditorPermission;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -45,10 +44,7 @@ public class EventsServicesTest {
     private EventMapper eventMapper;
 
     @Mock
-    private EditorServices editorServices;
-
-    @Mock
-    private EventDslRepository eventDslRepository;
+    private EventEditorPermission editorPermission;
 
     @InjectMocks
     private EventsServices eventsServices;
@@ -64,6 +60,8 @@ public class EventsServicesTest {
         eventId = 1L;
         existingEvent = mock(Event.class);
         expectedEventDTO = mock(EventDTO.class);
+
+        when(existingEvent.getId()).thenReturn(eventId);
     }
 
     @Nested
@@ -89,7 +87,7 @@ public class EventsServicesTest {
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
             when(existingEvent.isPubliclyAccessible()).thenReturn(false);
             when(existingEvent.isOwner(userId)).thenReturn(false);
-            when(editorServices.hasPermissionEdit(existingEvent, userId)).thenReturn(false);
+            when(editorPermission.hasPermissionEdit(existingEvent.getId(), userId)).thenReturn(false);
 
             assertThatThrownBy(() -> eventsServices.getById(eventId, userId))
                     .isInstanceOf(AccessDeniedException.class)
@@ -202,7 +200,7 @@ public class EventsServicesTest {
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
             when(existingEvent.isOwner(userId)).thenReturn(false);
-            when(editorServices.hasPermissionEdit(existingEvent, userId)).thenReturn(false);
+            when(editorPermission.hasPermissionEdit(existingEvent.getId(), userId)).thenReturn(false);
 
             assertThatThrownBy(() -> eventsServices.update(request, eventId, userId))
                     .isInstanceOf(AccessDeniedException.class)
@@ -237,7 +235,7 @@ public class EventsServicesTest {
         void updateEventStatus_throwsAccessDeniedException_whenUserHasNoPermission() {
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
             when(existingEvent.isOwner(userId)).thenReturn(false);
-            when(editorServices.hasPermissionEdit(existingEvent, userId)).thenReturn(false);
+            when(editorPermission.hasPermissionEdit(existingEvent.getId(), userId)).thenReturn(false);
 
             assertThatThrownBy(() -> eventsServices.updateEventStatus(eventId, EnumEventStatus.CANCELED, userId))
                     .isInstanceOf(AccessDeniedException.class)

@@ -1,6 +1,8 @@
 package com.ccomp.br.domain.events.guests.application;
 
-import com.ccomp.br.domain.auth.security.SecurityUtils;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
+import com.ccomp.br.domain.events.editors.application.EventEditorPermission;
 import com.ccomp.br.domain.events.shared.enums.EnumInvitationStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
@@ -10,7 +12,6 @@ import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitation;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitationDslRepository;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitationRepository;
-import com.ccomp.br.domain.events.editors.persistence.EventEditorRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
@@ -36,15 +37,23 @@ public class GuestInvitationServices {
     private final EventInvitationRepository eventInvitationRepository;
     private final EventInvitationDslRepository eventInvitationDspRepository;
     private final EventRepository eventRepository;
-    private final EventEditorRepository editorRepository;
+    private final EventCache eventCache;
+    private final EventEditorPermission editorPermission;
     private final UserManagement userManagement;
 
-    public GuestInvitationServices(EventGuestRepository eventGuestRepository, EventInvitationRepository eventInvitationRepository, EventInvitationDslRepository eventInvitationDspRepository, EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement) {
+    public GuestInvitationServices(
+            EventGuestRepository eventGuestRepository,
+            EventInvitationRepository eventInvitationRepository,
+            EventInvitationDslRepository eventInvitationDspRepository,
+            EventRepository eventRepository, EventCache eventCache,
+            EventEditorPermission editorPermission,
+            UserManagement userManagement) {
         this.eventGuestRepository = eventGuestRepository;
         this.eventInvitationRepository = eventInvitationRepository;
         this.eventInvitationDspRepository = eventInvitationDspRepository;
         this.eventRepository = eventRepository;
-        this.editorRepository = editorRepository;
+        this.eventCache = eventCache;
+        this.editorPermission = editorPermission;
         this.userManagement = userManagement;
     }
 
@@ -52,10 +61,10 @@ public class GuestInvitationServices {
     public CursorPage<EventInvitation> searchInvitations(
             UUID userId, @Nullable EmailAddress emailAddress, Long eventId, String cursor, int pageSize) {
         int finalPageSize = Math.min(pageSize, 50);
-        Event event = eventRepository.findById(eventId)
+        EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if(!canManageEvent(userId, event))
+        if(!(event.isOwner(userId) || editorPermission.hasPermissionEdit(event.id(), userId)))
             throw new AccessDeniedException("Você não tem permissão para gerenciar/enviar convites neste evento.");
 
         EventInvitationCursor cursorDecoded = CursorUtils.decode(cursor, EventInvitationCursor.class);
@@ -72,7 +81,13 @@ public class GuestInvitationServices {
     }
 
     public MessageResponse invite(UUID userId, Long eventId, EmailAddress emailAddress) {
-        Event event = getManageableEvent(userId, eventId);
+        Event event =  eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        if (!(event.isOwner(userId) || editorPermission.hasPermissionEdit(event.getId(), userId))) {
+            throw new AccessDeniedException("Você não tem permissão para gerenciar enviar convites neste evento.");
+        }
+
         Optional<UserDTO> userDtoOpt = userManagement.findByEmailAddress(emailAddress);
 
         if (userDtoOpt.isPresent()) {
@@ -147,9 +162,10 @@ public class GuestInvitationServices {
         EventInvitation invitation = eventInvitationRepository.findById(invitationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Convite não encontrado."));
 
-        Event event = invitation.getEvent();
+        EventDTO event = eventCache.findById(invitation.getEventId())
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if(!canManageEvent(userId, event))
+        if(!(event.isOwner(userId) || editorPermission.hasPermissionEdit(event.id(), userId)))
             throw new AccessDeniedException("Você não tem permissão para editar convites neste evento.");
 
         invitation.cancel();
@@ -157,21 +173,5 @@ public class GuestInvitationServices {
         eventInvitationRepository.save(invitation);
 
         return new MessageResponse("Convite cancelado com sucesso.");
-    }
-
-    private Event getManageableEvent(UUID userId, Long eventId) {
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-
-        if (!canManageEvent(userId, event)) {
-            throw new AccessDeniedException("Você não tem permissão para gerenciar enviar convites neste evento.");
-        }
-
-        return event;
-    }
-
-    private boolean canManageEvent(UUID userId, Event event) {
-        return event.isOwner(userId)
-                || editorRepository.existsByEventIdAndUserId(event.getId(), userId);
     }
 }

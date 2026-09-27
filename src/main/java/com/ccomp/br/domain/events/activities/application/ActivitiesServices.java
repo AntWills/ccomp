@@ -2,7 +2,8 @@ package com.ccomp.br.domain.events.activities.application;
 
 import com.ccomp.br.domain.events.activities.dto.*;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
-import com.ccomp.br.domain.events.editors.application.EditorServices;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
 import com.ccomp.br.domain.events.core.persistence.Event;
@@ -28,17 +29,19 @@ import java.util.UUID;
 @Slf4j
 public class ActivitiesServices {
     private final EventRepository eventRepository;
+    private final EventCache eventCache;
     private final EventEditorPermission editorPermission;
     private final EventActivityRepository activityRepository;
     private final EventActivityDslRepository activityDslRepository;
     private final ActivityMapper activityMapper;
 
-    public ActivitiesServices(EventRepository eventRepository,
+    public ActivitiesServices(EventRepository eventRepository, EventCache eventCache,
                               EventEditorPermission editorPermission,
                               EventActivityRepository activityRepository,
                               EventActivityDslRepository activityDslRepository,
                               ActivityMapper activityMapper) {
         this.eventRepository = eventRepository;
+        this.eventCache = eventCache;
         this.editorPermission = editorPermission;
         this.activityRepository = activityRepository;
         this.activityDslRepository = activityDslRepository;
@@ -48,12 +51,12 @@ public class ActivitiesServices {
     @Transactional(readOnly = true)
     public CursorPage<EventActivityDTO> searchByCursor(Long eventId, String cursor, UUID userId) {
         int pageSize = 50;
-        Event event = eventRepository.findById(eventId)
+        EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         boolean allowed = event.isPubliclyAccessible()
                 || event.isOwner(userId)
-                || (userId != null && editorPermission.hasPermissionEdit(event.getId(), userId))
+                || (userId != null && editorPermission.hasPermissionEdit(event.id(), userId))
                 || SecurityUtils.isModeratorOrAdmin();
 
         if (!allowed)
@@ -96,11 +99,12 @@ public class ActivitiesServices {
         EventActivity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não existe."));
 
-        Event event = activity.getEvent();
+        EventDTO event = eventCache.findById(activity.getEventId())
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não existe."));
 
         boolean allowed = SecurityUtils.isModeratorOrAdmin()
                 || event.isOwner(userId)
-                || editorPermission.hasPermissionEdit(event.getId(), userId);
+                || editorPermission.hasPermissionEdit(event.id(), userId);
 
         if (!allowed)
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
@@ -117,11 +121,12 @@ public class ActivitiesServices {
         EventActivity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não existe."));
 
-        Event event = activity.getEvent();
+        EventDTO event = eventCache.findById(activity.getEventId())
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não existe."));
 
         boolean allowed = SecurityUtils.isModeratorOrAdmin()
                 || event.isOwner(userId)
-                || editorPermission.hasPermissionEdit(event.getId(), userId);
+                || editorPermission.hasPermissionEdit(event.id(), userId);
 
         if (!allowed)
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");

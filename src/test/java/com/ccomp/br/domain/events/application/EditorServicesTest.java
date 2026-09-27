@@ -27,7 +27,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -220,60 +219,6 @@ public class EditorServicesTest {
             assertThat(message.response()).isEqualTo("Usuário removido como editor.");
 
             verify(editorRepository).deleteByEventIdAndUserId(eventId, userId);
-        }
-    }
-
-    @Nested
-    @DisplayName("Has Permission Edit - Verificação de Permissão")
-    class HasPermissionEdit {
-
-        @Test
-        @DisplayName("Retorna true quando o usuário é um editor ativo do evento")
-        void hasPermissionEdit_returnsTrue_whenUserIsActiveEditor() {
-            Event event = mock(Event.class);
-            UUID userId = UUID.randomUUID();
-            Long eventId = 1L;
-
-            EventEditor activeEditor = mock(EventEditor.class);
-            when(activeEditor.isActive()).thenReturn(true);
-
-            when(event.getId()).thenReturn(eventId);
-            when(editorRepository.findByEventIdAndUserId(eventId, userId))
-                    .thenReturn(Optional.of(activeEditor));
-
-            boolean hasPermission = editorServices.hasPermissionEdit(event, userId);
-
-            assertThat(hasPermission).isTrue();
-            verify(editorRepository).findByEventIdAndUserId(eventId, userId);
-        }
-
-        @Test
-        @DisplayName("Retorna false quando o usuário não é um editor ou o cadastro não está ativo")
-        void hasPermissionEdit_returnsFalse_whenEditorNotFoundOrInactive() {
-            Event event = mock(Event.class);
-            UUID userId = UUID.randomUUID();
-            Long eventId = 1L;
-
-            when(event.getId()).thenReturn(eventId);
-
-            // Cenário 1: Editor não encontrado no banco de dados
-            when(editorRepository.findByEventIdAndUserId(eventId, userId))
-                    .thenReturn(Optional.empty());
-
-            boolean hasPermissionNotFound = editorServices.hasPermissionEdit(event, userId);
-
-            assertThat(hasPermissionNotFound).isFalse();
-
-            // Cenário 2: Editor encontrado, mas inativo/pendente/revogado
-            EventEditor inactiveEditor = mock(EventEditor.class);
-            when(inactiveEditor.isActive()).thenReturn(false);
-
-            when(editorRepository.findByEventIdAndUserId(eventId, userId))
-                    .thenReturn(Optional.of(inactiveEditor));
-
-            boolean hasPermissionInactive = editorServices.hasPermissionEdit(event, userId);
-
-            assertThat(hasPermissionInactive).isFalse();
         }
     }
 }

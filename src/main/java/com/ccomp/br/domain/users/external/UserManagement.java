@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.users.external;
 
 import com.ccomp.br.config.RabbitMQConfig;
+import com.ccomp.br.domain.users.persistence.UserCache;
 import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.domain.users.external.dto.UserCreatedMessageDTO;
 import com.ccomp.br.domain.users.enums.EnumRoles;
@@ -13,9 +14,6 @@ import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.dto.UserSummaryView;
 import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
-import com.ccomp.br.shared.cache.CacheNames;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,21 +32,21 @@ public class UserManagement {
     private final UserModelRepository userModelRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private final UserCache userCache;
 
     @Autowired
-    public UserManagement(RabbitTemplate rabbitTemplate, RolesServices rolesServices, UserModelRepository userModelRepository, PasswordEncoder passwordEncoder, UserMapper userMapper){
+    public UserManagement(RabbitTemplate rabbitTemplate, RolesServices rolesServices, UserModelRepository userModelRepository, PasswordEncoder passwordEncoder, UserMapper userMapper, UserCache userCache){
         this.rabbitTemplate = rabbitTemplate;
         this.rolesServices = rolesServices;
         this.userModelRepository = userModelRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
+        this.userCache = userCache;
     }
-
     @Transactional
-    @CacheEvict(cacheNames = {CacheNames.USERS_BY_ID, CacheNames.USERS_BY_EMAIL}, allEntries = true)
-    public void register(RegisterUserDTO dto){
+    public void register(RegisterUserDTO dto) {
         var exist = userModelRepository.findByEmailAddress(dto.email());
-        if(exist.isPresent()) throw new ConflictException("Já existe uma conta com esses dados.");
+        if (exist.isPresent()) throw new ConflictException("Já existe uma conta com esses dados.");
 
         String encryptedPassword = passwordEncoder.encode(dto.password());
 
@@ -64,22 +62,23 @@ public class UserManagement {
         UserModel userSaved = userModelRepository.save(user);
         rolesServices.initRole(userSaved, EnumRoles.USER);
 
+        userCache.evict(userSaved); // chamada EXTERNA a outro bean, passa pelo proxy normalmente
+
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE_NAME,
                 RabbitMQConfig.ROUTING_KEY_USER_CREATED,
                 new UserCreatedMessageDTO(dto.name(), dto.email().getValue())
         );
-//        eventPublisher.publishEvent(new UserCreatedEvent(dto.name(), dto.email().getValue()));
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {CacheNames.USERS_BY_ID, CacheNames.USERS_BY_EMAIL}, allEntries = true)
     public void reactivateAccount(UUID userId) {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuario não encontrado."));
         user.activate();
-
         userModelRepository.save(user);
+
+        userCache.evict(user);
     }
 
     public boolean isAccountActive(UUID userId) {
@@ -88,7 +87,6 @@ public class UserManagement {
                 .orElse(false);
     }
 
-    @CacheEvict(cacheNames = {CacheNames.USERS_BY_ID, CacheNames.USERS_BY_EMAIL}, allEntries = true)
     public void updatePassword(UUID userId, String password) {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuario não encontrado."));
@@ -96,18 +94,16 @@ public class UserManagement {
         String encryptedPassword = passwordEncoder.encode(password);
         user.setPassword(encryptedPassword);
         userModelRepository.save(user);
+
+        userCache.evict(user);
     }
 
-    @Cacheable(cacheNames = CacheNames.USERS_BY_ID, key = "#id")
-    public Optional<UserDTO> findById(UUID id){
-        return userModelRepository.findById(id)
-                .map(userMapper::userToDto);
+    public Optional<UserDTO> findById(UUID id) {
+        return userCache.findById(id); // delega ao componente de cache
     }
 
-    @Cacheable(cacheNames = CacheNames.USERS_BY_EMAIL, key = "#emailAddress.value")
-    public Optional<UserDTO> findByEmailAddress(EmailAddress emailAddress){
-        return userModelRepository.findByEmailAddress(emailAddress)
-                .map(userMapper::userToDto);
+    public Optional<UserDTO> findByEmailAddress(EmailAddress emailAddress) {
+        return userCache.findByEmailAddress(emailAddress);
     }
 
     /** Used by Spring Security, which needs the password hash from UserDTO. */
@@ -116,18 +112,7 @@ public class UserManagement {
                 .map(userMapper::userToDto);
     }
 
-    public List<UserDTO> findAllByIds(List<UUID> ids) {
-        return userModelRepository.findAllById(ids)
-                .stream()
-                .map(userMapper::userToDto)
-                .toList();
-    }
-
     public List<UserSummaryView> findAllSummaryByIds(List<UUID> ids) {
         return userModelRepository.findAllByIdIn(ids);
-    }
-
-    public boolean userExists(UUID id){
-        return userModelRepository.existsById(id);
     }
 }

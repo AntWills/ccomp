@@ -63,6 +63,9 @@ public class EventActivity {
     )
     private Event event;
 
+    @Column(name = "event_id", insertable = false, updatable = false)
+    private Long eventId;
+
     @OneToMany(
             mappedBy = "activity",
             cascade = CascadeType.ALL,

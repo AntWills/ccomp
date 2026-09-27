@@ -1,6 +1,5 @@
 package com.ccomp.br.domain.events.editors.application;
 
-import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.editors.persistence.EventEditor;
 import com.ccomp.br.domain.events.editors.persistence.EventEditorRepository;
 import com.ccomp.br.shared.cache.CacheNames;

@@ -39,6 +39,9 @@ public class EventInvitation {
     )
     private Event event;
 
+    @Column(name = "event_id", insertable = false, updatable = false)
+    private Long eventId;
+
     @Column(name = "user_id")
     private UUID userId;
 

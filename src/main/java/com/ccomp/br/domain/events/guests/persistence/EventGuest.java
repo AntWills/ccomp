@@ -32,6 +32,9 @@ public class EventGuest {
     )
     private Event event;
 
+    @Column(name = "event_id", insertable = false, updatable = false)
+    private Long eventId;
+
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 

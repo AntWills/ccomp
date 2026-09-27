@@ -36,4 +36,15 @@ public record EventDTO(
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
+    public boolean isPubliclyAccessible() {
+        return status == EnumEventStatus.PUBLISHED; // ajuste para a regra real da sua entidade
+    }
+
+    public boolean isOwner(UUID userId) {
+        return ownerId != null && ownerId.equals(userId);
+    }
+
+    public boolean isPublished() {
+        return this.status == EnumEventStatus.PUBLISHED;
+    }
 }
