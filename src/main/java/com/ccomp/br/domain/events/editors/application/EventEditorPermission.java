@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.editors.application;
 
+import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.editors.persistence.EventEditor;
 import com.ccomp.br.domain.events.editors.persistence.EventEditorRepository;
 import com.ccomp.br.shared.cache.CacheNames;
@@ -12,9 +13,11 @@ import java.util.UUID;
 
 @Component
 public class EventEditorPermission {
+    private final EventCache eventCache;
     private final EventEditorRepository editorRepository;
 
-    public EventEditorPermission(EventEditorRepository editorRepository) {
+    public EventEditorPermission(EventCache eventCache, EventEditorRepository editorRepository) {
+        this.eventCache = eventCache;
         this.editorRepository = editorRepository;
     }
 
@@ -24,10 +27,16 @@ public class EventEditorPermission {
             key = "#eventId + ':' + #userId"
     )
     public boolean hasPermissionEdit(Long eventId, UUID userId) {
-        return editorRepository
+        boolean isOwner = eventCache.findById(eventId)
+                .map(e -> e.isOwner(userId))
+                .orElse(false);
+
+        boolean isEditor = editorRepository
                 .findByEventIdAndUserId(eventId, userId)
                 .map(EventEditor::isActive)
                 .orElse(false);
+
+        return isOwner || isEditor;
     }
 
     @CacheEvict(cacheNames = CacheNames.EVENT_EDITOR_HAS_PERMISSION, key = "#eventId + ':' + #userId")
