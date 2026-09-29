@@ -94,6 +94,10 @@ public class EventActivity {
         return registrationPolicy == EnumActivityRegistrationPolicy.PUBLIC;
     }
 
+    public boolean isInProgress(LocalDateTime now) {
+        return now.isAfter(startDate) && now.isBefore(endDate);
+    }
+
     public boolean requireRegistrationEvent() {
         return registrationPolicy == EnumActivityRegistrationPolicy.EVENT_REGISTRANTS_ONLY;
     }
