@@ -24,16 +24,16 @@ public final class CacheNames {
     public static final String EVENTS_SEARCH_BY = "events:search-by";
     public static final String EVENT_ACTIVITIES = "events:activities";
 
+    // domain/events/activity
+    public static final String EVENT_ACTIVITY_BY_ID = "events:activity:by-id";
+    public static final String EVENT_ACTIVITY_CHECK_IN_BY_ACTIVITY_ID = "events:activity:check-in:by-activity";
+
     // domain/events/editors
     public static final String EVENT_EDITOR_HAS_PERMISSION = "events:editors:has-permission";
 
     // domain/news
     public static final String NEWS_BY_SLUG = "news:by-slug";
 
-    /**
-     * Fonte única de verdade: qual cache pertence a qual tier.
-     * Declarado UMA vez, ao lado do nome — não em dois arquivos diferentes.
-     */
     public static final Map<String, CacheTier> TIERS = Map.ofEntries(
             Map.entry(USERS_BY_ID, SHORT),
             Map.entry(USERS_BY_EMAIL, SHORT),
@@ -46,6 +46,9 @@ public final class CacheNames {
             Map.entry(EVENTS_LIST, VOLATILE),
             Map.entry(EVENTS_SEARCH_BY, VOLATILE),
             Map.entry(EVENT_ACTIVITIES, SHORT),
+
+            Map.entry(EVENT_ACTIVITY_BY_ID, SHORT),
+            Map.entry(EVENT_ACTIVITY_CHECK_IN_BY_ACTIVITY_ID, SHORT),
 
             Map.entry(EVENT_EDITOR_HAS_PERMISSION, VOLATILE),
 
