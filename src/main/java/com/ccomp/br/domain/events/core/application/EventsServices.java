@@ -1,10 +1,11 @@
 package com.ccomp.br.domain.events.core.application;
 
 import com.ccomp.br.domain.events.core.dto.*;
-import com.ccomp.br.domain.events.editors.application.EditorServices;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.persistence.EventDslRepository;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
+import com.ccomp.br.domain.events.editors.application.EventEditorPermission;
 import com.ccomp.br.domain.news.utils.SlugUtils;
 import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.domain.events.core.persistence.Event;
@@ -17,7 +18,6 @@ import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
-import com.ccomp.br.shared.utils.DebugUtils;
 import org.jspecify.annotations.Nullable;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,31 +34,38 @@ import java.util.UUID;
 public class EventsServices {
     private final int MAX_PAGE_SIZE = 50;
     private final EventRepository eventRepository;
+    private final EventCache eventCache;
     private final UserManagement userManagement;
     private final EventMapper eventMapper;
-    private final EditorServices editorServices;
     private final EventDslRepository eventDslRepository;
+    private final EventEditorPermission editorPermission;
 
-    public EventsServices(EventRepository eventRepository, UserManagement userManagement, EventMapper eventMapper, EditorServices editorServices, EventDslRepository eventDslRepository) {
+    public EventsServices(
+            EventRepository eventRepository, EventCache eventCache,
+            UserManagement userManagement,
+            EventMapper eventMapper,
+            EventDslRepository eventDslRepository,
+            EventEditorPermission editorPermission) {
         this.eventRepository = eventRepository;
+        this.eventCache = eventCache;
         this.userManagement = userManagement;
         this.eventMapper = eventMapper;
-        this.editorServices = editorServices;
         this.eventDslRepository = eventDslRepository;
+        this.editorPermission = editorPermission;
     }
 
     // ---- Consultas ----
     @Transactional(readOnly = true)
     public Optional<EventDTO> getById(Long eventId, UUID userId) {
-        return eventRepository.findById(eventId)
+        return eventCache.findById(eventId)
                 .map(event -> {
                     // O evento pode ser acessado se estiver publicado/unlisted OU se o usuário for dono/editor/admin
                     boolean allowed = event.isPubliclyAccessible()
                             || (userId != null && event.isOwner(userId))
-                            || (userId != null && editorServices.hasPermissionEdit(event, userId))
+                            || (userId != null && editorPermission.hasPermissionEdit(event.id(), userId))
                             || SecurityUtils.isModeratorOrAdmin();
 
-                    if (allowed) return eventMapper.eventToEventDTO(event);
+                    if (allowed) return event;
 
                     throw new AccessDeniedException("Você não possui permissão para visualizar este evento.");
                 });
@@ -66,10 +73,8 @@ public class EventsServices {
 
     @Transactional(readOnly = true)
     public Optional<EventDTO> getBySlug(String slug) {
-        // A busca direta por slug público exige obrigatoriamente que o status seja PUBLISHED
-        return eventRepository.findBySlug(slug)
-                .filter(Event::isPublished)
-                .map(eventMapper::eventToEventDTO);
+        return eventCache.findBySlug(slug)
+                .filter(EventDTO::isPublished);
     }
 
     @Transactional(readOnly = true)
@@ -96,8 +101,6 @@ public class EventsServices {
         int finalPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
         EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class);
 
-//        List<EventListItemView> events = eventBlaze
-//                .findAllByOwnerId(ownerId, decodedCursor, finalPageSize + 1);
         List<EventListItemDTO> events = eventDslRepository.findAllByOwnerId(ownerId, decodedCursor, finalPageSize + 1);
 
         return CursorUtils.buildPage(events, finalPageSize,
@@ -150,12 +153,12 @@ public class EventsServices {
                 .ownerId(ownerId)
                 .build();
 
-        log.info("Registrando novo evento: {}", DebugUtils.printJson(eventModel));
 
         dto.optionalStartDate().ifPresent(eventModel::setStartDate);
         dto.optionalEndDate().ifPresent(eventModel::setEndDate);
 
         var savedEvent = eventRepository.save(eventModel);
+        eventCache.evict(savedEvent);
 
         return eventMapper.eventToEventDTO(savedEvent);
     }
@@ -181,7 +184,7 @@ public class EventsServices {
 
         boolean canEdit = SecurityUtils.isModeratorOrAdmin()
                 || event.isOwner(userId)
-                || editorServices.hasPermissionEdit(event, userId);
+                || editorPermission.hasPermissionEdit(event.getId(), userId);
 
         if (!canEdit)
             throw new AccessDeniedException("Você não tem permissão para alterar o status deste evento.");
@@ -194,8 +197,8 @@ public class EventsServices {
 
         eventMapper.updateEntityFromDto(request, event);
 
-        eventRepository.save(event);
-
+        var eventUpdated = eventRepository.save(event);
+        eventCache.evict(eventUpdated);
         return eventMapper.eventToEventDTO(event);
     }
 
@@ -207,7 +210,7 @@ public class EventsServices {
 
         boolean canEdit = SecurityUtils.isModeratorOrAdmin()
                 || event.isOwner(userId)
-                || editorServices.hasPermissionEdit(event, userId);
+                || editorPermission.hasPermissionEdit(event.getId(), userId);
 
         if (!canEdit) {
             throw new AccessDeniedException("Você não tem permissão para alterar o status deste evento.");
@@ -221,7 +224,8 @@ public class EventsServices {
             case UNLISTED -> event.unlist();
         }
 
-        eventRepository.save(event);
+        var eventUpdated = eventRepository.save(event);
+        eventCache.evict(eventUpdated);
 
         return new MessageResponse("Status do evento alterado para: " + newStatus.name());
     }
@@ -237,7 +241,7 @@ public class EventsServices {
         if (!canEdit) {
             throw new AccessDeniedException("Você não tem permissão para remover este evento.");
         }
-
+        eventCache.evict(event);
         eventRepository.delete(event);
     }
 }

@@ -3,13 +3,12 @@ package com.ccomp.br.domain.events.guests.application;
 import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
-import com.ccomp.br.domain.events.core.persistence.Event;
-import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.editors.persistence.EventEditorRepository;
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
-import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.dsl.ActivityGuestDslRepository;
@@ -28,15 +27,20 @@ import java.util.UUID;
 public class GuestService {
 
     private final EventGuestRepository eventGuestRepository;
-    private final EventRepository eventRepository;
+    private final EventCache eventCache;
     private final EventActivityRepository activityRepository;
     private final EventEditorRepository editorRepository;
     private final EventGuestDslRepository eventGuestDslRepository;
     private final ActivityGuestDslRepository activityGuestDslRepository;
 
-    public GuestService(EventGuestRepository eventGuestRepository, EventRepository eventRepository, EventActivityRepository activityRepository, EventEditorRepository editorRepository, EventGuestDslRepository eventGuestDslRepository, ActivityGuestDslRepository activityGuestDslRepository) {
+    public GuestService(EventGuestRepository eventGuestRepository,
+                        EventCache eventCache,
+                        EventActivityRepository activityRepository,
+                        EventEditorRepository editorRepository,
+                        EventGuestDslRepository eventGuestDslRepository,
+                        ActivityGuestDslRepository activityGuestDslRepository) {
         this.eventGuestRepository = eventGuestRepository;
-        this.eventRepository = eventRepository;
+        this.eventCache = eventCache;
         this.activityRepository = activityRepository;
         this.editorRepository = editorRepository;
         this.eventGuestDslRepository = eventGuestDslRepository;
@@ -46,7 +50,7 @@ public class GuestService {
     @Transactional(readOnly = true)
     public CursorPage<EventGuest> searchEventGuests(Long eventId, UUID requesterId, String cursorRaw, int pageSize) {
         int limit = Math.min(pageSize, 50);
-        Event event = eventRepository.findById(eventId)
+        EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         boolean isManager = requesterId != null && canManageEvent(requesterId, event);
@@ -68,7 +72,8 @@ public class GuestService {
         EventActivity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
 
-        Event event = activity.getEvent();
+        EventDTO event = eventCache.findById(activity.getEventId())
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         boolean isManager = requesterId != null && canManageEvent(requesterId, event);
 
         if (!isManager && !event.isPublished()) {
@@ -87,7 +92,8 @@ public class GuestService {
         EventGuest guest = eventGuestRepository.findByIdAndEventId(guestId, eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado neste evento."));
 
-        Event event = guest.getEvent();
+        EventDTO event = eventCache.findById(guest.getEventId())
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         boolean isManager = canManageEvent(requesterId, event);
         boolean isTheGuestHimself = guest.getUserId().equals(requesterId);
 
@@ -105,8 +111,8 @@ public class GuestService {
         eventGuestRepository.save(guest);
     }
 
-    private boolean canManageEvent(UUID userId, Event event) {
+    private boolean canManageEvent(UUID userId, EventDTO event) {
         return SecurityUtils.isModeratorOrAdmin() || event.isOwner(userId)
-                || editorRepository.existsByEventIdAndUserId(event.getId(), userId);
+                || editorRepository.existsByEventIdAndUserId(event.id(), userId);
     }
 }

@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.shared.application;
 import com.ccomp.br.domain.events.activities.dto.EventActivityConflictCursor;
 import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
 import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
+import com.ccomp.br.domain.events.editors.application.EventEditorPermission;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentsCursor;
 import com.ccomp.br.domain.events.enrollments.dto.UserActivitySummaryDTO;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentActivityCursor;
@@ -36,15 +37,21 @@ public class ActivitiesEnrollmentsServices {
     private final EnrollmentActivityRepository enrollmentActivityRepository;
     private final EnrollmentActivityDslRepository enrollmentActivityDslRepository;
     private final EventActivityDslRepository eventActivityDslRepository;
-    private final EditorServices editorServices;
+    private final EventEditorPermission editorPermission;
 
-    public ActivitiesEnrollmentsServices(EventActivityRepository activityRepository, EnrollmentRepository enrollmentRepository, EnrollmentActivityRepository enrollmentActivityRepository, EnrollmentActivityDslRepository enrollmentActivityDslRepository, EventActivityDslRepository eventActivityDslRepository, EditorServices editorServices) {
+    public ActivitiesEnrollmentsServices(
+            EventActivityRepository activityRepository,
+            EnrollmentRepository enrollmentRepository,
+            EnrollmentActivityRepository enrollmentActivityRepository,
+            EnrollmentActivityDslRepository enrollmentActivityDslRepository,
+            EventActivityDslRepository eventActivityDslRepository,
+            EventEditorPermission editorPermission) {
         this.activityRepository = activityRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.enrollmentActivityRepository = enrollmentActivityRepository;
         this.enrollmentActivityDslRepository = enrollmentActivityDslRepository;
         this.eventActivityDslRepository = eventActivityDslRepository;
-        this.editorServices = editorServices;
+        this.editorPermission = editorPermission;
     }
 
     @Transactional
@@ -135,7 +142,7 @@ public class ActivitiesEnrollmentsServices {
 
         boolean canEdit = SecurityUtils.isModeratorOrAdmin()
                 || event.isOwner(userId)
-                || editorServices.hasPermissionEdit(event, userId);
+                || editorPermission.hasPermissionEdit(event.getId(), userId);
 
         if(!canEdit)
             throw new AccessDeniedException("Você não possui permissão para visualizar os incritos.");

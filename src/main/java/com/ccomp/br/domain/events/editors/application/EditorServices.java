@@ -1,6 +1,8 @@
 package com.ccomp.br.domain.events.editors.application;
 
 import com.ccomp.br.config.RabbitMQConfig;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.editors.enums.EnumEditorsStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
@@ -29,7 +31,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.springframework.context.ApplicationEventPublisher;
 import com.ccomp.br.domain.events.editors.persistence.validation.EventEditorInvitationsRepository;
 import com.ccomp.br.domain.events.core.external.EditorAddedMessageDTO;
 
@@ -37,24 +38,35 @@ import com.ccomp.br.domain.events.core.external.EditorAddedMessageDTO;
 @Slf4j
 public class EditorServices {
     private final EventRepository eventRepository;
+    private final EventCache eventCache;
     private final EventEditorRepository editorRepository;
     private final EventEditorDslRepository editorDslRepository;
     private final UserManagement userManagement;
     private final RabbitTemplate rabbitTemplate;
     private final EventEditorInvitationsRepository invitationsRepository;
+    private final EventEditorPermission editorPermission;
 
-    public EditorServices(EventRepository eventRepository, EventEditorRepository editorRepository, UserManagement userManagement, ApplicationEventPublisher eventPublisher, EventEditorDslRepository editorDslRepository, RabbitTemplate rabbitTemplate, EventEditorInvitationsRepository invitationsRepository) {
+    public EditorServices(EventRepository eventRepository,
+                          EventCache eventCache,
+                          EventEditorRepository editorRepository,
+                          UserManagement userManagement,
+                          EventEditorDslRepository editorDslRepository,
+                          RabbitTemplate rabbitTemplate,
+                          EventEditorInvitationsRepository invitationsRepository,
+                          EventEditorPermission editorPermission) {
         this.eventRepository = eventRepository;
+        this.eventCache = eventCache;
         this.editorRepository = editorRepository;
         this.userManagement = userManagement;
         this.editorDslRepository = editorDslRepository;
         this.rabbitTemplate = rabbitTemplate;
         this.invitationsRepository = invitationsRepository;
+        this.editorPermission = editorPermission;
     }
 
     @Transactional
     public MessageResponse addEditor(Long eventId, UUID ownerId, EmailAddress emailAddress) {
-        Event event = getEventAndValidateOwnership(eventId, ownerId);
+        EventDTO event = getEventAndValidateOwnership(eventId, ownerId);
         Optional<UserDTO> userDtoOpt = userManagement.findByEmailAddress(emailAddress);
 
         if (userDtoOpt.isPresent()) {
@@ -102,6 +114,7 @@ public class EditorServices {
                 .assignedAt(LocalDateTime.now())
                 .build();
 
+        editorPermission.hasPermissionEditEvict(event.getId(), userDTO.id());
         editorRepository.save(editor);
         invitationsRepository.delete(invitation);
 
@@ -110,26 +123,18 @@ public class EditorServices {
 
     @Transactional
     public MessageResponse removeEditor(Long eventId, UUID ownerId, EmailAddress emailAddress){
-        Event event = getEventAndValidateOwnership(eventId, ownerId);
+        EventDTO event = getEventAndValidateOwnership(eventId, ownerId);
 
         UserDTO userDTO = userManagement.findByEmailAddress(emailAddress)
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado para o e-mail: %s".formatted(emailAddress)));
 
-        if (!editorRepository.existsByEventIdAndUserId(event.getId(), userDTO.id())) {
+        if (!editorRepository.existsByEventIdAndUserId(event.id(), userDTO.id())) {
             return new MessageResponse("O usuário não é editor deste evento.");
         }
-
-        editorRepository.deleteByEventIdAndUserId(event.getId(), userDTO.id());
+        editorPermission.hasPermissionEditEvict(event.id(), userDTO.id());
+        editorRepository.deleteByEventIdAndUserId(event.id(), userDTO.id());
 
         return new MessageResponse("Usuário removido como editor.");
-    }
-
-    @Transactional(readOnly = true)
-    public boolean hasPermissionEdit(Event event, UUID userId) {
-        return editorRepository
-                .findByEventIdAndUserId(event.getId(), userId)
-                .map(EventEditor::isActive)
-                .orElse(false);
     }
 
     @Transactional(readOnly = true)
@@ -139,7 +144,7 @@ public class EditorServices {
 
         boolean canAccess = SecurityUtils.isModeratorOrAdmin()
                 || event.isOwner(requesterId)
-                || hasPermissionEdit(event, requesterId);
+                || editorPermission.hasPermissionEdit(event.getId(), requesterId);
 
         if (!canAccess) {
             throw new AccessDeniedException("Você não tem permissão para visualizar os editores deste evento.");
@@ -162,8 +167,8 @@ public class EditorServices {
     // MÉTODOS PRIVADOS
     // ====================================================================================
 
-    private Event getEventAndValidateOwnership(Long eventId, UUID ownerId) {
-        Event event = eventRepository.findById(eventId)
+    private EventDTO getEventAndValidateOwnership(Long eventId, UUID ownerId) {
+        EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         if (!SecurityUtils.isModeratorOrAdmin() && !event.isOwner(ownerId)) {
@@ -178,14 +183,14 @@ public class EditorServices {
                 .orElseThrow(() -> new ResourceNotFoundException("Código de convite inválido ou expirado."));
     }
 
-    private void reissueInvitation(Event event, EmailAddress emailAddress) {
-        invitationsRepository.findByEmailAddressAndEventId(emailAddress, event.getId())
+    private void reissueInvitation(EventDTO event, EmailAddress emailAddress) {
+        invitationsRepository.findByEmailAddressAndEventId(emailAddress, event.id())
                 .ifPresent(invitationsRepository::delete);
 
         UUID code = UUID.randomUUID();
         EventEditorInvitations newInvite = EventEditorInvitations.builder()
                 .code(code)
-                .eventId(event.getId())
+                .eventId(event.id())
                 .emailAddress(emailAddress)
                 .expiresAt(LocalDateTime.now().plusHours(24))
                 .build();
@@ -194,7 +199,7 @@ public class EditorServices {
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE_NAME,
                 RabbitMQConfig.ROUTING_KEY_EDITOR_INVITATION,
-                new EditorAddedMessageDTO(event.getId(), event.getTitle(), code, emailAddress)
+                new EditorAddedMessageDTO(event.id(), event.title(), code, emailAddress)
         );
     }
 }

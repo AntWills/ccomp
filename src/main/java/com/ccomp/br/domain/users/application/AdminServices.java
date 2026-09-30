@@ -18,10 +18,13 @@ import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.dto.UserItemDTO;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
+import com.ccomp.br.shared.cache.CacheNames;
 import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,6 +70,7 @@ public class AdminServices {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.USERS_BY_EMAIL, key = "#email.value")
     public Optional<UserDTO> getByEmail(EmailAddress email){
         log.info("Buscando no banco os dados do email: {}", email);
         return userModelRepository.findByEmailAddress(email)
@@ -74,6 +78,7 @@ public class AdminServices {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheNames.USERS_BY_ID, CacheNames.USERS_BY_EMAIL}, allEntries = true)
     public void blockUser(UUID userId, String reason, UUID adminId) {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário com id [%s] não encontrado.".formatted(userId)));
@@ -99,6 +104,7 @@ public class AdminServices {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheNames.USERS_BY_ID, CacheNames.USERS_BY_EMAIL}, allEntries = true)
     public void unlockUser(UUID userId, String reason, UUID adminId) {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário com id [%s] não encontrado.".formatted(userId)));
@@ -123,6 +129,7 @@ public class AdminServices {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheNames.USERS_BY_ID, CacheNames.USERS_BY_EMAIL}, allEntries = true)
     public void changeRole(UUID userId, EnumRoles role, UUID adminId) {
         if(userId.equals(adminId))
             throw new DomainException("O admin atual não pode alterar o próprio cargo.");

@@ -12,10 +12,5 @@ import java.util.UUID;
 public interface EventGuestRepository extends JpaRepository<EventGuest, Long> {
     boolean existsByUserIdAndEvent(UUID userId, Event event);
 
-    List<EventGuest> findByEventId(Long eventId);
-
-    List<EventGuest> findByEventIdAndVisibilityAndStatus(
-            Long eventId, EnumGuestVisibility visibility, EnumGuestStatus status);
-
     Optional<EventGuest> findByIdAndEventId(Long id, Long eventId);
 }

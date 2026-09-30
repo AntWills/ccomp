@@ -57,6 +57,9 @@ public class EnrollmentActivity {
     )
     private EventActivity activity;
 
+    @Column(name = "attended_at")
+    private LocalDateTime attendedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -64,5 +67,9 @@ public class EnrollmentActivity {
     public EnrollmentActivity(Enrollment enrollment, EventActivity activity) {
         this.enrollment = enrollment;
         this.activity = activity;
+    }
+
+    public void makeAttendance() {
+        attendedAt = LocalDateTime.now();
     }
 }

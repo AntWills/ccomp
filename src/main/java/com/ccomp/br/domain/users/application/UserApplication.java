@@ -7,6 +7,9 @@ import com.ccomp.br.domain.users.utils.UserMapper;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
+import com.ccomp.br.shared.cache.CacheNames;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,6 +33,7 @@ public class UserApplication {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.USERS_BY_ID, key = "#id")
     public Optional<UserDTO> getById(UUID id){
         log.info("Buscando no banco os dados do userId: {}", id);
         return userModelRepository.findById(id)
@@ -37,6 +41,7 @@ public class UserApplication {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheNames.USERS_BY_ID, CacheNames.USERS_BY_EMAIL}, allEntries = true)
     public UserDTO update(UUID userId, UpdateUserDTO dto) {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
@@ -50,6 +55,7 @@ public class UserApplication {
 
 
     @Transactional
+    @CacheEvict(cacheNames = {CacheNames.USERS_BY_ID, CacheNames.USERS_BY_EMAIL}, allEntries = true)
     public void deactivateOwnAccount(UUID userId) {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado."));
