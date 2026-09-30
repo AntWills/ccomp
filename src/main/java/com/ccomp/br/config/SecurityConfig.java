@@ -141,6 +141,8 @@ public class SecurityConfig {
                             // Event
                             authorize.requestMatchers(HttpMethod.GET, PUBLIC_EVENT_ROUTES).permitAll();
                             authorize.requestMatchers(HttpMethod.POST, "/api/events/search").permitAll();
+                            // Event-Activity
+                            authorize.requestMatchers(HttpMethod.GET,"/api/events/{eventId}/activities").permitAll();
                             // Highlights
                             authorize.requestMatchers(HttpMethod.GET, PUBLIC_HIGHLIGHTS_ROUTES).permitAll();
                             // News
