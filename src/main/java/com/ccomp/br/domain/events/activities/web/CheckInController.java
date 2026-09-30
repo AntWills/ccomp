@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.util.UUID;
 
-@Tag(name = "events/check-in (CheckIn)")
+@Tag(name = "events/activity/check-in (CheckIn)")
 @RestController
 @RequestMapping("api/events")
 public class CheckInController {
