@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.events.activities.web;
 
 import com.ccomp.br.domain.events.activities.application.CheckInService;
-import com.ccomp.br.domain.events.activities.dto.CheckInDTO;
+import com.ccomp.br.domain.events.activities.dto.CheckInRequest;
 import com.ccomp.br.shared.dto.MessageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -16,9 +16,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.UUID;
 
@@ -83,7 +80,7 @@ public class CheckInController {
     })
     public ResponseEntity<MessageResponse> checkIn(
             @PathVariable long activityId,
-            @Valid @RequestBody CheckInDTO request,
+            @Valid @RequestBody CheckInRequest request,
             @AuthenticationPrincipal Jwt jwt
     ) {
         checkInService.checkIn(activityId, extractUserId(jwt), request.code());

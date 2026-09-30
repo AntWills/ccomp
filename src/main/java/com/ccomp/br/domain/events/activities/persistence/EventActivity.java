@@ -5,6 +5,7 @@ import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivity;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
+import com.ccomp.br.shared.exceptions.DomainException;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -95,6 +96,8 @@ public class EventActivity {
     }
 
     public boolean isInProgress(LocalDateTime now) {
+        if(startDate == null || endDate == null)
+            throw new DomainException("O cronograma da atividade não está definido.");
         return now.isAfter(startDate) && now.isBefore(endDate);
     }
 

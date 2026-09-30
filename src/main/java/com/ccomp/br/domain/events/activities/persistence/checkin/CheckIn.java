@@ -1,8 +1,11 @@
 package com.ccomp.br.domain.events.activities.persistence.checkin;
 
+import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Table(name = "tb_events_check_in", indexes = {
@@ -19,13 +22,17 @@ public class CheckIn {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "activity_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "activity_id", nullable = false, unique = true)
+    private EventActivity activity;
+
+    @Column(name = "activity_id", nullable = false, insertable = false, updatable = false)
     private Long activityId;
 
     @Column(nullable = false)
     private UUID code;
 
-    public boolean checkCode(UUID other) {
-        return other.equals(code);
-    }
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
 }

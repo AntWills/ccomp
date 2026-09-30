@@ -1,10 +1,12 @@
 package com.ccomp.br.domain.events.activities.application;
 
+import com.ccomp.br.domain.events.activities.dto.CheckInDTO;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.activities.persistence.checkin.CheckIn;
 import com.ccomp.br.domain.events.activities.persistence.checkin.CheckInCache;
 import com.ccomp.br.domain.events.activities.persistence.checkin.CheckInRepository;
+import com.ccomp.br.domain.events.activities.utils.CheckInMapper;
 import com.ccomp.br.domain.events.editors.application.EventEditorPermission;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityRepository;
@@ -25,6 +27,7 @@ import java.util.UUID;
 public class CheckInService {
     private final CheckInRepository checkInRepository;
     private final CheckInCache checkInCache;
+    private final CheckInMapper checkInMapper;
     private final EventActivityRepository activityRepository;
     private final EventEditorPermission editorPermission;
     private final EnrollmentActivityRepository enrollmentActivityRepository;
@@ -34,13 +37,14 @@ public class CheckInService {
     private String checkInUrl;
 
     public CheckInService(CheckInRepository checkInRepository,
-                          CheckInCache checkInCache,
+                          CheckInCache checkInCache, CheckInMapper checkInMapper,
                           EventActivityRepository activityRepository,
                           EventEditorPermission editorPermission,
                           EnrollmentActivityRepository enrollmentActivityRepository,
                           EnrollmentActivityDslRepository enrollmentActivityDslRepository) {
         this.checkInRepository = checkInRepository;
         this.checkInCache = checkInCache;
+        this.checkInMapper = checkInMapper;
         this.activityRepository = activityRepository;
         this.editorPermission = editorPermission;
         this.enrollmentActivityRepository = enrollmentActivityRepository;
@@ -54,15 +58,19 @@ public class CheckInService {
         if(!editorPermission.hasPermissionEdit(activity.getEventId(), userId))
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
-        CheckIn checkIn = checkInCache.findByActivityId(activityId)
-                .orElseGet(() -> checkInRepository.save(
-                    CheckIn.builder()
-                            .activityId(activityId)
-                            .code(UUID.randomUUID())
-                            .build()
-                ));
+        CheckInDTO checkIn = checkInCache.findByActivityId(activityId)
+                .orElseGet(() -> {
+                    CheckIn entity = checkInRepository.save(
+                            CheckIn.builder()
+                                    .activity(activity)
+                                    .code(UUID.randomUUID())
+                                    .build()
+                    );
 
-        String url = String.format(checkInUrl + "?activity_id=%d&code=%s", checkIn.getActivityId(), checkIn.getCode());
+                    return checkInMapper.checkInToCheckInDTO(entity);
+                });
+
+        String url = String.format(checkInUrl + "?activity_id=%d&code=%s", checkIn.activityId(), checkIn.code());
 
         try {
             BufferedImage image = QRCode.generateQRCodeImage(url);
@@ -75,7 +83,7 @@ public class CheckInService {
     }
 
     public void checkIn(long activityId, UUID userId, UUID presenceCode) {
-        CheckIn checkIn = checkInCache.findByActivityId(activityId)
+        CheckInDTO checkIn = checkInCache.findByActivityId(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Código inválido."));
 
         if(!checkIn.checkCode(presenceCode))
