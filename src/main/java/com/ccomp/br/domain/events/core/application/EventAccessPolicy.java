@@ -1,9 +1,10 @@
 package com.ccomp.br.domain.events.core.application;
 
 import com.ccomp.br.domain.auth.security.SecurityUtils;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
-import com.ccomp.br.domain.events.editors.application.EditorServices;
-import com.ccomp.br.domain.events.editors.application.EventEditorPermission;
+import com.ccomp.br.domain.events.editors.dto.EventEditorDTO;
+import com.ccomp.br.domain.events.editors.persistence.EventEditorCache;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
@@ -12,16 +13,34 @@ import java.util.UUID;
 
 @Component
 public class EventAccessPolicy {
-    private final EventEditorPermission editorPermission;
+    private final EventEditorCache editorCache;
 
-    public EventAccessPolicy(EventEditorPermission editorPermission) {
-        this.editorPermission = editorPermission;
+    public EventAccessPolicy(EventEditorCache editorCache) {
+        this.editorCache = editorCache;
+    }
+
+    public boolean canView(EventDTO event, @Nullable UUID userId) {
+        return event.isPubliclyAccessible()
+                || canEdit(event, userId);
+    }
+
+    public boolean canEdit(EventDTO event, @Nullable UUID userId) {
+        if (SecurityUtils.isModeratorOrAdmin()) return true;
+        if (userId == null) return false;
+        return event.isOwner(userId) || isActiveEditor(event.id(), userId);
+    }
+
+    public boolean isActiveEditor(Long eventId, UUID userId) {
+        return editorCache
+                .findByEventIdAndUserId(eventId, userId)
+                .map(EventEditorDTO::isActive)
+                .orElse(false);
     }
 
     public void assertCanView(Event event, @Nullable UUID userId) {
         boolean allowed = event.isPubliclyAccessible()
                 || (userId != null && event.isOwner(userId))
-                || (userId != null && editorPermission.hasPermissionEdit(event.getId(), userId))
+                || (userId != null && isActiveEditor(event.getId(), userId))
                 || SecurityUtils.isModeratorOrAdmin();
 
         if(allowed)
@@ -32,7 +51,7 @@ public class EventAccessPolicy {
 
     public void assertCanEdit(Event event, UUID userId) {
         boolean allowed = (userId != null && event.isOwner(userId))
-                || (userId != null && editorPermission.hasPermissionEdit(event.getId(), userId))
+                || (userId != null && isActiveEditor(event.getId(), userId))
                 || SecurityUtils.isModeratorOrAdmin();
 
         if(allowed)

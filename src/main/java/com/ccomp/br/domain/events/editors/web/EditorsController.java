@@ -22,7 +22,6 @@ import java.util.UUID;
 @Tag(name = "events/editors (Editores)")
 @RestController
 @RequestMapping("api/events")
-@PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
 public class EditorsController {
     private final EditorServices editorServices;
 

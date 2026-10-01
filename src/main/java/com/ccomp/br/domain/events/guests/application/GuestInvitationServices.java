@@ -1,8 +1,9 @@
 package com.ccomp.br.domain.events.guests.application;
 
+import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
-import com.ccomp.br.domain.events.editors.application.EventEditorPermission;
+import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.domain.events.shared.enums.EnumInvitationStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
@@ -38,7 +39,8 @@ public class GuestInvitationServices {
     private final EventInvitationDslRepository eventInvitationDspRepository;
     private final EventRepository eventRepository;
     private final EventCache eventCache;
-    private final EventEditorPermission editorPermission;
+    private final EventAccessPolicy eventAccessPolicy;
+    private final EventMapper eventMapper;
     private final UserManagement userManagement;
 
     public GuestInvitationServices(
@@ -46,14 +48,15 @@ public class GuestInvitationServices {
             EventInvitationRepository eventInvitationRepository,
             EventInvitationDslRepository eventInvitationDspRepository,
             EventRepository eventRepository, EventCache eventCache,
-            EventEditorPermission editorPermission,
+            EventAccessPolicy eventAccessPolicy, EventMapper eventMapper,
             UserManagement userManagement) {
         this.eventGuestRepository = eventGuestRepository;
         this.eventInvitationRepository = eventInvitationRepository;
         this.eventInvitationDspRepository = eventInvitationDspRepository;
         this.eventRepository = eventRepository;
         this.eventCache = eventCache;
-        this.editorPermission = editorPermission;
+        this.eventAccessPolicy = eventAccessPolicy;
+        this.eventMapper = eventMapper;
         this.userManagement = userManagement;
     }
 
@@ -64,7 +67,7 @@ public class GuestInvitationServices {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if(!(event.isOwner(userId) || editorPermission.hasPermissionEdit(event.id(), userId)))
+        if(!eventAccessPolicy.canEdit(event, userId))
             throw new AccessDeniedException("Você não tem permissão para gerenciar/enviar convites neste evento.");
 
         EventInvitationCursor cursorDecoded = CursorUtils.decode(cursor, EventInvitationCursor.class);
@@ -84,7 +87,7 @@ public class GuestInvitationServices {
         Event event =  eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if (!(event.isOwner(userId) || editorPermission.hasPermissionEdit(event.getId(), userId))) {
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId)) {
             throw new AccessDeniedException("Você não tem permissão para gerenciar enviar convites neste evento.");
         }
 
@@ -165,7 +168,7 @@ public class GuestInvitationServices {
         EventDTO event = eventCache.findById(invitation.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if(!(event.isOwner(userId) || editorPermission.hasPermissionEdit(event.id(), userId)))
+        if(!eventAccessPolicy.canEdit(event, userId))
             throw new AccessDeniedException("Você não tem permissão para editar convites neste evento.");
 
         invitation.cancel();

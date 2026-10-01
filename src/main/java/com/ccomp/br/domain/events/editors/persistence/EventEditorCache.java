@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.editors.persistence;
 import com.ccomp.br.domain.events.editors.dto.EventEditorDTO;
 import com.ccomp.br.domain.events.editors.utils.EventEditorMapper;
 import com.ccomp.br.shared.cache.CacheNames;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,4 +30,10 @@ public class EventEditorCache {
         return editorRepository.findByEventIdAndUserId(eventId, userId)
                 .map(eventEditorMapper::eventEditorToEventEditorDTO);
     }
+
+    @CacheEvict(
+            cacheNames = CacheNames.EVENT_EDITOR_BY_EVENT_USER,
+            key = "#eventId + ':' + #userId"
+    )
+    public void evict(long eventId, UUID userId) {}
 }

@@ -215,14 +215,13 @@ public class EventsController {
     }
 
     @PatchMapping("{eventId}/status/{status}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     @Operation(
             summary = "Atualiza o status de publicação de um evento",
             description = """
         Altera o estado de publicação do evento (`DRAFT`, `PUBLISHED`, `UNLISTED`, `CANCELED`).
 
         ### Requisitos de Permissão:
-        - Requer que o usuário autenticado seja um **ADMIN**, o **Proprietário** do evento ou um **Editor** atribuído.
+        - Requer permissão de edição do evento: **ADMIN/MODERATOR**, **Proprietário** ou **Editor ativo**.
         """
     )
     @ApiResponses(value = {
@@ -260,8 +259,7 @@ public class EventsController {
     }
 
     @DeleteMapping("/{eventId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
-    @Operation(summary = "Exclui um evento por ID")
+    @Operation(summary = "Exclui um evento por ID", description = "Requer permissão de edição do evento: ADMIN/MODERATOR, proprietário ou editor ativo.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Evento excluído com sucesso"),
             @ApiResponse(responseCode = "403", description = "Acesso negado"),
