@@ -1,11 +1,10 @@
 package com.ccomp.br.domain.events.guests.application;
 
-import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
+import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
-import com.ccomp.br.domain.events.editors.persistence.EventEditorRepository;
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
@@ -29,20 +28,20 @@ public class GuestService {
     private final EventGuestRepository eventGuestRepository;
     private final EventCache eventCache;
     private final EventActivityRepository activityRepository;
-    private final EventEditorRepository editorRepository;
+    private final EventAccessPolicy eventAccessPolicy;
     private final EventGuestDslRepository eventGuestDslRepository;
     private final ActivityGuestDslRepository activityGuestDslRepository;
 
     public GuestService(EventGuestRepository eventGuestRepository,
                         EventCache eventCache,
                         EventActivityRepository activityRepository,
-                        EventEditorRepository editorRepository,
+                        EventAccessPolicy eventAccessPolicy,
                         EventGuestDslRepository eventGuestDslRepository,
                         ActivityGuestDslRepository activityGuestDslRepository) {
         this.eventGuestRepository = eventGuestRepository;
         this.eventCache = eventCache;
         this.activityRepository = activityRepository;
-        this.editorRepository = editorRepository;
+        this.eventAccessPolicy = eventAccessPolicy;
         this.eventGuestDslRepository = eventGuestDslRepository;
         this.activityGuestDslRepository = activityGuestDslRepository;
     }
@@ -53,10 +52,10 @@ public class GuestService {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        boolean isManager = requesterId != null && canManageEvent(requesterId, event);
+        boolean isManager = eventAccessPolicy.canEdit(event, requesterId);
 
-        if (!isManager && !event.isPublished()) {
-            throw new AccessDeniedException("O evento não está publicado.");
+        if (!eventAccessPolicy.canView(event, requesterId)) {
+            throw new AccessDeniedException("Você não tem permissão para visualizar os convidados deste evento.");
         }
 
         GuestCursor decodedCursor = CursorUtils.decode(cursorRaw, GuestCursor.class);
@@ -74,10 +73,10 @@ public class GuestService {
 
         EventDTO event = eventCache.findById(activity.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-        boolean isManager = requesterId != null && canManageEvent(requesterId, event);
+        boolean isManager = eventAccessPolicy.canEdit(event, requesterId);
 
-        if (!isManager && !event.isPublished()) {
-            throw new AccessDeniedException("O evento não está publicado.");
+        if (!eventAccessPolicy.canView(event, requesterId)) {
+            throw new AccessDeniedException("Você não tem permissão para visualizar os convidados desta atividade.");
         }
 
         GuestCursor decodedCursor = CursorUtils.decode(cursorRaw, GuestCursor.class);
@@ -94,7 +93,7 @@ public class GuestService {
 
         EventDTO event = eventCache.findById(guest.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-        boolean isManager = canManageEvent(requesterId, event);
+        boolean isManager = eventAccessPolicy.canEdit(event, requesterId);
         boolean isTheGuestHimself = guest.getUserId().equals(requesterId);
 
         if (!isManager && !isTheGuestHimself) {
@@ -109,10 +108,5 @@ public class GuestService {
         }
 
         eventGuestRepository.save(guest);
-    }
-
-    private boolean canManageEvent(UUID userId, EventDTO event) {
-        return SecurityUtils.isModeratorOrAdmin() || event.isOwner(userId)
-                || editorRepository.existsByEventIdAndUserId(event.id(), userId);
     }
 }

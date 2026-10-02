@@ -5,9 +5,7 @@ import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.persistence.EventDslRepository;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
-import com.ccomp.br.domain.events.editors.application.EventEditorPermission;
 import com.ccomp.br.domain.news.utils.SlugUtils;
-import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
@@ -24,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,20 +35,20 @@ public class EventsServices {
     private final UserManagement userManagement;
     private final EventMapper eventMapper;
     private final EventDslRepository eventDslRepository;
-    private final EventEditorPermission editorPermission;
+    private final EventAccessPolicy eventAccessPolicy;
 
     public EventsServices(
             EventRepository eventRepository, EventCache eventCache,
             UserManagement userManagement,
             EventMapper eventMapper,
             EventDslRepository eventDslRepository,
-            EventEditorPermission editorPermission) {
+            EventAccessPolicy eventAccessPolicy) {
         this.eventRepository = eventRepository;
         this.eventCache = eventCache;
         this.userManagement = userManagement;
         this.eventMapper = eventMapper;
         this.eventDslRepository = eventDslRepository;
-        this.editorPermission = editorPermission;
+        this.eventAccessPolicy = eventAccessPolicy;
     }
 
     // ---- Consultas ----
@@ -59,13 +56,7 @@ public class EventsServices {
     public Optional<EventDTO> getById(Long eventId, UUID userId) {
         return eventCache.findById(eventId)
                 .map(event -> {
-                    // O evento pode ser acessado se estiver publicado/unlisted OU se o usuário for dono/editor/admin
-                    boolean allowed = event.isPubliclyAccessible()
-                            || (userId != null && event.isOwner(userId))
-                            || (userId != null && editorPermission.hasPermissionEdit(event.id(), userId))
-                            || SecurityUtils.isModeratorOrAdmin();
-
-                    if (allowed) return event;
+                    if (eventAccessPolicy.canView(event, userId)) return event;
 
                     throw new AccessDeniedException("Você não possui permissão para visualizar este evento.");
                 });
@@ -86,9 +77,6 @@ public class EventsServices {
 
 //        List<EventListItemView> events = eventBlaze.findByCursor(filter, decodedCursor, finalPageSize + 1);
         List<EventListItemDTO> events = eventDslRepository.findByCursor(filter, decodedCursor, finalPageSize + 1);
-
-        log.info("Quantidade de eventos retornados: {}", events.size());
-        log.info("Horário da consulta: {}", LocalDateTime.now());
 
         return CursorUtils.buildPage(
                 events,
@@ -182,13 +170,8 @@ public class EventsServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        boolean canEdit = SecurityUtils.isModeratorOrAdmin()
-                || event.isOwner(userId)
-                || editorPermission.hasPermissionEdit(event.getId(), userId);
-
-        if (!canEdit)
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId))
             throw new AccessDeniedException("Você não tem permissão para alterar o status deste evento.");
-
 
         request.titleOpt().ifPresent(title -> {
             event.setTitle(title);
@@ -208,13 +191,8 @@ public class EventsServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        boolean canEdit = SecurityUtils.isModeratorOrAdmin()
-                || event.isOwner(userId)
-                || editorPermission.hasPermissionEdit(event.getId(), userId);
-
-        if (!canEdit) {
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId))
             throw new AccessDeniedException("Você não tem permissão para alterar o status deste evento.");
-        }
 
         // Executa a transição através dos métodos de domínio encapsulados
         switch (newStatus) {
@@ -236,9 +214,7 @@ public class EventsServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        boolean canEdit = SecurityUtils.isModeratorOrAdmin() || event.isOwner(userId);
-
-        if (!canEdit) {
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId)) {
             throw new AccessDeniedException("Você não tem permissão para remover este evento.");
         }
         eventCache.evict(event);

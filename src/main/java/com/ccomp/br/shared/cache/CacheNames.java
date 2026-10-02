@@ -29,7 +29,12 @@ public final class CacheNames {
     public static final String EVENT_ACTIVITY_CHECK_IN_BY_ACTIVITY_ID = "events:activity:check-in:by-activity";
 
     // domain/events/editors
+    public static final String EVENT_EDITOR_BY_EVENT_USER = "events:editors:by-event-user";
     public static final String EVENT_EDITOR_HAS_PERMISSION = "events:editors:has-permission";
+    public static final String EVENT_EDITOR_IS_ACTIVE = "events:editors:is-active";
+
+    // domain/events/access
+    public static final String EVENT_ACCESS_CAN_EDIT = "events:access:can-edit";
 
     // domain/news
     public static final String NEWS_BY_SLUG = "news:by-slug";
@@ -50,7 +55,10 @@ public final class CacheNames {
             Map.entry(EVENT_ACTIVITY_BY_ID, SHORT),
             Map.entry(EVENT_ACTIVITY_CHECK_IN_BY_ACTIVITY_ID, SHORT),
 
-            Map.entry(EVENT_EDITOR_HAS_PERMISSION, VOLATILE),
+            Map.entry(EVENT_EDITOR_BY_EVENT_USER, SHORT),
+            Map.entry(EVENT_EDITOR_HAS_PERMISSION, SHORT),
+            Map.entry(EVENT_EDITOR_IS_ACTIVE, SHORT),
+            Map.entry(EVENT_ACCESS_CAN_EDIT, SHORT),
 
             Map.entry(NEWS_BY_SLUG, LONG)
     );

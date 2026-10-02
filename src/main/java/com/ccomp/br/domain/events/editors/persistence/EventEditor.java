@@ -30,7 +30,10 @@ public class EventEditor {
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;
 
-    @Column(nullable = false)
+    @Column(name = "event_id", nullable = false, insertable = false, updatable = false)
+    private Long eventId;
+
+    @Column(name = "user_id", nullable = false)
     private UUID userId;
 
     @Column(name = "assigned_at", nullable = false)

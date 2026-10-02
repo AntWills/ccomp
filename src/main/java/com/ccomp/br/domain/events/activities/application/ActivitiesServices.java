@@ -2,6 +2,7 @@ package com.ccomp.br.domain.events.activities.application;
 
 import com.ccomp.br.domain.events.activities.dto.*;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
+import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
@@ -11,13 +12,11 @@ import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
-import com.ccomp.br.domain.auth.security.SecurityUtils;
-import com.ccomp.br.domain.events.editors.application.EventEditorPermission;
+import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.CursorUtils;
-import com.ccomp.br.shared.utils.DebugUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,20 +29,23 @@ import java.util.UUID;
 @Slf4j
 public class ActivitiesServices {
     private final EventRepository eventRepository;
+    private final EventAccessPolicy eventAccessPolicy;
     private final EventCache eventCache;
-    private final EventEditorPermission editorPermission;
+    private final EventMapper eventMapper;
     private final EventActivityRepository activityRepository;
     private final EventActivityDslRepository activityDslRepository;
     private final ActivityMapper activityMapper;
 
-    public ActivitiesServices(EventRepository eventRepository, EventCache eventCache,
-                              EventEditorPermission editorPermission,
+    public ActivitiesServices(EventRepository eventRepository,
+                              EventAccessPolicy eventAccessPolicy,
+                              EventCache eventCache, EventMapper eventMapper,
                               EventActivityRepository activityRepository,
                               EventActivityDslRepository activityDslRepository,
                               ActivityMapper activityMapper) {
         this.eventRepository = eventRepository;
+        this.eventAccessPolicy = eventAccessPolicy;
         this.eventCache = eventCache;
-        this.editorPermission = editorPermission;
+        this.eventMapper = eventMapper;
         this.activityRepository = activityRepository;
         this.activityDslRepository = activityDslRepository;
         this.activityMapper = activityMapper;
@@ -55,12 +57,7 @@ public class ActivitiesServices {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        boolean allowed = event.isPubliclyAccessible()
-                || event.isOwner(userId)
-                || (userId != null && editorPermission.hasPermissionEdit(event.id(), userId))
-                || SecurityUtils.isModeratorOrAdmin();
-
-        if (!allowed)
+        if (!eventAccessPolicy.canView(event, userId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         EventActivityCursor cursorDecoded = CursorUtils.decode(cursor, EventActivityCursor.class);
@@ -78,7 +75,7 @@ public class ActivitiesServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if (!SecurityUtils.isModeratorOrAdmin() && !event.isOwner(userId) && !editorPermission.hasPermissionEdit(event.getId(), userId))
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         EventActivity activity = EventActivity.builder()
@@ -103,11 +100,7 @@ public class ActivitiesServices {
         EventDTO event = eventCache.findById(activity.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não existe."));
 
-        boolean allowed = SecurityUtils.isModeratorOrAdmin()
-                || event.isOwner(userId)
-                || editorPermission.hasPermissionEdit(event.id(), userId);
-
-        if (!allowed)
+        if (!eventAccessPolicy.canEdit(event, userId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         activityMapper.updateEventActivityFromRequest(request, activity);
@@ -125,11 +118,7 @@ public class ActivitiesServices {
         EventDTO event = eventCache.findById(activity.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não existe."));
 
-        boolean allowed = SecurityUtils.isModeratorOrAdmin()
-                || event.isOwner(userId)
-                || editorPermission.hasPermissionEdit(event.id(), userId);
-
-        if (!allowed)
+        if (!eventAccessPolicy.canEdit(event, userId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         activityRepository.deleteById(activityId);

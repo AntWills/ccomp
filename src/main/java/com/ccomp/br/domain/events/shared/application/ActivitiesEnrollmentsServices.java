@@ -3,11 +3,11 @@ package com.ccomp.br.domain.events.shared.application;
 import com.ccomp.br.domain.events.activities.dto.EventActivityConflictCursor;
 import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
 import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
-import com.ccomp.br.domain.events.editors.application.EventEditorPermission;
+import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
+import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentsCursor;
 import com.ccomp.br.domain.events.enrollments.dto.UserActivitySummaryDTO;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentActivityCursor;
-import com.ccomp.br.domain.events.editors.application.EditorServices;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivity;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityDslRepository;
@@ -16,7 +16,6 @@ import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
-import com.ccomp.br.domain.auth.security.SecurityUtils;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ConflictException;
@@ -37,7 +36,8 @@ public class ActivitiesEnrollmentsServices {
     private final EnrollmentActivityRepository enrollmentActivityRepository;
     private final EnrollmentActivityDslRepository enrollmentActivityDslRepository;
     private final EventActivityDslRepository eventActivityDslRepository;
-    private final EventEditorPermission editorPermission;
+    private final EventAccessPolicy eventAccessPolicy;
+    private final EventMapper eventMapper;
 
     public ActivitiesEnrollmentsServices(
             EventActivityRepository activityRepository,
@@ -45,13 +45,14 @@ public class ActivitiesEnrollmentsServices {
             EnrollmentActivityRepository enrollmentActivityRepository,
             EnrollmentActivityDslRepository enrollmentActivityDslRepository,
             EventActivityDslRepository eventActivityDslRepository,
-            EventEditorPermission editorPermission) {
+            EventAccessPolicy eventAccessPolicy, EventMapper eventMapper) {
         this.activityRepository = activityRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.enrollmentActivityRepository = enrollmentActivityRepository;
         this.enrollmentActivityDslRepository = enrollmentActivityDslRepository;
         this.eventActivityDslRepository = eventActivityDslRepository;
-        this.editorPermission = editorPermission;
+        this.eventAccessPolicy = eventAccessPolicy;
+        this.eventMapper = eventMapper;
     }
 
     @Transactional
@@ -140,11 +141,7 @@ public class ActivitiesEnrollmentsServices {
         Event event = eventActivityDslRepository.findEventByActivityId(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        boolean canEdit = SecurityUtils.isModeratorOrAdmin()
-                || event.isOwner(userId)
-                || editorPermission.hasPermissionEdit(event.getId(), userId);
-
-        if(!canEdit)
+        if(!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId))
             throw new AccessDeniedException("Você não possui permissão para visualizar os incritos.");
 
         EnrollmentActivityCursor cursorDecoded = CursorUtils.decode(cursor, EnrollmentActivityCursor.class);

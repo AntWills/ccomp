@@ -7,7 +7,9 @@ import com.ccomp.br.domain.events.activities.persistence.checkin.CheckIn;
 import com.ccomp.br.domain.events.activities.persistence.checkin.CheckInCache;
 import com.ccomp.br.domain.events.activities.persistence.checkin.CheckInRepository;
 import com.ccomp.br.domain.events.activities.utils.CheckInMapper;
-import com.ccomp.br.domain.events.editors.application.EventEditorPermission;
+import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityRepository;
 import com.ccomp.br.module.qrcode.QRCode;
@@ -29,9 +31,10 @@ public class CheckInService {
     private final CheckInCache checkInCache;
     private final CheckInMapper checkInMapper;
     private final EventActivityRepository activityRepository;
-    private final EventEditorPermission editorPermission;
     private final EnrollmentActivityRepository enrollmentActivityRepository;
     private final EnrollmentActivityDslRepository enrollmentActivityDslRepository;
+    private final EventCache eventCache;
+    private final EventAccessPolicy eventAccessPolicy;
 
     @Value("${app.frontend.check-in-url}")
     private String checkInUrl;
@@ -39,23 +42,27 @@ public class CheckInService {
     public CheckInService(CheckInRepository checkInRepository,
                           CheckInCache checkInCache, CheckInMapper checkInMapper,
                           EventActivityRepository activityRepository,
-                          EventEditorPermission editorPermission,
                           EnrollmentActivityRepository enrollmentActivityRepository,
-                          EnrollmentActivityDslRepository enrollmentActivityDslRepository) {
+                          EnrollmentActivityDslRepository enrollmentActivityDslRepository, EventCache eventCache,
+                          EventAccessPolicy eventAccessPolicy) {
         this.checkInRepository = checkInRepository;
         this.checkInCache = checkInCache;
         this.checkInMapper = checkInMapper;
         this.activityRepository = activityRepository;
-        this.editorPermission = editorPermission;
         this.enrollmentActivityRepository = enrollmentActivityRepository;
         this.enrollmentActivityDslRepository = enrollmentActivityDslRepository;
+        this.eventCache = eventCache;
+        this.eventAccessPolicy = eventAccessPolicy;
     }
 
     public byte[] generateCode(long activityId, UUID userId) {
         EventActivity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
 
-        if(!editorPermission.hasPermissionEdit(activity.getEventId(), userId))
+        EventDTO event = eventCache.findById(activity.getEventId())
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não existe."));
+
+        if(!eventAccessPolicy.canEdit(event, userId))
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         CheckInDTO checkIn = checkInCache.findByActivityId(activityId)
