@@ -77,13 +77,6 @@ public class EnrollmentsController {
         return ResponseEntity.ok(enrollmentsServices.searchEnrollments(eventId, extractUserId(jwt), nextCursor, pageSize));
     }
 
-    private UUID extractUserId(Jwt jwt) {
-        return Optional.ofNullable(jwt)
-                .map(Jwt::getSubject)
-                .map(UUID::fromString)
-                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
-    }
-
     @Operation(summary = "Inscreve-se em um evento", description = "Realiza a inscrição do usuário autenticado no evento informado.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Inscrição realizada com sucesso"),
@@ -118,5 +111,12 @@ public class EnrollmentsController {
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(enrollmentsServices.unsubscribe(userId, eventId));
+    }
+
+    private UUID extractUserId(Jwt jwt) {
+        return Optional.ofNullable(jwt)
+                .map(Jwt::getSubject)
+                .map(UUID::fromString)
+                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
     }
 }
