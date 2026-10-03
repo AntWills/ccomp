@@ -24,7 +24,8 @@ public class EventEditorCache {
     @Transactional(readOnly = true)
     @Cacheable(
             cacheNames = CacheNames.EVENT_EDITOR_BY_EVENT_USER,
-            key = "#eventId + ':' + #userId"
+            key = "#eventId + ':' + #userId",
+            unless = "#result == null"
     )
     public Optional<EventEditorDTO> findByEventIdAndUserId(long eventId, UUID userId) {
         return editorRepository.findByEventIdAndUserId(eventId, userId)

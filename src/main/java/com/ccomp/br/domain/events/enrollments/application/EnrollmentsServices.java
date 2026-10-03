@@ -1,5 +1,8 @@
 package com.ccomp.br.domain.events.enrollments.application;
 
+import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentListItem;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentsCursor;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
@@ -10,6 +13,7 @@ import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
 import com.ccomp.br.shared.dto.MessageResponse;
+import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -24,19 +28,31 @@ import java.util.UUID;
 @Service
 public class EnrollmentsServices {
     private final EventRepository eventRepository;
+    private final EventCache eventCache;
     private final EnrollmentRepository enrollmentRepository;
     private final EnrollmentDslRepository enrollmentDslRepository;
+    private final EventAccessPolicy eventAccessPolicy;
 
-    public EnrollmentsServices(EventRepository eventRepository, EnrollmentRepository enrollmentRepository,
-                               EnrollmentDslRepository enrollmentDslRepository) {
+    public EnrollmentsServices(EventRepository eventRepository, EventCache eventCache,
+                               EnrollmentRepository enrollmentRepository,
+                               EnrollmentDslRepository enrollmentDslRepository,
+                               EventAccessPolicy eventAccessPolicy) {
         this.eventRepository = eventRepository;
+        this.eventCache = eventCache;
         this.enrollmentRepository = enrollmentRepository;
         this.enrollmentDslRepository = enrollmentDslRepository;
+        this.eventAccessPolicy = eventAccessPolicy;
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<EnrollmentListItem> searchEnrollments(Long eventId, String cursor, int pageSize) {
+    public CursorPage<EnrollmentListItem> searchEnrollments(Long eventId, UUID userId, String cursor, int pageSize) {
         int finalPageSize = Math.min(pageSize, 50);
+
+        EventDTO event = eventCache.findById(eventId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        if(!eventAccessPolicy.canEdit(event, userId))
+            throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         EnrollmentsCursor cursorDecoded = CursorUtils.decode(cursor, EnrollmentsCursor.class);
         List<EnrollmentListItem> results = enrollmentDslRepository

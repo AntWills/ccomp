@@ -66,15 +66,15 @@ public class EnrollmentsController {
             )
     })
     @GetMapping("/{eventId}/enrollments")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     public ResponseEntity<CursorPage<EnrollmentListItem>> searchEnrollments(
             @PathVariable Long eventId,
             @Parameter(description = "Cursor para carregar a próxima página (retornado em 'nextCursor' na busca anterior)")
             @RequestParam(required = false) String nextCursor,
             @Parameter(description = "Quantidade de registros por página (Padrão: 10, Máximo: 50)")
-            @RequestParam(defaultValue = "10") int pageSize
+            @RequestParam(defaultValue = "10") int pageSize,
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        return ResponseEntity.ok(enrollmentsServices.searchEnrollments(eventId, nextCursor, pageSize));
+        return ResponseEntity.ok(enrollmentsServices.searchEnrollments(eventId, extractUserId(jwt), nextCursor, pageSize));
     }
 
     private UUID extractUserId(Jwt jwt) {

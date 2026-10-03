@@ -24,3 +24,24 @@ loki.write "local" {
     url = "http://grafana-lgtm:3100/loki/api/v1/push"
   }
 }
+
+prometheus.scrape "postgres" {
+  targets = [{
+    __address__ = "postgres-exporter:9187",
+  }]
+  forward_to      = [prometheus.remote_write.lgtm.receiver]
+  scrape_interval = "15s"
+}
+
+prometheus.remote_write "lgtm" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}
+
+prometheus.scrape "rabbitmq" {
+  targets = [{
+    __address__ = "rabbitmq:15692",
+  }]
+  forward_to = [prometheus.remote_write.lgtm.receiver]
+}
