@@ -5,5 +5,6 @@ public enum EnumEnrollmentState {
     CONFIRMED,   // Inscrição ativa e confirmada
 //    WAITLIST,    // Em lista de espera (quando ultrapassa a capacidade)
     CHECKED_IN,  // Presença confirmada no evento (fundamental para emissão de certificados)
-    CANCELED     // Inscrição cancelada pelo participante ou pelo organizador
+    CANCELED,    // Inscrição cancelada, podendo ser reativada pelo participante
+    BANNED       // Inscrição bloqueada pela organização, sem possibilidade de reinscrição
 }

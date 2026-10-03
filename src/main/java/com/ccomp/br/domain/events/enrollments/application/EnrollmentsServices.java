@@ -45,7 +45,8 @@ public class EnrollmentsServices {
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<EnrollmentListItem> searchEnrollments(Long eventId, UUID userId, String cursor, int pageSize) {
+    public CursorPage<EnrollmentListItem> searchEnrollments(Long eventId, UUID userId, String cursor, int pageSize,
+                                                             EnumEnrollmentState status) {
         int finalPageSize = Math.min(pageSize, 50);
 
         EventDTO event = eventCache.findById(eventId)
@@ -56,7 +57,7 @@ public class EnrollmentsServices {
 
         EnrollmentsCursor cursorDecoded = CursorUtils.decode(cursor, EnrollmentsCursor.class);
         List<EnrollmentListItem> results = enrollmentDslRepository
-                .findAllWithCursor(eventId, cursorDecoded, finalPageSize + 1);
+                .findAllWithCursor(eventId, status, cursorDecoded, finalPageSize + 1);
 
         return CursorUtils.buildPage(
                 results,
@@ -85,6 +86,9 @@ public class EnrollmentsServices {
 
         if (existingEnrollment.isPresent()) {
             Enrollment enrollment = existingEnrollment.get();
+
+            if (enrollment.getStatus() == EnumEnrollmentState.BANNED)
+                throw new DomainException("Você não pode se inscrever novamente neste evento.");
 
             if (enrollment.isActive())
                 return enrollment;
@@ -138,6 +142,7 @@ public class EnrollmentsServices {
             case CONFIRMED -> enrollment.confirm();
             case CHECKED_IN -> enrollment.checkIn();
             case CANCELED -> enrollment.cancel();
+            case BANNED -> enrollment.ban();
         }
 
         enrollmentRepository.save(enrollment);

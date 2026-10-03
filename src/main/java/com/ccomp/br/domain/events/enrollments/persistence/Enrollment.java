@@ -23,8 +23,8 @@ import java.util.UUID;
         },
         indexes = {
                 @Index(name = "idx_enrollment_user", columnList = "user_id"),
-                @Index(name = "idx_enrollment_event_status", columnList = "events_id, status"),
-                @Index(name = "idx_event_enrollment_created_at_id", columnList = "created_at DESC, id DESC")
+                @Index(name = "idx_enrollments_event_created_at_id", columnList = "events_id, created_at DESC, id DESC"),
+                @Index(name = "idx_enrollments_event_status_created_at_id", columnList = "events_id, status, created_at DESC, id DESC")
         }
 )
 @Entity
@@ -87,12 +87,22 @@ public class Enrollment {
         this.status = EnumEnrollmentState.CONFIRMED;
     }
 
+    public void ban() {
+        if (this.status == EnumEnrollmentState.CHECKED_IN) {
+            throw new DomainException("Não é possível banir uma inscrição com presença confirmada.");
+        }
+        this.status = EnumEnrollmentState.BANNED;
+    }
+
     /**
      * Realiza a confirmação de presença do participante no evento.
      */
     public void checkIn() {
         if(this.status == EnumEnrollmentState.CHECKED_IN)
             return;
+        if (this.status == EnumEnrollmentState.BANNED) {
+            throw new DomainException("Não é possível realizar credenciamento em uma inscrição banida.");
+        }
         if (this.status == EnumEnrollmentState.CANCELED) {
             throw new DomainException("Não é possível realizar credenciamento em uma inscrição cancelada.");
         }
@@ -104,6 +114,9 @@ public class Enrollment {
      * Cancela a inscrição do participante.
      */
     public void cancel() {
+        if (this.status == EnumEnrollmentState.BANNED) {
+            throw new DomainException("Não é possível cancelar uma inscrição banida.");
+        }
         if (this.status == EnumEnrollmentState.CHECKED_IN) {
             throw new DomainException("Não é possível cancelar uma inscrição que já possui presença confirmada.");
         }

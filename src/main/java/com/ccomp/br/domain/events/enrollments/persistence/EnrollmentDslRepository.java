@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.enrollments.persistence;
 
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentListItem;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentsCursor;
+import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.shared.dto.UserSummaryDTO;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
@@ -26,9 +27,17 @@ public class EnrollmentDslRepository {
     }
 
     public List<EnrollmentListItem> findAllWithCursor(Long eventId, @Nullable EnrollmentsCursor cursor, int limit) {
+        return findAllWithCursor(eventId, null, cursor, limit);
+    }
+
+    public List<EnrollmentListItem> findAllWithCursor(Long eventId, @Nullable EnumEnrollmentState status,
+                                                      @Nullable EnrollmentsCursor cursor, int limit) {
         BooleanBuilder whereClause = new BooleanBuilder();
 
         whereClause.and(enrollment.event.id.eq(eventId));
+        if (status != null) {
+            whereClause.and(enrollment.status.eq(status));
+        }
 
         if(cursor != null && cursor.id()!= null && cursor.createdAt() != null) {
             BooleanExpression cursorCondition = Expressions.booleanTemplate(

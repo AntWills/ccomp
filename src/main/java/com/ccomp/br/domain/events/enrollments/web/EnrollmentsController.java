@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.enrollments.web;
 import com.ccomp.br.domain.events.enrollments.application.EnrollmentsServices;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentListItem;
 import com.ccomp.br.domain.events.enrollments.dto.UpdateEnrollmentStatusDTO;
+import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
@@ -73,9 +74,11 @@ public class EnrollmentsController {
             @RequestParam(required = false) String nextCursor,
             @Parameter(description = "Quantidade de registros por página (Padrão: 10, Máximo: 50)")
             @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) EnumEnrollmentState status,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        return ResponseEntity.ok(enrollmentsServices.searchEnrollments(eventId, extractUserId(jwt), nextCursor, pageSize));
+        return ResponseEntity.ok(enrollmentsServices.searchEnrollments(
+                eventId, extractUserId(jwt), nextCursor, pageSize, status));
     }
 
     @Operation(summary = "Inscreve-se em um evento", description = "Realiza a inscrição do usuário autenticado no evento informado.")
