@@ -88,6 +88,8 @@ public class Enrollment {
      * Realiza a confirmação de presença do participante no evento.
      */
     public void checkIn() {
+        if(this.status == EnumEnrollmentState.CHECKED_IN)
+            return;
         if (this.status == EnumEnrollmentState.CANCELED) {
             throw new DomainException("Não é possível realizar credenciamento em uma inscrição cancelada.");
         }

@@ -1,6 +1,5 @@
 package com.ccomp.br.domain.notification.listeners;
 
-import com.ccomp.br.config.rabbit.RabbitMQConfig;
 import com.ccomp.br.domain.events.core.external.EditorAddedMessageDTO;
 import com.ccomp.br.domain.events.editors.external.message.EditorInvitationChannel;
 import com.ccomp.br.module.email.EmailService;
