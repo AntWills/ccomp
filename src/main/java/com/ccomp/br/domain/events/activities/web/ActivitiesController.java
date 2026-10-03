@@ -30,11 +30,9 @@ import java.util.UUID;
 @RequestMapping("api/events")
 public class ActivitiesController {
     private final ActivitiesServices activitiesServices;
-    private final ActivitiesEnrollmentsServices activitiesEnrollmentsServices;
 
-    public ActivitiesController(ActivitiesServices activitiesServices, ActivitiesEnrollmentsServices activitiesEnrollmentsServices) {
+    public ActivitiesController(ActivitiesServices activitiesServices) {
         this.activitiesServices = activitiesServices;
-        this.activitiesEnrollmentsServices = activitiesEnrollmentsServices;
     }
 
     @Operation(summary = "Lista as atividades de um evento", description = "Retorna uma lista paginada (por cursor) de todas as atividades associadas a um evento específico. Acesso restrito a eventos abertos, dono do evento, editores ou administradores.")

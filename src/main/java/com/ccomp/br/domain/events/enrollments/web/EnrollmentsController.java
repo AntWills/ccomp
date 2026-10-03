@@ -2,10 +2,12 @@ package com.ccomp.br.domain.events.enrollments.web;
 
 import com.ccomp.br.domain.events.enrollments.application.EnrollmentsServices;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentListItem;
+import com.ccomp.br.domain.events.enrollments.dto.UpdateEnrollmentStatusDTO;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -19,7 +21,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.Optional;
 import java.util.UUID;
 
@@ -111,6 +112,18 @@ public class EnrollmentsController {
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(enrollmentsServices.unsubscribe(userId, eventId));
+    }
+
+    @Operation(summary = "Altera o status de uma inscrição", description = "Requer permissão de edição do evento: proprietário, editor ativo, moderador ou administrador.")
+    @PutMapping("/{eventId}/enrollments/{enrollmentId}/status")
+    public ResponseEntity<MessageResponse> updateEnrollmentStatus(
+            @PathVariable Long eventId,
+            @PathVariable Long enrollmentId,
+            @Valid @RequestBody UpdateEnrollmentStatusDTO request,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ResponseEntity.ok(enrollmentsServices.updateEnrollmentStatus(
+                eventId, enrollmentId, request.status(), extractUserId(jwt)));
     }
 
     private UUID extractUserId(Jwt jwt) {

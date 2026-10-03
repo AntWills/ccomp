@@ -118,4 +118,29 @@ public class EnrollmentsServices {
 
         return new MessageResponse("Inscrição removida com sucesso.");
     }
+
+    @Transactional
+    public MessageResponse updateEnrollmentStatus(Long eventId, Long enrollmentId,
+                                                   EnumEnrollmentState newStatus, UUID userId) {
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        if (!eventAccessPolicy.canEdit(event, userId))
+            throw new AccessDeniedException("Você não tem permissão para alterar o status das inscrições deste evento.");
+
+        Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
+
+        if (!enrollment.getEventId().equals(eventId))
+            throw new ResourceNotFoundException("Inscrição não encontrada neste evento.");
+
+        switch (newStatus) {
+            case CONFIRMED -> enrollment.confirm();
+            case CHECKED_IN -> enrollment.checkIn();
+            case CANCELED -> enrollment.cancel();
+        }
+
+        enrollmentRepository.save(enrollment);
+        return new MessageResponse("Status da inscrição alterado para: " + newStatus.name());
+    }
 }
