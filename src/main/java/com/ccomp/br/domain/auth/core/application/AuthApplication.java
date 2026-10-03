@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.auth.core.application;
 
-import com.ccomp.br.config.RabbitMQConfig;
+import com.ccomp.br.config.rabbit.RabbitMQConfig;
 import com.ccomp.br.domain.auth.core.dto.*;
 import com.ccomp.br.domain.auth.core.external.dto.PasswordResetMessageDTO;
 import com.ccomp.br.domain.auth.core.external.dto.UserLoginMessageDTO;
@@ -8,6 +8,8 @@ import com.ccomp.br.domain.auth.jwt.application.JwtService;
 import com.ccomp.br.domain.auth.passwordreset.application.PasswordResetService;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.domain.auth.security.UserDetailsImpl;
+import com.ccomp.br.domain.users.external.message.UserLoginChannel;
+import com.ccomp.br.domain.users.external.message.UserPasswordResetChannel;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -81,7 +83,7 @@ public class AuthApplication {
 
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE_NAME,
-                RabbitMQConfig.ROUTING_KEY_USER_LOGIN,
+                UserLoginChannel.ROUTING,
                 loginEvent
         );
 
@@ -110,7 +112,7 @@ public class AuthApplication {
 
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE_NAME,
-                RabbitMQConfig.ROUTING_KEY_PASSWORD_RESET,
+                UserPasswordResetChannel.ROUTING,
                 new PasswordResetMessageDTO(user.emailAddress(), token)
         );
     }

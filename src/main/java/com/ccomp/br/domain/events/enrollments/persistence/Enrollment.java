@@ -80,6 +80,10 @@ public class Enrollment {
 
     // --- Métodos de Domínio para Transição de Estado ---
 
+    public void confirm() {
+        this.status = EnumEnrollmentState.CONFIRMED;
+    }
+
     /**
      * Realiza a confirmação de presença do participante no evento.
      */

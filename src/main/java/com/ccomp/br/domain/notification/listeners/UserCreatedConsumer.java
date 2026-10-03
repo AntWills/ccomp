@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.notification.listeners;
 
-import com.ccomp.br.config.RabbitMQConfig;
 import com.ccomp.br.domain.users.external.dto.UserCreatedMessageDTO;
+import com.ccomp.br.domain.users.external.message.UserCreatedChannel;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.module.email.EmailService;
 import com.ccomp.br.module.email.EmailTemplateService;
@@ -21,7 +21,7 @@ public class UserCreatedConsumer {
         this.templateService = templateService;
     }
 
-    @RabbitListener(queues = RabbitMQConfig.QUEUE_USER_CREATED)
+    @RabbitListener(queues = UserCreatedChannel.QUEUE)
     public void handler(UserCreatedMessageDTO message){
         String subject = "Bem-vindo à CCOMP";
         String body = templateService.render("welcome", subject, Map.of("name", message.name()));

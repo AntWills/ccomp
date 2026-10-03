@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.notification.listeners;
 
-import com.ccomp.br.config.RabbitMQConfig;
 import com.ccomp.br.domain.auth.core.external.dto.UserLoginMessageDTO;
+import com.ccomp.br.domain.users.external.message.UserLoginChannel;
 import com.ccomp.br.module.email.EmailService;
 import com.ccomp.br.module.email.EmailTemplateService;
 import com.ccomp.br.shared.dto.SendMailDTO;
@@ -27,7 +27,7 @@ public class UserLoginConsumer {
         this.templateService = templateService;
     }
 
-    @RabbitListener(queues = RabbitMQConfig.QUEUE_USER_LOGIN)
+    @RabbitListener(queues = UserLoginChannel.QUEUE)
     public void onUserLogin(UserLoginMessageDTO event) {
 
         String subject = "[SEGURANÇA] Novo acesso detectado na sua conta";
