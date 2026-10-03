@@ -1,6 +1,9 @@
 package com.ccomp.br.domain.events.activities.application;
 
+import com.ccomp.br.config.rabbit.RabbitMQConfig;
 import com.ccomp.br.domain.events.activities.dto.CheckInDTO;
+import com.ccomp.br.domain.events.activities.external.CheckInChannel;
+import com.ccomp.br.domain.events.activities.external.CheckInMessageDTO;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.activities.persistence.checkin.CheckIn;
@@ -16,6 +19,7 @@ import com.ccomp.br.module.qrcode.QRCode;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +39,7 @@ public class CheckInService {
     private final EnrollmentActivityDslRepository enrollmentActivityDslRepository;
     private final EventCache eventCache;
     private final EventAccessPolicy eventAccessPolicy;
+    private final RabbitTemplate rabbitTemplate;
 
     @Value("${app.frontend.check-in-url}")
     private String checkInUrl;
@@ -44,7 +49,7 @@ public class CheckInService {
                           EventActivityRepository activityRepository,
                           EnrollmentActivityRepository enrollmentActivityRepository,
                           EnrollmentActivityDslRepository enrollmentActivityDslRepository, EventCache eventCache,
-                          EventAccessPolicy eventAccessPolicy) {
+                          EventAccessPolicy eventAccessPolicy, RabbitTemplate rabbitTemplate) {
         this.checkInRepository = checkInRepository;
         this.checkInCache = checkInCache;
         this.checkInMapper = checkInMapper;
@@ -53,6 +58,7 @@ public class CheckInService {
         this.enrollmentActivityDslRepository = enrollmentActivityDslRepository;
         this.eventCache = eventCache;
         this.eventAccessPolicy = eventAccessPolicy;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     public byte[] generateCode(long activityId, UUID userId) {
@@ -105,7 +111,14 @@ public class CheckInService {
         var enrollment = enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("O usuário não está inscrito na atividade."));
 
+        if(enrollment.haveCheckIn())
+            return;
+
         enrollment.makeAttendance();
         enrollmentActivityRepository.save(enrollment);
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE_NAME,
+                CheckInChannel.ROUTING,
+                new CheckInMessageDTO(enrollment.getEnrollmentId()));
     }
 }

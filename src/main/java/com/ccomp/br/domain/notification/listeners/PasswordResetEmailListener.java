@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.notification.listeners;
 
-import com.ccomp.br.config.RabbitMQConfig;
 import com.ccomp.br.domain.auth.core.external.dto.PasswordResetMessageDTO;
+import com.ccomp.br.domain.users.external.message.UserPasswordResetChannel;
 import com.ccomp.br.module.email.EmailService;
 import com.ccomp.br.module.email.EmailTemplateService;
 import com.ccomp.br.shared.dto.SendMailDTO;
@@ -23,7 +23,7 @@ public class PasswordResetEmailListener {
         this.templateService = templateService;
     }
 
-    @RabbitListener(queues = RabbitMQConfig.QUEUE_PASSWORD_RESET)
+    @RabbitListener(queues = UserPasswordResetChannel.QUEUE)
     public void handler(PasswordResetMessageDTO event) {
         // Complete os demais passos.
         String subject = "Redefinir Senha da plataforma CCOMP";

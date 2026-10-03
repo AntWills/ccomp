@@ -1,12 +1,13 @@
 package com.ccomp.br.domain.events.editors.application;
 
-import com.ccomp.br.config.RabbitMQConfig;
+import com.ccomp.br.config.rabbit.RabbitMQConfig;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.editors.enums.EnumEditorsStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.editors.external.message.EditorInvitationChannel;
 import com.ccomp.br.domain.events.editors.persistence.EventEditor;
 import com.ccomp.br.domain.events.editors.persistence.EventEditorCache;
 import com.ccomp.br.domain.events.editors.persistence.EventEditorDslRepository;
@@ -199,7 +200,7 @@ public class EditorServices {
         invitationsRepository.save(newInvite);
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE_NAME,
-                RabbitMQConfig.ROUTING_KEY_EDITOR_INVITATION,
+                EditorInvitationChannel.ROUTING,
                 new EditorAddedMessageDTO(event.id(), event.title(), code, emailAddress)
         );
     }

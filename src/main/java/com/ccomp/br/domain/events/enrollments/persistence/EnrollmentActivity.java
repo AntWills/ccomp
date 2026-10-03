@@ -49,6 +49,9 @@ public class EnrollmentActivity {
     )
     private Enrollment enrollment;
 
+    @Column(name = "enrollment_id", nullable = false, updatable = false, insertable = false)
+    private Long enrollmentId;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "activity_id",
@@ -71,5 +74,9 @@ public class EnrollmentActivity {
 
     public void makeAttendance() {
         attendedAt = LocalDateTime.now();
+    }
+
+    public boolean haveCheckIn() {
+        return attendedAt != null;
     }
 }

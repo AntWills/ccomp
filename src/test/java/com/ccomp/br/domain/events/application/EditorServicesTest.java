@@ -1,10 +1,11 @@
 package com.ccomp.br.domain.events.application;
 
-import com.ccomp.br.config.RabbitMQConfig;
+import com.ccomp.br.config.rabbit.RabbitMQConfig;
 import com.ccomp.br.domain.events.editors.application.EditorServices;
 import com.ccomp.br.domain.events.core.external.EditorAddedMessageDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.editors.external.message.EditorInvitationChannel;
 import com.ccomp.br.domain.events.editors.persistence.EventEditor;
 import com.ccomp.br.domain.events.editors.persistence.EventEditorRepository;
 import com.ccomp.br.domain.events.editors.persistence.validation.EventEditorInvitations;
@@ -95,7 +96,7 @@ public class EditorServicesTest {
             verify(invitationsRepository).save(any(EventEditorInvitations.class));
             verify(rabbitTemplate).convertAndSend(
                     eq(RabbitMQConfig.EXCHANGE_NAME),
-                    eq(RabbitMQConfig.ROUTING_KEY_EDITOR_INVITATION),
+                    eq(EditorInvitationChannel.ROUTING),
                     any(EditorAddedMessageDTO.class)
             );
         }
@@ -127,7 +128,7 @@ public class EditorServicesTest {
             verify(invitationsRepository, never()).save(any(EventEditorInvitations.class));
             verify(rabbitTemplate, never()).convertAndSend(
                     eq(RabbitMQConfig.EXCHANGE_NAME),
-                    eq(RabbitMQConfig.ROUTING_KEY_EDITOR_INVITATION),
+                    eq(EditorInvitationChannel.ROUTING),
                     any(EditorAddedMessageDTO.class)
             );
         }

@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.notification.listeners;
 
-import com.ccomp.br.config.RabbitMQConfig;
 import com.ccomp.br.domain.events.core.external.EditorAddedMessageDTO;
+import com.ccomp.br.domain.events.editors.external.message.EditorInvitationChannel;
 import com.ccomp.br.module.email.EmailService;
 import com.ccomp.br.module.email.EmailTemplateService;
 import com.ccomp.br.shared.dto.SendMailDTO;
@@ -25,7 +25,7 @@ public class EditorAddedConsumer {
         this.templateService = templateService;
     }
 
-    @RabbitListener(queues = RabbitMQConfig.QUEUE_EDITOR_INVITATION)
+    @RabbitListener(queues = EditorInvitationChannel.QUEUE)
     public void onEditorAdded(EditorAddedMessageDTO event) {
 
         String subject = "[CONVITE] Editor para: " + event.eventTitle();

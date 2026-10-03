@@ -70,6 +70,17 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+  postgres-exporter:
+    logging: *default-logging
+    image: prometheuscommunity/postgres-exporter:latest
+    profiles: [ all, infra ]
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB}?sslmode=disable"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+
   seaweeds:
     logging: *default-logging
     image: chrislusf/seaweedfs:latest
@@ -151,9 +162,21 @@ services:
       - "127.0.0.1:3000:3000"
     environment:
       LOKI_EXTRA_ARGS: "-store.retention=720h -compactor.retention-enabled=true -compactor.delete-request-store=filesystem"
-      PROMETHEUS_EXTRA_ARGS: "--storage.tsdb.retention.time=30d"
     volumes:
       - grafana-lgtm-data:/data
+
+  prometheus:
+    logging: *default-logging
+    image: prom/prometheus:latest
+    profiles: [ all, infra ]
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.enable-remote-write-receiver
+    volumes:
+      - prometheus-data:/prometheus
 
   alloy:
     logging: *default-logging
@@ -175,4 +198,5 @@ volumes:
   rabbitmq_data:
   redis-data:
   grafana-lgtm-data:
+  prometheus-data:
   alloy-data:

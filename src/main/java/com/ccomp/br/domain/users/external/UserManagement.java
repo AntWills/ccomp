@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.users.external;
 
-import com.ccomp.br.config.RabbitMQConfig;
+import com.ccomp.br.config.rabbit.RabbitMQConfig;
+import com.ccomp.br.domain.users.external.message.UserCreatedChannel;
 import com.ccomp.br.domain.users.persistence.UserCache;
 import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.domain.users.external.dto.UserCreatedMessageDTO;
@@ -66,7 +67,7 @@ public class UserManagement {
 
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE_NAME,
-                RabbitMQConfig.ROUTING_KEY_USER_CREATED,
+                UserCreatedChannel.ROUTING,
                 new UserCreatedMessageDTO(dto.name(), dto.email().getValue())
         );
     }
