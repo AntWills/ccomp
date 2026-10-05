@@ -19,6 +19,7 @@ import com.ccomp.br.module.qrcode.QRCode;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class CheckInService {
     private final CheckInRepository checkInRepository;
@@ -84,6 +86,7 @@ public class CheckInService {
                 });
 
         String url = String.format(checkInUrl + "?activity_id=%d&code=%s", checkIn.activityId(), checkIn.code());
+        log.debug("URL: {}", url);
 
         try {
             BufferedImage image = QRCode.generateQRCodeImage(url);
