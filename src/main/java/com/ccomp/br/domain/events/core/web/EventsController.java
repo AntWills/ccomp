@@ -183,11 +183,19 @@ public class EventsController {
     }
 
     @PatchMapping("{eventId}")
-//    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'STAFF')")
     @Operation(
             summary = "Atualiza parcialmente um evento existente",
             description = """
-        Permite alterar dados gerais do evento, como alterar status de publicação, datas de inscrições ou período de realização.
+        Permite alterar dados gerais do evento, tais como titulo, descrição, datas de inscrições ou período de realização.
+        
+        ---
+        
+        > **Atenção:** As alterações abaixo possuem endpoints exclusivos e **não** são afetadas por esta rota:
+        >
+        > ️**Imagem de capa (`cover image`):** `POST /api/events/{eventId}/images`
+        > **Status do evento:** `PATCH /api/events/{eventId}/status/{status}`
+        
+        ---
         """
     )
     @ApiResponses(value = {
