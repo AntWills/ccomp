@@ -61,6 +61,7 @@ public class EnrollmentActivityDslRepository {
                                 userModel.name,
                                 userModel.emailAddress
                         ),
+                        enrollmentActivity.attendedAt.isNotNull(),
                         enrollmentActivity.id,
                         enrollmentActivity.createdAt
                 ))
