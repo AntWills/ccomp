@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.activities.dto;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record ActivityDTO(
@@ -14,6 +15,7 @@ public record ActivityDTO(
         String location,
         LocalDateTime startDate,
         LocalDateTime endDate,
+        BigDecimal workloadHours,
         EnumActivityRegistrationPolicy registrationPolicy,
         EnumActivityType type
 ) {

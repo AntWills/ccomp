@@ -3,9 +3,11 @@ package com.ccomp.br.domain.events.activities.dto;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Builder
@@ -24,6 +26,9 @@ public record UpdateActivityDTO(
         LocalDateTime startDate,
 
         LocalDateTime endDate,
+
+        @DecimalMin(value = "0.0", message = "A carga horária não pode ser negativa")
+        BigDecimal workloadHours,
 
         EnumActivityRegistrationPolicy registrationPolicy,
 

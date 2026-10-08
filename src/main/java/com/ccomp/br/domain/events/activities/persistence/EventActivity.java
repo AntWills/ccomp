@@ -9,6 +9,7 @@ import com.ccomp.br.shared.exceptions.DomainException;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -49,6 +50,9 @@ public class EventActivity {
     @Column(name = "end_date")
     private LocalDateTime endDate;
 
+    @Column(name = "workload_hours")
+    private BigDecimal workloadHours;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "registration_policy", nullable = false)
     private EnumActivityRegistrationPolicy registrationPolicy;
@@ -88,6 +92,9 @@ public class EventActivity {
     private void validateDates() {
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
             throw new IllegalArgumentException("A data de início não pode ser posterior à data de término.");
+        }
+        if (workloadHours != null && workloadHours.signum() < 0) {
+            throw new IllegalArgumentException("A carga horária não pode ser negativa.");
         }
     }
 
