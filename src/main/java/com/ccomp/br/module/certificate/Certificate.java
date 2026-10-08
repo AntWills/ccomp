@@ -2,106 +2,169 @@ package com.ccomp.br.module.certificate;
 
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import lombok.Builder;
-import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.ByteArrayResource;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.font.FontRenderContext;
+import java.awt.font.TextLayout;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 @Builder
 public class Certificate {
+    private static final int FONT_SIZE = 40;
+    private static final float LINE_SPACING = 1.2f;
+    private static final Font FONT = new Font(Font.SANS_SERIF, Font.PLAIN, FONT_SIZE);
+    private static final long MAX_IMAGE_PIXELS = 30_000_000L;
 
     private StorageExternal.StoredFile coverImage;
     private List<TextElement> textElements;
     private Map<String, String> toReplace;
 
     public StorageExternal.StoredFile generate() {
-        // Usa try-with-resources para garantir que o InputStream original seja fechado
-        try (InputStream is = coverImage.resource().getInputStream()) {
-
-            // 1. Carrega a imagem original (A4 Paisagem) em memória
-            BufferedImage image = ImageIO.read(is);
-            if (image == null) {
-                throw new IllegalArgumentException("O arquivo fornecido não é uma imagem válida.");
-            }
-
-            // 2. Prepara o motor gráfico 2D para desenhar na imagem
-            Graphics2D g2d = image.createGraphics();
-
-            // 3. Aplica Anti-aliasing para o texto ficar suave e sem pixels estourados
-            g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-            g2d.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
-
-            // 4. Itera sobre cada elemento que precisa ser desenhado
-            if (textElements != null) {
-                for (TextElement element : textElements) {
-
-                    // Substitui as chaves (ex: {participante.nome}) pelos valores (ex: José Cassios)
-                    String finalString = applyReplacements(element.textTemplate(), toReplace);
-
-                    // Configura a fonte e a cor baseando-se no elemento (com fallback padrão)
-                    int fontSize = element.fontSize() != null ? element.fontSize() : 40;
-                    Color fontColor = element.hexColor() != null ? Color.decode(element.hexColor()) : Color.BLACK;
-
-                    g2d.setFont(new Font("Arial", Font.PLAIN, fontSize));
-                    g2d.setColor(fontColor);
-
-                    // Desenha o texto. Importante: no Graphics2D, o X e Y definem a linha de base (baseline) do texto
-                    g2d.drawString(finalString, element.x().floatValue(), element.y().floatValue());
-                }
-            }
-
-            // Libera os recursos do processador gráfico
-            g2d.dispose();
-
-            // 5. Converte a imagem modificada de volta para Bytes
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-
-            // Detecta o formato original baseado no contentType salvo (fallback para jpg)
-            String format = (coverImage.contentType() != null && coverImage.contentType().contains("png")) ? "png" : "jpg";
-            ImageIO.write(image, format, outputStream);
-
-            // 6. Encapsula os bytes resultantes num ByteArrayResource do Spring
-            ByteArrayResource generatedResource = new ByteArrayResource(outputStream.toByteArray());
-
-            // Retorna a nova imagem pronta
-            return new StorageExternal.StoredFile(generatedResource, "image/" + format);
-
-        } catch (IOException e) {
-            // Em sua arquitetura CCOMP, recomendo trocar por uma exception global tipo "CertificateGenerationException"
-            throw new RuntimeException("Falha ao manipular e gerar a imagem do certificado.", e);
+        if (coverImage == null || coverImage.resource() == null) {
+            throw new IllegalArgumentException("A imagem de fundo é obrigatória.");
         }
+
+        try (InputStream input = coverImage.resource().getInputStream()) {
+            BufferedImage image = ImageIO.read(input);
+            if (image == null) {
+                throw new IllegalArgumentException("O arquivo enviado não é uma imagem suportada.");
+            }
+            if ((long) image.getWidth() * image.getHeight() > MAX_IMAGE_PIXELS) {
+                throw new IllegalArgumentException("A imagem excede o limite de resolução para a prévia.");
+            }
+
+            Graphics2D graphics = image.createGraphics();
+            try {
+                graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                graphics.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+                graphics.setFont(FONT);
+
+                if (textElements != null) {
+                    for (TextElement element : textElements) {
+                        drawTextBox(graphics, image, element, applyReplacements(element.textTemplate(), toReplace));
+                    }
+                }
+            } finally {
+                graphics.dispose();
+            }
+
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            if (!ImageIO.write(image, "png", output)) {
+                throw new IllegalStateException("Não foi possível codificar a imagem da prévia em PNG.");
+            }
+            return new StorageExternal.StoredFile(new ByteArrayResource(output.toByteArray()), "image/png");
+        } catch (IOException e) {
+            throw new IllegalStateException("Falha ao ler ou gerar a imagem da prévia.", e);
+        }
+    }
+
+    private void drawTextBox(Graphics2D graphics, BufferedImage image, TextElement element, String text) {
+        if (element == null || element.x() == null || element.y() == null
+                || element.width() == null || element.height() == null) {
+            throw new IllegalArgumentException("Cada caixa deve informar posição, largura e altura.");
+        }
+        if (element.x() + element.width() > 1 || element.y() + element.height() > 1) {
+            throw new IllegalArgumentException("A caixa de texto ultrapassa os limites da imagem.");
+        }
+
+        int x = (int) Math.round(element.x() * image.getWidth());
+        int y = (int) Math.round(element.y() * image.getHeight());
+        float boxWidth = (float) (element.width() * image.getWidth());
+        float boxHeight = (float) (element.height() * image.getHeight());
+        FontRenderContext context = graphics.getFontRenderContext();
+        List<String> lines = wrap(text, boxWidth, context);
+        float lineHeight = FONT_SIZE * LINE_SPACING;
+        float requiredHeight = lines.size() * lineHeight;
+        if (requiredHeight > boxHeight) {
+            throw new IllegalArgumentException("O texto excede a altura da caixa. Aumente a caixa ou reduza o texto.");
+        }
+
+        graphics.setColor(java.awt.Color.BLACK);
+        float baseline = y + FONT_SIZE;
+        for (int i = 0; i < lines.size(); i++) {
+            TextLayout layout = new TextLayout(lines.get(i).isEmpty() ? " " : lines.get(i), FONT, context);
+            boolean lastLine = i == lines.size() - 1;
+            if (!lastLine && lines.get(i).contains(" ") && layout.getAdvance() < boxWidth) {
+                layout = layout.getJustifiedLayout(boxWidth);
+            }
+            layout.draw(graphics, x, baseline + i * lineHeight);
+        }
+    }
+
+    private List<String> wrap(String text, float maxWidth, FontRenderContext context) {
+        if (maxWidth <= 0) {
+            throw new IllegalArgumentException("A largura da caixa de texto precisa ser maior que zero.");
+        }
+
+        List<String> lines = new ArrayList<>();
+        for (String paragraph : text.split("\\R", -1)) {
+            if (paragraph.isBlank()) {
+                lines.add("");
+                continue;
+            }
+            StringBuilder line = new StringBuilder();
+            for (String word : paragraph.trim().split("\\s+")) {
+                if (new TextLayout(word, FONT, context).getAdvance() > maxWidth) {
+                    if (!line.isEmpty()) {
+                        lines.add(line.toString());
+                        line.setLength(0);
+                    }
+                    splitLongWord(word, maxWidth, context, lines, line);
+                    continue;
+                }
+
+                String candidate = line.isEmpty() ? word : line + " " + word;
+                if (!line.isEmpty() && new TextLayout(candidate, FONT, context).getAdvance() > maxWidth) {
+                    lines.add(line.toString());
+                    line.setLength(0);
+                }
+                if (!line.isEmpty()) line.append(' ');
+                line.append(word);
+            }
+            if (!line.isEmpty()) lines.add(line.toString());
+        }
+        return lines.isEmpty() ? List.of("") : lines;
+    }
+
+    private void splitLongWord(String word, float maxWidth, FontRenderContext context,
+                               List<String> lines, StringBuilder remainder) {
+        StringBuilder chunk = new StringBuilder();
+        for (int offset = 0; offset < word.length();) {
+            int codePoint = word.codePointAt(offset);
+            String candidate = chunk.toString() + new String(Character.toChars(codePoint));
+            if (chunk.isEmpty() && new TextLayout(candidate, FONT, context).getAdvance() > maxWidth) {
+                throw new IllegalArgumentException("A caixa é estreita demais para exibir um caractere da fonte.");
+            }
+            if (!chunk.isEmpty() && new TextLayout(candidate, FONT, context).getAdvance() > maxWidth) {
+                lines.add(chunk.toString());
+                chunk.setLength(0);
+            }
+            chunk.appendCodePoint(codePoint);
+            offset += Character.charCount(codePoint);
+        }
+        remainder.append(chunk);
     }
 
     private String applyReplacements(String template, Map<String, String> variables) {
-        if (template == null) return "";
-        if (variables == null || variables.isEmpty()) return template;
-
-        String processedString = template;
+        if (template == null || variables == null || variables.isEmpty()) return template == null ? "" : template;
+        String result = template;
         for (Map.Entry<String, String> entry : variables.entrySet()) {
-            // Utiliza o .replace() convencional em vez de .replaceAll() para evitar problemas com regex se a chave tiver chaves "{}"
-            processedString = processedString.replace(entry.getKey(), entry.getValue());
+            if (entry.getKey() != null && entry.getValue() != null) {
+                result = result.replace(entry.getKey(), entry.getValue());
+            }
         }
-        return processedString;
+        return result;
     }
 
-    /**
-     * Transformamos o Map antigo num Record mais completo.
-     * Isso permite que futuramente você passe o tamanho da fonte e cor customizada pelo BD/Frontend
-     * para cada pedaço de texto (ex: O nome pode ser maior que o texto padrão).
-     */
-    public record TextElement(
-            String textTemplate,
-            Double x,
-            Double y,
-            @Nullable
-            Integer fontSize, // Opcional
-            String hexColor   // Opcional (Ex: "#000000")
-    ) {}
+    public record TextElement(String textTemplate, Double x, Double y, Double width, Double height) {}
 }
