@@ -65,6 +65,7 @@ public class EventActivityDslRepository {
                         eventActivity.location,
                         eventActivity.startDate,
                         eventActivity.endDate,
+                        eventActivity.workloadHours,
                         eventActivity.registrationPolicy,
                         eventActivity.type,
                         eventActivity.createdAt
@@ -112,6 +113,7 @@ public class EventActivityDslRepository {
                                 eventActivity.location,
                                 eventActivity.startDate,
                                 eventActivity.endDate,
+                                eventActivity.workloadHours,
                                 eventActivity.registrationPolicy,
                                 eventActivity.type,
                                 eventActivity.createdAt
@@ -209,6 +211,7 @@ public class EventActivityDslRepository {
                                 eventActivity.location,
                                 eventActivity.startDate,
                                 eventActivity.endDate,
+                                eventActivity.workloadHours,
                                 eventActivity.registrationPolicy,
                                 eventActivity.type,
                                 eventActivity.createdAt

@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 
 public record UserActivitySummaryDTO(
         UserSummaryDTO user,
+        boolean haveCheckIn,
         Long id,
         LocalDateTime createdAt
 ) {

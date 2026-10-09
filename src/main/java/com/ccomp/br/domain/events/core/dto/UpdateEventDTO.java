@@ -18,8 +18,6 @@ public record UpdateEventDTO(
         @Size(min = 4, max = 5000, message = "A descrição deve ter entre 4 e 5000 caracteres.")
         String content,
 
-        String coverImageUrl,
-
         EnumEventCategory category,
         EnumEventFormat format,
         EnumScheduleConflictPolicy scheduleConflictPolicy,
