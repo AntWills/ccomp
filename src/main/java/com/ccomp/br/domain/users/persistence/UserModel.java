@@ -33,8 +33,10 @@ public class UserModel {
     )
     private EmailAddress emailAddress;
 
-    @Column(nullable = false)
     private String password;
+
+    @Column(name = "google_subject", unique = true)
+    private String googleSubject;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status_account", columnDefinition = "varchar(25)", nullable = false)

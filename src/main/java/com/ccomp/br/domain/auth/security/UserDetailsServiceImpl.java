@@ -28,6 +28,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         UserDTO user = userManagement.findByEmailAddressForAuthentication(new EmailAddress(email))
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + email));
 
+        if (user.password() == null)
+            throw new UsernameNotFoundException("A conta utiliza login social.");
+
         List<EnumRoles> roles = rolesServices.loadRolesByUserID(user.id());
 
         return new UserDetailsImpl(user, roles);
