@@ -87,50 +87,53 @@ public class Certificate {
         float boxWidth = (float) (element.width() * image.getWidth());
         float boxHeight = (float) (element.height() * image.getHeight());
 
+        Graphics2D boxGraphics = (Graphics2D) graphics.create();
+        boxGraphics.clipRect(x, y, Math.round(boxWidth), Math.round(boxHeight));
+
         // 1. Converte a string com Markdown básico para AttributedString
         AttributedString attributedText = MarkdownTextParser.parse(text, font, fontColor);
         AttributedCharacterIterator iterator = attributedText.getIterator();
         String renderedText = getIteratorText(iterator);
 
         // 2. Quebra de linha e renderização nativa
-        LineBreakMeasurer measurer = new LineBreakMeasurer(iterator, graphics.getFontRenderContext());
+        LineBreakMeasurer measurer = new LineBreakMeasurer(iterator, boxGraphics.getFontRenderContext());
         float lineHeight = fontSize * LINE_SPACING;
         float currentY = y + fontSize;
 
-        while (measurer.getPosition() < iterator.getEndIndex()) {
-            int nextPos = measurer.nextOffset(boxWidth);
-            int limit = measurer.getPosition();
+        try {
+            while (measurer.getPosition() < iterator.getEndIndex()) {
+                int nextPos = measurer.nextOffset(boxWidth);
+                int limit = measurer.getPosition();
 
-            // Tratamento para quebras de linha explícitas (\n) no texto
-            String sub = renderedText.substring(limit, nextPos);
-            int newLineIdx = sub.indexOf('\n');
-            if (newLineIdx != -1) {
-                nextPos = limit + newLineIdx + 1;
-            }
-
-            TextLayout layout = measurer.nextLayout(boxWidth, nextPos, false);
-            if (layout == null) break;
-
-            if (currentY + layout.getDescent() > y + boxHeight) {
-                throw new IllegalArgumentException("O texto excede a altura da caixa.");
-            }
-
-            float drawX = x;
-            boolean isLastLine = measurer.getPosition() >= iterator.getEndIndex();
-
-            switch (alignment) {
-                case JUSTIFIED -> {
-                    if (!isLastLine && layout.getAdvance() < boxWidth) {
-                        layout = layout.getJustifiedLayout(boxWidth);
-                    }
+                // Tratamento para quebras de linha explícitas (\n) no texto
+                String sub = renderedText.substring(limit, nextPos);
+                int newLineIdx = sub.indexOf('\n');
+                if (newLineIdx != -1) {
+                    nextPos = limit + newLineIdx + 1;
                 }
-                case RIGHT -> drawX = x + (boxWidth - layout.getAdvance());
-                case CENTERED -> drawX = x + ((boxWidth - layout.getAdvance()) / 2.0f);
-                case LEFT -> drawX = x;
-            }
 
-            layout.draw(graphics, drawX, currentY);
-            currentY += lineHeight;
+                TextLayout layout = measurer.nextLayout(boxWidth, nextPos, false);
+                if (layout == null) break;
+
+                float drawX = x;
+                boolean isLastLine = measurer.getPosition() >= iterator.getEndIndex();
+
+                switch (alignment) {
+                    case JUSTIFIED -> {
+                        if (!isLastLine && layout.getAdvance() < boxWidth) {
+                            layout = layout.getJustifiedLayout(boxWidth);
+                        }
+                    }
+                    case RIGHT -> drawX = x + (boxWidth - layout.getAdvance());
+                    case CENTERED -> drawX = x + ((boxWidth - layout.getAdvance()) / 2.0f);
+                    case LEFT -> drawX = x;
+                }
+
+                layout.draw(boxGraphics, drawX, currentY);
+                currentY += lineHeight;
+            }
+        } finally {
+            boxGraphics.dispose();
         }
     }
 
