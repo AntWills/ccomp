@@ -26,7 +26,7 @@ public class Certificate {
     private static final long MAX_IMAGE_PIXELS = 30_000_000L;
 
     private StorageExternal.StoredFile coverImage;
-    private List<TextElement> textElements;
+    private List<BoxElement> boxElements;
     private Map<String, String> toReplace;
 
     public StorageExternal.StoredFile generate() {
@@ -49,8 +49,8 @@ public class Certificate {
                 graphics.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
                 graphics.setFont(FONT);
 
-                if (textElements != null) {
-                    for (TextElement element : textElements) {
+                if (boxElements != null) {
+                    for (BoxElement element : boxElements) {
                         drawTextBox(graphics, image, element, applyReplacements(element.textTemplate(), toReplace));
                     }
                 }
@@ -68,7 +68,7 @@ public class Certificate {
         }
     }
 
-    private void drawTextBox(Graphics2D graphics, BufferedImage image, TextElement element, String text) {
+    private void drawTextBox(Graphics2D graphics, BufferedImage image, BoxElement element, String text) {
         if (element == null || element.x() == null || element.y() == null
                 || element.width() == null || element.height() == null) {
             throw new IllegalArgumentException("Cada caixa deve informar posição, largura e altura.");
@@ -165,6 +165,4 @@ public class Certificate {
         }
         return result;
     }
-
-    public record TextElement(String textTemplate, Double x, Double y, Double width, Double height) {}
 }

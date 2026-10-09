@@ -71,12 +71,12 @@ public class EventCertificateController {
         }
 
         var elements = request.textElements().stream()
-                .map(GenerateCertificatePreviewRequest.TextElementDTO::toDomain)
+                .map(GenerateCertificatePreviewRequest.BoxElementDTO::toDomain)
                 .toList();
 
         StorageExternal.StoredFile result = Certificate.builder()
                 .coverImage(template)
-                .textElements(elements)
+                .boxElements(elements)
                 .toReplace(variables)
                 .build()
                 .generate();

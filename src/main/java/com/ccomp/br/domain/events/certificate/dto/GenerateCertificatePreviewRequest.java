@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.certificate.dto;
 
+import com.ccomp.br.module.certificate.BoxElement;
 import com.ccomp.br.module.certificate.Certificate;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
@@ -16,11 +17,11 @@ public record GenerateCertificatePreviewRequest(
         @NotEmpty(message = "A lista de elementos de texto não pode estar vazia.")
         @Size(max = 30, message = "A prévia aceita no máximo 30 caixas de texto.")
         @Valid
-        List<TextElementDTO> textElements,
+        List<BoxElementDTO> textElements,
 
         Map<String, String> variables
 ) {
-    public record TextElementDTO(
+    public record BoxElementDTO(
             @NotBlank(message = "O template de texto é obrigatório.")
             @Size(max = 2000, message = "O texto da caixa excede o limite de 2000 caracteres.")
             String textTemplate,
@@ -45,8 +46,8 @@ public record GenerateCertificatePreviewRequest(
             @DecimalMax(value = "1.0", message = "A altura deve estar entre 0 e 1.")
             Double height
     ) {
-        public Certificate.TextElement toDomain() {
-            return new Certificate.TextElement(textTemplate, x, y, width, height);
+        public BoxElement toDomain() {
+            return new BoxElement(textTemplate, x, y, width, height);
         }
     }
 }
