@@ -7,8 +7,6 @@ import com.ccomp.br.domain.auth.core.external.dto.UserLoginMessageDTO;
 import com.ccomp.br.domain.auth.jwt.application.JwtService;
 import com.ccomp.br.domain.auth.passwordreset.application.PasswordResetService;
 import com.ccomp.br.domain.users.external.UserManagement;
-import com.ccomp.br.domain.users.external.RolesServices;
-import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.domain.auth.security.UserDetailsImpl;
 import com.ccomp.br.domain.users.external.message.UserLoginChannel;
 import com.ccomp.br.domain.users.external.message.UserPasswordResetChannel;
@@ -16,7 +14,6 @@ import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
-import com.ccomp.br.shared.exceptions.UserBlockedException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -39,7 +36,6 @@ public class AuthApplication {
     private final AuthenticationManager authenticationManager;
     private final PasswordResetService passwordResetService;
     private final RabbitTemplate rabbitTemplate;
-    private final RolesServices rolesServices;
 
     @Autowired
     public AuthApplication(
@@ -47,14 +43,12 @@ public class AuthApplication {
             JwtService jwtService,
             AuthenticationManager authenticationManager,
             PasswordResetService passwordResetService,
-            RabbitTemplate rabbitTemplate,
-            RolesServices rolesServices) {
+            RabbitTemplate rabbitTemplate) {
         this.userManagement = userManagement;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
         this.passwordResetService = passwordResetService;
         this.rabbitTemplate = rabbitTemplate;
-        this.rolesServices = rolesServices;
     }
 
     @Transactional
@@ -96,30 +90,6 @@ public class AuthApplication {
         return new TokenPair(
                 jwtService.generateAccessToken(userDetails.getId(), roles),
                 jwtService.createRefreshToken(userDetails.getId(), metaDTO));
-    }
-
-    @Transactional
-    public TokenPair signInWithGoogle(String email, String name, String subject, ClientMetadataDTO metadata) {
-        UUID userId = userManagement.provisionGoogleUser(new EmailAddress(email), name, subject);
-
-        UserDTO user = userManagement.findByIdForAuthentication(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
-
-        if (user.statusAccount() == EnumUserStatusAccount.BLOCKED)
-            throw new UserBlockedException("Esta conta está bloqueada.");
-        if (user.statusAccount() == EnumUserStatusAccount.DEACTIVATED)
-            userManagement.reactivateAccount(userId);
-
-        List<String> roles = rolesServices.loadRolesByUserID(userId).stream()
-                .map(role -> "ROLE_" + role.name())
-                .toList();
-
-        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, UserLoginChannel.ROUTING,
-                new UserLoginMessageDTO(userId, user.emailAddress(), metadata.ipAddress(),
-                        metadata.userAgent(), LocalDateTime.now()));
-
-        return new TokenPair(jwtService.generateAccessToken(userId, roles),
-                jwtService.createRefreshToken(userId, metadata));
     }
 
     public Optional<TokenPair> refresh(RefreshTokenRequest request, ClientMetadataDTO metaDTO){

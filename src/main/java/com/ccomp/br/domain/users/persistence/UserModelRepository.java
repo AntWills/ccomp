@@ -11,7 +11,6 @@ import java.util.UUID;
 
 public interface UserModelRepository extends JpaRepository<UserModel, UUID>, JpaSpecificationExecutor<UserModel> {
     Optional<UserModel> findByEmailAddress(EmailAddress emailAddress);
-    Optional<UserModel> findByGoogleSubject(String googleSubject);
     List<UserSummaryView> findAllByIdIn(List<UUID> ids);
     boolean existsById(UUID id);
     boolean existsByEmailAddress(EmailAddress emailAddress);
