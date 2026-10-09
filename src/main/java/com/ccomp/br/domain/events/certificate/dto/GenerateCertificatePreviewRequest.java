@@ -44,11 +44,6 @@ public record GenerateCertificatePreviewRequest(
             @DecimalMax(value = "1.0", message = "A largura deve estar entre 0 e 1.")
             Double width,
 
-            @NotNull(message = "A altura da caixa é obrigatória.")
-            @DecimalMin(value = "0.01", message = "A altura deve ser maior que zero.")
-            @DecimalMax(value = "1.0", message = "A altura deve estar entre 0 e 1.")
-            Double height,
-
             @Min(value = 8, message = "O tamanho da fonte deve ser de no mínimo 8pt.")
             @Max(value = 300, message = "O tamanho da fonte deve ser de no máximo 300pt.")
             Float fontSize,
@@ -59,7 +54,7 @@ public record GenerateCertificatePreviewRequest(
             EnumAlignment alignment
     ) {
         public BoxElement toDomain() {
-            return new BoxElement(textTemplate, x, y, width, height, fontSize, fontColor, alignment);
+            return new BoxElement(textTemplate, x, y, width, fontSize, fontColor, alignment);
         }
     }
 }

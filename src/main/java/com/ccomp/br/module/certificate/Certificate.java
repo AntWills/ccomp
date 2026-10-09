@@ -73,8 +73,8 @@ public class Certificate {
     }
     private void drawTextBox(Graphics2D graphics, BufferedImage image, BoxElement element, String text) {
         if (element == null || element.x() == null || element.y() == null
-                || element.width() == null || element.height() == null) {
-            throw new IllegalArgumentException("Cada caixa deve informar posição, largura e altura.");
+                || element.width() == null) {
+            throw new IllegalArgumentException("Cada caixa deve informar posição e largura.");
         }
 
         float fontSize = element.fontSize() != null ? element.fontSize() : DEFAULT_FONT_SIZE;
@@ -85,55 +85,48 @@ public class Certificate {
         int x = (int) Math.round(element.x() * image.getWidth());
         int y = (int) Math.round(element.y() * image.getHeight());
         float boxWidth = (float) (element.width() * image.getWidth());
-        float boxHeight = (float) (element.height() * image.getHeight());
-
-        Graphics2D boxGraphics = (Graphics2D) graphics.create();
-        boxGraphics.clipRect(x, y, Math.round(boxWidth), Math.round(boxHeight));
 
         // 1. Converte a string com Markdown básico para AttributedString
         AttributedString attributedText = MarkdownTextParser.parse(text, font, fontColor);
         AttributedCharacterIterator iterator = attributedText.getIterator();
         String renderedText = getIteratorText(iterator);
 
-        // 2. Quebra de linha e renderização nativa
-        LineBreakMeasurer measurer = new LineBreakMeasurer(iterator, boxGraphics.getFontRenderContext());
+        // 2. Quebra de linha e renderização nativa.
+        // O texto flui livremente para baixo; o que exceder os limites da imagem é cortado automaticamente.
+        LineBreakMeasurer measurer = new LineBreakMeasurer(iterator, graphics.getFontRenderContext());
         float lineHeight = fontSize * LINE_SPACING;
         float currentY = y + fontSize;
 
-        try {
-            while (measurer.getPosition() < iterator.getEndIndex()) {
-                int nextPos = measurer.nextOffset(boxWidth);
-                int limit = measurer.getPosition();
+        while (measurer.getPosition() < iterator.getEndIndex()) {
+            int nextPos = measurer.nextOffset(boxWidth);
+            int limit = measurer.getPosition();
 
-                // Tratamento para quebras de linha explícitas (\n) no texto
-                String sub = renderedText.substring(limit, nextPos);
-                int newLineIdx = sub.indexOf('\n');
-                if (newLineIdx != -1) {
-                    nextPos = limit + newLineIdx + 1;
-                }
-
-                TextLayout layout = measurer.nextLayout(boxWidth, nextPos, false);
-                if (layout == null) break;
-
-                float drawX = x;
-                boolean isLastLine = measurer.getPosition() >= iterator.getEndIndex();
-
-                switch (alignment) {
-                    case JUSTIFIED -> {
-                        if (!isLastLine && layout.getAdvance() < boxWidth) {
-                            layout = layout.getJustifiedLayout(boxWidth);
-                        }
-                    }
-                    case RIGHT -> drawX = x + (boxWidth - layout.getAdvance());
-                    case CENTERED -> drawX = x + ((boxWidth - layout.getAdvance()) / 2.0f);
-                    case LEFT -> drawX = x;
-                }
-
-                layout.draw(boxGraphics, drawX, currentY);
-                currentY += lineHeight;
+            // Tratamento para quebras de linha explícitas (\n) no texto
+            String sub = renderedText.substring(limit, nextPos);
+            int newLineIdx = sub.indexOf('\n');
+            if (newLineIdx != -1) {
+                nextPos = limit + newLineIdx + 1;
             }
-        } finally {
-            boxGraphics.dispose();
+
+            TextLayout layout = measurer.nextLayout(boxWidth, nextPos, false);
+            if (layout == null) break;
+
+            float drawX = x;
+            boolean isLastLine = measurer.getPosition() >= iterator.getEndIndex();
+
+            switch (alignment) {
+                case JUSTIFIED -> {
+                    if (!isLastLine && layout.getAdvance() < boxWidth) {
+                        layout = layout.getJustifiedLayout(boxWidth);
+                    }
+                }
+                case RIGHT -> drawX = x + (boxWidth - layout.getAdvance());
+                case CENTERED -> drawX = x + ((boxWidth - layout.getAdvance()) / 2.0f);
+                case LEFT -> drawX = x;
+            }
+
+            layout.draw(graphics, drawX, currentY);
+            currentY += lineHeight;
         }
     }
 

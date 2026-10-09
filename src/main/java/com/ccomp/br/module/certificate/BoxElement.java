@@ -5,7 +5,6 @@ public record BoxElement(
         Double x,
         Double y,
         Double width,
-        Double height,
         Float fontSize,
         String fontColor,
         EnumAlignment alignment
