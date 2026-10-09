@@ -52,6 +52,8 @@ USERNAME=seu@email.com
 MAIL_PASSWORD=senha
 MAIL_SMTP_AUTH=true
 MAIL_SMTP_STARTTLS_ENABLE=true
+CLIENT_ID=seu-client-id-google
+CLIENT_SECRET=seu-client-secret-google
 
 # Rabbit
 RABBITMQ_HOST=rabbitmq
@@ -103,6 +105,12 @@ iniciar o projeto.
 O perfil default `dev` vai ser usado e as configurações do
 `application.properties` serão usadas. A aplicação vai carregar
 o `.env.dev` na execução.
+
+Para iniciar o login Google, configure `CLIENT_ID` e `CLIENT_SECRET` no
+`.env.dev` e cadastre `http://localhost:8080/login/oauth2/code/google` como
+URI de redirecionamento autorizada no Google Cloud. A URL de início do fluxo
+é `/oauth2/authorization/google`; após o callback, a API responde com o par
+de tokens próprio (`access_token` e `refresh_token`).
 
 Por fim, execute o comando no terminal na raiz do projeto:
 ```shell
