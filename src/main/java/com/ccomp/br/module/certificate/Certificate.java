@@ -10,11 +10,14 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.font.FontRenderContext;
+import java.awt.font.LineBreakMeasurer;
 import java.awt.font.TextLayout;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.AttributedCharacterIterator;
+import java.text.AttributedString;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -68,14 +71,10 @@ public class Certificate {
             throw new IllegalStateException("Falha ao ler ou gerar a imagem da prévia.", e);
         }
     }
-
     private void drawTextBox(Graphics2D graphics, BufferedImage image, BoxElement element, String text) {
         if (element == null || element.x() == null || element.y() == null
                 || element.width() == null || element.height() == null) {
             throw new IllegalArgumentException("Cada caixa deve informar posição, largura e altura.");
-        }
-        if (element.x() + element.width() > 1 || element.y() + element.height() > 1) {
-            throw new IllegalArgumentException("A caixa de texto ultrapassa os limites da imagem.");
         }
 
         float fontSize = element.fontSize() != null ? element.fontSize() : DEFAULT_FONT_SIZE;
@@ -83,33 +82,45 @@ public class Certificate {
         Color fontColor = parseColor(element.fontColor());
         EnumAlignment alignment = element.alignment() != null ? element.alignment() : DEFAULT_ALIGNMENT;
 
-        graphics.setFont(font);
-        graphics.setColor(fontColor);
-
         int x = (int) Math.round(element.x() * image.getWidth());
         int y = (int) Math.round(element.y() * image.getHeight());
         float boxWidth = (float) (element.width() * image.getWidth());
         float boxHeight = (float) (element.height() * image.getHeight());
 
-        FontRenderContext context = graphics.getFontRenderContext();
-        List<String> lines = wrap(text, boxWidth, font, context);
-        float lineHeight = fontSize * LINE_SPACING;
-        float requiredHeight = lines.size() * lineHeight;
-        if (requiredHeight > boxHeight) {
-            throw new IllegalArgumentException("O texto excede a altura da caixa. Aumente a caixa ou reduza o texto.");
-        }
+        // 1. Converte a string com Markdown básico para AttributedString
+        AttributedString attributedText = MarkdownTextParser.parse(text, font, fontColor);
+        AttributedCharacterIterator iterator = attributedText.getIterator();
+        String renderedText = getIteratorText(iterator);
 
-        float baseline = y + fontSize;
-        for (int i = 0; i < lines.size(); i++) {
-            String lineText = lines.get(i);
-            TextLayout layout = new TextLayout(lineText.isEmpty() ? " " : lineText, font, context);
-            boolean lastLine = i == lines.size() - 1;
+        // 2. Quebra de linha e renderização nativa
+        LineBreakMeasurer measurer = new LineBreakMeasurer(iterator, graphics.getFontRenderContext());
+        float lineHeight = fontSize * LINE_SPACING;
+        float currentY = y + fontSize;
+
+        while (measurer.getPosition() < iterator.getEndIndex()) {
+            int nextPos = measurer.nextOffset(boxWidth);
+            int limit = measurer.getPosition();
+
+            // Tratamento para quebras de linha explícitas (\n) no texto
+            String sub = renderedText.substring(limit, nextPos);
+            int newLineIdx = sub.indexOf('\n');
+            if (newLineIdx != -1) {
+                nextPos = limit + newLineIdx + 1;
+            }
+
+            TextLayout layout = measurer.nextLayout(boxWidth, nextPos, false);
+            if (layout == null) break;
+
+            if (currentY + layout.getDescent() > y + boxHeight) {
+                throw new IllegalArgumentException("O texto excede a altura da caixa.");
+            }
 
             float drawX = x;
+            boolean isLastLine = measurer.getPosition() >= iterator.getEndIndex();
 
             switch (alignment) {
                 case JUSTIFIED -> {
-                    if (!lastLine && lineText.contains(" ") && layout.getAdvance() < boxWidth) {
+                    if (!isLastLine && layout.getAdvance() < boxWidth) {
                         layout = layout.getJustifiedLayout(boxWidth);
                     }
                 }
@@ -118,8 +129,17 @@ public class Certificate {
                 case LEFT -> drawX = x;
             }
 
-            layout.draw(graphics, drawX, baseline + i * lineHeight);
+            layout.draw(graphics, drawX, currentY);
+            currentY += lineHeight;
         }
+    }
+
+    private String getIteratorText(AttributedCharacterIterator iterator) {
+        StringBuilder text = new StringBuilder(iterator.getEndIndex() - iterator.getBeginIndex());
+        for (char character = iterator.first(); character != AttributedCharacterIterator.DONE; character = iterator.next()) {
+            text.append(character);
+        }
+        return text.toString();
     }
 
     private List<String> wrap(String text, float maxWidth, Font font, FontRenderContext context) {
