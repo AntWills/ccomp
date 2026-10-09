@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.certificate.dto;
 
 import com.ccomp.br.module.certificate.BoxElement;
+import com.ccomp.br.module.certificate.EnumAlignment;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -53,10 +54,12 @@ public record GenerateCertificatePreviewRequest(
             Float fontSize,
 
             @Pattern(regexp = "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$", message = "A cor da fonte deve ser um hexadecimal válido (ex: #000000).")
-            String fontColor
+            String fontColor,
+
+            EnumAlignment alignment
     ) {
         public BoxElement toDomain() {
-            return new BoxElement(textTemplate, x, y, width, height, fontSize, fontColor);
+            return new BoxElement(textTemplate, x, y, width, height, fontSize, fontColor, alignment);
         }
     }
 }

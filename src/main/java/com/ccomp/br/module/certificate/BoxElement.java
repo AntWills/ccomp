@@ -7,6 +7,7 @@ public record BoxElement(
         Double width,
         Double height,
         Float fontSize,
-        String fontColor
+        String fontColor,
+        EnumAlignment alignment
 ) {
 }

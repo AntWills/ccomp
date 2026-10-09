@@ -23,6 +23,7 @@ import java.util.Map;
 public class Certificate {
     private static final float DEFAULT_FONT_SIZE = 40.0f;
     private static final Color DEFAULT_FONT_COLOR = Color.BLACK;
+    private static final EnumAlignment DEFAULT_ALIGNMENT = EnumAlignment.LEFT;
     private static final float LINE_SPACING = 1.2f;
     private static final long MAX_IMAGE_PIXELS = 30_000_000L;
 
@@ -80,6 +81,7 @@ public class Certificate {
         float fontSize = element.fontSize() != null ? element.fontSize() : DEFAULT_FONT_SIZE;
         Font font = new Font(Font.SANS_SERIF, Font.PLAIN, (int) fontSize).deriveFont(fontSize);
         Color fontColor = parseColor(element.fontColor());
+        EnumAlignment alignment = element.alignment() != null ? element.alignment() : DEFAULT_ALIGNMENT;
 
         graphics.setFont(font);
         graphics.setColor(fontColor);
@@ -99,12 +101,24 @@ public class Certificate {
 
         float baseline = y + fontSize;
         for (int i = 0; i < lines.size(); i++) {
-            TextLayout layout = new TextLayout(lines.get(i).isEmpty() ? " " : lines.get(i), font, context);
+            String lineText = lines.get(i);
+            TextLayout layout = new TextLayout(lineText.isEmpty() ? " " : lineText, font, context);
             boolean lastLine = i == lines.size() - 1;
-            if (!lastLine && lines.get(i).contains(" ") && layout.getAdvance() < boxWidth) {
-                layout = layout.getJustifiedLayout(boxWidth);
+
+            float drawX = x;
+
+            switch (alignment) {
+                case JUSTIFIED -> {
+                    if (!lastLine && lineText.contains(" ") && layout.getAdvance() < boxWidth) {
+                        layout = layout.getJustifiedLayout(boxWidth);
+                    }
+                }
+                case RIGHT -> drawX = x + (boxWidth - layout.getAdvance());
+                case CENTERED -> drawX = x + ((boxWidth - layout.getAdvance()) / 2.0f);
+                case LEFT -> drawX = x;
             }
-            layout.draw(graphics, x, baseline + i * lineHeight);
+
+            layout.draw(graphics, drawX, baseline + i * lineHeight);
         }
     }
 
