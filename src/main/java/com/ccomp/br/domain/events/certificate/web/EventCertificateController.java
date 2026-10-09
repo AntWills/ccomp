@@ -45,7 +45,7 @@ public class EventCertificateController {
             );
         }
 
-        var elements = request.textElements().stream()
+        var elements = request.boxElements().stream()
                 .map(GenerateCertificatePreviewRequest.BoxElementDTO::toDomain)
                 .toList();
 

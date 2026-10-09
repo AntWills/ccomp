@@ -1,6 +1,12 @@
 package com.ccomp.br.module.certificate;
 
-public record BoxElement (
-        String textTemplate, Double x, Double y, Double width, Double height
+public record BoxElement(
+        String textTemplate,
+        Double x,
+        Double y,
+        Double width,
+        Double height,
+        Float fontSize,
+        String fontColor
 ) {
 }

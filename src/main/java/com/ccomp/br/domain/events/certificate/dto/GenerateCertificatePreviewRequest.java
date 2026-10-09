@@ -1,13 +1,15 @@
 package com.ccomp.br.domain.events.certificate.dto;
 
 import com.ccomp.br.module.certificate.BoxElement;
-import com.ccomp.br.module.certificate.Certificate;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
@@ -17,7 +19,7 @@ public record GenerateCertificatePreviewRequest(
         @NotEmpty(message = "A lista de elementos de texto não pode estar vazia.")
         @Size(max = 30, message = "A prévia aceita no máximo 30 caixas de texto.")
         @Valid
-        List<BoxElementDTO> textElements,
+        List<BoxElementDTO> boxElements,
 
         Map<String, String> variables
 ) {
@@ -44,10 +46,17 @@ public record GenerateCertificatePreviewRequest(
             @NotNull(message = "A altura da caixa é obrigatória.")
             @DecimalMin(value = "0.01", message = "A altura deve ser maior que zero.")
             @DecimalMax(value = "1.0", message = "A altura deve estar entre 0 e 1.")
-            Double height
+            Double height,
+
+            @Min(value = 8, message = "O tamanho da fonte deve ser de no mínimo 8pt.")
+            @Max(value = 300, message = "O tamanho da fonte deve ser de no máximo 300pt.")
+            Float fontSize,
+
+            @Pattern(regexp = "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$", message = "A cor da fonte deve ser um hexadecimal válido (ex: #000000).")
+            String fontColor
     ) {
         public BoxElement toDomain() {
-            return new BoxElement(textTemplate, x, y, width, height);
+            return new BoxElement(textTemplate, x, y, width, height, fontSize, fontColor);
         }
     }
 }
