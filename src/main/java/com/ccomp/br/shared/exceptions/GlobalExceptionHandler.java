@@ -17,6 +17,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -160,6 +163,27 @@ public class GlobalExceptionHandler {
                 null
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    @ExceptionHandler({MissingServletRequestPartException.class, MultipartException.class})
+    public ResponseEntity<ErrorResponse> handleMissingServletRequestPart(Exception ex, WebRequest request) {
+        String path = path(request);
+        log.warn("Arquivo ou parte multipart ausente em {}: {}", path, ex.getMessage());
+
+        String partName = (ex instanceof MissingServletRequestPartException partEx)
+                ? partEx.getRequestPartName()
+                : "file";
+
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Arquivo obrigatório ausente",
+                path,
+                List.of(String.format("O arquivo multipart/form-data '%s' não foi enviado na requisição.", partName)),
+                Map.of(partName, "Este arquivo é obrigatório.")
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     private static String path(WebRequest request) {
