@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.certificate.web;
 
+import com.ccomp.br.domain.events.certificate.application.CertificateService;
 import com.ccomp.br.domain.events.certificate.dto.GenerateCertificatePreviewRequest;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.module.certificate.Certificate;
@@ -22,8 +23,11 @@ import java.util.Map;
 @RequestMapping("/api/events")
 @Tag(name = "events/certificate (Certificados)", description = "Prévia de certificados de eventos e atividades")
 public class EventCertificateController {
+    private final CertificateService certificateService;
 
-    private final Resource defaultTemplate = new ClassPathResource("templates/certificado-default.png");
+    public EventCertificateController(CertificateService certificateService) {
+        this.certificateService = certificateService;
+    }
 
     @PostMapping(
             value = "/certificate-test",
@@ -34,7 +38,7 @@ public class EventCertificateController {
     public ResponseEntity<Resource> generatePreview(
             @Valid @RequestBody GenerateCertificatePreviewRequest request
     ) {
-        StorageExternal.StoredFile template = new StorageExternal.StoredFile(defaultTemplate, MediaType.IMAGE_PNG_VALUE);
+        var template = certificateService.loadCoverTemplate(90);
 
         Map<String, String> variables = request.variables();
         if (variables == null || variables.isEmpty()) {
