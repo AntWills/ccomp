@@ -1,6 +1,7 @@
 package com.ccomp.br.shared.exceptions;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -52,15 +53,28 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ApiException.class)
-    public ResponseEntity<ErrorResponse> handleApiException(
-            ApiException ex,
-            WebRequest request) {
-
-        String path = request.getDescription(false).replace("uri=", "");
-
+    public ResponseEntity<ErrorResponse> handleApiException(ApiException ex, WebRequest request) {
         return ResponseEntity
                 .status(ex.getStatus())
-                .body(ex.toErrorResponse(path));
+                .contentType(MediaType.APPLICATION_JSON) // Force Content-Type JSON no erro
+                .body(ex.toErrorResponse(path(request)));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex, WebRequest request) {
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.NOT_FOUND.value(),
+                "Recurso não encontrado",
+                path(request),
+                List.of(ex.getMessage()),
+                null
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(error);
     }
 
     @ExceptionHandler({
@@ -146,5 +160,9 @@ public class GlobalExceptionHandler {
                 null
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    private static String path(WebRequest request) {
+        return request.getDescription(false).replace("uri=", "");
     }
 }
