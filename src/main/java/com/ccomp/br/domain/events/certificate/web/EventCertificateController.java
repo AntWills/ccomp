@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.certificate.web;
 
 import com.ccomp.br.domain.events.certificate.application.CertificateService;
+import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.dto.GenerateCertificatePreviewRequest;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.module.certificate.Certificate;
@@ -77,7 +78,7 @@ public class EventCertificateController {
         }
 
         var elements = request.boxElements().stream()
-                .map(GenerateCertificatePreviewRequest.BoxElementDTO::toDomain)
+                .map(BoxElementDTO::toDomain)
                 .toList();
 
         StorageExternal.StoredFile result = Certificate.builder()
