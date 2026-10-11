@@ -23,6 +23,11 @@ public class EventBoxTemplate {
     @Column(name = "event_id", nullable = false, unique = true)
     private Long eventId;
 
+    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.JSON)
+    private List<String> variables;
+
+    @Column(nullable = false)
     @JdbcTypeCode(SqlTypes.JSON)
     private List<BoxElementDTO> boxes;
 }
