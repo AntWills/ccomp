@@ -24,15 +24,16 @@ public class CertificateCoverService {
     private static final List<String> ALLOWED_CONTENT_TYPES =
             List.of("image/png", "image/jpeg", "image/webp");
 
-    private final Resource defaultTemplate = new ClassPathResource("templates/certificado-default.png");
     private final EventCoverTemplateRepository coverTemplateRepository;
+    private final EventCoverTemplateFetcher coverTemplateFetcher;
     private final EventCache eventCache;
     private final EventAccessPolicy accessPolicy;
     private final StorageKeyGenerator storageKeyGenerator;
     private final StorageExternal storageExternal;
 
-    public CertificateCoverService(EventCoverTemplateRepository coverTemplateRepository, EventCache eventCache, EventAccessPolicy accessPolicy, StorageKeyGenerator storageKeyGenerator, StorageExternal storageExternal) {
+    public CertificateCoverService(EventCoverTemplateRepository coverTemplateRepository, EventCoverTemplateFetcher coverTemplateFetcher, EventCache eventCache, EventAccessPolicy accessPolicy, StorageKeyGenerator storageKeyGenerator, StorageExternal storageExternal) {
         this.coverTemplateRepository = coverTemplateRepository;
+        this.coverTemplateFetcher = coverTemplateFetcher;
         this.eventCache = eventCache;
         this.accessPolicy = accessPolicy;
         this.storageKeyGenerator = storageKeyGenerator;
@@ -47,19 +48,7 @@ public class CertificateCoverService {
         if (!accessPolicy.canView(event, userId))
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
-        Optional<EventCoverTemplate> coverTemplateOpt = coverTemplateRepository.findByEventId(eventId);
-        if (coverTemplateOpt.isEmpty())
-            return new StorageExternal.StoredFile(defaultTemplate, MediaType.IMAGE_PNG_VALUE);
-
-        Optional<StorageExternal.StoredFile> objectOpt =
-                storageExternal.getObject(coverTemplateOpt.get().getCoverTemplateKey());
-
-        if (objectOpt.isPresent())
-            return objectOpt.get();
-
-        // O objeto sumiu do storage: remove a referência órfã e volta ao padrão.
-        coverTemplateRepository.deleteByEventId(eventId);
-        return new StorageExternal.StoredFile(defaultTemplate, MediaType.IMAGE_PNG_VALUE);
+        return coverTemplateFetcher.fetchCoverTemplate(eventId);
     }
 
     @Transactional
