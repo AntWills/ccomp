@@ -3,7 +3,7 @@ package com.ccomp.br.domain.events.certificate.persistence;
 import jakarta.persistence.*;
 import lombok.*;
 
-@Table(name = "tb_event_cover_template")
+@Table(name = "tb_event_certificate_cover_template")
 @Entity
 @Setter
 @Getter

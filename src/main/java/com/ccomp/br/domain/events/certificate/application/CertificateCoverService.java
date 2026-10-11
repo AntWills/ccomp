@@ -17,12 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
-public class CertificateService {
+public class CertificateCoverService {
     private static final List<String> ALLOWED_CONTENT_TYPES =
             List.of("image/png", "image/jpeg", "image/webp");
 
@@ -33,14 +31,13 @@ public class CertificateService {
     private final StorageKeyGenerator storageKeyGenerator;
     private final StorageExternal storageExternal;
 
-    public CertificateService(EventCoverTemplateRepository coverTemplateRepository, EventCache eventCache, EventAccessPolicy accessPolicy, StorageKeyGenerator storageKeyGenerator, StorageExternal storageExternal) {
+    public CertificateCoverService(EventCoverTemplateRepository coverTemplateRepository, EventCache eventCache, EventAccessPolicy accessPolicy, StorageKeyGenerator storageKeyGenerator, StorageExternal storageExternal) {
         this.coverTemplateRepository = coverTemplateRepository;
         this.eventCache = eventCache;
         this.accessPolicy = accessPolicy;
         this.storageKeyGenerator = storageKeyGenerator;
         this.storageExternal = storageExternal;
     }
-
 
     @Transactional
     public StorageExternal.StoredFile loadCoverTemplate(long eventId, UUID userId) {

@@ -1,9 +1,14 @@
 package com.ccomp.br.domain.events.certificate.persistence;
 
+import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
-@Table(name = "tb_event_box_template")
+import java.util.List;
+
+@Table(name = "tb_event_certificate_box_template")
 @Entity
 @Setter
 @Getter
@@ -13,8 +18,11 @@ import lombok.*;
 public class EventBoxTemplate {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id;
+    private Long id;
 
     @Column(name = "event_id", nullable = false, unique = true)
     private Long eventId;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private List<BoxElementDTO> boxes;
 }

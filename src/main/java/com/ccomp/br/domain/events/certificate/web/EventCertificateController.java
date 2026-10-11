@@ -1,8 +1,10 @@
 package com.ccomp.br.domain.events.certificate.web;
 
-import com.ccomp.br.domain.events.certificate.application.CertificateService;
+import com.ccomp.br.domain.events.certificate.application.CertificateCoverService;
+import com.ccomp.br.domain.events.certificate.application.CertificateBoxServices;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.dto.GenerateCertificatePreviewRequest;
+import com.ccomp.br.domain.events.certificate.dto.SaveCertificateBoxesRequest;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.module.certificate.Certificate;
 import com.ccomp.br.shared.dto.MessageResponse;
@@ -31,10 +33,13 @@ import java.util.UUID;
 @Tag(name = "events/certificate (Certificados)",
         description = "Prévia de certificados e gestão do fundo (cover template) do certificado do evento")
 public class EventCertificateController {
-    private final CertificateService certificateService;
+    private final CertificateCoverService certificateCoverService;
+    private final CertificateBoxServices certificateBoxServices;
 
-    public EventCertificateController(CertificateService certificateService) {
-        this.certificateService = certificateService;
+    public EventCertificateController(CertificateCoverService certificateCoverService,
+                                      CertificateBoxServices certificateBoxServices) {
+        this.certificateCoverService = certificateCoverService;
+        this.certificateBoxServices = certificateBoxServices;
     }
 
     @Operation(
@@ -66,7 +71,7 @@ public class EventCertificateController {
             @PathVariable Long eventId,
             @AuthenticationPrincipal @Nullable Jwt jwt
     ) {
-        var template = certificateService.loadCoverTemplate(eventId, extractUserId(jwt));
+        var template = certificateCoverService.loadCoverTemplate(eventId, extractUserId(jwt));
 
         Map<String, String> variables = request.variables();
         if (variables == null || variables.isEmpty()) {
@@ -124,8 +129,37 @@ public class EventCertificateController {
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal @Nullable Jwt jwt
     ) {
-        certificateService.uploadCoverTemplate(eventId, extractUserId(jwt), file);
+        certificateCoverService.uploadCoverTemplate(eventId, extractUserId(jwt), file);
         return ResponseEntity.ok(new MessageResponse("Fundo do certificado atualizado com sucesso."));
+    }
+
+    @Operation(
+            summary = "Salvar as caixas do template do certificado",
+            description = "Cria ou substitui as caixas de texto persistidas para o evento. Aceita até 30 caixas. " +
+                    "Requer permissão de edição do evento (dono, editor ativo ou moderador/admin)."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Template de caixas salvo com sucesso",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = MessageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Lista vazia ou dados inválidos",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de edição do evento",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @PostMapping(value = "/{eventId}/certificate-box-template", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<MessageResponse> saveBoxTemplate(
+            @PathVariable Long eventId,
+            @Valid @RequestBody SaveCertificateBoxesRequest request,
+            @AuthenticationPrincipal @Nullable Jwt jwt
+    ) {
+        certificateBoxServices.saveBoxTemplate(eventId, extractUserId(jwt), request.boxes());
+        return ResponseEntity.ok(new MessageResponse("Template de caixas salvo com sucesso."));
     }
 
     private @Nullable UUID extractUserId(@Nullable Jwt jwt) {
