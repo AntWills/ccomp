@@ -10,9 +10,6 @@ import com.ccomp.br.domain.storage.external.StorageKeyGenerator;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,15 +22,15 @@ public class CertificateCoverService {
             List.of("image/png", "image/jpeg", "image/webp");
 
     private final EventCoverTemplateRepository coverTemplateRepository;
-    private final EventCoverTemplateFetcher coverTemplateFetcher;
+    private final CertificateFetcher certificateFetcher;
     private final EventCache eventCache;
     private final EventAccessPolicy accessPolicy;
     private final StorageKeyGenerator storageKeyGenerator;
     private final StorageExternal storageExternal;
 
-    public CertificateCoverService(EventCoverTemplateRepository coverTemplateRepository, EventCoverTemplateFetcher coverTemplateFetcher, EventCache eventCache, EventAccessPolicy accessPolicy, StorageKeyGenerator storageKeyGenerator, StorageExternal storageExternal) {
+    public CertificateCoverService(EventCoverTemplateRepository coverTemplateRepository, CertificateFetcher certificateFetcher, EventCache eventCache, EventAccessPolicy accessPolicy, StorageKeyGenerator storageKeyGenerator, StorageExternal storageExternal) {
         this.coverTemplateRepository = coverTemplateRepository;
-        this.coverTemplateFetcher = coverTemplateFetcher;
+        this.certificateFetcher = certificateFetcher;
         this.eventCache = eventCache;
         this.accessPolicy = accessPolicy;
         this.storageKeyGenerator = storageKeyGenerator;
@@ -48,7 +45,7 @@ public class CertificateCoverService {
         if (!accessPolicy.canView(event, userId))
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
-        return coverTemplateFetcher.fetchCoverTemplate(eventId);
+        return certificateFetcher.fetchCoverTemplate(eventId);
     }
 
     @Transactional

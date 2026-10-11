@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -21,12 +20,16 @@ public class CertificateBoxServices {
     private static final int MAX_BOXES = 30;
 
     private final EventBoxTemplateRepository boxTemplateRepository;
+    private final CertificateFetcher certificateFetcher;
     private final EventCache eventCache;
     private final EventAccessPolicy accessPolicy;
 
-    public CertificateBoxServices(EventBoxTemplateRepository boxTemplateRepository, EventCache eventCache,
+    public CertificateBoxServices(EventBoxTemplateRepository boxTemplateRepository,
+                                  CertificateFetcher certificateFetcher,
+                                  EventCache eventCache,
                                   EventAccessPolicy accessPolicy) {
         this.boxTemplateRepository = boxTemplateRepository;
+        this.certificateFetcher = certificateFetcher;
         this.eventCache = eventCache;
         this.accessPolicy = accessPolicy;
     }
@@ -39,22 +42,7 @@ public class CertificateBoxServices {
         if (!accessPolicy.canView(event, userId))
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
-        return boxTemplateRepository.findByEventId(eventId)
-                .orElse(EventBoxTemplate.builder()
-                        .eventId(eventId)
-                        .boxes(List.of(
-                                new BoxElementDTO(
-                                        "Certificamos que *{participante.nome}* participou de *{evento.nome}*, com carga horária de {evento.carga_horaria}.",
-                                        0.25, 0.5, 0.5, 25f, null, null
-                                ))
-                        )
-                        .variables(List.of(
-                                "{participante.nome}",
-                                "{evento.nome}",
-                                "{evento.carga_horaria}"
-                                )
-                        )
-                        .build());
+        return certificateFetcher.fetchBoxTemplate(eventId);
     }
 
     @Transactional
