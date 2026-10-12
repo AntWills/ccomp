@@ -7,6 +7,7 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +25,7 @@ public class EnrollmentActivityDslRepository {
         this.queryFactory = queryFactory;
     }
 
+    @Transactional(readOnly = true)
     public Optional<EnrollmentActivity> findByUserIdAndActivityId(UUID userId, Long activityId) {
         var result = queryFactory
                 .selectFrom(enrollmentActivity)
@@ -37,6 +39,7 @@ public class EnrollmentActivityDslRepository {
         return Optional.ofNullable(result);
     }
 
+    @Transactional(readOnly = true)
     public List<UserActivitySummaryDTO> findAllUsersByActivityId(Long activityId,
                                                                  EnrollmentActivityCursor cursor,
                                                                  int limit) {
