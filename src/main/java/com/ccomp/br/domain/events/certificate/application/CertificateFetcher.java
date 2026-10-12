@@ -3,6 +3,8 @@ package com.ccomp.br.domain.events.certificate.application;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplateRepository;
+import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplate;
+import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplateRepository;
 import com.ccomp.br.domain.events.certificate.persistence.EventCoverTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventCoverTemplateRepository;
 import com.ccomp.br.domain.storage.external.StorageExternal;
@@ -23,13 +25,16 @@ public class CertificateFetcher {
     private final StorageExternal storageExternal;
 
     private final EventBoxTemplateRepository boxTemplateRepository;
+    private final EventActivityBoxTemplateRepository activityBoxTemplateRepository;
 
     public CertificateFetcher(EventCoverTemplateRepository coverTemplateRepository,
                               StorageExternal storageExternal,
-                              EventBoxTemplateRepository boxTemplateRepository) {
+                              EventBoxTemplateRepository boxTemplateRepository,
+                              EventActivityBoxTemplateRepository activityBoxTemplateRepository) {
         this.coverTemplateRepository = coverTemplateRepository;
         this.storageExternal = storageExternal;
         this.boxTemplateRepository = boxTemplateRepository;
+        this.activityBoxTemplateRepository = activityBoxTemplateRepository;
     }
 
     @Transactional(readOnly = true)
@@ -67,6 +72,26 @@ public class CertificateFetcher {
                                         "{evento.carga_horaria}"
                                 )
                         )
+                        .build());
+    }
+
+    @Transactional(readOnly = true)
+    public EventActivityBoxTemplate fetchActivityBoxTemplate(long eventId) {
+        return activityBoxTemplateRepository.findByEventId(eventId)
+                .orElse(EventActivityBoxTemplate.builder()
+                        .eventId(eventId)
+                        .boxes(List.of(
+                                new BoxElementDTO(
+                                        "Certificamos que *{participante.nome}* participou da atividade *{atividade.nome}*, " +
+                                                "com carga horária de {atividade.carga_horaria}.",
+                                        0.25, 0.5, 0.5, 25f, null, null
+                                )
+                        ))
+                        .variables(List.of(
+                                "{participante.nome}",
+                                "{atividade.nome}",
+                                "{atividade.carga_horaria}"
+                        ))
                         .build());
     }
 }

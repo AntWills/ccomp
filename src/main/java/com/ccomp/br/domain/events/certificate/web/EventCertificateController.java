@@ -1,11 +1,9 @@
 package com.ccomp.br.domain.events.certificate.web;
 
-import com.ccomp.br.domain.events.certificate.application.CertificateCoverService;
-import com.ccomp.br.domain.events.certificate.application.CertificateBoxServices;
-import com.ccomp.br.domain.events.certificate.application.CertificateServices;
+import com.ccomp.br.domain.events.certificate.application.*;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
-import com.ccomp.br.domain.events.certificate.dto.GenerateCertificatePreviewRequest;
 import com.ccomp.br.domain.events.certificate.dto.SaveCertificateBoxesRequest;
+import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplate;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.module.certificate.Certificate;
 import com.ccomp.br.shared.dto.MessageResponse;
@@ -26,24 +24,28 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/events")
 @Tag(name = "events/certificate (Certificados)",
-        description = "Prévia de certificados e gestão do fundo (cover template) do certificado do evento")
+        description = "Geração e prévia de certificados do evento e de atividades, além da gestão dos templates")
 public class EventCertificateController {
     private final CertificateCoverService certificateCoverService;
     private final CertificateBoxServices certificateBoxServices;
     private final CertificateServices certificateServices;
+    private final ActivityCertificateBoxServices activityCertificateBoxServices;
 
     public EventCertificateController(CertificateCoverService certificateCoverService,
                                       CertificateBoxServices certificateBoxServices,
-                                      CertificateServices certificateServices) {
+                                      CertificateServices certificateServices,
+                                      ActivityCertificateBoxServices activityCertificateBoxServices) {
         this.certificateCoverService = certificateCoverService;
         this.certificateBoxServices = certificateBoxServices;
         this.certificateServices = certificateServices;
+        this.activityCertificateBoxServices = activityCertificateBoxServices;
     }
 
     @Operation(
@@ -76,17 +78,13 @@ public class EventCertificateController {
     }
 
     @Operation(
-            summary = "Gera prévia PNG do certificado",
-            description = "Renderiza a prévia usando o fundo do evento (ou o padrão) e as caixas de " +
-                    "texto enviadas no JSON. Se `variables` não for enviado, usa valores de exemplo. " +
+            summary = "Gerar prévia do certificado do evento",
+            description = "Renderiza o cover e as caixas salvas para o evento, preenchendo as variáveis com dados de exemplo. " +
                     "Requer acesso de visualização do evento."
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Prévia PNG gerada",
+            @ApiResponse(responseCode = "200", description = "Prévia PNG do certificado do evento gerada",
                     content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
-            @ApiResponse(responseCode = "400", description = "Dados da prévia inválidos",
-                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "Usuário sem permissão de visualização do evento",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
@@ -94,34 +92,51 @@ public class EventCertificateController {
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
     })
-    @PostMapping(
-            value = "/{eventId}/certificate-test",
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = { MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE }
-    )
-    public ResponseEntity<Resource> generatePreview(
-            @Valid @RequestBody GenerateCertificatePreviewRequest request,
+    @GetMapping(value = "/{eventId}/certificate-preview",
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> previewEventCertificate(
             @PathVariable Long eventId,
             @AuthenticationPrincipal @Nullable Jwt jwt
     ) {
-        var template = certificateCoverService.loadCoverTemplate(eventId, extractUserId(jwt));
+        UUID userId = extractUserId(jwt);
+        var cover = certificateCoverService.loadCoverTemplate(eventId, userId);
+        var template = certificateBoxServices.loadBoxTemplate(eventId, userId);
+        return renderPreview(cover, template.getBoxes(), mockCertificateVariables());
+    }
 
-        Map<String, String> variables = request.variables();
-        if (variables == null || variables.isEmpty()) {
-            variables = Map.of(
-                    "{participante.nome}", "Nome de Exemplo",
-                    "{evento.nome}", "Evento de Teste",
-                    "{evento.carga_horaria}", "20 horas"
-            );
-        }
+    @Operation(
+            summary = "Gerar prévia do certificado de atividade",
+            description = "Renderiza o cover do evento e o template de caixas compartilhado por suas atividades, " +
+                    "preenchendo as variáveis com dados de exemplo. Requer acesso de visualização do evento."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Prévia PNG do certificado de atividade gerada",
+                    content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de visualização do evento",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @GetMapping(value = "/{eventId}/activity-certificate-preview",
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> previewActivityCertificate(
+            @PathVariable Long eventId,
+            @AuthenticationPrincipal @Nullable Jwt jwt
+    ) {
+        UUID userId = extractUserId(jwt);
+        var cover = certificateCoverService.loadCoverTemplate(eventId, userId);
+        var template = activityCertificateBoxServices.loadBoxTemplate(eventId, userId);
+        return renderPreview(cover, template.getBoxes(), mockCertificateVariables());
+    }
 
-        var elements = request.boxElements().stream()
-                .map(BoxElementDTO::toDomain)
-                .toList();
-
+    private ResponseEntity<Resource> renderPreview(StorageExternal.StoredFile cover,
+                                                   List<BoxElementDTO> boxes,
+                                                   Map<String, String> variables) {
         StorageExternal.StoredFile result = Certificate.builder()
-                .coverImage(template)
-                .boxElements(elements)
+                .coverImage(cover)
+                .boxElements(boxes.stream().map(BoxElementDTO::toDomain).toList())
                 .toReplace(variables)
                 .build()
                 .generate();
@@ -130,6 +145,22 @@ public class EventCertificateController {
                 .contentType(MediaType.IMAGE_PNG)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"certificado-previa.png\"")
                 .body(result.resource());
+    }
+
+    private Map<String, String> mockCertificateVariables() {
+        return Map.ofEntries(
+                Map.entry("{participante.nome}", "Nome de Exemplo"),
+                Map.entry("{evento.nome}", "Evento de Exemplo"),
+                Map.entry("{evento.title}", "Evento de Exemplo"),
+                Map.entry("{evento.local}", "Auditório de Exemplo"),
+                Map.entry("{evento.carga_horaria}", "20 horas"),
+                Map.entry("{atividade.title}", "Atividade de Exemplo"),
+                Map.entry("{atividade.local}", "Sala de Exemplo"),
+                Map.entry("{atividade.carga_horaria}", "4 horas"),
+                Map.entry("{eveto.organizacao}", "Organização de Exemplo"),
+                Map.entry("{validacao.codigo}", "ABC123"),
+                Map.entry("{validacao.url}", "https://exemplo.invalid/validar/ABC123")
+        );
     }
 
     @Operation(
@@ -167,7 +198,27 @@ public class EventCertificateController {
     }
 
     @Operation(
-            summary = "Salvar as caixas do template do certificado",
+            summary = "Consultar variaveis dos certificados",
+            description = "Retorna o template de caixas compartilhado por todas as atividades do evento. " +
+                    "Se ainda não houver configuração salva, retorna o template padrão. Requer acesso de visualização do evento."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de variaveis suportadas",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de visualização do evento",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @GetMapping(value = "/certificate-variables", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<String>> loadActivityBoxTemplate() {
+        return ResponseEntity.ok(CertificateVariablesServices.VARIABLES);
+    }
+
+    @Operation(
+            summary = "Salvar template do evento",
             description = "Cria ou substitui as caixas de texto persistidas para o evento. Aceita até 30 caixas. " +
                     "Requer permissão de edição do evento (dono, editor ativo ou moderador/admin)."
     )
@@ -193,6 +244,36 @@ public class EventCertificateController {
     ) {
         certificateBoxServices.saveBoxTemplate(eventId, extractUserId(jwt), request.boxes());
         return ResponseEntity.ok(new MessageResponse("Template de caixas salvo com sucesso."));
+    }
+
+    @Operation(
+            summary = "Salvar template da atividade",
+            description = "Cria ou substitui o template de caixas único do evento, utilizado em todas as atividades. " +
+                    "Aceita até 30 caixas e requer permissão de edição do evento (dono, editor ativo ou moderador/admin)."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Template de certificado de atividade salvo",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = MessageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Lista vazia ou dados inválidos",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de edição do evento",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @PostMapping(value = "/{eventId}/activity-certificate-box-template", consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<MessageResponse> saveActivityBoxTemplate(
+            @PathVariable Long eventId,
+            @Valid @RequestBody SaveCertificateBoxesRequest request,
+            @AuthenticationPrincipal @Nullable Jwt jwt
+    ) {
+        activityCertificateBoxServices.saveBoxTemplate(eventId, extractUserId(jwt), request.boxes());
+        return ResponseEntity.ok(new MessageResponse("Template de caixas do certificado de atividade salvo com sucesso."));
     }
 
     private @Nullable UUID extractUserId(@Nullable Jwt jwt) {
