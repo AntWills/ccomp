@@ -12,12 +12,17 @@ import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class CertificateBoxServices {
     private static final int MAX_BOXES = 30;
+    private static final Pattern VARIABLE_PATTERN = Pattern.compile("\\{[^{}]+}");
 
     private final EventBoxTemplateRepository boxTemplateRepository;
     private final CertificateFetcher certificateFetcher;
@@ -60,7 +65,26 @@ public class CertificateBoxServices {
 
         EventBoxTemplate template = boxTemplateRepository.findByEventId(eventId)
                 .orElseGet(() -> EventBoxTemplate.builder().eventId(eventId).build());
+
         template.setBoxes(List.copyOf(boxes));
+        template.setVariables(extractVariables(boxes));
         boxTemplateRepository.save(template);
+    }
+
+    private List<String> extractVariables(List<BoxElementDTO> boxes) {
+        Set<String> allowedVariables = Set.copyOf(CertificateVariablesServices.VARIABLES);
+        Set<String> extractedVariables = new LinkedHashSet<>();
+
+        for (BoxElementDTO box : boxes) {
+            Matcher matcher = VARIABLE_PATTERN.matcher(box.textTemplate());
+            while (matcher.find()) {
+                String variable = matcher.group();
+                if (!allowedVariables.contains(variable))
+                    throw new DomainException("Variável não suportada no template: " + variable);
+                extractedVariables.add(variable);
+            }
+        }
+
+        return List.copyOf(extractedVariables);
     }
 }
