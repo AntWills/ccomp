@@ -2,8 +2,8 @@ package com.ccomp.br.domain.events.certificate.web;
 
 import com.ccomp.br.domain.events.certificate.application.*;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
+import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
 import com.ccomp.br.domain.events.certificate.dto.SaveCertificateBoxesRequest;
-import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplate;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.module.certificate.Certificate;
 import com.ccomp.br.shared.dto.MessageResponse;
@@ -37,15 +37,18 @@ public class EventCertificateController {
     private final CertificateBoxServices certificateBoxServices;
     private final CertificateServices certificateServices;
     private final ActivityCertificateBoxServices activityCertificateBoxServices;
+    private final CertificateValidatorService certificateValidatorService;
 
     public EventCertificateController(CertificateCoverService certificateCoverService,
                                       CertificateBoxServices certificateBoxServices,
                                       CertificateServices certificateServices,
-                                      ActivityCertificateBoxServices activityCertificateBoxServices) {
+                                      ActivityCertificateBoxServices activityCertificateBoxServices,
+                                      CertificateValidatorService certificateValidatorService) {
         this.certificateCoverService = certificateCoverService;
         this.certificateBoxServices = certificateBoxServices;
         this.certificateServices = certificateServices;
         this.activityCertificateBoxServices = activityCertificateBoxServices;
+        this.certificateValidatorService = certificateValidatorService;
     }
 
     @Operation(
@@ -129,6 +132,24 @@ public class EventCertificateController {
         var cover = certificateCoverService.loadCoverTemplate(eventId, userId);
         var template = activityCertificateBoxServices.loadBoxTemplate(eventId, userId);
         return renderPreview(cover, template.getBoxes(), mockCertificateVariables());
+    }
+
+    @Operation(
+            summary = "Validar certificado pelo código",
+            description = "Rota pública. Recebe o código de validação impresso no certificado (variável " +
+                    "{validacao.codigo}) e devolve os dados correspondentes, ou 404 se o código não existir."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Certificado válido",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = CertificateValidationResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Código não encontrado",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @GetMapping(value = "/certificates/validate/{code}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<CertificateValidationResponse> validateCertificate(@PathVariable String code) {
+        return ResponseEntity.ok(certificateValidatorService.validate(code));
     }
 
     private ResponseEntity<Resource> renderPreview(StorageExternal.StoredFile cover,

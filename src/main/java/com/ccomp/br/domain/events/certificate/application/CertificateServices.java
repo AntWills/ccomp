@@ -26,7 +26,8 @@ public class CertificateServices {
 
     public CertificateServices(EventCache eventCache,
                                EventAccessPolicy accessPolicy,
-                               CertificateFetcher certificateFetcher, CertificateVariablesServices variablesServices) {
+                               CertificateFetcher certificateFetcher,
+                               CertificateVariablesServices variablesServices) {
         this.eventCache = eventCache;
         this.accessPolicy = accessPolicy;
         this.certificateFetcher = certificateFetcher;
@@ -72,7 +73,7 @@ public class CertificateServices {
             if (e.getCause() instanceof RuntimeException runtimeException) {
                 throw runtimeException;
             }
-            throw new IllegalStateException("Falha ao gerar certificado assincronamente.", e.getCause());
+            throw new IllegalStateException("Falha ao gerar certificado.", e.getCause());
         }
     }
 }
