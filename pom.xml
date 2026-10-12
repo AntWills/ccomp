@@ -264,6 +264,14 @@
             <artifactId>javase</artifactId>
             <version>3.5.4</version>
         </dependency>
+
+        <!-- Source: https://mvnrepository.com/artifact/com.twelvemonkeys.imageio/imageio-webp -->
+        <dependency>
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-webp</artifactId>
+            <version>3.15.3</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>
