@@ -2,6 +2,7 @@ package com.ccomp.br.domain.events.certificate.web;
 
 import com.ccomp.br.domain.events.certificate.application.CertificateCoverService;
 import com.ccomp.br.domain.events.certificate.application.CertificateBoxServices;
+import com.ccomp.br.domain.events.certificate.application.CertificateServices;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.dto.GenerateCertificatePreviewRequest;
 import com.ccomp.br.domain.events.certificate.dto.SaveCertificateBoxesRequest;
@@ -35,11 +36,43 @@ import java.util.UUID;
 public class EventCertificateController {
     private final CertificateCoverService certificateCoverService;
     private final CertificateBoxServices certificateBoxServices;
+    private final CertificateServices certificateServices;
 
     public EventCertificateController(CertificateCoverService certificateCoverService,
-                                      CertificateBoxServices certificateBoxServices) {
+                                      CertificateBoxServices certificateBoxServices,
+                                      CertificateServices certificateServices) {
         this.certificateCoverService = certificateCoverService;
         this.certificateBoxServices = certificateBoxServices;
+        this.certificateServices = certificateServices;
+    }
+
+    @Operation(
+            summary = "Gerar certificado do evento",
+            description = "Gera o certificado em PNG usando o fundo, as caixas e as variáveis configuradas para o evento. " +
+                    "Requer acesso de visualização do evento."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Certificado PNG gerado",
+                    content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de visualização do evento",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @GetMapping(value = "/{eventId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> buildCertificateFromEvent(
+            @PathVariable Long eventId,
+            @AuthenticationPrincipal @Nullable Jwt jwt
+    ) {
+        StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromEvent(eventId, extractUserId(jwt));
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(certificate.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"certificado-evento-%d.png\"".formatted(eventId))
+                .body(certificate.resource());
     }
 
     @Operation(
