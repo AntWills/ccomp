@@ -21,6 +21,7 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -381,5 +382,184 @@ class EventActivityDslRepositoryTest {
         // Asserções Página 2 (18:00)
         assertThat(page2).hasSize(1);
         assertThat(page2.getFirst().title()).isEqualTo("Atividade Conflito C");
+    }
+
+    @Test
+    @DisplayName("Deve carregar apenas as atividades em que o inscrito fez check-in, ordenadas por displayOrder")
+    void shouldLoadOnlyCheckedInActivitiesForUserInEvent() {
+        // Arranjo
+        UUID userId = UUID.randomUUID();
+        UUID otherUserId = UUID.randomUUID();
+        LocalDateTime now = LocalDateTime.now();
+
+        Event event = Event.builder()
+                .title("Semana Acadêmica")
+                .slug("semana-academica-303")
+                .category(EnumEventCategory.ACADEMIC_EDUCATIONAL)
+                .format(EnumEventFormat.IN_PERSON)
+                .ownerId(UUID.randomUUID())
+                .createdAt(now)
+                .build();
+        entityManager.persist(event);
+
+        Enrollment enrollment = Enrollment.builder()
+                .event(event)
+                .userId(userId)
+                .status(EnumEnrollmentState.CHECKED_IN)
+                .createdAt(now)
+                .build();
+        entityManager.persist(enrollment);
+
+        // Outro usuário não deve aparecer no resultado
+        Enrollment otherEnrollment = Enrollment.builder()
+                .event(event)
+                .userId(otherUserId)
+                .status(EnumEnrollmentState.CHECKED_IN)
+                .createdAt(now)
+                .build();
+        entityManager.persist(otherEnrollment);
+
+        EventActivity activity1 = EventActivity.builder()
+                .title("Abertura")
+                .type(EnumActivityType.LECTURE)
+                .displayOrder(10L)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .createdAt(now)
+                .event(event)
+                .build();
+
+        EventActivity activity2 = EventActivity.builder()
+                .title("Palestra Principal")
+                .type(EnumActivityType.LECTURE)
+                .displayOrder(20L)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .createdAt(now)
+                .event(event)
+                .build();
+
+        // Inscrito, porém sem check-in: não deve ser retornado
+        EventActivity activity3 = EventActivity.builder()
+                .title("Workshop Sem Check-in")
+                .type(EnumActivityType.WORKSHOP)
+                .displayOrder(30L)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .createdAt(now)
+                .event(event)
+                .build();
+
+        entityManager.persist(activity1);
+        entityManager.persist(activity2);
+        entityManager.persist(activity3);
+
+        // Check-in do usuário nas duas primeiras atividades
+        EnrollmentActivity attended1 = new EnrollmentActivity(enrollment, activity1);
+        attended1.makeAttendance();
+        entityManager.persist(attended1);
+
+        EnrollmentActivity attended2 = new EnrollmentActivity(enrollment, activity2);
+        attended2.makeAttendance();
+        entityManager.persist(attended2);
+
+        // Sem check-in
+        entityManager.persist(new EnrollmentActivity(enrollment, activity3));
+
+        // Check-in do outro usuário na atividade sem check-in do primeiro
+        EnrollmentActivity otherAttendance = new EnrollmentActivity(otherEnrollment, activity3);
+        otherAttendance.makeAttendance();
+        entityManager.persist(otherAttendance);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // Ação
+        List<EventActivityDTO> result =
+                eventActivityDslRepository.findAllCheckedInByUserAndEvent(userId, event.getId());
+
+        // Asserções: apenas as 2 com check-in, em ordem de displayOrder crescente
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).title()).isEqualTo("Abertura");
+        assertThat(result.get(1).title()).isEqualTo("Palestra Principal");
+    }
+
+    @Test
+    @DisplayName("Deve somar a carga horária apenas das atividades com check-in e retornar zero sem participação")
+    void shouldSumWorkloadHoursOnlyForCheckedInActivities() {
+        // Arranjo
+        UUID userId = UUID.randomUUID();
+        LocalDateTime now = LocalDateTime.now();
+
+        Event event = Event.builder()
+                .title("Congresso de Extensão")
+                .slug("congresso-extensao-404")
+                .category(EnumEventCategory.ACADEMIC_EDUCATIONAL)
+                .format(EnumEventFormat.IN_PERSON)
+                .ownerId(UUID.randomUUID())
+                .createdAt(now)
+                .build();
+        entityManager.persist(event);
+
+        Enrollment enrollment = Enrollment.builder()
+                .event(event)
+                .userId(userId)
+                .status(EnumEnrollmentState.CHECKED_IN)
+                .createdAt(now)
+                .build();
+        entityManager.persist(enrollment);
+
+        EventActivity activity1 = EventActivity.builder()
+                .title("Minicurso")
+                .type(EnumActivityType.WORKSHOP)
+                .displayOrder(1L)
+                .workloadHours(BigDecimal.valueOf(2))
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .createdAt(now)
+                .event(event)
+                .build();
+
+        EventActivity activity2 = EventActivity.builder()
+                .title("Oficina")
+                .type(EnumActivityType.WORKSHOP)
+                .displayOrder(2L)
+                .workloadHours(BigDecimal.valueOf(4))
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .createdAt(now)
+                .event(event)
+                .build();
+
+        // Sem check-in: não entra na soma
+        EventActivity notAttended = EventActivity.builder()
+                .title("Palestra Remota")
+                .type(EnumActivityType.LECTURE)
+                .displayOrder(3L)
+                .workloadHours(BigDecimal.valueOf(6))
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .createdAt(now)
+                .event(event)
+                .build();
+
+        entityManager.persist(activity1);
+        entityManager.persist(activity2);
+        entityManager.persist(notAttended);
+
+        EnrollmentActivity attended1 = new EnrollmentActivity(enrollment, activity1);
+        attended1.makeAttendance();
+        entityManager.persist(attended1);
+
+        EnrollmentActivity attended2 = new EnrollmentActivity(enrollment, activity2);
+        attended2.makeAttendance();
+        entityManager.persist(attended2);
+
+        entityManager.persist(new EnrollmentActivity(enrollment, notAttended));
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // Ação & Asserções
+        BigDecimal sum = eventActivityDslRepository.sumWorkloadHoursByCheckIn(userId, event.getId());
+        assertThat(sum).isEqualByComparingTo(BigDecimal.valueOf(6));
+
+        // Usuário sem participação retorna zero
+        BigDecimal emptySum = eventActivityDslRepository.sumWorkloadHoursByCheckIn(UUID.randomUUID(), event.getId());
+        assertThat(emptySum).isEqualByComparingTo(BigDecimal.ZERO);
     }
 }
