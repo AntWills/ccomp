@@ -6,12 +6,14 @@ import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -131,10 +133,6 @@ public class EventActivityDslRepository {
                 .fetch();
     }
 
-    /**
-     * Verifica de forma performática se o usuário possui ao menos uma atividade inscrita
-     * com choque de horário em relação à atividade informada.
-     */
     public boolean existsSchedulingConflict(UUID userId, EventActivity activity) {
         if (activity.getStartDate() == null || activity.getEndDate() == null)
             return false;
@@ -165,10 +163,6 @@ public class EventActivityDslRepository {
         return result != null;
     }
 
-    /**
-     * Retorna de forma paginada via cursor todas as atividades inscritas do usuário
-     * que possuem conflito de horário com a atividade informada, ordenadas por startDate crescente e id decrescente.
-     */
     public List<EventActivityDTO> findConflictingActivities(
             UUID userId, EventActivity activity, @Nullable EventActivityConflictCursor cursor, int limit) {
         if (activity.getStartDate() == null || activity.getEndDate() == null) {
@@ -226,5 +220,64 @@ public class EventActivityDslRepository {
                 )
                 .limit(limit)
                 .fetch();
+    }
+
+    /**
+     * Carrega todas as atividades do evento em que o usuário realmente participou
+     * (inscrição com check-in feito), ordenadas por ordem de exibição e id.
+     */
+    public List<EventActivityDTO> findAllCheckedInByUserAndEvent(UUID userId, Long eventId) {
+        BooleanBuilder whereClause = new BooleanBuilder();
+
+        whereClause.and(eventActivity.event.id.eq(eventId));
+        whereClause.and(enrollmentActivity.enrollment.userId.eq(userId));
+        whereClause.and(enrollmentActivity.attendedAt.isNotNull());
+
+        return queryFactory
+                .select(
+                        Projections.constructor(
+                                EventActivityDTO.class,
+                                eventActivity.id,
+                                eventActivity.event.id,
+                                eventActivity.title,
+                                eventActivity.description,
+                                eventActivity.displayOrder,
+                                eventActivity.location,
+                                eventActivity.startDate,
+                                eventActivity.endDate,
+                                eventActivity.workloadHours,
+                                eventActivity.registrationPolicy,
+                                eventActivity.type,
+                                eventActivity.createdAt
+                        )
+                )
+                .from(eventActivity)
+                .innerJoin(eventActivity.enrollments, enrollmentActivity)
+                .innerJoin(enrollmentActivity.enrollment, enrollment)
+                .where(whereClause)
+                .orderBy(
+                        eventActivity.displayOrder.asc(),
+                        eventActivity.id.desc()
+                )
+                .fetch();
+    }
+
+    public BigDecimal sumWorkloadHoursByCheckIn(UUID userId, Long eventId) {
+        BigDecimal result = queryFactory
+                .select(Expressions.numberTemplate(
+                        BigDecimal.class,
+                        "coalesce(sum({0}), 0)",
+                        eventActivity.workloadHours))
+                .from(enrollmentActivity)
+                .innerJoin(enrollmentActivity.activity, eventActivity)
+                .innerJoin(enrollmentActivity.enrollment, enrollment)
+                .where(
+                        enrollment.userId.eq(userId),
+                        eventActivity.event.id.eq(eventId),
+                        enrollmentActivity.attendedAt.isNotNull()
+                )
+                .fetchOne();
+
+        return result != null ? result : BigDecimal.ZERO;
     }
 }

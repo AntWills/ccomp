@@ -87,11 +87,6 @@ public class NewsApplication {
         if(!userId.equals(entity.getAuthorId()) && !SecurityUtils.isModeratorOrAdmin())
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
-        if(Optional.ofNullable(dto.title()).isPresent() && !dto.title().equals(entity.getTitle())) {
-            String newSlug = generateSlug(dto.title());
-            entity.setSlug(newSlug);
-        }
-
         if(dto.title() != null && !dto.title().equals(entity.getTitle())) {
             String newSlug = generateSlug(dto.title());
             entity.setSlug(newSlug);

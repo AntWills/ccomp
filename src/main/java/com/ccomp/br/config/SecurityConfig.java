@@ -70,6 +70,10 @@ public class SecurityConfig {
             "/api/events"
     };
 
+    private static final String[] PUBLIC_CERTIFICATE_ROUTES = {
+            "/api/events/certificates/validate/{code}"
+    };
+
     private static final String[] PUBLIC_FILES_ROUTES = {
             "/api/events/{eventId}/images/cover"
     };
@@ -140,6 +144,8 @@ public class SecurityConfig {
                             authorize.requestMatchers(HttpMethod.GET, PUBLIC_CLUB_ROUTES).permitAll();
                             // Event
                             authorize.requestMatchers(HttpMethod.GET, PUBLIC_EVENT_ROUTES).permitAll();
+                            // Certificate validation
+                            authorize.requestMatchers(HttpMethod.GET, PUBLIC_CERTIFICATE_ROUTES).permitAll();
                             authorize.requestMatchers(HttpMethod.POST, "/api/events/search").permitAll();
                             // Event-Activity
                             authorize.requestMatchers(HttpMethod.GET,"/api/events/{eventId}/activities").permitAll();
