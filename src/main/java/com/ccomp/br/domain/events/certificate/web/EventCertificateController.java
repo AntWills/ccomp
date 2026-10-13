@@ -2,6 +2,7 @@ package com.ccomp.br.domain.events.certificate.web;
 
 import com.ccomp.br.domain.events.certificate.application.*;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
+import com.ccomp.br.domain.events.certificate.dto.BoxTemplateResponse;
 import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
 import com.ccomp.br.domain.events.certificate.dto.SaveCertificateBoxesRequest;
 import com.ccomp.br.domain.storage.external.StorageExternal;
@@ -17,6 +18,7 @@ import jakarta.validation.Valid;
 import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -113,6 +115,86 @@ public class EventCertificateController {
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"certificado-atividade-%d.png\"".formatted(activityId))
                 .body(certificate.resource());
+    }
+
+    @Operation(
+            summary = "Consultar template do certificado do evento",
+            description = "Retorna as caixas de texto e as variáveis em uso no certificado do evento. " +
+                    "Se ainda não houver template salvo, retorna o template padrão. " +
+                    "Requer acesso de visualização do evento."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Template retornado com sucesso",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = BoxTemplateResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de visualização do evento",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @GetMapping(value = "/{eventId}/certificate-box-template", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<BoxTemplateResponse> getBoxTemplate(
+            @PathVariable Long eventId,
+            @AuthenticationPrincipal @Nullable Jwt jwt
+    ) {
+        var template = certificateBoxServices.loadBoxTemplate(eventId, extractUserId(jwt));
+        return ResponseEntity.ok(new BoxTemplateResponse(template.getBoxes(), template.getVariables()));
+    }
+
+    @Operation(
+            summary = "Consultar template do certificado de atividade",
+            description = "Retorna as caixas de texto e as variáveis do template único compartilhado por todas as " +
+                    "atividades do evento. Se ainda não houver template salvo, retorna o template padrão. " +
+                    "Requer acesso de visualização do evento."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Template retornado com sucesso",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = BoxTemplateResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de visualização do evento",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @GetMapping(value = "/{eventId}/activity-certificate-box-template", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<BoxTemplateResponse> getActivityBoxTemplate(
+            @PathVariable Long eventId,
+            @AuthenticationPrincipal @Nullable Jwt jwt
+    ) {
+        var template = activityCertificateBoxServices.loadBoxTemplate(eventId, extractUserId(jwt));
+        return ResponseEntity.ok(new BoxTemplateResponse(template.getBoxes(), template.getVariables()));
+    }
+
+    @Operation(
+            summary = "Consultar o fundo (cover) do certificado em uso",
+            description = "Retorna os bytes da imagem de fundo atualmente em uso pelo certificado do evento. " +
+                    "Se não houver fundo salvo, retorna a imagem padrão. " +
+                    "Requer acesso de visualização do evento."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Imagem de fundo retornada com sucesso",
+                    content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de visualização do evento",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @GetMapping(value = "/{eventId}/certificate-cover-template",
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_JPEG_VALUE, "image/webp", MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> getCoverTemplate(
+            @PathVariable Long eventId,
+            @AuthenticationPrincipal @Nullable Jwt jwt
+    ) {
+        StorageExternal.StoredFile cover = certificateCoverService.loadCoverTemplate(eventId, extractUserId(jwt));
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(cover.contentType()))
+                .body(cover.resource());
     }
 
     @Operation(
@@ -250,6 +332,37 @@ public class EventCertificateController {
     ) {
         certificateCoverService.uploadCoverTemplate(eventId, extractUserId(jwt), file);
         return ResponseEntity.ok(new MessageResponse("Fundo do certificado atualizado com sucesso."));
+    }
+
+    @Operation(
+            summary = "Remover o fundo (cover) do certificado",
+            description = "Remove o fundo salvo do certificado do evento. Após a remoção volta a ser usada a " +
+                    "imagem padrão. Requer permissão de edição do evento (dono, editor ativo ou moderador/admin)."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Fundo removido com sucesso", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Não autenticado", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Usuário não é dono nem editor do evento",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado ou sem fundo definido",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = MessageResponse.class)))
+    })
+    @DeleteMapping(value = "/{eventId}/certificate-cover-template",
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> deleteCoverTemplate(
+            @PathVariable Long eventId,
+            @AuthenticationPrincipal @Nullable Jwt jwt
+    ) {
+        boolean removed = certificateCoverService.deleteCoverTemplate(eventId, extractUserId(jwt));
+
+        if (!removed) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new MessageResponse("Este evento não possui um fundo de certificado definido."));
+        }
+
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(

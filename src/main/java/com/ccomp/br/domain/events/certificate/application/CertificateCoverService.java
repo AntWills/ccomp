@@ -89,4 +89,30 @@ public class CertificateCoverService {
         coverTemplateRepository.save(coverTemplate);
         storageExternal.deleteObject(oldKey);
     }
+
+    /**
+     * Remove o fundo salvo do certificado do evento. Devolve {@code false} quando
+     * o evento nunca teve um fundo próprio (ou seja, já usa a imagem padrão).
+     */
+    @Transactional
+    public boolean deleteCoverTemplate(long eventId, UUID userId) {
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        if (!accessPolicy.canEdit(event, userId))
+            throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+
+        Optional<EventCoverTemplate> coverTemplateOpt = coverTemplateRepository.findByEventId(eventId);
+
+        if (coverTemplateOpt.isEmpty())
+            return false;
+
+        EventCoverTemplate coverTemplate = coverTemplateOpt.get();
+        String storageKey = coverTemplate.getCoverTemplateKey();
+
+        coverTemplateRepository.delete(coverTemplate);
+        storageExternal.deleteObject(storageKey);
+
+        return true;
+    }
 }
