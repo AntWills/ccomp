@@ -20,6 +20,7 @@ Gerada a partir dos controllers e do `SecurityConfig`. Rotas não listadas por a
 | `POST` | `/api/auth/sign-in` | `AuthController#login` | Pública | Pública; login e recuperação usam respostas genéricas. |
 | `POST` | `/api/auth/sign-up` | `AuthController#signUp` | Pública | Pública; login e recuperação usam respostas genéricas. |
 | `GET` | `/api/events/certificates/validate/{code}` | `EventCertificateController#validateCertificate` | Pública | Pública; o validador só retorna dados se existir um certificado com o código informado. |
+| `GET` | `/api/events/activities/{activityId}/certificate` | `EventCertificateController#buildCertificateFromActivity` | Protegida (JWT) | Requer autenticação; a autorização é a inscrição na atividade com check-in, validada no serviço (não exige permissão no evento). |
 | `POST` | `/api/clubs` | `ClubController#create` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
 | `POST` | `/api/clubs/me` | `ClubController#findMyClubs` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
 | `POST` | `/api/clubs/search` | `ClubController#search` | Pública | Pública; o serviço filtra conteúdo não publicado quando aplicável. |

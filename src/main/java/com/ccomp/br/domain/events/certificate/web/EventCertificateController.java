@@ -81,6 +81,41 @@ public class EventCertificateController {
     }
 
     @Operation(
+            summary = "Gerar certificado de atividade",
+            description = "Gera o certificado em PNG da atividade para o usuário autenticado, usando o fundo do evento " +
+                    "e o template de caixas compartilhado por suas atividades. " +
+                    "A autorização é a própria inscrição na atividade com check-in realizado, " +
+                    "não sendo necessária permissão de visualização do evento."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Certificado PNG gerado",
+                    content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
+            @ApiResponse(responseCode = "400", description = "Check-in na atividade não realizado",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Usuário não autenticado",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Atividade não encontrada ou usuário não inscrito",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @GetMapping(value = "/activities/{activityId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> buildCertificateFromActivity(
+            @PathVariable Long activityId,
+            @AuthenticationPrincipal @Nullable Jwt jwt
+    ) {
+        StorageExternal.StoredFile certificate =
+                certificateServices.buildCertificateFromActivity(activityId, extractUserId(jwt));
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(certificate.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"certificado-atividade-%d.png\"".formatted(activityId))
+                .body(certificate.resource());
+    }
+
+    @Operation(
             summary = "Gerar prévia do certificado do evento",
             description = "Renderiza o cover e as caixas salvas para o evento, preenchendo as variáveis com dados de exemplo. " +
                     "Requer acesso de visualização do evento."
@@ -171,14 +206,13 @@ public class EventCertificateController {
     private Map<String, String> mockCertificateVariables() {
         return Map.ofEntries(
                 Map.entry("{participante.nome}", "Nome de Exemplo"),
-                Map.entry("{evento.nome}", "Evento de Exemplo"),
                 Map.entry("{evento.title}", "Evento de Exemplo"),
                 Map.entry("{evento.local}", "Auditório de Exemplo"),
                 Map.entry("{evento.carga_horaria}", "20 horas"),
-                Map.entry("{atividade.title}", "Atividade de Exemplo"),
+                Map.entry("{atividade.nome}", "Atividade de Exemplo"),
                 Map.entry("{atividade.local}", "Sala de Exemplo"),
                 Map.entry("{atividade.carga_horaria}", "4 horas"),
-                Map.entry("{eveto.organizacao}", "Organização de Exemplo"),
+                Map.entry("{evento.organizacao}", "Organização de Exemplo"),
                 Map.entry("{validacao.codigo}", "ABC123"),
                 Map.entry("{validacao.url}", "https://exemplo.invalid/validar/ABC123")
         );

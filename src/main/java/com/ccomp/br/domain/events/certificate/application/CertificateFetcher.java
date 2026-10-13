@@ -37,7 +37,7 @@ public class CertificateFetcher {
         this.activityBoxTemplateRepository = activityBoxTemplateRepository;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public StorageExternal.StoredFile fetchCoverTemplate(long eventId) {
         Optional<EventCoverTemplate> coverTemplateOpt = coverTemplateRepository.findByEventId(eventId);
         if (coverTemplateOpt.isEmpty()) {
@@ -62,13 +62,13 @@ public class CertificateFetcher {
                         .eventId(eventId)
                         .boxes(List.of(
                                 new BoxElementDTO(
-                                        "Certificamos que *{participante.nome}* participou de *{evento.nome}*, com carga horária de {evento.carga_horaria}.",
+                                        "Certificamos que *{participante.nome}* participou de *{evento.title}*, com carga horária de {evento.carga_horaria}.",
                                         0.25, 0.5, 0.5, 25f, null, null
                                 ))
                         )
                         .variables(List.of(
                                         "{participante.nome}",
-                                        "{evento.nome}",
+                                        "{evento.title}",
                                         "{evento.carga_horaria}"
                                 )
                         )

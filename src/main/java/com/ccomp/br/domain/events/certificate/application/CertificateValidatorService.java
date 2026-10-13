@@ -5,16 +5,15 @@ import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository
 import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
 import com.ccomp.br.domain.events.certificate.persistence.EventCertificateValidationCode;
 import com.ccomp.br.domain.events.certificate.persistence.EventCertificateValidationCodeRepository;
-import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.users.external.UserManagement;
-import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -43,7 +42,7 @@ public class CertificateValidatorService {
 
     @Transactional(readOnly = true)
     public CertificateValidationResponse validate(String code) {
-        EventCertificateValidationCode validationCode = validationCodeRepository.findByCode(code)
+        EventCertificateValidationCode validationCode = validationCodeRepository.findByCode(normalize(code))
                 .orElseThrow(() -> new ResourceNotFoundException("Certificado não encontrado para o código informado."));
 
         var userDto = userManagement.findById(validationCode.getUserId())
@@ -61,7 +60,7 @@ public class CertificateValidatorService {
                     userDto.name(),
                     eventDto.title(),
                     activity.getTitle(),
-                    activity.getWorkloadHours().toString(),
+                    formatWorkloadHours(activity.getWorkloadHours()),
                     validationCode.getCreatedAt());
         }
 
@@ -71,9 +70,29 @@ public class CertificateValidatorService {
                 userDto.name(),
                 eventDto.title(),
                 null,
-                activityDslRepository.sumWorkloadHoursByCheckIn(userDto.id(), eventDto.id()).toString(),
+                formatWorkloadHours(activityDslRepository.sumWorkloadHoursByCheckIn(userDto.id(), eventDto.id())),
                 validationCode.getCreatedAt()
         );
+    }
+
+    /** Aceita o código com espaços ou em minúsculas (ex.: digitado manualmente). */
+    private String normalize(String code) {
+        if (code == null) {
+            throw new ResourceNotFoundException("Certificado não encontrado para o código informado.");
+        }
+
+        String normalized = code.trim().toUpperCase();
+        if (normalized.isEmpty()) {
+            throw new ResourceNotFoundException("Certificado não encontrado para o código informado.");
+        }
+        return normalized;
+    }
+
+    private String formatWorkloadHours(BigDecimal workloadHours) {
+        if (workloadHours == null) {
+            return "0 horas";
+        }
+        return workloadHours.stripTrailingZeros().toPlainString() + " horas";
     }
 
     /**
