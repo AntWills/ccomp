@@ -2,7 +2,10 @@ package com.ccomp.br.domain.events.guests.application;
 
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
-import com.ccomp.br.domain.events.editors.persistence.EventEditorRepository;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
+import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.domain.events.guests.dto.EventInvitationCursor;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitation;
@@ -52,8 +55,9 @@ class GuestInvitationServicesTest {
     @Mock
     private EventRepository eventRepository;
 
-    @Mock
-    private EventEditorRepository editorRepository;
+    @Mock private EventCache eventCache;
+    @Mock private EventAccessPolicy eventAccessPolicy;
+    @Mock private EventMapper eventMapper;
 
     @Mock
     private UserManagement userManagement;
@@ -64,6 +68,7 @@ class GuestInvitationServicesTest {
     private UUID userId;
     private Long eventId;
     private Event event;
+    private EventDTO eventDTO;
     private EmailAddress emailAddress;
 
     @BeforeEach
@@ -71,7 +76,12 @@ class GuestInvitationServicesTest {
         userId = UUID.randomUUID();
         eventId = 1L;
         event = mock(Event.class);
+        eventDTO = mock(EventDTO.class);
         emailAddress = mock(EmailAddress.class);
+    }
+
+    private void givenEventIsEditable() {
+        when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
     }
 
     @Nested
@@ -86,8 +96,8 @@ class GuestInvitationServicesTest {
                 EventInvitation invitation = mock(EventInvitation.class);
                 CursorPage<EventInvitation> expectedPage = mock(CursorPage.class);
 
-                when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-                when(event.isOwner(userId)).thenReturn(true);
+                when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
+                givenEventIsEditable();
                 cursorUtilsMock.when(() -> CursorUtils.decode(any(), eq(EventInvitationCursor.class))).thenReturn(decodedCursor);
                 when(eventInvitationDspRepository.findAllWithCursor(emailAddress, eventId, decodedCursor, 20)).thenReturn(List.of(invitation));
                 cursorUtilsMock.when(() -> CursorUtils.buildPage(anyList(), anyInt(), any())).thenReturn(expectedPage);
@@ -102,9 +112,8 @@ class GuestInvitationServicesTest {
         @Test
         @DisplayName("Lança AccessDeniedException quando o usuário não possui permissão de gerenciar o evento")
         void searchInvitations_throwsAccessDeniedException_whenUserHasNoPermission() {
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-            when(event.isOwner(userId)).thenReturn(false);
-            when(editorRepository.existsByEventIdAndUserId(event.getId(), userId)).thenReturn(false);
+            when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
+            when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(false);
 
             assertThatThrownBy(() -> guestInvitationServices.searchInvitations(userId, emailAddress, eventId, "cursorRaw", 20))
                     .isInstanceOf(AccessDeniedException.class)
@@ -125,7 +134,8 @@ class GuestInvitationServicesTest {
             UUID guestUserId = UUID.randomUUID();
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-            when(event.isOwner(userId)).thenReturn(true);
+            when(eventMapper.eventToEventDTO(event)).thenReturn(eventDTO);
+            givenEventIsEditable();
             when(userManagement.findByEmailAddress(emailAddress)).thenReturn(Optional.of(userDTO));
             when(userDTO.isActive()).thenReturn(true);
             when(userDTO.id()).thenReturn(guestUserId);
@@ -145,7 +155,8 @@ class GuestInvitationServicesTest {
             UserDTO userDTO = mock(UserDTO.class);
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-            when(event.isOwner(userId)).thenReturn(true);
+            when(eventMapper.eventToEventDTO(event)).thenReturn(eventDTO);
+            givenEventIsEditable();
             when(userManagement.findByEmailAddress(emailAddress)).thenReturn(Optional.of(userDTO));
             when(userDTO.isActive()).thenReturn(false);
 
@@ -217,8 +228,9 @@ class GuestInvitationServicesTest {
             EventInvitation invitation = mock(EventInvitation.class);
 
             when(eventInvitationRepository.findById(invitationId)).thenReturn(Optional.of(invitation));
-            when(invitation.getEvent()).thenReturn(event);
-            when(event.isOwner(userId)).thenReturn(true);
+            when(invitation.getEventId()).thenReturn(eventId);
+            when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
+            givenEventIsEditable();
 
             MessageResponse response = guestInvitationServices.cancelInvitation(userId, invitationId);
 

@@ -5,6 +5,7 @@ import com.ccomp.br.domain.auth.core.dto.RefreshTokenRequest;
 import com.ccomp.br.domain.auth.core.dto.TokenPair;
 import com.ccomp.br.domain.auth.jwt.persistence.RefreshToken;
 import com.ccomp.br.domain.auth.jwt.persistence.RefreshTokenRepository;
+import com.ccomp.br.domain.auth.passwordreset.application.TokenHasher;
 import com.ccomp.br.domain.users.enums.EnumRoles;
 import com.ccomp.br.domain.users.external.RolesServices;
 import com.ccomp.br.domain.users.external.UserManagement;
@@ -114,24 +115,22 @@ public class JwtServiceTest {
     class CreateRefreshToken {
 
         @Test
-        @DisplayName("Cria um novo refresh token, limpa sessões do mesmo dispositivo e retorna o UUID bruto")
-        void createRefreshToken_createsTokenAndClearsOldDeviceSessions() {
+        @DisplayName("Cria um refresh token e retorna o UUID bruto sem consultar tokens antigos")
+        void createRefreshToken_savesTokenAndReturnsRawUuid() {
             ClientMetadataDTO metadata = new ClientMetadataDTO("192.168.0.1", "Google Chrome");
-
-            // Simula a busca de tokens antigos (1 token existente do mesmo dispositivo)
-            RefreshToken oldToken = RefreshToken.builder().userAgent("Google Chrome").build();
-            when(refreshTokenRepository.findAllByUserId(userId)).thenReturn(List.of(oldToken));
 
             UUID resultRawToken = jwtService.createRefreshToken(userId, metadata);
 
             assertThat(resultRawToken).isNotNull();
-
-            // Verifica se o token antigo do mesmo dispositivo foi deletado
-            verify(refreshTokenRepository).deleteAll(List.of(oldToken));
-            verify(refreshTokenRepository).flush();
-
-            // Verifica se o novo token foi salvo
-            verify(refreshTokenRepository).save(any(RefreshToken.class));
+            ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
+            verify(refreshTokenRepository).save(captor.capture());
+            assertThat(captor.getValue().getUserId()).isEqualTo(userId);
+            assertThat(captor.getValue().getUserAgent()).isEqualTo("Google Chrome");
+            assertThat(captor.getValue().getIpAddress()).isEqualTo("192.168.0.1");
+            assertThat(captor.getValue().getFamilyId()).isNotNull();
+            assertThat(captor.getValue().getTokenHash()).isEqualTo(TokenHasher.hash(resultRawToken));
+            assertThat(captor.getValue().getExpiryDate()).isAfter(Instant.now());
+            verifyNoMoreInteractions(refreshTokenRepository);
         }
 
         @Test
@@ -224,6 +223,36 @@ public class JwtServiceTest {
             assertThat(result).isEmpty();
             verify(refreshTokenRepository).delete(existingRefreshToken);
             verify(userManagement, never()).isAccountActive(any()); // Não deve chegar a validar a conta
+        }
+
+        @Test
+        @DisplayName("Remove a família inteira quando um refresh token revogado é reutilizado")
+        void validRefreshToken_deletesTokenFamily_whenTokenWasAlreadyRevoked() {
+            UUID familyId = UUID.randomUUID();
+            existingRefreshToken.setFamilyId(familyId);
+            existingRefreshToken.revoke();
+            RefreshTokenRequest request = mock(RefreshTokenRequest.class);
+            when(request.refreshToken()).thenReturn(rawToken);
+            when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(existingRefreshToken));
+
+            assertThat(jwtService.validRefreshToken(request, new ClientMetadataDTO("127.0.0.1", "test"))).isEmpty();
+
+            verify(refreshTokenRepository).deleteByFamilyId(familyId);
+            verifyNoInteractions(userManagement, rolesServices, jwtEncoder);
+        }
+
+        @Test
+        @DisplayName("Revoga todas as sessões quando a conta do usuário está inativa")
+        void validRefreshToken_deletesAllUserTokens_whenAccountIsInactive() {
+            RefreshTokenRequest request = mock(RefreshTokenRequest.class);
+            when(request.refreshToken()).thenReturn(rawToken);
+            when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(existingRefreshToken));
+            when(userManagement.isAccountActive(userId)).thenReturn(false);
+
+            assertThat(jwtService.validRefreshToken(request, new ClientMetadataDTO("127.0.0.1", "test"))).isEmpty();
+
+            verify(refreshTokenRepository).deleteByUserId(userId);
+            verifyNoInteractions(rolesServices, jwtEncoder);
         }
     }
 

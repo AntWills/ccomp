@@ -1,9 +1,15 @@
 package com.ccomp.br.domain.news.application;
 
 import com.ccomp.br.domain.news.dto.NewsResponse;
+import com.ccomp.br.domain.news.dto.NewsCursor;
+import com.ccomp.br.domain.news.dto.NewsItem;
+import com.ccomp.br.domain.news.dto.NewsSearchFilter;
 import com.ccomp.br.domain.news.dto.NewsUpdateDto;
 import com.ccomp.br.domain.news.persistence.News;
 import com.ccomp.br.domain.news.persistence.NewsRepository;
+import com.ccomp.br.domain.news.persistence.NewsDslRepository;
+import com.ccomp.br.shared.utils.CursorPage;
+import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.domain.news.utils.NewsMapper;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
@@ -14,9 +20,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,6 +47,9 @@ class NewsApplicationTest {
     private NewsRepository newsRepository;
 
     @Mock
+    private NewsDslRepository newsDslRepository;
+
+    @Mock
     private NewsMapper newsMapper;
 
     @InjectMocks
@@ -58,75 +69,42 @@ class NewsApplicationTest {
     // ---------------------------------------------------------------
     // searchNewsWithFilters
     // ---------------------------------------------------------------
-    /***/
-//    @Nested
-//    @DisplayName("searchNewsWithFilters")
-//    class SearchNewsWithFilters {
-//
-//        @Test
-//        @DisplayName("não deve retornar próximo cursor quando resultados <= pageSize")
-//        void shouldNotReturnNextCursor_whenResultsFitInOnePage() {
-//            NewsItem item = mock(NewsItem.class);
-//            mockFindBy(List.of(item, item)); // 2 itens, pageSize 5 -> cabe tudo
-//
-//            CursorPage<NewsItem> page = newsApplication.searchNewsWithFilters(
-//                    mock(NewsFilter.class), null, 5);
-//
-//            assertThat(page.data()).hasSize(2);
-//            assertThat(page.nextCursor()).isNull();
-//        }
-//
-//        @Test
-//        @DisplayName("deve retornar próximo cursor quando há mais resultados que pageSize")
-//        void shouldReturnNextCursor_whenThereAreMoreResultsThanPageSize() {
-//            NewsItem item = mock(NewsItem.class);
-//            // repositório é chamado com limit(pageSize + 1); simulamos 3 itens p/ pageSize=2
-//            mockFindBy(List.of(item, item, item));
-//
-//            CursorPage<NewsItem> page = newsApplication.searchNewsWithFilters(
-//                    mock(NewsFilter.class), null, 2);
-//
-//            // só os 2 primeiros devem ir para a página; o 3º item existe apenas
-//            // para indicar que "há mais" (é descartado do resultado final)
-//            assertThat(page.data()).hasSize(2);
-//            assertThat(page.nextCursor()).isNotNull();
-//        }
-//
-//        @Test
-//        @DisplayName("deve limitar pageSize a 50 mesmo se um valor maior for solicitado")
-//        void shouldCapPageSizeAt50() {
-//            mockFindBy(List.of());
-//
-//            newsApplication.searchNewsWithFilters(mock(NewsFilter.class), null, 999);
-//
-//            // Verificamos indiretamente: como a função passada ao findBy chama
-//            // .limit(finalPageSize + 1), poderíamos capturar o Function e inspecionar,
-//            // mas o teste de contrato mais simples e robusto é: não deve estourar
-//            // e o resultado deve ser tratado normalmente (sem exceptions/overflow).
-//            verify(newsRepository, times(1)).findBy(any(Specification.class), any(Function.class));
-//        }
-//
-//        /**
-//         * Helper que resolve o problema de mockar a API fluente do Spring Data
-//         * (findBy(spec, query -> query.as(...).limit(...).sortBy(...).all())).
-//         * RETURNS_SELF faz cada chamada encadeada devolver o próprio mock,
-//         * até .all() ser interceptado para devolver a lista desejada.
-//         */
-//        @SuppressWarnings("unchecked")
-//        private void mockFindBy(List<NewsItem> results) {
-//            when(newsRepository.findBy(any(Specification.class), any(Function.class)))
-//                    .thenAnswer(invocation -> {
-//                        Function<FluentQuery.FetchableFluentQuery<News>, List<NewsItem>> queryFn =
-//                                invocation.getArgument(1);
-//                        FluentQuery.FetchableFluentQuery<News> fluentMock =
-//                                mock(FluentQuery.FetchableFluentQuery.class, RETURNS_SELF);
-//                        when(fluentMock.all()).thenReturn((List) results);
-//                        return queryFn.apply(fluentMock);
-//                    });
-//        }
-//    }
+    @Nested
+    @DisplayName("searchNewsWithFilters")
+    class SearchNewsWithFilters {
+        @Test
+        void requestsOneExtraRowToDetectNextPage() {
+            NewsSearchFilter filter = new NewsSearchFilter(true);
+            NewsCursor cursor = new NewsCursor(null, 10L);
+            List<NewsItem> rows = List.of(mock(NewsItem.class), mock(NewsItem.class), mock(NewsItem.class));
+            CursorPage<NewsItem> expected = new CursorPage<>(rows, "next", null);
 
-    // ---------------------------------------------------------------
+            try (MockedStatic<CursorUtils> cursorUtils = mockStatic(CursorUtils.class)) {
+                cursorUtils.when(() -> CursorUtils.decode("cursor", NewsCursor.class)).thenReturn(cursor);
+                when(newsDslRepository.findByCursor(filter, cursor, 3)).thenReturn(rows);
+                cursorUtils.when(() -> CursorUtils.buildPage(anyList(), eq(2), any())).thenReturn(expected);
+
+                assertThat(newsApplication.searchNewsWithFilters(filter, "cursor", 2)).isSameAs(expected);
+                verify(newsDslRepository).findByCursor(filter, cursor, 3);
+            }
+        }
+
+        @Test
+        void capsRequestedPageSizeAtFiftyAndRequests51Rows() {
+            NewsSearchFilter filter = new NewsSearchFilter(null);
+            NewsCursor cursor = new NewsCursor(null, null);
+            List<NewsItem> rows = List.of();
+            try (MockedStatic<CursorUtils> cursorUtils = mockStatic(CursorUtils.class)) {
+                cursorUtils.when(() -> CursorUtils.decode(null, NewsCursor.class)).thenReturn(cursor);
+                when(newsDslRepository.findByCursor(filter, cursor, 51)).thenReturn(rows);
+                cursorUtils.when(() -> CursorUtils.buildPage(anyList(), eq(50), any())).thenReturn(new CursorPage<>(rows, null, null));
+
+                newsApplication.searchNewsWithFilters(filter, null, 999);
+                verify(newsDslRepository).findByCursor(filter, cursor, 51);
+            }
+        }
+    }
+
     // getById / getBySlug
     // ---------------------------------------------------------------
     @Nested
@@ -285,7 +263,8 @@ class NewsApplicationTest {
             newsApplication.update(1L, dto, authorId);
 
             // setSlug deve ser chamado com um slug derivado do novo título
-            verify(existingNews, atLeastOnce()).setSlug(anyString());
+            verify(existingNews).setSlug(anyString());
+            verify(newsRepository, times(1)).findBySlug(anyString());
         }
     }
 

@@ -7,8 +7,10 @@ import com.ccomp.br.domain.events.core.dto.UpdateEventDTO;
 import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
+import com.ccomp.br.domain.events.core.persistence.EventDslRepository;
+import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
-import com.ccomp.br.domain.events.editors.application.EventEditorPermission;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -43,8 +45,9 @@ public class EventsServicesTest {
     @Mock
     private EventMapper eventMapper;
 
-    @Mock
-    private EventEditorPermission editorPermission;
+    @Mock private EventCache eventCache;
+    @Mock private EventDslRepository eventDslRepository;
+    @Mock private EventAccessPolicy eventAccessPolicy;
 
     @InjectMocks
     private EventsServices eventsServices;
@@ -61,7 +64,6 @@ public class EventsServicesTest {
         existingEvent = mock(Event.class);
         expectedEventDTO = mock(EventDTO.class);
 
-        when(existingEvent.getId()).thenReturn(eventId);
     }
 
     @Nested
@@ -71,23 +73,20 @@ public class EventsServicesTest {
         @Test
         @DisplayName("Retorna o evento quando é publicamente acessível")
         void getById_returnsEventDTO_whenEventIsPubliclyAccessible() {
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isPubliclyAccessible()).thenReturn(true);
-            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(expectedEventDTO);
+            when(eventCache.findById(eventId)).thenReturn(Optional.of(expectedEventDTO));
+            when(eventAccessPolicy.canView(expectedEventDTO, userId)).thenReturn(true);
 
             Optional<EventDTO> result = eventsServices.getById(eventId, userId);
 
             assertThat(result).isPresent().contains(expectedEventDTO);
-            verify(eventRepository).findById(eventId);
+            verify(eventCache).findById(eventId);
         }
 
         @Test
         @DisplayName("Lança AccessDeniedException quando evento é privado e usuário não é dono nem editor")
         void getById_throwsAccessDeniedException_whenUserHasNoPermission() {
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isPubliclyAccessible()).thenReturn(false);
-            when(existingEvent.isOwner(userId)).thenReturn(false);
-            when(editorPermission.hasPermissionEdit(existingEvent.getId(), userId)).thenReturn(false);
+            when(eventCache.findById(eventId)).thenReturn(Optional.of(expectedEventDTO));
+            when(eventAccessPolicy.canView(expectedEventDTO, userId)).thenReturn(false);
 
             assertThatThrownBy(() -> eventsServices.getById(eventId, userId))
                     .isInstanceOf(AccessDeniedException.class)
@@ -104,9 +103,8 @@ public class EventsServicesTest {
         void getBySlug_returnsEventDTO_whenEventIsPublished() {
             String slug = "semana-de-tecnologia-a1b2c3";
 
-            when(eventRepository.findBySlug(slug)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isPublished()).thenReturn(true);
-            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(expectedEventDTO);
+            when(eventCache.findBySlug(slug)).thenReturn(Optional.of(expectedEventDTO));
+            when(expectedEventDTO.isPublished()).thenReturn(true);
 
             Optional<EventDTO> result = eventsServices.getBySlug(slug);
 
@@ -118,8 +116,8 @@ public class EventsServicesTest {
         void getBySlug_returnsEmpty_whenEventIsNotPublished() {
             String slug = "semana-de-tecnologia-a1b2c3";
 
-            when(eventRepository.findBySlug(slug)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isPublished()).thenReturn(false);
+            when(eventCache.findBySlug(slug)).thenReturn(Optional.of(expectedEventDTO));
+            when(expectedEventDTO.isPublished()).thenReturn(false);
 
             Optional<EventDTO> result = eventsServices.getBySlug(slug);
 
@@ -147,7 +145,6 @@ public class EventsServicesTest {
             when(eventRepository.existsBySlug(anyString())).thenReturn(false);
             when(eventRepository.save(any(Event.class))).thenReturn(existingEvent);
             when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(expectedEventDTO);
-
             EventDTO result = eventsServices.create(userId, dto);
 
             assertThat(result).isNotNull().isEqualTo(expectedEventDTO);
@@ -182,9 +179,9 @@ public class EventsServicesTest {
             when(request.titleOpt()).thenReturn(Optional.empty());
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isOwner(userId)).thenReturn(true);
             when(eventRepository.save(existingEvent)).thenReturn(existingEvent);
             when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(expectedEventDTO);
+            when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(true);
 
             EventDTO result = eventsServices.update(request, eventId, userId);
 
@@ -199,8 +196,8 @@ public class EventsServicesTest {
             UpdateEventDTO request = mock(UpdateEventDTO.class);
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isOwner(userId)).thenReturn(false);
-            when(editorPermission.hasPermissionEdit(existingEvent.getId(), userId)).thenReturn(false);
+            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(expectedEventDTO);
+            when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(false);
 
             assertThatThrownBy(() -> eventsServices.update(request, eventId, userId))
                     .isInstanceOf(AccessDeniedException.class)
@@ -218,7 +215,8 @@ public class EventsServicesTest {
         @DisplayName("Altera status do evento para PUBLISHED e chama o método de domínio publish()")
         void updateEventStatus_changesStatusToPublished_whenUserHasPermission() {
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isOwner(userId)).thenReturn(true);
+            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(expectedEventDTO);
+            when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(true);
             when(eventRepository.save(existingEvent)).thenReturn(existingEvent);
 
             MessageResponse response = eventsServices.updateEventStatus(eventId, EnumEventStatus.PUBLISHED, userId);
@@ -234,8 +232,8 @@ public class EventsServicesTest {
         @DisplayName("Lança AccessDeniedException quando usuário não possui permissão para alterar o status")
         void updateEventStatus_throwsAccessDeniedException_whenUserHasNoPermission() {
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isOwner(userId)).thenReturn(false);
-            when(editorPermission.hasPermissionEdit(existingEvent.getId(), userId)).thenReturn(false);
+            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(expectedEventDTO);
+            when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(false);
 
             assertThatThrownBy(() -> eventsServices.updateEventStatus(eventId, EnumEventStatus.CANCELED, userId))
                     .isInstanceOf(AccessDeniedException.class)
@@ -254,7 +252,8 @@ public class EventsServicesTest {
         @DisplayName("Remove o evento com sucesso quando o usuário é o dono")
         void delete_removesEventSuccessfully_whenUserIsOwner() {
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isOwner(userId)).thenReturn(true);
+            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(expectedEventDTO);
+            when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(true);
 
             eventsServices.delete(eventId, userId);
 
@@ -265,7 +264,8 @@ public class EventsServicesTest {
         @DisplayName("Lança AccessDeniedException quando um editor tenta remover o evento (apenas dono/admin pode)")
         void delete_throwsAccessDeniedException_whenUserIsNotOwner() {
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isOwner(userId)).thenReturn(false);
+            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(expectedEventDTO);
+            when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(false);
 
             assertThatThrownBy(() -> eventsServices.delete(eventId, userId))
                     .isInstanceOf(AccessDeniedException.class)
