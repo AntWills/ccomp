@@ -99,8 +99,8 @@ public class AuthApplication {
     }
 
     @Transactional
-    public TokenPair signInWithGoogle(String email, String name, String subject, ClientMetadataDTO metadata) {
-        UUID userId = userManagement.provisionGoogleUser(new EmailAddress(email), name, subject);
+    public TokenPair signInWithGoogle(String email, String name, ClientMetadataDTO metadata) {
+        UUID userId = userManagement.provisionGoogleUser(new EmailAddress(email), name);
         UserDTO user = userManagement.findByIdForAuthentication(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 
