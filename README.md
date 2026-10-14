@@ -122,6 +122,9 @@ pelo e-mail: e-mails diferentes criam contas diferentes. Não é necessário
 client secret nem callback OAuth no backend neste fluxo. Com
 `GOOGLE_OAUTH_ENABLED=false` (padrão), o endpoint fica desabilitado.
 
+O guia detalhado de configuração e integração está em
+[docs/login-google.md](docs/login-google.md).
+
 No callback do Google Identity Services, envie `response.credential` ao backend:
 
 ```javascript
