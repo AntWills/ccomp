@@ -52,6 +52,9 @@ USERNAME=seu@email.com
 MAIL_PASSWORD=senha
 MAIL_SMTP_AUTH=true
 MAIL_SMTP_STARTTLS_ENABLE=true
+CLIENT_ID=seu-client-id-google
+CLIENT_SECRET=seu-client-secret-google
+GOOGLE_OAUTH_ENABLED=false
 
 # Rabbit
 RABBITMQ_HOST=rabbitmq
@@ -108,6 +111,14 @@ Por fim, execute o comando no terminal na raiz do projeto:
 ```shell
 ./mvnw spring-boot:run 
 ```
+
+Para habilitar o login Google, configure `CLIENT_ID` e `CLIENT_SECRET` no
+`.env.dev` e defina `GOOGLE_OAUTH_ENABLED=true`. Cadastre
+`http://localhost:8080/login/oauth2/code/google` como URI de redirecionamento
+autorizada no Google Cloud. O fluxo começa em `/oauth2/authorization/google`;
+após o callback, a API responde com os tokens próprios (`access_token` e
+`refresh_token`). Com `GOOGLE_OAUTH_ENABLED=false` (padrão), o login Google
+permanece desativado sem exigir credenciais.
 
 ## Documentação da API
 

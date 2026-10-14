@@ -73,6 +73,40 @@ public class UserManagement {
     }
 
     @Transactional
+    public UUID provisionGoogleUser(EmailAddress email, String name, String googleSubject) {
+        UserModel user = userModelRepository.findByGoogleSubject(googleSubject)
+                .orElseGet(() -> userModelRepository.findByEmailAddress(email).orElseGet(() -> {
+                    UserModel created = UserModel.builder()
+                            .name(name)
+                            .emailAddress(email)
+                            .googleSubject(googleSubject)
+                            .statusAccount(EnumUserStatusAccount.ACTIVE)
+                            .createdAt(LocalDateTime.now())
+                            .updatedAt(LocalDateTime.now())
+                            .build();
+                    UserModel saved = userModelRepository.save(created);
+                    rolesServices.initRole(saved, EnumRoles.USER);
+                    userCache.evict(saved);
+                    rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME,
+                            UserCreatedChannel.ROUTING,
+                            new UserCreatedMessageDTO(name, email.getValue()));
+                    return saved;
+                }));
+
+        if (user.getGoogleSubject() != null && !user.getGoogleSubject().equals(googleSubject)) {
+            throw new ConflictException("Já existe uma conta com esses dados.");
+        }
+
+        if (user.getGoogleSubject() == null) {
+            user.setGoogleSubject(googleSubject);
+            user.setUpdatedAt(LocalDateTime.now());
+            userModelRepository.save(user);
+            userCache.evict(user);
+        }
+        return user.getId();
+    }
+
+    @Transactional
     public void reactivateAccount(UUID userId) {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuario não encontrado."));
@@ -111,6 +145,10 @@ public class UserManagement {
     public Optional<UserDTO> findByEmailAddressForAuthentication(EmailAddress emailAddress) {
         return userModelRepository.findByEmailAddress(emailAddress)
                 .map(userMapper::userToDto);
+    }
+
+    public Optional<UserDTO> findByIdForAuthentication(UUID id) {
+        return userModelRepository.findById(id).map(userMapper::userToDto);
     }
 
     public List<UserSummaryView> findAllSummaryByIds(List<UUID> ids) {
