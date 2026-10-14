@@ -34,7 +34,10 @@ public record EventDTO(
         // Metadados
         UUID ownerId,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+
+        // Endereço / local do evento (usado nos certificados em {evento.local})
+        String address
 ) {
     public boolean isPubliclyAccessible() {
         return status == EnumEventStatus.PUBLISHED; // ajuste para a regra real da sua entidade

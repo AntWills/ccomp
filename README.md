@@ -52,6 +52,8 @@ USERNAME=seu@email.com
 MAIL_PASSWORD=senha
 MAIL_SMTP_AUTH=true
 MAIL_SMTP_STARTTLS_ENABLE=true
+GOOGLE_CLIENT_ID=seu-client-id-google
+GOOGLE_OAUTH_ENABLED=false
 
 # Rabbit
 RABBITMQ_HOST=rabbitmq
@@ -108,6 +110,35 @@ Por fim, execute o comando no terminal na raiz do projeto:
 ```shell
 ./mvnw spring-boot:run 
 ```
+
+Para habilitar o login Google, configure `GOOGLE_CLIENT_ID` no `.env.dev` e
+defina `GOOGLE_OAUTH_ENABLED=true`. Use o mesmo client ID no frontend ao
+configurar o botão Google Identity Services. O frontend envia a credencial
+recebida para `POST /api/auth/google` como `{ "credential": "..." }`; a API
+valida o ID token e responde com seus próprios `access_token` e `refresh_token`.
+Se o e-mail verificado ainda não existir, uma conta com role padrão é criada e
+o evento de boas-vindas envia a notificação por e-mail. Contas são identificadas
+pelo e-mail: e-mails diferentes criam contas diferentes. Não é necessário
+client secret nem callback OAuth no backend neste fluxo. Com
+`GOOGLE_OAUTH_ENABLED=false` (padrão), o endpoint fica desabilitado.
+
+O guia detalhado de configuração e integração está em
+[docs/login-google.md](docs/login-google.md).
+
+No callback do Google Identity Services, envie `response.credential` ao backend:
+
+```javascript
+const response = await fetch(`${API_URL}/api/auth/google`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ credential: googleResponse.credential }),
+});
+
+const tokens = await response.json();
+```
+
+O token Google deve ser enviado inteiro para validação no backend; não envie
+claims de usuário montadas pelo frontend.
 
 ## Documentação da API
 

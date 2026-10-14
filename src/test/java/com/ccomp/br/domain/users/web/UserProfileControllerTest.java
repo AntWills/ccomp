@@ -1,93 +1,76 @@
 package com.ccomp.br.domain.users.web;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.ActiveProfiles;
+import com.ccomp.br.domain.users.application.UserApplication;
+import com.ccomp.br.domain.users.dto.UpdateUserDTO;
+import com.ccomp.br.shared.dto.UserDTO;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.oauth2.jwt.Jwt;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import java.util.Optional;
+import java.util.UUID;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@WithMockUser
-@Slf4j
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
 class UserProfileControllerTest {
-//    @Autowired
-//    private MockMvc mockMvc;
-//
-//    @Autowired
-//    private ObjectMapper objectMapper;
-//
-//    @Autowired
-//    PasswordEncoder passwordEncoder;
-//
-//    @Autowired
-//    private UserModelRepository userModelRepository;
-//
-//    private UserModel savedUser;
-//
-//    private String userPassword = "12345678";
-//
-//    @BeforeEach
-//    void setup(){
-//        savedUser = userModelRepository.save(
-//                UserModel.builder()
-//                        .name("Fulaninho")
-//                        .emailAddress(new EmailAddress("fulaninho@gmail.com"))
-//                        .password(passwordEncoder.encode(userPassword)).build()
-//        );
-//
-//        log.info("Usuário de teste criado: ID = {}, email = {}",
-//                savedUser.getId(), savedUser.getEmailAddress().getValue());
-//    }
-//
-//    @Test
-//    void getAll() {
-//    }
-//
-//    @Test
-//    @WithMockUser
-//    @DisplayName("Fazer login e recuperar dados do usuario")
-//    void getMe() throws Exception {
-//        LoginRequestDTO loginRequestDTO = new LoginRequestDTO(
-//                savedUser.getEmailAddress(), userPassword
-//        );
-//
-//        String requestBody = objectMapper.writeValueAsString(loginRequestDTO);
-//
-//        log.info("Corpo da requisição (JSON):\n{}",
-//                objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(loginRequestDTO));
-//
-//        var resultLogin = mockMvc.perform(post("/api/auth/login")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(requestBody))
-//                .andExpect(status().isOk())
-//                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-//                .andReturn();
-//
-//        String jsonResponse = resultLogin.getResponse().getContentAsString();
-//        Object jsonObject = objectMapper.readValue(jsonResponse, Object.class);
-//        String prettyJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonObject);
-//
-//        log.info("Resposta do Login:\n{}", prettyJson);
-//
-//        String accessToken = objectMapper.readTree(jsonResponse).path("accessToken").asString();
-//
-//        var resultMe = mockMvc.perform(get("/api/users/me")
-//                        .header("Authorization", "Bearer " + accessToken))
-//                .andExpect(status().isOk())
-//                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-//                .andReturn();
-//
-//        String jsonResponse2 = resultMe.getResponse().getContentAsString();
-//        Object jsonObject2 = objectMapper.readValue(jsonResponse2, Object.class);
-//        String prettyJson2 = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonObject2);
-//
-//        log.info("Resposta de details:\n{}", prettyJson2);
-//
-//        log.info("===== FIM TESTE =====");
-//    }
+    @Mock private UserApplication userApplication;
+    @InjectMocks private UserProfileController controller;
+
+    @Test
+    void getMeReturnsProfileForJwtSubject() {
+        UUID userId = UUID.randomUUID();
+        Jwt jwt = mock(Jwt.class);
+        UserDTO user = mock(UserDTO.class);
+        when(jwt.getSubject()).thenReturn(userId.toString());
+        when(userApplication.getById(userId)).thenReturn(Optional.of(user));
+
+        var response = controller.getMe(jwt);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isSameAs(user);
+    }
+
+    @Test
+    void getMeReturnsNotFoundWhenSubjectHasNoProfile() {
+        UUID userId = UUID.randomUUID();
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getSubject()).thenReturn(userId.toString());
+        when(userApplication.getById(userId)).thenReturn(Optional.empty());
+
+        assertThat(controller.getMe(jwt).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void updateUsesJwtSubjectAndReturnsUpdatedProfile() {
+        UUID userId = UUID.randomUUID();
+        Jwt jwt = mock(Jwt.class);
+        UpdateUserDTO request = new UpdateUserDTO("Updated name");
+        UserDTO user = mock(UserDTO.class);
+        when(jwt.getSubject()).thenReturn(userId.toString());
+        when(userApplication.update(userId, request)).thenReturn(user);
+
+        var response = controller.update(request, jwt);
+
+        assertThat(response.getBody()).isSameAs(user);
+        verify(userApplication).update(userId, request);
+    }
+
+    @Test
+    void deactivateAccountUsesJwtSubjectAndReturnsConfirmation() {
+        UUID userId = UUID.randomUUID();
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getSubject()).thenReturn(userId.toString());
+
+        var response = controller.deactivateAccount(jwt);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().response()).isEqualTo("Conta desativada com sucesso!");
+        verify(userApplication).deactivateOwnAccount(userId);
+    }
 }

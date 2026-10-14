@@ -8,6 +8,11 @@ import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.editors.external.message.EditorInvitationChannel;
 import com.ccomp.br.domain.events.editors.persistence.EventEditor;
 import com.ccomp.br.domain.events.editors.persistence.EventEditorRepository;
+import com.ccomp.br.domain.events.editors.persistence.EventEditorCache;
+import com.ccomp.br.domain.events.editors.persistence.EventEditorDslRepository;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
+import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.editors.persistence.validation.EventEditorInvitations;
 import com.ccomp.br.domain.events.editors.persistence.validation.EventEditorInvitationsRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
@@ -37,6 +42,10 @@ public class EditorServicesTest {
     private EventRepository eventRepository;
     @Mock
     private EventEditorRepository editorRepository;
+    @Mock private EventEditorDslRepository editorDslRepository;
+    @Mock private EventEditorCache eventEditorCache;
+    @Mock private EventCache eventCache;
+    @Mock private EventAccessPolicy eventAccessPolicy;
     @Mock
     private UserManagement userManagement;
     @Mock
@@ -50,6 +59,7 @@ public class EditorServicesTest {
     private UUID ownerId;
     private Long eventId;
     private Event existingEvent;
+    private EventDTO eventDTO;
     private UserDTO existingUserDTO;
     private EmailAddress emailAddress;
 
@@ -58,6 +68,7 @@ public class EditorServicesTest {
         ownerId = UUID.randomUUID();
         eventId = 1L;
         existingEvent = mock(Event.class);
+        eventDTO = mock(EventDTO.class);
         emailAddress = mock(EmailAddress.class);
         existingUserDTO = mock(UserDTO.class);
     }
@@ -72,11 +83,9 @@ public class EditorServicesTest {
 
             // Dados
             when(existingUserDTO.id()).thenReturn(userId);
-            when(existingEvent.getId()).thenReturn(eventId);
-
-            // Mock getEventAndValidateOwnership() privado
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isOwner(ownerId)).thenReturn(true);
+            givenEventIsEditable();
+            when(eventDTO.id()).thenReturn(eventId);
+            when(eventDTO.title()).thenReturn("Nome evento");
 
             // Mock usuario e editor
             when(userManagement.findByEmailAddress(emailAddress)).thenReturn(Optional.of(existingUserDTO));
@@ -108,10 +117,7 @@ public class EditorServicesTest {
 
             // Dados
             when(existingUserDTO.id()).thenReturn(userId);
-
-            // Mock getEventAndValidateOwnership() privado
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isOwner(ownerId)).thenReturn(true);
+            givenEventIsEditable();
 
             // Mock usuario e editor
             when(userManagement.findByEmailAddress(emailAddress)).thenReturn(Optional.of(existingUserDTO));
@@ -166,6 +172,7 @@ public class EditorServicesTest {
 
             verify(editorRepository).save(any(EventEditor.class));
             verify(invitationsRepository).delete(any(EventEditorInvitations.class));
+            verify(eventEditorCache).evict(eventId, userId);
         }
 
         @Test
@@ -206,13 +213,12 @@ public class EditorServicesTest {
         void removeEditor_returnMessage_whenEditorExist() {
             UUID userId = UUID.randomUUID();
 
-            when(existingEvent.getId()).thenReturn(eventId);
             when(existingUserDTO.id()).thenReturn(userId);
 
-            when(eventRepository.findById(existingEvent.getId())).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isOwner(ownerId)).thenReturn(true);
+            givenEventIsEditable();
+            when(eventDTO.id()).thenReturn(eventId);
             when(userManagement.findByEmailAddress(emailAddress)).thenReturn(Optional.of(existingUserDTO));
-            when(editorRepository.existsByEventIdAndUserId(eventId, userId)).thenReturn(true);
+            when(editorRepository.findByEventIdAndUserId(eventId, userId)).thenReturn(Optional.of(mock(EventEditor.class)));
 
             MessageResponse message = editorServices.removeEditor(eventId, ownerId, emailAddress);
 
@@ -220,6 +226,12 @@ public class EditorServicesTest {
             assertThat(message.response()).isEqualTo("Usuário removido como editor.");
 
             verify(editorRepository).deleteByEventIdAndUserId(eventId, userId);
+            verify(eventEditorCache).evict(eventId, userId);
         }
+    }
+
+    private void givenEventIsEditable() {
+        when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
+        when(eventAccessPolicy.canEdit(eventDTO, ownerId)).thenReturn(true);
     }
 }

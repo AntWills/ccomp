@@ -5,12 +5,14 @@ import com.ccomp.br.domain.users.external.message.UserPasswordResetChannel;
 import com.ccomp.br.module.email.EmailService;
 import com.ccomp.br.module.email.EmailTemplateService;
 import com.ccomp.br.shared.dto.SendMailDTO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
+@Slf4j
 @Component
 public class PasswordResetEmailListener {
     @Value("${app.frontend.password-reset-url}")
@@ -36,7 +38,7 @@ public class PasswordResetEmailListener {
                 body,
                 true
         );
-
+        log.debug("Token de reset de senha: {}", event.token());
         emailService.send(dto);
     }
 

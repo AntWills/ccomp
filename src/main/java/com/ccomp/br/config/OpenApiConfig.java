@@ -21,9 +21,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Configuration
 public class OpenApiConfig {
@@ -102,19 +101,17 @@ public class OpenApiConfig {
         return new ModelResolver(objectMapper);
     }
 
+    /**
+     * Ordena as tags alfabeticamente preservando nome e descrição
+     * declarados nas anotações {@link Tag} dos controllers.
+     */
     @Bean
     public OpenApiCustomizer sortTagsAlphabetically() {
         return openApi -> {
-            if (openApi.getPaths() != null) {
-                var sortedTags = openApi.getPaths().values().stream()
-                        .flatMap(pathItem -> pathItem.readOperations().stream())
-                        .flatMap(operation -> operation.getTags() != null ? operation.getTags().stream() : Stream.empty())
-                        .distinct()
-                        .sorted(String::compareToIgnoreCase)
-                        .map(tagName -> new Tag().name(tagName))
-                        .collect(Collectors.toList());
-
-                openApi.setTags(sortedTags);
+            if (openApi.getTags() != null) {
+                openApi.getTags().sort(Comparator.comparing(
+                        (Tag tag) -> tag.getName() == null ? "" : tag.getName(),
+                        String::compareToIgnoreCase));
             }
         };
     }

@@ -6,11 +6,14 @@ import com.ccomp.br.domain.events.activities.dto.CreateActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
+import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 
 import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
-import com.ccomp.br.domain.events.editors.application.EventEditorPermission;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,7 +40,9 @@ public class ActivityServicesTest {
     private EventRepository eventRepository;
 
     @Mock
-    private EventEditorPermission editorPermission;
+    private EventAccessPolicy eventAccessPolicy;
+    @Mock private EventCache eventCache;
+    @Mock private EventMapper eventMapper;
 
     @Mock
     private EventActivityRepository activityRepository;
@@ -53,6 +58,7 @@ public class ActivityServicesTest {
     private Long activityId;
     private Event existingEvent;
     private EventActivity existingActivity;
+    private EventDTO eventDTO;
 
     @BeforeEach
     void setUp() {
@@ -61,8 +67,8 @@ public class ActivityServicesTest {
         activityId = 10L;
         existingEvent = mock(Event.class);
         existingActivity = mock(EventActivity.class);
+        eventDTO = mock(EventDTO.class);
 
-        when(existingEvent.getId()).thenReturn(eventId);
     }
 
     @Nested
@@ -77,7 +83,8 @@ public class ActivityServicesTest {
             EventActivity savedActivity = mock(EventActivity.class);
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isOwner(userId)).thenReturn(true);
+            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(eventDTO);
+            when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
             when(activityRepository.save(any(EventActivity.class))).thenReturn(savedActivity);
             when(activityMapper.eventActivityToActivityDTO(savedActivity)).thenReturn(expectedDTO);
 
@@ -96,8 +103,8 @@ public class ActivityServicesTest {
             EventActivity savedActivity = mock(EventActivity.class);
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isOwner(userId)).thenReturn(false);
-            when(editorPermission.hasPermissionEdit(existingEvent.getId(), userId)).thenReturn(true);
+            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(eventDTO);
+            when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
             when(activityRepository.save(any(EventActivity.class))).thenReturn(savedActivity);
             when(activityMapper.eventActivityToActivityDTO(savedActivity)).thenReturn(expectedDTO);
 
@@ -114,8 +121,8 @@ public class ActivityServicesTest {
             CreateActivityDTO request = new CreateActivityDTO("Palestra Spring Boot", "Descrição da palestra");
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.isOwner(userId)).thenReturn(false);
-            when(editorPermission.hasPermissionEdit(existingEvent.getId(), userId)).thenReturn(false);
+            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(eventDTO);
+            when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(false);
 
             assertThatThrownBy(() -> activityServices.createActivity(userId, eventId, request))
                     .isInstanceOf(AccessDeniedException.class)
@@ -139,11 +146,10 @@ public class ActivityServicesTest {
 
             ActivityDTO expectedDTO = mock(ActivityDTO.class);
 
-            when(existingActivity.getEvent()).thenReturn(existingEvent);
-            when(existingEvent.isOwner(userId)).thenReturn(true);
-
             when(activityRepository.findById(activityId)).thenReturn(Optional.of(existingActivity));
-//            when(editorServices.hasPermissionEdit(existingEvent, userId)).thenReturn(true);
+            when(existingActivity.getEventId()).thenReturn(eventId);
+            when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
+            when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
             when(activityRepository.save(existingActivity)).thenReturn(existingActivity);
             when(activityMapper.eventActivityToActivityDTO(existingActivity)).thenReturn(expectedDTO);
 
@@ -179,11 +185,10 @@ public class ActivityServicesTest {
         @Test
         @DisplayName("Remove atividade com sucesso quando o usuário é editor/dono do evento")
         void deleteActivity_deletesSuccessfully_whenUserHasPermission() {
-            when(existingActivity.getEvent()).thenReturn(existingEvent);
-            when(existingEvent.isOwner(userId)).thenReturn(false);
-            when(editorPermission.hasPermissionEdit(existingEvent.getId(), userId)).thenReturn(true);
-
             when(activityRepository.findById(activityId)).thenReturn(Optional.of(existingActivity));
+            when(existingActivity.getEventId()).thenReturn(eventId);
+            when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
+            when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
 
             activityServices.deleteActivity(userId, activityId);
 
@@ -193,11 +198,10 @@ public class ActivityServicesTest {
         @Test
         @DisplayName("Lança AccessDeniedException ao tentar remover atividade sem ter permissão")
         void deleteActivity_throwsAccessDeniedException_whenUserHasNoPermission() {
-            when(existingActivity.getEvent()).thenReturn(existingEvent);
-            when(existingEvent.isOwner(userId)).thenReturn(false);
-            when(editorPermission.hasPermissionEdit(existingEvent.getId(), userId)).thenReturn(false);
-
             when(activityRepository.findById(activityId)).thenReturn(Optional.of(existingActivity));
+            when(existingActivity.getEventId()).thenReturn(eventId);
+            when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
+            when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(false);
 
             assertThatThrownBy(() -> activityServices.deleteActivity(userId, activityId))
                     .isInstanceOf(AccessDeniedException.class)

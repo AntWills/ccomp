@@ -73,6 +73,29 @@ public class UserManagement {
     }
 
     @Transactional
+    public UUID provisionGoogleUser(EmailAddress email, String name) {
+        var existing = userModelRepository.findByEmailAddress(email);
+        if (existing.isPresent()) {
+            return existing.get().getId();
+        }
+
+        UserModel created = UserModel.builder()
+                .name(name)
+                .emailAddress(email)
+                .statusAccount(EnumUserStatusAccount.ACTIVE)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+        UserModel saved = userModelRepository.save(created);
+        rolesServices.initRole(saved, EnumRoles.USER);
+        userCache.evict(saved);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME,
+                UserCreatedChannel.ROUTING,
+                new UserCreatedMessageDTO(name, email.getValue()));
+        return saved.getId();
+    }
+
+    @Transactional
     public void reactivateAccount(UUID userId) {
         UserModel user = userModelRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuario não encontrado."));
@@ -111,6 +134,10 @@ public class UserManagement {
     public Optional<UserDTO> findByEmailAddressForAuthentication(EmailAddress emailAddress) {
         return userModelRepository.findByEmailAddress(emailAddress)
                 .map(userMapper::userToDto);
+    }
+
+    public Optional<UserDTO> findByIdForAuthentication(UUID id) {
+        return userModelRepository.findById(id).map(userMapper::userToDto);
     }
 
     public List<UserSummaryView> findAllSummaryByIds(List<UUID> ids) {

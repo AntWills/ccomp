@@ -2,9 +2,9 @@ package com.ccomp.br.domain.events.guests.application;
 
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
-import com.ccomp.br.domain.events.core.persistence.Event;
-import com.ccomp.br.domain.events.core.persistence.EventRepository;
-import com.ccomp.br.domain.events.editors.persistence.EventEditorRepository;
+import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
@@ -19,7 +19,6 @@ import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.CursorUtils;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,148 +33,145 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class GuestServiceTest {
+    @Mock private EventGuestRepository eventGuestRepository;
+    @Mock private EventCache eventCache;
+    @Mock private EventActivityRepository activityRepository;
+    @Mock private EventAccessPolicy eventAccessPolicy;
+    @Mock private EventGuestDslRepository eventGuestDslRepository;
+    @Mock private ActivityGuestDslRepository activityGuestDslRepository;
 
-    @Mock
-    private EventGuestRepository eventGuestRepository;
-
-    @Mock
-    private EventRepository eventRepository;
-
-    @Mock
-    private EventActivityRepository activityRepository;
-
-    @Mock
-    private EventEditorRepository editorRepository;
-
-    @Mock
-    private EventGuestDslRepository eventGuestDslRepository;
-
-    @Mock
-    private ActivityGuestDslRepository activityGuestDslRepository;
-
-    @InjectMocks
-    private GuestService guestService;
+    @InjectMocks private GuestService guestService;
 
     private Long eventId;
     private Long activityId;
     private UUID requesterId;
-    private Event event;
+    private EventDTO event;
 
     @BeforeEach
     void setUp() {
         eventId = 1L;
         activityId = 10L;
         requesterId = UUID.randomUUID();
-        event = mock(Event.class);
+        event = mock(EventDTO.class);
+    }
+
+    private void givenEventExists() {
+        when(eventCache.findById(eventId)).thenReturn(Optional.of(event));
     }
 
     @Nested
-    @DisplayName("Search Event Guests - Consulta Paginada de Convidados do Evento")
     class SearchEventGuests {
-
         @Test
-        @DisplayName("Retorna a lista paginada de convidados quando o evento está publicado")
-        void searchEventGuests_returnsCursorPage_whenEventIsPublished() {
-            try (MockedStatic<CursorUtils> cursorUtilsMock = mockStatic(CursorUtils.class)) {
-                GuestCursor decodedCursor = mock(GuestCursor.class);
+        void returnsCursorPageForPublicEvent() {
+            try (MockedStatic<CursorUtils> cursorUtils = mockStatic(CursorUtils.class)) {
+                givenEventExists();
+                GuestCursor cursor = mock(GuestCursor.class);
                 EventGuest guest = mock(EventGuest.class);
-                CursorPage<EventGuest> expectedPage = mock(CursorPage.class);
+                CursorPage<EventGuest> expected = mock(CursorPage.class);
+                when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(false);
+                when(eventAccessPolicy.canView(event, requesterId)).thenReturn(true);
+                when(eventGuestDslRepository.findGuestsWithCursor(eventId, false, cursor, 20)).thenReturn(List.of(guest));
+                cursorUtils.when(() -> CursorUtils.decode("raw", GuestCursor.class)).thenReturn(cursor);
+                cursorUtils.when(() -> CursorUtils.buildPage(anyList(), eq(20), any())).thenReturn(expected);
 
-                when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-                when(event.isOwner(requesterId)).thenReturn(false);
-                when(editorRepository.existsByEventIdAndUserId(event.getId(), requesterId)).thenReturn(false);
-                when(event.isPublished()).thenReturn(true);
-
-                cursorUtilsMock.when(() -> CursorUtils.decode(any(), eq(GuestCursor.class))).thenReturn(decodedCursor);
-                when(eventGuestDslRepository.findGuestsWithCursor(eventId, false, decodedCursor, 20)).thenReturn(List.of(guest));
-                cursorUtilsMock.when(() -> CursorUtils.buildPage(anyList(), anyInt(), any())).thenReturn(expectedPage);
-
-                CursorPage<EventGuest> result = guestService.searchEventGuests(eventId, requesterId, "cursorRaw", 20);
-
-                assertThat(result).isNotNull().isEqualTo(expectedPage);
-                verify(eventGuestDslRepository).findGuestsWithCursor(eventId, false, decodedCursor, 20);
+                assertThat(guestService.searchEventGuests(eventId, requesterId, "raw", 20)).isSameAs(expected);
+                verify(eventGuestDslRepository).findGuestsWithCursor(eventId, false, cursor, 20);
             }
         }
 
         @Test
-        @DisplayName("Lança AccessDeniedException quando o evento não está publicado e o solicitante não é gerente")
-        void searchEventGuests_throwsAccessDeniedException_whenEventNotPublishedAndNotManager() {
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-            when(event.isOwner(requesterId)).thenReturn(false);
-            when(editorRepository.existsByEventIdAndUserId(event.getId(), requesterId)).thenReturn(false);
-            when(event.isPublished()).thenReturn(false);
+        void capsPageSizeAtFiftyAndAllowsManagersToSeePrivateGuests() {
+            try (MockedStatic<CursorUtils> cursorUtils = mockStatic(CursorUtils.class)) {
+                givenEventExists();
+                GuestCursor cursor = mock(GuestCursor.class);
+                when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
+                when(eventAccessPolicy.canView(event, requesterId)).thenReturn(true);
+                when(eventGuestDslRepository.findGuestsWithCursor(eventId, true, cursor, 50)).thenReturn(List.of());
+                cursorUtils.when(() -> CursorUtils.decode(null, GuestCursor.class)).thenReturn(cursor);
+                cursorUtils.when(() -> CursorUtils.buildPage(anyList(), eq(50), any())).thenReturn(mock(CursorPage.class));
 
-            assertThatThrownBy(() -> guestService.searchEventGuests(eventId, requesterId, "cursorRaw", 20))
-                    .isInstanceOf(AccessDeniedException.class)
-                    .hasMessage("O evento não está publicado.");
+                guestService.searchEventGuests(eventId, requesterId, null, 100);
+                verify(eventGuestDslRepository).findGuestsWithCursor(eventId, true, cursor, 50);
+            }
+        }
 
-            verify(eventGuestDslRepository, never()).findGuestsWithCursor(any(), anyBoolean(), any(), anyInt());
+        @Test
+        void deniesPrivateEventToNonManager() {
+            givenEventExists();
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(false);
+            when(eventAccessPolicy.canView(event, requesterId)).thenReturn(false);
+            assertThatThrownBy(() -> guestService.searchEventGuests(eventId, requesterId, null, 20))
+                    .isInstanceOf(AccessDeniedException.class);
+            verifyNoInteractions(eventGuestDslRepository);
+        }
+
+        @Test
+        void throwsWhenEventDoesNotExist() {
+            when(eventCache.findById(eventId)).thenReturn(Optional.empty());
+            assertThatThrownBy(() -> guestService.searchEventGuests(eventId, requesterId, null, 20))
+                    .isInstanceOf(ResourceNotFoundException.class).hasMessage("Evento não encontrado.");
         }
     }
 
     @Nested
-    @DisplayName("Search Activity Guests - Consulta Paginada de Convidados da Atividade")
     class SearchActivityGuests {
-
         @Test
-        @DisplayName("Retorna a lista paginada de convidados da atividade com sucesso")
-        void searchActivityGuests_returnsCursorPage_whenActivityExistsAndEventIsPublished() {
-            try (MockedStatic<CursorUtils> cursorUtilsMock = mockStatic(CursorUtils.class)) {
+        void returnsGuestsWhenActivityEventIsViewable() {
+            try (MockedStatic<CursorUtils> cursorUtils = mockStatic(CursorUtils.class)) {
                 EventActivity activity = mock(EventActivity.class);
-                GuestCursor decodedCursor = mock(GuestCursor.class);
-                ActivityGuest activityGuest = mock(ActivityGuest.class);
-                CursorPage<ActivityGuest> expectedPage = mock(CursorPage.class);
-
+                GuestCursor cursor = mock(GuestCursor.class);
+                ActivityGuest guest = mock(ActivityGuest.class);
+                CursorPage<ActivityGuest> expected = mock(CursorPage.class);
                 when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
-                when(activity.getEvent()).thenReturn(event);
-                when(event.isOwner(requesterId)).thenReturn(true);
+                when(activity.getEventId()).thenReturn(eventId);
+                givenEventExists();
+                when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
+                when(eventAccessPolicy.canView(event, requesterId)).thenReturn(true);
+                when(activityGuestDslRepository.findActivityGuestsWithCursor(activityId, true, cursor, 20)).thenReturn(List.of(guest));
+                cursorUtils.when(() -> CursorUtils.decode("raw", GuestCursor.class)).thenReturn(cursor);
+                cursorUtils.when(() -> CursorUtils.buildPage(anyList(), eq(20), any())).thenReturn(expected);
 
-                cursorUtilsMock.when(() -> CursorUtils.decode(any(), eq(GuestCursor.class))).thenReturn(decodedCursor);
-                when(activityGuestDslRepository.findActivityGuestsWithCursor(activityId, true, decodedCursor, 20)).thenReturn(List.of(activityGuest));
-                cursorUtilsMock.when(() -> CursorUtils.buildPage(anyList(), anyInt(), any())).thenReturn(expectedPage);
-
-                CursorPage<ActivityGuest> result = guestService.searchActivityGuests(activityId, requesterId, "cursorRaw", 20);
-
-                assertThat(result).isNotNull().isEqualTo(expectedPage);
-                verify(activityGuestDslRepository).findActivityGuestsWithCursor(activityId, true, decodedCursor, 20);
+                assertThat(guestService.searchActivityGuests(activityId, requesterId, "raw", 20)).isSameAs(expected);
             }
         }
 
         @Test
-        @DisplayName("Lança ResourceNotFoundException quando a atividade não é encontrada")
-        void searchActivityGuests_throwsResourceNotFoundException_whenActivityNotFound() {
+        void throwsWhenActivityDoesNotExist() {
             when(activityRepository.findById(activityId)).thenReturn(Optional.empty());
+            assertThatThrownBy(() -> guestService.searchActivityGuests(activityId, requesterId, null, 20))
+                    .isInstanceOf(ResourceNotFoundException.class).hasMessage("Atividade não encontrada.");
+        }
 
-            assertThatThrownBy(() -> guestService.searchActivityGuests(activityId, requesterId, "cursorRaw", 20))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessage("Atividade não encontrada.");
-
-            verify(activityGuestDslRepository, never()).findActivityGuestsWithCursor(any(), anyBoolean(), any(), anyInt());
+        @Test
+        void deniesWhenActivityEventIsNotViewable() {
+            EventActivity activity = mock(EventActivity.class);
+            when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
+            when(activity.getEventId()).thenReturn(eventId);
+            givenEventExists();
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(false);
+            when(eventAccessPolicy.canView(event, requesterId)).thenReturn(false);
+            assertThatThrownBy(() -> guestService.searchActivityGuests(activityId, requesterId, null, 20))
+                    .isInstanceOf(AccessDeniedException.class);
+            verifyNoInteractions(activityGuestDslRepository);
         }
     }
 
     @Nested
-    @DisplayName("Update Event Guest - Atualização de Convidado")
     class UpdateEventGuest {
-
         @Test
-        @DisplayName("Atualiza o status e a visibilidade do convidado quando o solicitante é o próprio convidado")
-        void updateEventGuest_updatesSuccessfully_whenRequesterIsTheGuestHimself() {
+        void allowsGuestToUpdateTheirOwnStatusAndVisibility() {
             Long guestId = 5L;
             EventGuest guest = mock(EventGuest.class);
-            UpdateGuestDTO dto = new UpdateGuestDTO(EnumGuestStatus.CANCELED, EnumGuestVisibility.PRIVATE);
-
             when(eventGuestRepository.findByIdAndEventId(guestId, eventId)).thenReturn(Optional.of(guest));
-            when(guest.getEvent()).thenReturn(event);
-            when(event.isOwner(requesterId)).thenReturn(false);
-            when(editorRepository.existsByEventIdAndUserId(event.getId(), requesterId)).thenReturn(false);
+            when(guest.getEventId()).thenReturn(eventId);
+            givenEventExists();
             when(guest.getUserId()).thenReturn(requesterId);
+            UpdateGuestDTO dto = new UpdateGuestDTO(EnumGuestStatus.CANCELED, EnumGuestVisibility.PRIVATE);
 
             guestService.updateEventGuest(eventId, guestId, requesterId, dto);
 
@@ -185,23 +181,46 @@ class GuestServiceTest {
         }
 
         @Test
-        @DisplayName("Lança AccessDeniedException quando o solicitante não é o gerente e nem o próprio convidado")
-        void updateEventGuest_throwsAccessDeniedException_whenRequesterHasNoPermission() {
+        void allowsManagerToUpdateAnotherGuest() {
             Long guestId = 5L;
             EventGuest guest = mock(EventGuest.class);
-            UpdateGuestDTO dto = new UpdateGuestDTO(EnumGuestStatus.CONFIRMED, EnumGuestVisibility.PUBLIC);
-
             when(eventGuestRepository.findByIdAndEventId(guestId, eventId)).thenReturn(Optional.of(guest));
-            when(guest.getEvent()).thenReturn(event);
-            when(event.isOwner(requesterId)).thenReturn(false);
-            when(editorRepository.existsByEventIdAndUserId(event.getId(), requesterId)).thenReturn(false);
-            when(guest.getUserId()).thenReturn(UUID.randomUUID()); // Outro usuário
+            when(guest.getEventId()).thenReturn(eventId);
+            givenEventExists();
+            when(guest.getUserId()).thenReturn(UUID.randomUUID());
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
 
-            assertThatThrownBy(() -> guestService.updateEventGuest(eventId, guestId, requesterId, dto))
-                    .isInstanceOf(AccessDeniedException.class)
-                    .hasMessage("Você não tem permissão para alterar os dados deste convidado.");
+            guestService.updateEventGuest(eventId, guestId, requesterId,
+                    new UpdateGuestDTO(EnumGuestStatus.CONFIRMED, null));
 
+            verify(guest).setStatus(EnumGuestStatus.CONFIRMED);
+            verify(guest, never()).setVisibility(any());
+            verify(eventGuestRepository).save(guest);
+        }
+
+        @Test
+        void deniesUpdateByUnrelatedUser() {
+            Long guestId = 5L;
+            EventGuest guest = mock(EventGuest.class);
+            when(eventGuestRepository.findByIdAndEventId(guestId, eventId)).thenReturn(Optional.of(guest));
+            when(guest.getEventId()).thenReturn(eventId);
+            givenEventExists();
+            when(guest.getUserId()).thenReturn(UUID.randomUUID());
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(false);
+
+            assertThatThrownBy(() -> guestService.updateEventGuest(eventId, guestId, requesterId,
+                    new UpdateGuestDTO(EnumGuestStatus.CONFIRMED, EnumGuestVisibility.PUBLIC)))
+                    .isInstanceOf(AccessDeniedException.class);
             verify(eventGuestRepository, never()).save(any());
+        }
+
+        @Test
+        void throwsWhenGuestDoesNotExist() {
+            when(eventGuestRepository.findByIdAndEventId(5L, eventId)).thenReturn(Optional.empty());
+            assertThatThrownBy(() -> guestService.updateEventGuest(eventId, 5L, requesterId,
+                    new UpdateGuestDTO(null, null)))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessage("Convidado não encontrado neste evento.");
         }
     }
 }

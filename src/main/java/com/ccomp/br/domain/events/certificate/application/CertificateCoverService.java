@@ -1,0 +1,118 @@
+package com.ccomp.br.domain.events.certificate.application;
+
+import com.ccomp.br.domain.events.certificate.persistence.EventCoverTemplate;
+import com.ccomp.br.domain.events.certificate.persistence.EventCoverTemplateRepository;
+import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
+import com.ccomp.br.domain.storage.external.StorageExternal;
+import com.ccomp.br.domain.storage.external.StorageKeyGenerator;
+import com.ccomp.br.shared.exceptions.AccessDeniedException;
+import com.ccomp.br.shared.exceptions.DomainException;
+import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.*;
+
+@Service
+public class CertificateCoverService {
+    private static final List<String> ALLOWED_CONTENT_TYPES =
+            List.of("image/png", "image/jpeg", "image/webp");
+
+    private final EventCoverTemplateRepository coverTemplateRepository;
+    private final CertificateFetcher certificateFetcher;
+    private final EventCache eventCache;
+    private final EventAccessPolicy accessPolicy;
+    private final StorageKeyGenerator storageKeyGenerator;
+    private final StorageExternal storageExternal;
+
+    public CertificateCoverService(EventCoverTemplateRepository coverTemplateRepository, CertificateFetcher certificateFetcher, EventCache eventCache, EventAccessPolicy accessPolicy, StorageKeyGenerator storageKeyGenerator, StorageExternal storageExternal) {
+        this.coverTemplateRepository = coverTemplateRepository;
+        this.certificateFetcher = certificateFetcher;
+        this.eventCache = eventCache;
+        this.accessPolicy = accessPolicy;
+        this.storageKeyGenerator = storageKeyGenerator;
+        this.storageExternal = storageExternal;
+    }
+
+    @Transactional
+    public StorageExternal.StoredFile loadCoverTemplate(long eventId, UUID userId) {
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        if (!accessPolicy.canView(event, userId))
+            throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+
+        return certificateFetcher.fetchCoverTemplate(eventId);
+    }
+
+    @Transactional
+    public void uploadCoverTemplate(long eventId, UUID userId, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new DomainException("Nenhum arquivo enviado.");
+        }
+
+        if (!ALLOWED_CONTENT_TYPES.contains(file.getContentType())) {
+            throw new DomainException("Tipo de arquivo não suportado. Utilize PNG, JPEG ou Webp.");
+        }
+
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        if (!accessPolicy.canEdit(event, userId))
+            throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+
+        String newKey = storageKeyGenerator.generate(
+                "events/%d/certificate-cover-template".formatted(eventId),
+                file.getOriginalFilename()
+        );
+        storageExternal.putObject(newKey, file);
+
+        Optional<EventCoverTemplate> coverTemplateOpt = coverTemplateRepository.findByEventId(eventId);
+
+        if(coverTemplateOpt.isEmpty()) {
+            coverTemplateRepository.save(
+                    EventCoverTemplate.builder()
+                            .eventId(eventId)
+                            .coverTemplateKey(newKey)
+                            .build()
+            );
+            return;
+        }
+
+        EventCoverTemplate coverTemplate = coverTemplateOpt.get();
+        String oldKey = coverTemplate.getCoverTemplateKey();
+        coverTemplate.setCoverTemplateKey(newKey);
+
+        coverTemplateRepository.save(coverTemplate);
+        storageExternal.deleteObject(oldKey);
+    }
+
+    /**
+     * Remove o fundo salvo do certificado do evento. Devolve {@code false} quando
+     * o evento nunca teve um fundo próprio (ou seja, já usa a imagem padrão).
+     */
+    @Transactional
+    public boolean deleteCoverTemplate(long eventId, UUID userId) {
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        if (!accessPolicy.canEdit(event, userId))
+            throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+
+        Optional<EventCoverTemplate> coverTemplateOpt = coverTemplateRepository.findByEventId(eventId);
+
+        if (coverTemplateOpt.isEmpty())
+            return false;
+
+        EventCoverTemplate coverTemplate = coverTemplateOpt.get();
+        String storageKey = coverTemplate.getCoverTemplateKey();
+
+        coverTemplateRepository.delete(coverTemplate);
+        storageExternal.deleteObject(storageKey);
+
+        return true;
+    }
+}
