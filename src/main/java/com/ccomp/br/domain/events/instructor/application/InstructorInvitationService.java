@@ -118,14 +118,14 @@ public class InstructorInvitationService {
             throw new DomainException("Convite inválido ou expirado.");
         }
 
-        UserDTO user = userManagement.findByEmailAddress(invitation.getEmailAddress())
+        UserDTO user = userManagement.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuário deve estar cadastrado no sistema."));
-        if (!user.isActive()) {
+
+        if (!user.isActive())
             throw new UserBlockedException("O usuário informado está inativo ou bloqueado.");
-        }
-        if (!user.id().equals(userId) || !invitation.isSameEmail(user.emailAddress())) {
+        if (!invitation.isSameEmail(user.emailAddress()))
             throw new AccessDeniedException("Este convite pertence a outra conta.");
-        }
+
 
         if (!accept) {
             invitation.reject();
@@ -162,6 +162,10 @@ public class InstructorInvitationService {
         InstructorInvitation invitation = invitationRepository.findById(invitationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Convite não encontrado."));
         assertCanManage(getEvent(invitation.getActivity()), requesterId);
+
+        if (!invitation.isSent())
+            throw new DomainException("Não é possível cancelar um convite que já foi respondido ou cancelado.");
+
         invitation.cancel();
         invitationRepository.save(invitation);
         return new MessageResponse("Convite cancelado com sucesso.");

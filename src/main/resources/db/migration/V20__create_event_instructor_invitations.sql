@@ -5,6 +5,7 @@ CREATE TABLE tb_event_instructors (
     status VARCHAR(20) NOT NULL DEFAULT 'CONFIRMED'
         CHECK (status IN ('CONFIRMED', 'CANCELED')),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    responded_at TIMESTAMP,
     CONSTRAINT fk_event_instructors_activity FOREIGN KEY (activity_id) REFERENCES tb_event_activities (id) ON DELETE CASCADE,
     CONSTRAINT uk_event_instructor_activity_user UNIQUE (activity_id, user_id)
 );

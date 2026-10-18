@@ -45,6 +45,9 @@ public class InstructorInvitation {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
+    @Column(name = "responded_at")
+    private LocalDateTime respondedAt;
+
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(expiresAt);
     }
@@ -72,11 +75,13 @@ public class InstructorInvitation {
     public void accept() {
         requireSent();
         status = EnumInstructorInvitationStatus.ACCEPTED;
+        respondedAt = LocalDateTime.now();
     }
 
     public void reject() {
         requireSent();
         status = EnumInstructorInvitationStatus.REJECTED;
+        respondedAt = LocalDateTime.now();
     }
 
     public void cancel() {

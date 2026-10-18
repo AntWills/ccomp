@@ -13,7 +13,9 @@ import com.ccomp.br.domain.events.instructor.persistence.EventInstructor;
 import com.ccomp.br.domain.events.instructor.persistence.EventInstructorRepository;
 import com.ccomp.br.domain.events.instructor.persistence.InstructorDslRepository;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
+import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
+import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.CursorUtils;
 import org.springframework.stereotype.Service;
@@ -94,5 +96,21 @@ public class InstructorService {
         EventActivity savedActivity = activityRepository.save(activity);
 
         return activityMapper.eventActivityToActivityDTO(savedActivity);
+    }
+
+    @Transactional
+    public MessageResponse cancelMyLink(UUID instructorId, Long activityId) {
+        EventInstructor instructor = instructorRepository.findByActivityIdAndUserId(activityId, instructorId)
+                .orElseThrow(() -> new AccessDeniedException(
+                        "Você não está vinculado como ministrante desta atividade."
+                ));
+
+        if (!instructor.isConfirmed()) {
+            throw new DomainException("Seu vínculo de ministrante já está cancelado.");
+        }
+
+        instructor.cancel();
+        instructorRepository.save(instructor);
+        return new MessageResponse("Seu vínculo como ministrante foi cancelado.");
     }
 }

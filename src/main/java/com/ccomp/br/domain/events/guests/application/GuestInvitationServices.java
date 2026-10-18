@@ -140,6 +140,9 @@ public class GuestInvitationServices {
         UserDTO userDTO = userManagement.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não cadastrado na plataforma"));
 
+        if (!userDTO.isActive())
+            throw new UserBlockedException("O usuário informado está inativo ou bloqueado.");
+
         if(!invitation.isSameEmail(userDTO.emailAddress()))
             throw new AccessDeniedException("Usuário não autorizado.");
 

@@ -55,6 +55,14 @@ public class InstructorController {
         );
     }
 
+    @DeleteMapping("/activities/{activityId}/instructors/me")
+    public ResponseEntity<MessageResponse> cancelMyInstructorLink(
+            @RequestAttribute("userId") UUID userId,
+            @PathVariable Long activityId
+    ) {
+        return ResponseEntity.ok(instructorService.cancelMyLink(userId, activityId));
+    }
+
     @PostMapping("/activities/{activityId}/instructors/invitations")
     public ResponseEntity<MessageResponse> invite(
             @RequestAttribute("userId") UUID userId,
