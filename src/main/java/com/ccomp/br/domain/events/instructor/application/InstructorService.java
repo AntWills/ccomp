@@ -9,6 +9,7 @@ import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.instructor.dto.InstructorCursor;
+import com.ccomp.br.domain.events.instructor.dto.EventInstructorDTO;
 import com.ccomp.br.domain.events.instructor.persistence.EventInstructor;
 import com.ccomp.br.domain.events.instructor.persistence.EventInstructorRepository;
 import com.ccomp.br.domain.events.instructor.persistence.InstructorDslRepository;
@@ -50,7 +51,7 @@ public class InstructorService {
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<EventInstructor> searchByEvent(
+    public CursorPage<EventInstructorDTO> searchByEvent(
             Long eventId,
             UUID requesterId,
             String cursor,
@@ -70,10 +71,21 @@ public class InstructorService {
         List<EventInstructor> instructors = instructorDslRepository
                 .findByEvent(eventId, decodedCursor, limit + 1);
 
-        return CursorUtils.buildPage(
+        CursorPage<EventInstructor> page = CursorUtils.buildPage(
                 instructors,
                 limit,
                 instructor -> new InstructorCursor(instructor.getId(), instructor.getCreatedAt())
+        );
+        return new CursorPage<>(
+                page.content().stream().map(instructor -> new EventInstructorDTO(
+                        instructor.getId(),
+                        instructor.getUserId(),
+                        instructor.getActivityId(),
+                        instructor.getStatus(),
+                        instructor.getCreatedAt()
+                )).toList(),
+                page.nextCursor(),
+                page.previousCursor()
         );
     }
 

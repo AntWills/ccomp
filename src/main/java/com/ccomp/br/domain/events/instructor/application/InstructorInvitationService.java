@@ -8,6 +8,7 @@ import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.instructor.external.InstructorInvitationMessageDTO;
 import com.ccomp.br.domain.events.instructor.external.message.InstructorInvitationChannel;
+import com.ccomp.br.domain.events.instructor.dto.InstructorInvitationDTO;
 import com.ccomp.br.domain.events.instructor.persistence.EventInstructor;
 import com.ccomp.br.domain.events.instructor.persistence.EventInstructorRepository;
 import com.ccomp.br.domain.events.instructor.persistence.InstructorInvitation;
@@ -151,10 +152,21 @@ public class InstructorInvitationService {
     }
 
     @Transactional(readOnly = true)
-    public List<InstructorInvitation> searchInvitations(UUID requesterId, Long activityId) {
+    public List<InstructorInvitationDTO> searchInvitations(UUID requesterId, Long activityId) {
         EventActivity activity = findActivity(activityId);
         assertCanManage(getEvent(activity), requesterId);
-        return invitationRepository.findAllByActivity_IdOrderByInvitedAtDesc(activityId);
+        return invitationRepository.findAllByActivity_IdOrderByInvitedAtDesc(activityId)
+                .stream()
+                .map(invitation -> new InstructorInvitationDTO(
+                        invitation.getId(),
+                        invitation.getActivity().getId(),
+                        invitation.getEmailAddress().getValue(),
+                        invitation.getStatus(),
+                        invitation.getInvitedAt(),
+                        invitation.getExpiresAt(),
+                        invitation.getRespondedAt()
+                ))
+                .toList();
     }
 
     @Transactional

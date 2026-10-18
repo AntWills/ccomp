@@ -185,6 +185,8 @@ SPRING_PROFILES_ACTIVE=prod
 # Dados da aplicação em produção
 FRONTEND_PASSWORD_RESET_URL=https://frontend.com/reset-password
 FRONTEND_ACCEPT_EDITOR_INVITE_URL=https://frontend.com/accept-editor-invite
+FRONTEND_ACCEPT_INSTRUCTOR_INVITE_URL=https://frontend.com/accept-instructor-invite
+FRONTEND_ACCEPT_GUEST_INVITE_URL=https://frontend.com/accept-event-invite
 PUBLIC_KEY=file:/app/keys/public.key
 PRIVITE_KEY=file:/app/keys/private.key
 

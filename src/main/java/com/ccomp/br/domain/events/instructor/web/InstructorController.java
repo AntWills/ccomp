@@ -4,8 +4,8 @@ import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
 import com.ccomp.br.domain.events.instructor.application.InstructorInvitationService;
 import com.ccomp.br.domain.events.instructor.application.InstructorService;
-import com.ccomp.br.domain.events.instructor.persistence.EventInstructor;
-import com.ccomp.br.domain.events.instructor.persistence.InstructorInvitation;
+import com.ccomp.br.domain.events.instructor.dto.EventInstructorDTO;
+import com.ccomp.br.domain.events.instructor.dto.InstructorInvitationDTO;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -54,7 +54,7 @@ public class InstructorController {
             @ApiResponse(responseCode = "404", description = "Evento não encontrado")
     })
     @GetMapping("/{eventId}/instructors")
-    public ResponseEntity<CursorPage<EventInstructor>> searchByEvent(
+    public ResponseEntity<CursorPage<EventInstructorDTO>> searchByEvent(
             @Parameter(description = "ID do evento", example = "1")
             @PathVariable Long eventId,
             @Parameter(description = "Cursor retornado pela página anterior")
@@ -153,7 +153,7 @@ public class InstructorController {
             @ApiResponse(responseCode = "404", description = "Atividade ou evento não encontrado")
     })
     @GetMapping("/activities/{activityId}/instructors/invitations")
-    public ResponseEntity<List<InstructorInvitation>> searchInvitations(
+    public ResponseEntity<List<InstructorInvitationDTO>> searchInvitations(
             @Parameter(description = "ID da atividade", example = "1")
             @PathVariable Long activityId,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt

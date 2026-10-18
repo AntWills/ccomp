@@ -2,7 +2,7 @@ package com.ccomp.br.domain.events.guests.web;
 
 import com.ccomp.br.domain.events.guests.application.GuestInvitationServices;
 import com.ccomp.br.domain.events.guests.dto.InviteRequestDTO;
-import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitation;
+import com.ccomp.br.domain.events.guests.dto.EventInvitationDTO;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -37,7 +37,7 @@ public class GuestInvitationController {
             @ApiResponse(responseCode = "403", description = "Acesso negado para visualizar convites deste evento"),
             @ApiResponse(responseCode = "404", description = "Evento não encontrado")
     })
-    public ResponseEntity<CursorPage<EventInvitation>> searchInvitations(
+    public ResponseEntity<CursorPage<EventInvitationDTO>> searchInvitations(
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long eventId,
             @RequestParam(required = false) String email,
@@ -47,7 +47,7 @@ public class GuestInvitationController {
         // Converte a string de email para o Value Object EmailAddress (caso exista na requisição)
         EmailAddress emailAddress = (email != null && !email.isBlank()) ? new EmailAddress(email) : null;
 
-        CursorPage<EventInvitation> response = guestInvitationServices.searchInvitations(
+        CursorPage<EventInvitationDTO> response = guestInvitationServices.searchInvitations(
                 extractUserId(jwt), emailAddress, eventId, cursor, pageSize
         );
         return ResponseEntity.ok(response);
