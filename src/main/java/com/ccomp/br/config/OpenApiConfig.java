@@ -43,7 +43,9 @@ public class OpenApiConfig {
         final String securitySchemeName = "bearerAuth";
 
         return new OpenAPI()
-                .servers(List.of(new Server().url("/")))
+                // A URL relative to the OpenAPI document keeps deployments mounted
+                // below a path prefix (for example /ccomp-api/) working.
+                .servers(List.of(new Server().url("./")))
                 .info(new Info()
                         .title("CCOMP API")
                         .version(apiVersion)

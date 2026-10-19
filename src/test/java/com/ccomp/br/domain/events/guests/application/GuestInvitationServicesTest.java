@@ -7,6 +7,7 @@ import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.domain.events.guests.dto.EventInvitationCursor;
+import com.ccomp.br.domain.events.guests.dto.EventInvitationDTO;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitation;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitationDslRepository;
@@ -94,7 +95,7 @@ class GuestInvitationServicesTest {
             try (MockedStatic<CursorUtils> cursorUtilsMock = mockStatic(CursorUtils.class)) {
                 EventInvitationCursor decodedCursor = mock(EventInvitationCursor.class);
                 EventInvitation invitation = mock(EventInvitation.class);
-                CursorPage<EventInvitation> expectedPage = mock(CursorPage.class);
+                CursorPage<EventInvitationDTO> expectedPage = mock(CursorPage.class);
 
                 when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
                 givenEventIsEditable();
@@ -102,7 +103,7 @@ class GuestInvitationServicesTest {
                 when(eventInvitationDspRepository.findAllWithCursor(emailAddress, eventId, decodedCursor, 20)).thenReturn(List.of(invitation));
                 cursorUtilsMock.when(() -> CursorUtils.buildPage(anyList(), anyInt(), any())).thenReturn(expectedPage);
 
-                CursorPage<EventInvitation> result = guestInvitationServices.searchInvitations(userId, emailAddress, eventId, "cursorRaw", 20);
+                CursorPage<EventInvitationDTO> result = guestInvitationServices.searchInvitations(userId, emailAddress, eventId, "cursorRaw", 20);
 
                 assertThat(result).isNotNull().isEqualTo(expectedPage);
                 verify(eventInvitationDspRepository).findAllWithCursor(emailAddress, eventId, decodedCursor, 20);
