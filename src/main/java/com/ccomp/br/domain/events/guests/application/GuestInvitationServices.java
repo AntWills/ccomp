@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.guests.application;
 
+import com.ccomp.br.config.rabbit.RabbitMQConfig;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
@@ -8,6 +9,9 @@ import com.ccomp.br.domain.events.shared.enums.EnumInvitationStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.guests.dto.EventInvitationCursor;
+import com.ccomp.br.domain.events.guests.dto.EventInvitationDTO;
+import com.ccomp.br.domain.events.guests.external.GuestInvitationMessageDTO;
+import com.ccomp.br.domain.events.guests.external.message.GuestInvitationChannel;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitation;
@@ -24,6 +28,7 @@ import com.ccomp.br.shared.exceptions.UserBlockedException;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.CursorUtils;
 import org.jspecify.annotations.Nullable;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +47,7 @@ public class GuestInvitationServices {
     private final EventAccessPolicy eventAccessPolicy;
     private final EventMapper eventMapper;
     private final UserManagement userManagement;
+    private final RabbitTemplate rabbitTemplate;
 
     public GuestInvitationServices(
             EventGuestRepository eventGuestRepository,
@@ -49,7 +55,7 @@ public class GuestInvitationServices {
             EventInvitationDslRepository eventInvitationDspRepository,
             EventRepository eventRepository, EventCache eventCache,
             EventAccessPolicy eventAccessPolicy, EventMapper eventMapper,
-            UserManagement userManagement) {
+            UserManagement userManagement, RabbitTemplate rabbitTemplate) {
         this.eventGuestRepository = eventGuestRepository;
         this.eventInvitationRepository = eventInvitationRepository;
         this.eventInvitationDspRepository = eventInvitationDspRepository;
@@ -58,10 +64,11 @@ public class GuestInvitationServices {
         this.eventAccessPolicy = eventAccessPolicy;
         this.eventMapper = eventMapper;
         this.userManagement = userManagement;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<EventInvitation> searchInvitations(
+    public CursorPage<EventInvitationDTO> searchInvitations(
             UUID userId, @Nullable EmailAddress emailAddress, Long eventId, String cursor, int pageSize) {
         int finalPageSize = Math.min(pageSize, 50);
         EventDTO event = eventCache.findById(eventId)
@@ -74,15 +81,31 @@ public class GuestInvitationServices {
         List<EventInvitation> results = eventInvitationDspRepository
                 .findAllWithCursor(emailAddress, eventId, cursorDecoded, finalPageSize);
 
-        return CursorUtils.buildPage(
+        CursorPage<EventInvitation> page = CursorUtils.buildPage(
                 results,
                 finalPageSize,
                 ei -> new EventInvitationCursor(
                         ei.getId(), ei.getInvitedAt()
                 )
         );
+        return new CursorPage<>(
+                page.content().stream().map(invitation -> new EventInvitationDTO(
+                        invitation.getId(),
+                        invitation.getCode(),
+                        invitation.getEventId(),
+                        invitation.getUserId(),
+                        invitation.getEmailAddress().getValue(),
+                        invitation.getStatus(),
+                        invitation.getInvitedAt(),
+                        invitation.getExpiresAt(),
+                        invitation.getAcceptedAt()
+                )).toList(),
+                page.nextCursor(),
+                page.previousCursor()
+        );
     }
 
+    @Transactional
     public MessageResponse invite(UUID userId, Long eventId, EmailAddress emailAddress) {
         Event event =  eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
@@ -127,6 +150,12 @@ public class GuestInvitationServices {
 
         eventInvitationRepository.save(invitation);
 
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE_NAME,
+                GuestInvitationChannel.ROUTING,
+                new GuestInvitationMessageDTO(event.getId(), event.getTitle(), invitation.getCode(), emailAddress)
+        );
+
         return new MessageResponse("Um e-mail de convite foi enviado.");
     }
 
@@ -139,6 +168,9 @@ public class GuestInvitationServices {
 
         UserDTO userDTO = userManagement.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não cadastrado na plataforma"));
+
+        if (!userDTO.isActive())
+            throw new UserBlockedException("O usuário informado está inativo ou bloqueado.");
 
         if(!invitation.isSameEmail(userDTO.emailAddress()))
             throw new AccessDeniedException("Usuário não autorizado.");

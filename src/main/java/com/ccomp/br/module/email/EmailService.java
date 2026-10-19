@@ -33,8 +33,8 @@ public class EmailService {
             log.info("E-mail enviado com sucesso para {}", dto.to().getValue());
 
         } catch (MessagingException | MailException e) {
-            log.error("O envio de e-mail para {} não foi possível!", dto.to().getValue());
-            log.error(e.getMessage(), e);
+            log.error("O envio de e-mail para {} não foi possível!", dto.to().getValue(), e);
+            throw new IllegalStateException("Não foi possível enviar o e-mail.", e);
         }
     }
 }

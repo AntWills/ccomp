@@ -2,7 +2,7 @@ package com.ccomp.br.domain.events.guests.web;
 
 import com.ccomp.br.domain.events.guests.application.GuestInvitationServices;
 import com.ccomp.br.domain.events.guests.dto.InviteRequestDTO;
-import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitation;
+import com.ccomp.br.domain.events.guests.dto.EventInvitationDTO;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -13,6 +13,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -35,8 +37,8 @@ public class GuestInvitationController {
             @ApiResponse(responseCode = "403", description = "Acesso negado para visualizar convites deste evento"),
             @ApiResponse(responseCode = "404", description = "Evento não encontrado")
     })
-    public ResponseEntity<CursorPage<EventInvitation>> searchInvitations(
-            @Parameter(hidden = true) @RequestAttribute("userId") UUID userId,
+    public ResponseEntity<CursorPage<EventInvitationDTO>> searchInvitations(
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long eventId,
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String cursor,
@@ -45,7 +47,9 @@ public class GuestInvitationController {
         // Converte a string de email para o Value Object EmailAddress (caso exista na requisição)
         EmailAddress emailAddress = (email != null && !email.isBlank()) ? new EmailAddress(email) : null;
 
-        CursorPage<EventInvitation> response = guestInvitationServices.searchInvitations(userId, emailAddress, eventId, cursor, pageSize);
+        CursorPage<EventInvitationDTO> response = guestInvitationServices.searchInvitations(
+                extractUserId(jwt), emailAddress, eventId, cursor, pageSize
+        );
         return ResponseEntity.ok(response);
     }
 
@@ -56,12 +60,12 @@ public class GuestInvitationController {
             @ApiResponse(responseCode = "403", description = "Acesso negado para gerenciar o evento")
     })
     public ResponseEntity<MessageResponse> inviteUser(
-            @Parameter(hidden = true) @RequestAttribute("userId") UUID userId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long eventId,
             @Valid @RequestBody InviteRequestDTO request
     ) {
         EmailAddress emailAddress = new EmailAddress(request.email());
-        MessageResponse response = guestInvitationServices.invite(userId, eventId, emailAddress);
+        MessageResponse response = guestInvitationServices.invite(extractUserId(jwt), eventId, emailAddress);
         return ResponseEntity.ok(response);
     }
 
@@ -74,12 +78,12 @@ public class GuestInvitationController {
             @ApiResponse(responseCode = "404", description = "Código de convite não encontrado")
     })
     public ResponseEntity<MessageResponse> replyToInvite(
-            @Parameter(hidden = true) @RequestAttribute("userId") UUID userId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID code,
             @Parameter(description = "Define se o convite será aceito (true) ou recusado (false). O valor padrão é true.")
             @RequestParam(defaultValue = "true") boolean accept
     ) {
-        MessageResponse response = guestInvitationServices.acceptInvite(userId, code, accept);
+        MessageResponse response = guestInvitationServices.acceptInvite(extractUserId(jwt), code, accept);
         return ResponseEntity.ok(response);
     }
 
@@ -91,10 +95,14 @@ public class GuestInvitationController {
             @ApiResponse(responseCode = "404", description = "Convite não encontrado")
     })
     public ResponseEntity<MessageResponse> cancelInvitation(
-            @Parameter(hidden = true) @RequestAttribute("userId") UUID userId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long invitationId
     ) {
-        MessageResponse response = guestInvitationServices.cancelInvitation(userId, invitationId);
+        MessageResponse response = guestInvitationServices.cancelInvitation(extractUserId(jwt), invitationId);
         return ResponseEntity.ok(response);
+    }
+
+    private UUID extractUserId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
     }
 }

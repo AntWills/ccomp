@@ -2,8 +2,8 @@ package com.ccomp.br.domain.events.guests.web;
 
 import com.ccomp.br.domain.events.guests.application.GuestService;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
-import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
-import com.ccomp.br.domain.events.guests.persistence.EventGuest;
+import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
+import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,7 +30,7 @@ public class GuestController {
 
     @GetMapping("/{eventId}/guests")
     @Operation(summary = "Buscar convidados do evento", description = "Retorna de forma paginada (cursor) os convidados do evento.")
-    public ResponseEntity<CursorPage<EventGuest>> searchEventGuests(
+    public ResponseEntity<CursorPage<EventGuestDTO>> searchEventGuests(
             @Parameter(hidden = true) @RequestAttribute(value = "userId", required = false) UUID userId,
             @PathVariable Long eventId,
             @RequestParam(required = false) String cursor,
@@ -41,7 +41,7 @@ public class GuestController {
 
     @GetMapping("/activities/{activityId}/guests")
     @Operation(summary = "Buscar convidados da atividade", description = "Retorna de forma paginada (cursor) os convidados vinculados à atividade.")
-    public ResponseEntity<CursorPage<ActivityGuest>> searchActivityGuests(
+    public ResponseEntity<CursorPage<ActivityGuestDTO>> searchActivityGuests(
             @Parameter(hidden = true) @RequestAttribute(value = "userId", required = false) UUID userId,
             @PathVariable Long activityId,
             @RequestParam(required = false) String cursor,
