@@ -12,6 +12,10 @@ import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
+import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
+import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
+import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
 
 import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
@@ -48,6 +52,12 @@ public class ActivityServicesTest {
     private EventActivityRepository activityRepository;
 
     @Mock
+    private EventActivityDslRepository activityDslRepository;
+
+    @Mock
+    private ActivityCache activityCache;
+
+    @Mock
     private ActivityMapper activityMapper;
 
     @InjectMocks
@@ -77,26 +87,6 @@ public class ActivityServicesTest {
 
         @Test
         @DisplayName("Cria atividade com sucesso quando o usuário tem permissão (é editor)")
-        void createActivity_returnsActivityDTO_whenUserIsOwner() {
-            CreateActivityDTO request = new CreateActivityDTO("Palestra Spring Boot", "Descrição da palestra");
-            ActivityDTO expectedDTO = mock(ActivityDTO.class);
-            EventActivity savedActivity = mock(EventActivity.class);
-
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(eventDTO);
-            when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
-            when(activityRepository.save(any(EventActivity.class))).thenReturn(savedActivity);
-            when(activityMapper.eventActivityToActivityDTO(savedActivity)).thenReturn(expectedDTO);
-
-            ActivityDTO response = activityServices.createActivity(userId, eventId, request);
-
-            assertThat(response).isNotNull().isEqualTo(expectedDTO);
-            verify(activityRepository).save(any(EventActivity.class));
-            verify(activityMapper).eventActivityToActivityDTO(savedActivity);
-        }
-
-        @Test
-        @DisplayName("Cria atividade com sucesso quando o usuário tem permissão (é editor)")
         void createActivity_returnsActivityDTO_whenUserHasPermission() {
             CreateActivityDTO request = new CreateActivityDTO("Palestra Spring Boot", "Descrição da palestra");
             ActivityDTO expectedDTO = mock(ActivityDTO.class);
@@ -113,6 +103,7 @@ public class ActivityServicesTest {
             assertThat(response).isNotNull().isEqualTo(expectedDTO);
             verify(activityRepository).save(any(EventActivity.class));
             verify(activityMapper).eventActivityToActivityDTO(savedActivity);
+            verify(activityCache).evictEventLists();
         }
 
         @Test
@@ -128,6 +119,17 @@ public class ActivityServicesTest {
                     .isInstanceOf(AccessDeniedException.class)
                     .hasMessage("O usuario não tem acesso a este recurso.");
 
+            verify(activityRepository, never()).save(any());
+        }
+
+        @Test
+        void createActivity_throwsNotFound_whenEventDoesNotExist() {
+            when(eventRepository.findById(eventId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> activityServices.createActivity(userId, eventId,
+                    new CreateActivityDTO("Palestra", "Descrição")))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessage("Evento não encontrado.");
             verify(activityRepository, never()).save(any());
         }
     }
@@ -158,6 +160,7 @@ public class ActivityServicesTest {
             assertThat(response).isNotNull().isEqualTo(expectedDTO);
             verify(activityMapper).updateEventActivityFromRequest(request, existingActivity);
             verify(activityRepository).save(existingActivity);
+            verify(activityCache).evict(existingActivity);
         }
 
         @Test
@@ -174,6 +177,19 @@ public class ActivityServicesTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessage("Atividade não existe.");
 
+            verify(activityRepository, never()).save(any());
+        }
+
+        @Test
+        void updateActivity_throwsAccessDenied_whenUserCannotEditEvent() {
+            UpdateActivityDTO request = UpdateActivityDTO.builder().title("Novo título").build();
+            when(activityRepository.findById(activityId)).thenReturn(Optional.of(existingActivity));
+            when(existingActivity.getEventId()).thenReturn(eventId);
+            when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
+            when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(false);
+
+            assertThatThrownBy(() -> activityServices.updateActivity(userId, activityId, request))
+                    .isInstanceOf(AccessDeniedException.class);
             verify(activityRepository, never()).save(any());
         }
     }
@@ -193,6 +209,7 @@ public class ActivityServicesTest {
             activityServices.deleteActivity(userId, activityId);
 
             verify(activityRepository).deleteById(activityId);
+            verify(activityCache).evict(existingActivity);
         }
 
         @Test
@@ -208,6 +225,55 @@ public class ActivityServicesTest {
                     .hasMessage("O usuario não tem acesso a este recurso.");
 
             verify(activityRepository, never()).deleteById(anyLong());
+        }
+
+        @Test
+        void deleteActivity_throwsNotFound_whenActivityDoesNotExist() {
+            when(activityRepository.findById(activityId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> activityServices.deleteActivity(userId, activityId))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessage("Atividade não existe.");
+            verify(activityRepository, never()).deleteById(anyLong());
+        }
+    }
+
+    @Nested
+    @DisplayName("Search Activities - Busca paginada")
+    class SearchActivities {
+        @Test
+        void searchByCursor_returnsPage_whenUserCanViewEvent() {
+            EventActivityDTO activity = new EventActivityDTO(activityId, eventId, "Palestra", null, 1L,
+                    null, null, null, null, null, null, null);
+            when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
+            when(eventAccessPolicy.canView(eventDTO, userId)).thenReturn(true);
+            when(activityCache.findAllByEventIdWithCursor(eventId, null, 51)).thenReturn(java.util.List.of(activity));
+
+            var page = activityServices.searchByCursor(eventId, null, userId);
+
+            assertThat(page.content()).containsExactly(activity);
+            assertThat(page.nextCursor()).isNull();
+            verify(activityCache).findAllByEventIdWithCursor(eventId, null, 51);
+        }
+
+        @Test
+        void searchByCursor_throwsNotFound_whenEventDoesNotExist() {
+            when(eventCache.findById(eventId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> activityServices.searchByCursor(eventId, null, userId))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessage("Evento não encontrado.");
+            verifyNoInteractions(activityCache);
+        }
+
+        @Test
+        void searchByCursor_throwsAccessDenied_whenUserCannotViewEvent() {
+            when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
+            when(eventAccessPolicy.canView(eventDTO, userId)).thenReturn(false);
+
+            assertThatThrownBy(() -> activityServices.searchByCursor(eventId, null, userId))
+                    .isInstanceOf(AccessDeniedException.class);
+            verifyNoInteractions(activityCache);
         }
     }
 }
