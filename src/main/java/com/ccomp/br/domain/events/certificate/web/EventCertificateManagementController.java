@@ -32,89 +32,19 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/events")
-@Tag(name = "events/certificate (Certificados)",
-        description = "Geração e prévia de certificados do evento e de atividades, além da gestão dos templates")
-public class EventCertificateController {
+@Tag(name = "events/certificate/management (Gestão de certificados)",
+        description = "Consulta e edição dos templates e fundos de certificados por gestores e editores do evento")
+public class EventCertificateManagementController {
     private final CertificateCoverService certificateCoverService;
     private final CertificateBoxServices certificateBoxServices;
-    private final CertificateServices certificateServices;
     private final ActivityCertificateBoxServices activityCertificateBoxServices;
-    private final CertificateValidatorService certificateValidatorService;
 
-    public EventCertificateController(CertificateCoverService certificateCoverService,
+    public EventCertificateManagementController(CertificateCoverService certificateCoverService,
                                       CertificateBoxServices certificateBoxServices,
-                                      CertificateServices certificateServices,
-                                      ActivityCertificateBoxServices activityCertificateBoxServices,
-                                      CertificateValidatorService certificateValidatorService) {
+                                      ActivityCertificateBoxServices activityCertificateBoxServices) {
         this.certificateCoverService = certificateCoverService;
         this.certificateBoxServices = certificateBoxServices;
-        this.certificateServices = certificateServices;
         this.activityCertificateBoxServices = activityCertificateBoxServices;
-        this.certificateValidatorService = certificateValidatorService;
-    }
-
-    @Operation(
-            summary = "Gerar certificado do evento",
-            description = "Gera o certificado em PNG usando o fundo, as caixas e as variáveis configuradas para o evento. " +
-                    "Requer acesso de visualização do evento."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Certificado PNG gerado",
-                    content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
-            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de visualização do evento",
-                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Evento não encontrado",
-                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
-    })
-    @GetMapping(value = "/{eventId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<Resource> buildCertificateFromEvent(
-            @PathVariable Long eventId,
-            @AuthenticationPrincipal @Nullable Jwt jwt
-    ) {
-        StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromEvent(eventId, extractUserId(jwt));
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(certificate.contentType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"certificado-evento-%d.png\"".formatted(eventId))
-                .body(certificate.resource());
-    }
-
-    @Operation(
-            summary = "Gerar certificado de atividade",
-            description = "Gera o certificado em PNG da atividade para o usuário autenticado, usando o fundo do evento " +
-                    "e o template de caixas compartilhado por suas atividades. " +
-                    "A autorização é a própria inscrição na atividade com check-in realizado, " +
-                    "não sendo necessária permissão de visualização do evento."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Certificado PNG gerado",
-                    content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
-            @ApiResponse(responseCode = "400", description = "Check-in na atividade não realizado",
-                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Usuário não autenticado",
-                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Atividade não encontrada ou usuário não inscrito",
-                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
-    })
-    @GetMapping(value = "/activities/{activityId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<Resource> buildCertificateFromActivity(
-            @PathVariable Long activityId,
-            @AuthenticationPrincipal @Nullable Jwt jwt
-    ) {
-        StorageExternal.StoredFile certificate =
-                certificateServices.buildCertificateFromActivity(activityId, extractUserId(jwt));
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(certificate.contentType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"certificado-atividade-%d.png\"".formatted(activityId))
-                .body(certificate.resource());
     }
 
     @Operation(
@@ -249,55 +179,6 @@ public class EventCertificateController {
         var cover = certificateCoverService.loadCoverTemplate(eventId, userId);
         var template = activityCertificateBoxServices.loadBoxTemplate(eventId, userId);
         return renderPreview(cover, template.getBoxes(), mockCertificateVariables());
-    }
-
-    @Operation(
-            summary = "Validar certificado pelo código",
-            description = "Rota pública. Recebe o código de validação impresso no certificado (variável " +
-                    "{validacao.codigo}) e devolve os dados correspondentes, ou 404 se o código não existir."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Certificado válido",
-                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = CertificateValidationResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Código não encontrado",
-                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
-    })
-    @GetMapping(value = "/certificates/validate/{code}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<CertificateValidationResponse> validateCertificate(@PathVariable String code) {
-        return ResponseEntity.ok(certificateValidatorService.validate(code));
-    }
-
-    private ResponseEntity<Resource> renderPreview(StorageExternal.StoredFile cover,
-                                                   List<BoxElementDTO> boxes,
-                                                   Map<String, String> variables) {
-        StorageExternal.StoredFile result = Certificate.builder()
-                .coverImage(cover)
-                .boxElements(boxes.stream().map(BoxElementDTO::toDomain).toList())
-                .toReplace(variables)
-                .build()
-                .generate();
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_PNG)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"certificado-previa.png\"")
-                .body(result.resource());
-    }
-
-    private Map<String, String> mockCertificateVariables() {
-        return Map.ofEntries(
-                Map.entry("{participante.nome}", "Nome de Exemplo"),
-                Map.entry("{evento.title}", "Evento de Exemplo"),
-                Map.entry("{evento.local}", "Auditório de Exemplo"),
-                Map.entry("{evento.carga_horaria}", "20 horas"),
-                Map.entry("{atividade.nome}", "Atividade de Exemplo"),
-                Map.entry("{atividade.local}", "Sala de Exemplo"),
-                Map.entry("{atividade.carga_horaria}", "4 horas"),
-                Map.entry("{evento.organizacao}", "Organização de Exemplo"),
-                Map.entry("{validacao.codigo}", "ABC123"),
-                Map.entry("{validacao.url}", "https://exemplo.invalid/validar/ABC123")
-        );
     }
 
     @Operation(
@@ -442,6 +323,37 @@ public class EventCertificateController {
     ) {
         activityCertificateBoxServices.saveBoxTemplate(eventId, extractUserId(jwt), request.boxes());
         return ResponseEntity.ok(new MessageResponse("Template de caixas do certificado de atividade salvo com sucesso."));
+    }
+
+    private ResponseEntity<Resource> renderPreview(StorageExternal.StoredFile cover,
+                                                   List<BoxElementDTO> boxes,
+                                                   Map<String, String> variables) {
+        StorageExternal.StoredFile result = Certificate.builder()
+                .coverImage(cover)
+                .boxElements(boxes.stream().map(BoxElementDTO::toDomain).toList())
+                .toReplace(variables)
+                .build()
+                .generate();
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"certificado-previa.png\"")
+                .body(result.resource());
+    }
+
+    private Map<String, String> mockCertificateVariables() {
+        return Map.ofEntries(
+                Map.entry("{participante.nome}", "Nome de Exemplo"),
+                Map.entry("{evento.title}", "Evento de Exemplo"),
+                Map.entry("{evento.local}", "Auditório de Exemplo"),
+                Map.entry("{evento.carga_horaria}", "20 horas"),
+                Map.entry("{atividade.nome}", "Atividade de Exemplo"),
+                Map.entry("{atividade.local}", "Sala de Exemplo"),
+                Map.entry("{atividade.carga_horaria}", "4 horas"),
+                Map.entry("{evento.organizacao}", "Organização de Exemplo"),
+                Map.entry("{validacao.codigo}", "ABC123"),
+                Map.entry("{validacao.url}", "https://exemplo.invalid/validar/ABC123")
+        );
     }
 
     private @Nullable UUID extractUserId(@Nullable Jwt jwt) {
