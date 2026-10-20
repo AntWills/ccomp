@@ -2,6 +2,7 @@ package com.ccomp.br.domain.events.activities.application;
 
 import com.ccomp.br.domain.events.activities.dto.*;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
+import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
@@ -35,13 +36,15 @@ public class ActivitiesServices {
     private final EventActivityRepository activityRepository;
     private final EventActivityDslRepository activityDslRepository;
     private final ActivityMapper activityMapper;
+    private final ActivityCache activityCache;
 
     public ActivitiesServices(EventRepository eventRepository,
                               EventAccessPolicy eventAccessPolicy,
                               EventCache eventCache, EventMapper eventMapper,
                               EventActivityRepository activityRepository,
                               EventActivityDslRepository activityDslRepository,
-                              ActivityMapper activityMapper) {
+                              ActivityMapper activityMapper,
+                              ActivityCache activityCache) {
         this.eventRepository = eventRepository;
         this.eventAccessPolicy = eventAccessPolicy;
         this.eventCache = eventCache;
@@ -49,6 +52,7 @@ public class ActivitiesServices {
         this.activityRepository = activityRepository;
         this.activityDslRepository = activityDslRepository;
         this.activityMapper = activityMapper;
+        this.activityCache = activityCache;
     }
 
     @Transactional(readOnly = true)
@@ -61,7 +65,7 @@ public class ActivitiesServices {
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         EventActivityCursor cursorDecoded = CursorUtils.decode(cursor, EventActivityCursor.class);
-        List<EventActivityDTO> results = activityDslRepository
+        List<EventActivityDTO> results = activityCache
                 .findAllByEventIdWithCursor(eventId, cursorDecoded, pageSize + 1);
 
         return CursorUtils.buildPage(
@@ -88,6 +92,7 @@ public class ActivitiesServices {
                 .build();
 
         EventActivity activitySaved = activityRepository.save(activity);
+        activityCache.evictEventLists();
 
         return activityMapper.eventActivityToActivityDTO(activitySaved);
     }
@@ -106,6 +111,7 @@ public class ActivitiesServices {
         activityMapper.updateEventActivityFromRequest(request, activity);
         
         EventActivity activitySaved = activityRepository.save(activity);
+        activityCache.evict(activitySaved);
         
         return activityMapper.eventActivityToActivityDTO(activitySaved);
     }
@@ -122,5 +128,6 @@ public class ActivitiesServices {
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         activityRepository.deleteById(activityId);
+        activityCache.evict(activity);
     }
 }

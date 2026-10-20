@@ -1,6 +1,8 @@
 package com.ccomp.br.domain.events.instructor.application;
 
 import com.ccomp.br.config.rabbit.RabbitMQConfig;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
+import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
@@ -33,6 +35,7 @@ import java.util.UUID;
 
 @Service
 public class InstructorInvitationService {
+    private final ActivityCache activityCache;
     private final EventActivityRepository activityRepository;
     private final EventInstructorRepository instructorRepository;
     private final InstructorInvitationRepository invitationRepository;
@@ -42,6 +45,7 @@ public class InstructorInvitationService {
     private final RabbitTemplate rabbitTemplate;
 
     public InstructorInvitationService(
+            ActivityCache activityCache,
             EventActivityRepository activityRepository,
             EventInstructorRepository instructorRepository,
             InstructorInvitationRepository invitationRepository,
@@ -50,6 +54,7 @@ public class InstructorInvitationService {
             UserManagement userManagement,
             RabbitTemplate rabbitTemplate
     ) {
+        this.activityCache = activityCache;
         this.activityRepository = activityRepository;
         this.instructorRepository = instructorRepository;
         this.invitationRepository = invitationRepository;
@@ -61,7 +66,8 @@ public class InstructorInvitationService {
 
     @Transactional
     public MessageResponse invite(UUID requesterId, Long activityId, EmailAddress emailAddress) {
-        EventActivity activity = findActivity(activityId);
+        EventActivity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
         EventDTO event = getEvent(activity);
         assertCanManage(event, requesterId);
 
@@ -153,7 +159,8 @@ public class InstructorInvitationService {
 
     @Transactional(readOnly = true)
     public List<InstructorInvitationDTO> searchInvitations(UUID requesterId, Long activityId) {
-        EventActivity activity = findActivity(activityId);
+        ActivityDTO activity = activityCache.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
         assertCanManage(getEvent(activity), requesterId);
         return invitationRepository.findAllByActivity_IdOrderByInvitedAtDesc(activityId)
                 .stream()
@@ -183,9 +190,9 @@ public class InstructorInvitationService {
         return new MessageResponse("Convite cancelado com sucesso.");
     }
 
-    private EventActivity findActivity(Long activityId) {
-        return activityRepository.findById(activityId)
-                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+    private EventDTO getEvent(ActivityDTO activity) {
+        return eventCache.findById(activity.eventId())
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
     }
 
     private EventDTO getEvent(EventActivity activity) {

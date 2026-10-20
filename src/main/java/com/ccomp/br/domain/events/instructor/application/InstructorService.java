@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.instructor.application;
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
+import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
@@ -33,6 +34,7 @@ public class InstructorService {
     private final EventCache eventCache;
     private final EventAccessPolicy eventAccessPolicy;
     private final ActivityMapper activityMapper;
+    private final ActivityCache activityCache;
 
     public InstructorService(
             EventActivityRepository activityRepository,
@@ -40,7 +42,8 @@ public class InstructorService {
             InstructorDslRepository instructorDslRepository,
             EventCache eventCache,
             EventAccessPolicy eventAccessPolicy,
-            ActivityMapper activityMapper
+            ActivityMapper activityMapper,
+            ActivityCache activityCache
     ) {
         this.activityRepository = activityRepository;
         this.instructorRepository = instructorRepository;
@@ -48,6 +51,7 @@ public class InstructorService {
         this.eventCache = eventCache;
         this.eventAccessPolicy = eventAccessPolicy;
         this.activityMapper = activityMapper;
+        this.activityCache = activityCache;
     }
 
     @Transactional(readOnly = true)
@@ -106,6 +110,7 @@ public class InstructorService {
 
         activityMapper.updateEventActivityFromRequest(request, activity);
         EventActivity savedActivity = activityRepository.save(activity);
+        activityCache.evict(savedActivity);
 
         return activityMapper.eventActivityToActivityDTO(savedActivity);
     }

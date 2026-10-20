@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.events.certificate.application;
 
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
-import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
+import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
 import com.ccomp.br.domain.events.certificate.persistence.EventCertificateValidationCode;
 import com.ccomp.br.domain.events.certificate.persistence.EventCertificateValidationCodeRepository;
@@ -24,18 +24,18 @@ public class CertificateValidatorService {
 
     private final EventCertificateValidationCodeRepository validationCodeRepository;
     private final EventCache eventCache;
-    private final EventActivityRepository activityRepository;
+    private final ActivityCache activityCache;
     private final EventActivityDslRepository activityDslRepository;
     private final UserManagement userManagement;
 
     public CertificateValidatorService(EventCertificateValidationCodeRepository validationCodeRepository,
                                        EventCache eventCache,
-                                       EventActivityRepository activityRepository,
+                                       ActivityCache activityCache,
                                        EventActivityDslRepository activityDslRepository,
                                        UserManagement userManagement) {
         this.validationCodeRepository = validationCodeRepository;
         this.eventCache = eventCache;
-        this.activityRepository = activityRepository;
+        this.activityCache = activityCache;
         this.activityDslRepository = activityDslRepository;
         this.userManagement = userManagement;
     }
@@ -52,15 +52,15 @@ public class CertificateValidatorService {
                 .orElseThrow(() -> new DomainException("O evento vinculado não existe."));
 
         if (validationCode.getActivityId() != null) {
-            var activity = activityRepository.findById(validationCode.getActivityId())
+            var activity = activityCache.findById(validationCode.getActivityId())
                     .orElseThrow(() -> new DomainException("A atividade vinculada não existe."));
 
             return new CertificateValidationResponse(validationCode.getCode(),
                     validationCode.getUserId(),
                     userDto.name(),
                     eventDto.title(),
-                    activity.getTitle(),
-                    formatWorkloadHours(activity.getWorkloadHours()),
+                    activity.title(),
+                    formatWorkloadHours(activity.workloadHours()),
                     validationCode.getCreatedAt());
         }
 

@@ -1,7 +1,6 @@
 package com.ccomp.br.domain.events.guests.application;
 
-import com.ccomp.br.domain.events.activities.persistence.EventActivity;
-import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
+import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
@@ -29,20 +28,20 @@ public class GuestService {
 
     private final EventGuestRepository eventGuestRepository;
     private final EventCache eventCache;
-    private final EventActivityRepository activityRepository;
+    private final ActivityCache activityCache;
     private final EventAccessPolicy eventAccessPolicy;
     private final EventGuestDslRepository eventGuestDslRepository;
     private final ActivityGuestDslRepository activityGuestDslRepository;
 
     public GuestService(EventGuestRepository eventGuestRepository,
                         EventCache eventCache,
-                        EventActivityRepository activityRepository,
+                        ActivityCache activityCache,
                         EventAccessPolicy eventAccessPolicy,
                         EventGuestDslRepository eventGuestDslRepository,
                         ActivityGuestDslRepository activityGuestDslRepository) {
         this.eventGuestRepository = eventGuestRepository;
         this.eventCache = eventCache;
-        this.activityRepository = activityRepository;
+        this.activityCache = activityCache;
         this.eventAccessPolicy = eventAccessPolicy;
         this.eventGuestDslRepository = eventGuestDslRepository;
         this.activityGuestDslRepository = activityGuestDslRepository;
@@ -84,10 +83,10 @@ public class GuestService {
     @Transactional(readOnly = true)
     public CursorPage<ActivityGuestDTO> searchActivityGuests(Long activityId, UUID requesterId, String cursorRaw, int pageSize) {
         int limit = Math.min(pageSize, 50);
-        EventActivity activity = activityRepository.findById(activityId)
+        var activity = activityCache.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
 
-        EventDTO event = eventCache.findById(activity.getEventId())
+        EventDTO event = eventCache.findById(activity.eventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         boolean isManager = eventAccessPolicy.canEdit(event, requesterId);
 
