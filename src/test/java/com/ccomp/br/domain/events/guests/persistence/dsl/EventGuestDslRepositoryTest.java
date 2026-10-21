@@ -5,6 +5,7 @@ import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
+import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
@@ -83,23 +84,23 @@ class EventGuestDslRepositoryTest {
         entityManager.clear();
 
         // Ação: Busca da Primeira Página como Gerente (limite = 2)
-        List<EventGuest> page1 = eventGuestDslRepository.findGuestsWithCursor(event.getId(), true, null, 2);
+        List<EventGuestDTO> page1 = eventGuestDslRepository.findGuestsWithCursor(event.getId(), true, null, 2);
 
         // Asserções Página 1 (deve trazer os 2 mais recentes: guest3 depois guest2)
         assertThat(page1).hasSize(2);
-        assertThat(page1.get(0).getId()).isEqualTo(guest3.getId());
-        assertThat(page1.get(1).getId()).isEqualTo(guest2.getId());
+        assertThat(page1.get(0).id()).isEqualTo(guest3.getId());
+        assertThat(page1.get(1).id()).isEqualTo(guest2.getId());
 
         // Construção do cursor com base no último item retornado
-        EventGuest lastGuest = page1.getLast();
-        GuestCursor cursor = new GuestCursor(lastGuest.getId(), lastGuest.getCreatedAt());
+        EventGuestDTO lastGuest = page1.getLast();
+        GuestCursor cursor = new GuestCursor(lastGuest.id(), lastGuest.createdAt());
 
         // Ação: Busca da Segunda Página via Cursor (limite = 2)
-        List<EventGuest> page2 = eventGuestDslRepository.findGuestsWithCursor(event.getId(), true, cursor, 2);
+        List<EventGuestDTO> page2 = eventGuestDslRepository.findGuestsWithCursor(event.getId(), true, cursor, 2);
 
         // Asserções Página 2 (deve trazer o mais antigo: guest1)
         assertThat(page2).hasSize(1);
-        assertThat(page2.getFirst().getId()).isEqualTo(guest1.getId());
+        assertThat(page2.getFirst().id()).isEqualTo(guest1.getId());
     }
 
     @Test
@@ -153,14 +154,14 @@ class EventGuestDslRepositoryTest {
         entityManager.clear();
 
         // Ação 1: Consulta por usuário comum (não gerente)
-        List<EventGuest> publicView = eventGuestDslRepository.findGuestsWithCursor(event.getId(), false, null, 10);
+        List<EventGuestDTO> publicView = eventGuestDslRepository.findGuestsWithCursor(event.getId(), false, null, 10);
 
         // Asserções para Usuário Comum
         assertThat(publicView).hasSize(1);
-        assertThat(publicView.getFirst().getId()).isEqualTo(publicConfirmedGuest.getId());
+        assertThat(publicView.getFirst().id()).isEqualTo(publicConfirmedGuest.getId());
 
         // Ação 2: Consulta por gerente do evento
-        List<EventGuest> managerView = eventGuestDslRepository.findGuestsWithCursor(event.getId(), true, null, 10);
+        List<EventGuestDTO> managerView = eventGuestDslRepository.findGuestsWithCursor(event.getId(), true, null, 10);
 
         // Asserções para Gerente
         assertThat(managerView).hasSize(3);

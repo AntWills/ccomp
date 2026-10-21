@@ -1,8 +1,9 @@
 package com.ccomp.br.domain.events.certificate.application;
 
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
-import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
+import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
 import com.ccomp.br.domain.events.certificate.persistence.EventCertificateValidationCode;
 import com.ccomp.br.domain.events.certificate.persistence.EventCertificateValidationCodeRepository;
@@ -42,7 +43,7 @@ class CertificateValidatorServiceTest {
     private EventCache eventCache;
 
     @Mock
-    private EventActivityRepository activityRepository;
+    private ActivityCache activityCache;
 
     @Mock
     private EventActivityDslRepository activityDslRepository;
@@ -52,7 +53,7 @@ class CertificateValidatorServiceTest {
 
     private CertificateValidatorService createService() {
         return new CertificateValidatorService(validationCodeRepository, eventCache,
-                activityRepository, activityDslRepository, userManagement);
+                activityCache, activityDslRepository, userManagement);
     }
 
     @Test
@@ -102,10 +103,9 @@ class CertificateValidatorServiceTest {
         stubCommon(codeForActivity());
         when(userManagement.findById(USER_ID)).thenReturn(Optional.of(userDto("Ana Souza")));
         when(eventCache.findById(10L)).thenReturn(Optional.of(eventDto("Semanas de Tecnologia")));
-        when(activityRepository.findById(77L)).thenReturn(Optional.of(EventActivity.builder()
-                .title("Workshop de IA")
-                .workloadHours(BigDecimal.valueOf(4))
-                .build()));
+        when(activityCache.findById(77L)).thenReturn(Optional.of(new ActivityDTO(
+                77L, 10L, "Workshop de IA", null, null, null, null, null,
+                BigDecimal.valueOf(4), null, null)));
 
         CertificateValidationResponse response = createService().validate("ABC12345");
 
@@ -119,10 +119,9 @@ class CertificateValidatorServiceTest {
         stubCommon(codeForActivity());
         when(userManagement.findById(USER_ID)).thenReturn(Optional.of(userDto("Ana Souza")));
         when(eventCache.findById(10L)).thenReturn(Optional.of(eventDto("Semanas de Tecnologia")));
-        when(activityRepository.findById(77L)).thenReturn(Optional.of(EventActivity.builder()
-                .title("Workshop Sem Carga")
-                .workloadHours(null)
-                .build()));
+        when(activityCache.findById(77L)).thenReturn(Optional.of(new ActivityDTO(
+                77L, 10L, "Workshop Sem Carga", null, null, null, null, null,
+                null, null, null)));
 
         assertThat(createService().validate("ABC12345").workloadHours()).isEqualTo("0 horas");
     }

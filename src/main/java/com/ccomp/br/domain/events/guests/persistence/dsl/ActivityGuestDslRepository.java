@@ -1,10 +1,12 @@
 package com.ccomp.br.domain.events.guests.persistence.dsl;
 
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
+import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -22,7 +24,7 @@ public class ActivityGuestDslRepository {
         this.queryFactory = queryFactory;
     }
 
-    public List<ActivityGuest> findActivityGuestsWithCursor(
+    public List<ActivityGuestDTO> findActivityGuestsWithCursor(
             Long activityId, boolean isManager, GuestCursor cursor, int limit) {
 
         BooleanBuilder where = new BooleanBuilder();
@@ -44,8 +46,18 @@ public class ActivityGuestDslRepository {
         }
 
         return queryFactory
-                .selectFrom(activityGuest)
-                .innerJoin(activityGuest.eventGuest).fetchJoin() // Traz o EventGuest junto para evitar N+1
+                .select(Projections.constructor(
+                        ActivityGuestDTO.class,
+                        activityGuest.id,
+                        activityGuest.activity.id,
+                        activityGuest.eventGuest.id,
+                        activityGuest.eventGuest.userId,
+                        activityGuest.eventGuest.status,
+                        activityGuest.eventGuest.visibility,
+                        activityGuest.createdAt
+                ))
+                .from(activityGuest)
+                .innerJoin(activityGuest.eventGuest)
                 .where(where)
                 .orderBy(activityGuest.createdAt.desc(), activityGuest.id.desc())
                 .limit(limit)

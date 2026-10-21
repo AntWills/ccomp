@@ -1,8 +1,8 @@
 package com.ccomp.br.domain.events.certificate.application;
 
-import com.ccomp.br.domain.events.activities.persistence.EventActivity;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
+import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
-import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.certificate.persistence.EventCertificateValidationCode;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
@@ -40,7 +40,7 @@ public class CertificateVariablesServices {
     private final UserManagement userManagement;
     private final EventCache eventCache;
     private final CertificateValidatorService validatorService;
-    private final EventActivityRepository activityRepository;
+    private final ActivityCache activityCache;
     private final EnrollmentRepository enrollmentRepository;
     private final EventRepository eventRepository;
 
@@ -61,7 +61,7 @@ public class CertificateVariablesServices {
                                         EventActivityDslRepository activityDslRepository,
                                         UserManagement userManagement,
                                         EventCache eventCache, CertificateValidatorService validatorService,
-                                        EventActivityRepository activityRepository,
+                                        ActivityCache activityCache,
                                         EnrollmentRepository enrollmentRepository,
                                         EventRepository eventRepository) {
         this.enrollmentActivityDslRepository = enrollmentActivityDslRepository;
@@ -69,7 +69,7 @@ public class CertificateVariablesServices {
         this.userManagement = userManagement;
         this.eventCache = eventCache;
         this.validatorService = validatorService;
-        this.activityRepository = activityRepository;
+        this.activityCache = activityCache;
         this.enrollmentRepository = enrollmentRepository;
         this.eventRepository = eventRepository;
     }
@@ -162,8 +162,8 @@ public class CertificateVariablesServices {
                     : CompletableFuture.completedFuture(null);
 
             // Fork-2: Busca da Atividade
-            CompletableFuture<EventActivity> activityFuture = (needsActivity || needsEvent)
-                    ? CompletableFuture.supplyAsync(() -> activityRepository.findById(activityId)
+            CompletableFuture<ActivityDTO> activityFuture = (needsActivity || needsEvent)
+                    ? CompletableFuture.supplyAsync(() -> activityCache.findById(activityId)
                     .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada.")), executor)
                     : CompletableFuture.completedFuture(null);
 
@@ -171,13 +171,13 @@ public class CertificateVariablesServices {
                     .thenApplyAsync(activity -> {
                         if(activity == null || !needsCode) return null;
 
-                        return validatorService.issueForActivity(activity.getEventId(), activity.getId(), userId);
+                        return validatorService.issueForActivity(activity.eventId(), activity.id(), userId);
                     }, executor);
 
             // Fork-4: Busca do Evento (Depende do id retornado na Atividade)
             CompletableFuture<EventDTO> eventFuture = activityFuture.thenApplyAsync(activity -> {
                 if (activity == null || !needsEvent) return null;
-                return eventCache.findById(activity.getEventId())
+                return eventCache.findById(activity.eventId())
                         .orElseThrow(() -> new ResourceNotFoundException("Evento associado à atividade não encontrado."));
             }, executor);
 
@@ -207,11 +207,11 @@ public class CertificateVariablesServices {
         }
     }
 
-    private void extractValuesFromActivity(Map<String, String> values, @Nullable EventActivity activity) {
+    private void extractValuesFromActivity(Map<String, String> values, @Nullable ActivityDTO activity) {
         if (activity != null) {
-            values.put("{atividade.nome}", activity.getTitle());
-            values.put("{atividade.carga_horaria}", activity.getWorkloadHours() != null ? activity.getWorkloadHours() + " horas" : "Não consta");
-            values.put("{atividade.local}", activity.getLocation() != null ? activity.getLocation() : "Não consta");
+            values.put("{atividade.nome}", activity.title());
+            values.put("{atividade.carga_horaria}", activity.workloadHours() != null ? activity.workloadHours() + " horas" : "Não consta");
+            values.put("{atividade.local}", activity.location() != null ? activity.location() : "Não consta");
         }
     }
 

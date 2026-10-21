@@ -1,7 +1,6 @@
 package com.ccomp.br.domain.events.certificate.application;
 
-import com.ccomp.br.domain.events.activities.persistence.EventActivity;
-import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
+import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
@@ -26,18 +25,18 @@ public class CertificateServices {
     private final EventAccessPolicy accessPolicy;
     private final CertificateFetcher certificateFetcher;
     private final CertificateVariablesServices variablesServices;
-    private final EventActivityRepository activityRepository;
+    private final ActivityCache activityCache;
 
     public CertificateServices(EventCache eventCache,
                                EventAccessPolicy accessPolicy,
                                CertificateFetcher certificateFetcher,
                                CertificateVariablesServices variablesServices,
-                               EventActivityRepository activityRepository) {
+                               ActivityCache activityCache) {
         this.eventCache = eventCache;
         this.accessPolicy = accessPolicy;
         this.certificateFetcher = certificateFetcher;
         this.variablesServices = variablesServices;
-        this.activityRepository = activityRepository;
+        this.activityCache = activityCache;
     }
 
     public StorageExternal.StoredFile buildCertificateFromEvent(Long eventId, UUID userId) {
@@ -83,14 +82,10 @@ public class CertificateServices {
     }
 
     public StorageExternal.StoredFile buildCertificateFromActivity(Long activityId, UUID userId) {
-        if (userId == null) {
-            throw new AccessDeniedException("É necessário estar autenticado para gerar o certificado.");
-        }
-
-        EventActivity activity = activityRepository.findById(activityId)
+        var activity = activityCache.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
 
-        Long eventId = activity.getEventId();
+        Long eventId = activity.eventId();
 
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             CompletableFuture<StorageExternal.StoredFile> templateFuture =

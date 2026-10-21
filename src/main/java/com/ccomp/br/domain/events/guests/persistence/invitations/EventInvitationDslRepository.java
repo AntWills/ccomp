@@ -1,8 +1,10 @@
 package com.ccomp.br.domain.events.guests.persistence.invitations;
 
 import com.ccomp.br.domain.events.guests.dto.EventInvitationCursor;
+import com.ccomp.br.domain.events.guests.dto.EventInvitationDTO;
 import com.ccomp.br.module.email.EmailAddress;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -22,7 +24,7 @@ public class EventInvitationDslRepository {
         this.queryFactory = queryFactory;
     }
 
-    public List<EventInvitation> findAllWithCursor(
+    public List<EventInvitationDTO> findAllWithCursor(
             @Nullable EmailAddress emailAddress, Long eventId, EventInvitationCursor cursor, int limit) {
         BooleanBuilder whereClause = new BooleanBuilder();
 
@@ -43,7 +45,19 @@ public class EventInvitationDslRepository {
         }
 
         return queryFactory
-                .selectFrom(eventInvitation)
+                .select(Projections.constructor(
+                        EventInvitationDTO.class,
+                        eventInvitation.id,
+                        eventInvitation.code,
+                        eventInvitation.eventId,
+                        eventInvitation.userId,
+                        eventInvitation.emailAddress.value,
+                        eventInvitation.status,
+                        eventInvitation.invitedAt,
+                        eventInvitation.expiresAt,
+                        eventInvitation.acceptedAt
+                ))
+                .from(eventInvitation)
                 .where(whereClause)
                 .orderBy(
                         eventInvitation.invitedAt.desc(),

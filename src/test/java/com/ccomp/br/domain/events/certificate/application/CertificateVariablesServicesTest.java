@@ -3,6 +3,8 @@ package com.ccomp.br.domain.events.certificate.application;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
+import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
 import com.ccomp.br.domain.events.certificate.persistence.EventCertificateValidationCode;
@@ -59,7 +61,7 @@ class CertificateVariablesServicesTest {
     private CertificateValidatorService validatorService;
 
     @Mock
-    private EventActivityRepository activityRepository;
+    private ActivityCache activityCache;
 
     @Mock
     private EnrollmentRepository enrollmentRepository;
@@ -74,7 +76,7 @@ class CertificateVariablesServicesTest {
                 userManagement,
                 eventCache,
                 validatorService,
-                activityRepository,
+                activityCache,
                 enrollmentRepository,
                 eventRepository);
         ReflectionTestUtils.setField(service, "validationBaseUrl", VALIDATION_BASE_URL);
@@ -182,7 +184,9 @@ class CertificateVariablesServicesTest {
         when(enrollmentActivityDslRepository.findByUserIdAndActivityId(USER_ID, 77L))
                 .thenReturn(Optional.of(enrollmentActivity));
         when(userManagement.findById(USER_ID)).thenReturn(Optional.of(userDto("Ana Souza")));
-        when(activityRepository.findById(77L)).thenReturn(Optional.of(activity));
+        when(activityCache.findById(77L)).thenReturn(Optional.of(new ActivityDTO(
+                77L, 10L, "Workshop de IA", null, null, "Sala 1", null, null,
+                BigDecimal.valueOf(4), null, null)));
         when(validatorService.issueForActivity(10L, 77L, USER_ID))
                 .thenReturn(validationCode());
 
