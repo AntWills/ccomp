@@ -94,7 +94,7 @@ class GuestInvitationServicesTest {
         void searchInvitations_returnsCursorPage_whenUserHasPermission() {
             try (MockedStatic<CursorUtils> cursorUtilsMock = mockStatic(CursorUtils.class)) {
                 EventInvitationCursor decodedCursor = mock(EventInvitationCursor.class);
-                EventInvitation invitation = mock(EventInvitation.class);
+                EventInvitationDTO invitation = mock(EventInvitationDTO.class);
                 CursorPage<EventInvitationDTO> expectedPage = mock(CursorPage.class);
 
                 when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
@@ -207,6 +207,7 @@ class GuestInvitationServicesTest {
             when(invitation.isValid()).thenReturn(true);
             when(userManagement.findById(userId)).thenReturn(Optional.of(userDTO));
             when(userDTO.emailAddress()).thenReturn(emailAddress);
+            when(userDTO.isActive()).thenReturn(true);
             when(invitation.isSameEmail(emailAddress)).thenReturn(false);
 
             assertThatThrownBy(() -> guestInvitationServices.acceptInvite(userId, code, true))

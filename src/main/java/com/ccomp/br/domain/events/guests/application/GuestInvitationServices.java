@@ -78,30 +78,13 @@ public class GuestInvitationServices {
             throw new AccessDeniedException("Você não tem permissão para gerenciar/enviar convites neste evento.");
 
         EventInvitationCursor cursorDecoded = CursorUtils.decode(cursor, EventInvitationCursor.class);
-        List<EventInvitation> results = eventInvitationDspRepository
+        List<EventInvitationDTO> results = eventInvitationDspRepository
                 .findAllWithCursor(emailAddress, eventId, cursorDecoded, finalPageSize);
 
-        CursorPage<EventInvitation> page = CursorUtils.buildPage(
+        return CursorUtils.buildPage(
                 results,
                 finalPageSize,
-                ei -> new EventInvitationCursor(
-                        ei.getId(), ei.getInvitedAt()
-                )
-        );
-        return new CursorPage<>(
-                page.content().stream().map(invitation -> new EventInvitationDTO(
-                        invitation.getId(),
-                        invitation.getCode(),
-                        invitation.getEventId(),
-                        invitation.getUserId(),
-                        invitation.getEmailAddress().getValue(),
-                        invitation.getStatus(),
-                        invitation.getInvitedAt(),
-                        invitation.getExpiresAt(),
-                        invitation.getAcceptedAt()
-                )).toList(),
-                page.nextCursor(),
-                page.previousCursor()
+                invitation -> new EventInvitationCursor(invitation.id(), invitation.invitedAt())
         );
     }
 
