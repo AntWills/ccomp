@@ -92,12 +92,12 @@ class EventCertificateControllerTest {
                 new UsernamePasswordAuthenticationToken(jwt, null, List.of());
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        var controller = new EventCertificateController(certificateCoverService,
+        var managementController = new EventCertificateManagementController(certificateCoverService,
                 certificateBoxServices,
-                certificateServices,
-                activityCertificateBoxServices,
+                activityCertificateBoxServices);
+        var consultationController = new EventCertificateConsultationController(certificateServices,
                 certificateValidatorService);
-        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+        mockMvc = MockMvcBuilders.standaloneSetup(managementController, consultationController)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
