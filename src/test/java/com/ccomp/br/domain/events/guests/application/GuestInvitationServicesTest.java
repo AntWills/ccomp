@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.guests.application;
 
+import com.ccomp.br.config.rabbit.RabbitMQConfig;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
@@ -8,6 +9,8 @@ import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.domain.events.guests.dto.EventInvitationCursor;
 import com.ccomp.br.domain.events.guests.dto.EventInvitationDTO;
+import com.ccomp.br.domain.events.guests.external.GuestInvitationMessageDTO;
+import com.ccomp.br.domain.events.guests.external.message.GuestInvitationChannel;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitation;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitationDslRepository;
@@ -30,6 +33,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 import java.util.List;
 import java.util.Optional;
@@ -43,6 +47,9 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class GuestInvitationServicesTest {
+
+    @Mock
+    private RabbitTemplate rabbitTemplate;
 
     @Mock
     private EventGuestRepository eventGuestRepository;
@@ -147,7 +154,15 @@ class GuestInvitationServicesTest {
 
             assertThat(response).isNotNull();
             assertThat(response.response()).isEqualTo("Um e-mail de convite foi enviado.");
+
             verify(eventInvitationRepository).save(any(EventInvitation.class));
+
+            // Garante que o evento foi publicado no RabbitMQ
+            verify(rabbitTemplate).convertAndSend(
+                    eq(RabbitMQConfig.EXCHANGE_NAME),
+                    eq(GuestInvitationChannel.ROUTING),
+                    any(GuestInvitationMessageDTO.class)
+            );
         }
 
         @Test
@@ -184,6 +199,7 @@ class GuestInvitationServicesTest {
             when(invitation.isValid()).thenReturn(true);
             when(userManagement.findById(userId)).thenReturn(Optional.of(userDTO));
             when(userDTO.emailAddress()).thenReturn(emailAddress);
+            when(userDTO.isActive()).thenReturn(true);
             when(invitation.isSameEmail(emailAddress)).thenReturn(true);
             when(invitation.getEvent()).thenReturn(event);
 
