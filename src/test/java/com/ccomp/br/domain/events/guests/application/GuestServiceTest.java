@@ -1,10 +1,12 @@
 package com.ccomp.br.domain.events.guests.application;
 
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
+import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
-import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
+import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
@@ -40,7 +42,7 @@ import static org.mockito.Mockito.*;
 class GuestServiceTest {
     @Mock private EventGuestRepository eventGuestRepository;
     @Mock private EventCache eventCache;
-    @Mock private EventActivityRepository activityRepository;
+    @Mock private ActivityCache activityCache;
     @Mock private EventAccessPolicy eventAccessPolicy;
     @Mock private EventGuestDslRepository eventGuestDslRepository;
     @Mock private ActivityGuestDslRepository activityGuestDslRepository;
@@ -123,16 +125,23 @@ class GuestServiceTest {
         @Test
         void returnsGuestsWhenActivityEventIsViewable() {
             try (MockedStatic<CursorUtils> cursorUtils = mockStatic(CursorUtils.class)) {
-                EventActivity activity = mock(EventActivity.class);
+                ActivityDTO activity = mock(ActivityDTO.class);
                 GuestCursor cursor = mock(GuestCursor.class);
-                ActivityGuest guest = mock(ActivityGuest.class);
-                CursorPage<ActivityGuest> expected = mock(CursorPage.class);
-                when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
-                when(activity.getEventId()).thenReturn(eventId);
+                ActivityGuestDTO guest = mock(ActivityGuestDTO.class);
+                CursorPage<ActivityGuestDTO> expected = mock(CursorPage.class);
+
+                when(activityCache.findById(activityId)).thenReturn(Optional.of(activity));
+                when(activity.eventId()).thenReturn(eventId);
                 givenEventExists();
                 when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
                 when(eventAccessPolicy.canView(event, requesterId)).thenReturn(true);
-                when(activityGuestDslRepository.findActivityGuestsWithCursor(activityId, true, cursor, 20)).thenReturn(List.of(guest));
+                when(activityGuestDslRepository.findActivityGuestsWithCursor(
+                        activityId,
+                        true,
+                        cursor,
+                        20)
+                ).thenReturn(List.of(guest));
+
                 cursorUtils.when(() -> CursorUtils.decode("raw", GuestCursor.class)).thenReturn(cursor);
                 cursorUtils.when(() -> CursorUtils.buildPage(anyList(), eq(20), any())).thenReturn(expected);
 
@@ -142,21 +151,23 @@ class GuestServiceTest {
 
         @Test
         void throwsWhenActivityDoesNotExist() {
-            when(activityRepository.findById(activityId)).thenReturn(Optional.empty());
+            when(activityCache.findById(activityId)).thenReturn(Optional.empty());
             assertThatThrownBy(() -> guestService.searchActivityGuests(activityId, requesterId, null, 20))
                     .isInstanceOf(ResourceNotFoundException.class).hasMessage("Atividade não encontrada.");
         }
 
         @Test
         void deniesWhenActivityEventIsNotViewable() {
-            EventActivity activity = mock(EventActivity.class);
-            when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
-            when(activity.getEventId()).thenReturn(eventId);
+            ActivityDTO activity = mock(ActivityDTO.class);
+            when(activityCache.findById(activityId)).thenReturn(Optional.of(activity));
+            when(activity.eventId()).thenReturn(eventId);
             givenEventExists();
             when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(false);
             when(eventAccessPolicy.canView(event, requesterId)).thenReturn(false);
+
             assertThatThrownBy(() -> guestService.searchActivityGuests(activityId, requesterId, null, 20))
                     .isInstanceOf(AccessDeniedException.class);
+
             verifyNoInteractions(activityGuestDslRepository);
         }
     }

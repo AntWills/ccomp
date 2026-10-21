@@ -8,6 +8,7 @@ import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
+import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
@@ -97,23 +98,23 @@ class ActivityGuestDslRepositoryTest {
         entityManager.clear();
 
         // Ação: Primeira página (limite = 2) como Gerente
-        List<ActivityGuest> page1 = activityGuestDslRepository.findActivityGuestsWithCursor(activity.getId(), true, null, 2);
+        List<ActivityGuestDTO> page1 = activityGuestDslRepository.findActivityGuestsWithCursor(activity.getId(), true, null, 2);
 
         // Asserções Página 1
         assertThat(page1).hasSize(2);
-        assertThat(page1.get(0).getId()).isEqualTo(ag3.getId());
-        assertThat(page1.get(1).getId()).isEqualTo(ag2.getId());
+        assertThat(page1.get(0).id()).isEqualTo(ag3.getId());
+        assertThat(page1.get(1).id()).isEqualTo(ag2.getId());
 
         // Cursor do último item da página 1
-        ActivityGuest lastActivityGuest = page1.getLast();
-        GuestCursor cursor = new GuestCursor(lastActivityGuest.getId(), lastActivityGuest.getCreatedAt());
+        ActivityGuestDTO lastActivityGuest = page1.getLast();
+        GuestCursor cursor = new GuestCursor(lastActivityGuest.id(), lastActivityGuest.createdAt());
 
         // Ação: Segunda página com Cursor (limite = 2)
-        List<ActivityGuest> page2 = activityGuestDslRepository.findActivityGuestsWithCursor(activity.getId(), true, cursor, 2);
+        List<ActivityGuestDTO> page2 = activityGuestDslRepository.findActivityGuestsWithCursor(activity.getId(), true, cursor, 2);
 
         // Asserções Página 2
         assertThat(page2).hasSize(1);
-        assertThat(page2.getFirst().getId()).isEqualTo(ag1.getId());
+        assertThat(page2.getFirst().id()).isEqualTo(ag1.getId());
     }
 
     @Test
@@ -159,15 +160,15 @@ class ActivityGuestDslRepositoryTest {
         entityManager.clear();
 
         // Ação 1: Consulta por não-gerente
-        List<ActivityGuest> publicView = activityGuestDslRepository.findActivityGuestsWithCursor(activity.getId(), false, null, 10);
+        List<ActivityGuestDTO> publicView = activityGuestDslRepository.findActivityGuestsWithCursor(activity.getId(), false, null, 10);
 
         // Asserções Não-Gerente (Deve retornar somente o vínculo com EventGuest público e confirmado)
         assertThat(publicView).hasSize(1);
-        assertThat(publicView.getFirst().getId()).isEqualTo(agPublic.getId());
-        assertThat(publicView.getFirst().getEventGuest().getUserId()).isEqualTo(publicConfirmed.getUserId());
+        assertThat(publicView.getFirst().id()).isEqualTo(agPublic.getId());
+        assertThat(publicView.getFirst().userId()).isEqualTo(publicConfirmed.getUserId());
 
         // Ação 2: Consulta por gerente
-        List<ActivityGuest> managerView = activityGuestDslRepository.findActivityGuestsWithCursor(activity.getId(), true, null, 10);
+        List<ActivityGuestDTO> managerView = activityGuestDslRepository.findActivityGuestsWithCursor(activity.getId(), true, null, 10);
 
         // Asserções Gerente (Deve retornar todos)
         assertThat(managerView).hasSize(3);

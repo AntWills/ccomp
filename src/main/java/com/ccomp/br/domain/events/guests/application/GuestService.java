@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.guests.application;
 
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
@@ -8,7 +9,6 @@ import com.ccomp.br.domain.events.guests.dto.GuestCursor;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
-import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.dsl.ActivityGuestDslRepository;
@@ -83,36 +83,21 @@ public class GuestService {
     @Transactional(readOnly = true)
     public CursorPage<ActivityGuestDTO> searchActivityGuests(Long activityId, UUID requesterId, String cursorRaw, int pageSize) {
         int limit = Math.min(pageSize, 50);
-        var activity = activityCache.findById(activityId)
+        ActivityDTO activity = activityCache.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
 
         EventDTO event = eventCache.findById(activity.eventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         boolean isManager = eventAccessPolicy.canEdit(event, requesterId);
 
-        if (!eventAccessPolicy.canView(event, requesterId)) {
+        if (!eventAccessPolicy.canView(event, requesterId))
             throw new AccessDeniedException("Você não tem permissão para visualizar os convidados desta atividade.");
-        }
 
         GuestCursor decodedCursor = CursorUtils.decode(cursorRaw, GuestCursor.class);
 
-        List<ActivityGuest> results = activityGuestDslRepository.findActivityGuestsWithCursor(activityId, isManager, decodedCursor, limit);
-
-        CursorPage<ActivityGuest> page = CursorUtils.buildPage(
-                results, limit, guest -> new GuestCursor(guest.getId(), guest.getCreatedAt())
-        );
-        return new CursorPage<>(
-                page.content().stream().map(guest -> new ActivityGuestDTO(
-                        guest.getId(),
-                        guest.getActivity().getId(),
-                        guest.getEventGuest().getId(),
-                        guest.getEventGuest().getUserId(),
-                        guest.getEventGuest().getStatus(),
-                        guest.getEventGuest().getVisibility(),
-                        guest.getCreatedAt()
-                )).toList(),
-                page.nextCursor(),
-                page.previousCursor()
+        List<ActivityGuestDTO> results = activityGuestDslRepository.findActivityGuestsWithCursor(activityId, isManager, decodedCursor, limit);
+        return CursorUtils.buildPage(
+                results, limit, guest -> new GuestCursor(guest.id(), guest.createdAt())
         );
     }
 
