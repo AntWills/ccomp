@@ -1,10 +1,11 @@
 package com.ccomp.br.domain.events.guests.persistence.dsl;
 
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
+import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
-import com.ccomp.br.domain.events.guests.persistence.EventGuest;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -22,7 +23,7 @@ public class EventGuestDslRepository {
         this.queryFactory = queryFactory;
     }
 
-    public List<EventGuest> findGuestsWithCursor(
+    public List<EventGuestDTO> findGuestsWithCursor(
             Long eventId, boolean isManager, GuestCursor cursor, int limit) {
 
         BooleanBuilder where = new BooleanBuilder();
@@ -44,7 +45,16 @@ public class EventGuestDslRepository {
         }
 
         return queryFactory
-                .selectFrom(eventGuest)
+                .select(Projections.constructor(
+                        EventGuestDTO.class,
+                        eventGuest.id,
+                        eventGuest.eventId,
+                        eventGuest.userId,
+                        eventGuest.status,
+                        eventGuest.visibility,
+                        eventGuest.createdAt
+                ))
+                .from(eventGuest)
                 .where(where)
                 .orderBy(eventGuest.createdAt.desc(), eventGuest.id.desc())
                 .limit(limit)

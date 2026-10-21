@@ -7,11 +7,11 @@ import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
+import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
-import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.dsl.ActivityGuestDslRepository;
@@ -21,6 +21,7 @@ import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.CursorUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -69,12 +70,13 @@ class GuestServiceTest {
     @Nested
     class SearchEventGuests {
         @Test
+        @DisplayName("Deve retornar a página de convidados públicos quando o evento pode ser visualizado")
         void returnsCursorPageForPublicEvent() {
             try (MockedStatic<CursorUtils> cursorUtils = mockStatic(CursorUtils.class)) {
                 givenEventExists();
                 GuestCursor cursor = mock(GuestCursor.class);
-                EventGuest guest = mock(EventGuest.class);
-                CursorPage<EventGuest> expected = mock(CursorPage.class);
+                EventGuestDTO guest = mock(EventGuestDTO.class);
+                CursorPage<EventGuestDTO> expected = mock(CursorPage.class);
                 when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(false);
                 when(eventAccessPolicy.canView(event, requesterId)).thenReturn(true);
                 when(eventGuestDslRepository.findGuestsWithCursor(eventId, false, cursor, 20)).thenReturn(List.of(guest));
@@ -87,6 +89,7 @@ class GuestServiceTest {
         }
 
         @Test
+        @DisplayName("Deve limitar a página a 50 convidados e permitir ao gerente visualizar convidados privados")
         void capsPageSizeAtFiftyAndAllowsManagersToSeePrivateGuests() {
             try (MockedStatic<CursorUtils> cursorUtils = mockStatic(CursorUtils.class)) {
                 givenEventExists();
@@ -103,6 +106,7 @@ class GuestServiceTest {
         }
 
         @Test
+        @DisplayName("Deve negar a consulta quando o evento não pode ser visualizado pelo solicitante")
         void deniesPrivateEventToNonManager() {
             givenEventExists();
             when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(false);
@@ -113,6 +117,7 @@ class GuestServiceTest {
         }
 
         @Test
+        @DisplayName("Deve lançar erro quando o evento não existe")
         void throwsWhenEventDoesNotExist() {
             when(eventCache.findById(eventId)).thenReturn(Optional.empty());
             assertThatThrownBy(() -> guestService.searchEventGuests(eventId, requesterId, null, 20))
@@ -123,6 +128,7 @@ class GuestServiceTest {
     @Nested
     class SearchActivityGuests {
         @Test
+        @DisplayName("Deve retornar convidados quando o evento da atividade pode ser visualizado")
         void returnsGuestsWhenActivityEventIsViewable() {
             try (MockedStatic<CursorUtils> cursorUtils = mockStatic(CursorUtils.class)) {
                 ActivityDTO activity = mock(ActivityDTO.class);
@@ -150,6 +156,7 @@ class GuestServiceTest {
         }
 
         @Test
+        @DisplayName("Deve lançar erro quando a atividade não existe")
         void throwsWhenActivityDoesNotExist() {
             when(activityCache.findById(activityId)).thenReturn(Optional.empty());
             assertThatThrownBy(() -> guestService.searchActivityGuests(activityId, requesterId, null, 20))
@@ -157,6 +164,7 @@ class GuestServiceTest {
         }
 
         @Test
+        @DisplayName("Deve negar a consulta quando o evento da atividade não pode ser visualizado")
         void deniesWhenActivityEventIsNotViewable() {
             ActivityDTO activity = mock(ActivityDTO.class);
             when(activityCache.findById(activityId)).thenReturn(Optional.of(activity));
@@ -175,6 +183,7 @@ class GuestServiceTest {
     @Nested
     class UpdateEventGuest {
         @Test
+        @DisplayName("Deve permitir ao convidado atualizar o próprio status e visibilidade")
         void allowsGuestToUpdateTheirOwnStatusAndVisibility() {
             Long guestId = 5L;
             EventGuest guest = mock(EventGuest.class);
@@ -192,6 +201,7 @@ class GuestServiceTest {
         }
 
         @Test
+        @DisplayName("Deve permitir ao gerente atualizar outro convidado")
         void allowsManagerToUpdateAnotherGuest() {
             Long guestId = 5L;
             EventGuest guest = mock(EventGuest.class);
@@ -210,6 +220,7 @@ class GuestServiceTest {
         }
 
         @Test
+        @DisplayName("Deve negar a atualização solicitada por usuário sem permissão")
         void deniesUpdateByUnrelatedUser() {
             Long guestId = 5L;
             EventGuest guest = mock(EventGuest.class);
@@ -226,6 +237,7 @@ class GuestServiceTest {
         }
 
         @Test
+        @DisplayName("Deve lançar erro quando o convidado não existe no evento")
         void throwsWhenGuestDoesNotExist() {
             when(eventGuestRepository.findByIdAndEventId(5L, eventId)).thenReturn(Optional.empty());
             assertThatThrownBy(() -> guestService.updateEventGuest(eventId, 5L, requesterId,

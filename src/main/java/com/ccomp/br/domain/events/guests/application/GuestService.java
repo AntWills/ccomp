@@ -61,22 +61,9 @@ public class GuestService {
 
         GuestCursor decodedCursor = CursorUtils.decode(cursorRaw, GuestCursor.class);
 
-        List<EventGuest> results = eventGuestDslRepository.findGuestsWithCursor(eventId, isManager, decodedCursor, limit);
-
-        CursorPage<EventGuest> page = CursorUtils.buildPage(
-                results, limit, guest -> new GuestCursor(guest.getId(), guest.getCreatedAt())
-        );
-        return new CursorPage<>(
-                page.content().stream().map(guest -> new EventGuestDTO(
-                        guest.getId(),
-                        guest.getEventId(),
-                        guest.getUserId(),
-                        guest.getStatus(),
-                        guest.getVisibility(),
-                        guest.getCreatedAt()
-                )).toList(),
-                page.nextCursor(),
-                page.previousCursor()
+        List<EventGuestDTO> results = eventGuestDslRepository.findGuestsWithCursor(eventId, isManager, decodedCursor, limit);
+        return CursorUtils.buildPage(
+                results, limit, guest -> new GuestCursor(guest.id(), guest.createdAt())
         );
     }
 
