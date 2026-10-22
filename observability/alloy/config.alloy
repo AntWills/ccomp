@@ -12,11 +12,92 @@ discovery.relabel "ccomp" {
   }
 }
 
+discovery.relabel "log_labels" {
+  targets = []
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service_name"
+  }
+}
+
 loki.source.docker "ccomp" {
   host       = "unix:///var/run/docker.sock"
   targets    = discovery.relabel.ccomp.output
   labels     = { job = "ccomp" }
+  relabel_rules = discovery.relabel.log_labels.rules
+  forward_to = [loki.process.normalize.receiver]
+}
+
+loki.process "normalize" {
   forward_to = [loki.write.local.receiver]
+
+  stage.match {
+    selector = "{service_name=\"ccomp-backend\"}"
+
+    stage.multiline {
+      firstline     = "^\\d{4}-\\d{2}-\\d{2}[T ]"
+      max_wait_time = "3s"
+      max_lines     = 128
+    }
+  }
+
+  stage.match {
+    selector = "{service_name=\"seaweeds\"}"
+
+    stage.regex {
+      expression = "^(?P<glog_level>[IWEF])\\d{4}"
+    }
+
+    stage.template {
+      source   = "level"
+      template = "{{ if eq .glog_level \"I\" }}info{{ else if eq .glog_level \"W\" }}warn{{ else if eq .glog_level \"E\" }}error{{ else }}fatal{{ end }}"
+    }
+
+    stage.labels {
+      values = { level = "level" }
+    }
+  }
+
+  stage.match {
+    selector = "{service_name=\"postgres-db\"}"
+
+    stage.regex {
+      expression = "\\b(?P<pg_level>ERROR|FATAL|PANIC|WARNING|LOG|INFO|NOTICE|DEBUG[1-5]):"
+    }
+
+    stage.template {
+      source   = "level"
+      template = "{{ ToLower .pg_level }}"
+    }
+
+    stage.labels {
+      values = { level = "level" }
+    }
+  }
+
+  stage.match {
+    selector = "{service_name=\"proxy\"}"
+
+    stage.regex {
+      expression = "\\\" (?P<status_code>[0-9]{3}) "
+    }
+
+    stage.template {
+      source   = "level"
+      template = "{{ if hasPrefix \"5\" .status_code }}error{{ else if hasPrefix \"4\" .status_code }}warn{{ else }}info{{ end }}"
+    }
+
+    stage.labels {
+      values = { level = "level" }
+    }
+  }
 }
 
 loki.write "local" {
@@ -33,6 +114,35 @@ prometheus.scrape "postgres" {
   scrape_interval = "15s"
 }
 
+discovery.relabel "backend_metrics" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    regex         = "ccomp"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "ccomp-backend"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_port_private"]
+    regex         = "8081"
+    action        = "keep"
+  }
+}
+
+prometheus.scrape "application" {
+  targets = discovery.relabel.backend_metrics.output
+  metrics_path    = "/actuator/prometheus"
+  forward_to      = [prometheus.remote_write.lgtm.receiver]
+  scrape_interval = "15s"
+}
+
 prometheus.remote_write "lgtm" {
   endpoint {
     url = "http://prometheus:9090/api/v1/write"
@@ -43,5 +153,22 @@ prometheus.scrape "rabbitmq" {
   targets = [{
     __address__ = "rabbitmq:15692",
   }]
-  forward_to = [prometheus.remote_write.lgtm.receiver]
+  forward_to      = [prometheus.remote_write.lgtm.receiver]
+  scrape_interval = "15s"
+}
+
+prometheus.scrape "redis" {
+  targets = [{
+    __address__ = "redis-exporter:9121",
+  }]
+  forward_to      = [prometheus.remote_write.lgtm.receiver]
+  scrape_interval = "15s"
+}
+
+prometheus.scrape "seaweedfs" {
+  targets = [{
+    __address__ = "seaweeds:9327",
+  }]
+  forward_to      = [prometheus.remote_write.lgtm.receiver]
+  scrape_interval = "15s"
 }
