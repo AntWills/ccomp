@@ -15,6 +15,11 @@ services:
       - "127.0.0.1:8080:8080"
     profiles: [all]
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
     depends_on:
       ccomp-backend:
         condition: service_healthy
@@ -26,10 +31,16 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=65.0"
     labels:
       prometheus.scrape: "true"
     deploy:
       replicas: 2
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 1G
     depends_on:
       grafana-lgtm:
         condition: service_started
@@ -57,6 +68,11 @@ services:
     image: postgres:17-alpine
     profiles: [ all, infra ]
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 2500M
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -84,6 +100,11 @@ services:
     image: prometheuscommunity/postgres-exporter:v0.20.1
     profiles: [ all, infra ]
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 128M
     environment:
       DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB}?sslmode=disable"
     depends_on:
@@ -98,6 +119,11 @@ services:
     image: chrislusf/seaweedfs:latest
     profiles: [ all, infra ]
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 768M
     environment:
       STORAGE_USER: ${STORAGE_USER}
       STORAGE_PASSWORD: ${STORAGE_PASSWORD}
@@ -119,6 +145,11 @@ services:
     logging: *default-logging
     image: amazon/aws-cli
     profiles: [ all, infra ]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
     depends_on:
       seaweeds:
         condition: service_healthy
@@ -138,6 +169,11 @@ services:
     image: rabbitmq:4.3.5-management-alpine
     container_name: ccomp-rabbitmq
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
@@ -157,6 +193,11 @@ services:
     image: redis:7-alpine
     profiles: [all, infra]
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 640M
     command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -171,6 +212,11 @@ services:
     image: oliver006/redis_exporter:v1.76.0
     profiles: [ all, infra ]
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 128M
     environment:
       REDIS_ADDR: redis://redis:6379
     depends_on:
@@ -182,6 +228,11 @@ services:
     image: 'grafana/otel-lgtm:latest'
     profiles: [ all, infra ]
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 2G
     ports:
       - "127.0.0.1:3000:3000"
     environment:
@@ -194,6 +245,11 @@ services:
     image: prom/prometheus:latest
     profiles: [ all, infra ]
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 1G
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
@@ -207,6 +263,11 @@ services:
     image: grafana/alloy:latest
     profiles: [all, infra]
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
     command: ["run", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
     depends_on:
       grafana-lgtm:
