@@ -89,6 +89,7 @@ public class AdminServices {
         String newStatus = user.getStatusAccount().name();
 
         auditExternal.registerLog(AuditCommand.builder()
+                        .actionType(EnumActionType.USER_BLOCKED)
                         .targetType(EnumTargetType.USER)
                         .targetId(userId)
                         .actorType(EnumActorType.USER)
