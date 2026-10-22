@@ -103,7 +103,8 @@ public class SecurityConfig {
     private static final String[] ACTUATOR_ROUTES = {
             "/actuator/health",
             "/actuator/health/**",
-            "/actuator/info"
+            "/actuator/info",
+            "/actuator/prometheus"
     };
 
     @Bean

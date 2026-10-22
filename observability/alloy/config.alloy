@@ -33,6 +33,35 @@ prometheus.scrape "postgres" {
   scrape_interval = "15s"
 }
 
+discovery.relabel "backend_metrics" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    regex         = "ccomp"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "ccomp-backend"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_port_private"]
+    regex         = "8081"
+    action        = "keep"
+  }
+}
+
+prometheus.scrape "application" {
+  targets = discovery.relabel.backend_metrics.output
+  metrics_path    = "/actuator/prometheus"
+  forward_to      = [prometheus.remote_write.lgtm.receiver]
+  scrape_interval = "15s"
+}
+
 prometheus.remote_write "lgtm" {
   endpoint {
     url = "http://prometheus:9090/api/v1/write"
@@ -43,5 +72,22 @@ prometheus.scrape "rabbitmq" {
   targets = [{
     __address__ = "rabbitmq:15692",
   }]
-  forward_to = [prometheus.remote_write.lgtm.receiver]
+  forward_to      = [prometheus.remote_write.lgtm.receiver]
+  scrape_interval = "15s"
+}
+
+prometheus.scrape "redis" {
+  targets = [{
+    __address__ = "redis-exporter:9121",
+  }]
+  forward_to      = [prometheus.remote_write.lgtm.receiver]
+  scrape_interval = "15s"
+}
+
+prometheus.scrape "seaweedfs" {
+  targets = [{
+    __address__ = "seaweeds:9327",
+  }]
+  forward_to      = [prometheus.remote_write.lgtm.receiver]
+  scrape_interval = "15s"
 }

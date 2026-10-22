@@ -26,6 +26,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    labels:
+      prometheus.scrape: "true"
     deploy:
       replicas: 2
     depends_on:
@@ -69,10 +71,17 @@ services:
       - "127.0.0.1:5433:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./observability/postgres/init:/docker-entrypoint-initdb.d:ro
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=all
 
   postgres-exporter:
     logging: *default-logging
-    image: prometheuscommunity/postgres-exporter:latest
+    image: prometheuscommunity/postgres-exporter:v0.20.1
     profiles: [ all, infra ]
     restart: unless-stopped
     environment:
@@ -80,6 +89,9 @@ services:
     depends_on:
       postgres-db:
         condition: service_healthy
+    command:
+      - --collector.stat_statements
+      - --collector.stat_checkpointer
 
   seaweeds:
     logging: *default-logging
@@ -93,7 +105,7 @@ services:
       sh -c "
       mkdir -p /etc/seaweedfs &&
       printf '{\"identities\":[{\"name\":\"%s\",\"credentials\":[{\"accessKey\":\"%s\",\"secretKey\":\"%s\"}],\"actions\":[\"Admin\",\"Read\",\"Write\"]}]}' \"$$STORAGE_USER\" \"$$STORAGE_USER\" \"$$STORAGE_PASSWORD\" > /etc/seaweedfs/s3.json &&
-      weed server -s3 -s3.port=9000 -s3.config=/etc/seaweedfs/s3.json -dir=/data
+      weed server -s3 -s3.port=9000 -s3.config=/etc/seaweedfs/s3.json -dir=/data -metricsPort=9327
       "
     volumes:
       - seaweed-data:/data
@@ -133,6 +145,7 @@ services:
       - "127.0.0.1:15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    command: ["sh", "-c", "rabbitmq-plugins enable --offline rabbitmq_prometheus && rabbitmq-server"]
     healthcheck:
       test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 10s
@@ -152,6 +165,17 @@ services:
       retries: 5
     volumes:
       - redis-data:/data
+
+  redis-exporter:
+    logging: *default-logging
+    image: oliver006/redis_exporter:v1.76.0
+    profiles: [ all, infra ]
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
 
   grafana-lgtm:
     logging: *default-logging
