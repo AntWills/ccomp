@@ -3,6 +3,8 @@
 Os arquivos dos containers são enviados ao Loki pelo Alloy. A descoberta mantém
 somente containers com o rótulo de projeto Compose `ccomp`. Grafana/LGTM guarda
 logs e métricas por 30 dias; os dados ficam nos volumes Docker persistentes.
+Os logs recebem os rótulos `service_name` (serviço Compose) e `container`, para
+filtrar por exemplo `ccomp-backend`, `postgres-db` ou `postgres-exporter`.
 
 ## Métricas
 
