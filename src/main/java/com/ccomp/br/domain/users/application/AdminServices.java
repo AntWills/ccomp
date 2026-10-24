@@ -59,13 +59,16 @@ public class AdminServices {
 
         UserCursor cursorDecoded = CursorUtils.decode(cursor, UserCursor.class);
 
-        List<UserItemDTO> results = userDslRepository.findByCursor(filter, cursorDecoded, finalPageSize + 1);
-
-
+        List<UserSearchResult> results = userDslRepository.findByCursor(filter, cursorDecoded, finalPageSize + 1);
         return CursorUtils.buildPage(
                 results,
                 finalPageSize,
-                e -> new UserCursor(e.createdAt(), e.id())
+                UserSearchResult::user,
+                result -> new UserCursor(
+                        filter.searchTermOpt().isPresent() ? result.similarity() : null,
+                        result.user().createdAt(),
+                        result.user().id()
+                )
         );
     }
 

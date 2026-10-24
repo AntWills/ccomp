@@ -45,7 +45,11 @@ public class UserAdminController {
     @PostMapping("/search")
     @Operation(
             summary = "Listar todos os usuários",
-            description = "Retorna uma lista, junto com o cursor, de todos os usuários cadastrados na aplicação. Requer permissão ADMIN."
+            description = """
+                    Retorna uma lista paginada de usuários.
+                    O filtro searchTerm pesquisa nome e e-mail por similaridade (limiar mínimo de 40%) e ordena pela relevância.
+                    Consulte o arquivo docs/busca-textual.md no repositório GitHub AntWills/ccomp para detalhes da infraestrutura de busca.
+                    Requer permissão ADMIN ou MODERATOR."""
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de usuários retornada com sucesso"),
@@ -78,7 +82,8 @@ public class UserAdminController {
     @GetMapping("email/{email}")
     @Operation(
             summary = "Obter dados do usuário via email",
-            description = "Retorna os detalhes do perfil do usuário usando o email."
+            description = "DEPRECATED: este endpoint será removido em versões futuras. Use POST /api/admin/users/search com o campo searchTerm para localizar usuários pelo e-mail.",
+            deprecated = true
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Perfil do usuário retornado com sucesso"),
