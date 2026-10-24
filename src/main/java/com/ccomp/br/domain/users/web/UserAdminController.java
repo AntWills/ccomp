@@ -45,7 +45,7 @@ public class UserAdminController {
     @PostMapping("/search")
     @Operation(
             summary = "Listar todos os usuários",
-            description = "Retorna uma lista, junto com o cursor, de todos os usuários cadastrados na aplicação. Requer permissão ADMIN."
+            description = "Retorna uma lista paginada de usuários. O filtro searchTerm pesquisa nome e e-mail por similaridade (mínimo de 40%). Requer permissão ADMIN ou MODERATOR."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de usuários retornada com sucesso"),

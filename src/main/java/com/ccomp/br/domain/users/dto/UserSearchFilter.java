@@ -9,8 +9,13 @@ import java.util.Optional;
 @Builder
 public record UserSearchFilter(
         EnumUserStatusAccount statusAccount,
-        EnumRoles role
+        EnumRoles role,
+        String searchTerm
 ) {
+    public Optional<String> searchTermOpt() {
+        return Optional.ofNullable(searchTerm).map(String::trim).filter(term -> !term.isBlank());
+    }
+
     public Optional<EnumRoles> roleOpt() {
         return Optional.ofNullable(role);
     }
