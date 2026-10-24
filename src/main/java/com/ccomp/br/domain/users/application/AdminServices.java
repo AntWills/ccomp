@@ -60,20 +60,16 @@ public class AdminServices {
         UserCursor cursorDecoded = CursorUtils.decode(cursor, UserCursor.class);
 
         List<UserSearchResult> results = userDslRepository.findByCursor(filter, cursorDecoded, finalPageSize + 1);
-
-        boolean hasNext = results.size() > finalPageSize;
-        List<UserSearchResult> page = hasNext ? results.subList(0, finalPageSize) : results;
-        String nextCursor = null;
-
-        if (hasNext && !page.isEmpty()) {
-            UserSearchResult last = page.getLast();
-            nextCursor = CursorUtils.encode(new UserCursor(
-                    filter.searchTermOpt().isPresent() ? last.similarity() : null,
-                    last.user().createdAt(),
-                    last.user().id()
-            ));
-        }
-        return new CursorPage<>(page.stream().map(UserSearchResult::user).toList(), nextCursor, null);
+        return CursorUtils.buildPage(
+                results,
+                finalPageSize,
+                UserSearchResult::user,
+                result -> new UserCursor(
+                        filter.searchTermOpt().isPresent() ? result.similarity() : null,
+                        result.user().createdAt(),
+                        result.user().id()
+                )
+        );
     }
 
     @Transactional(readOnly = true)

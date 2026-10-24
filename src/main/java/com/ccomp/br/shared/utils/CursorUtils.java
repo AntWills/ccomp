@@ -48,6 +48,15 @@ public final class CursorUtils {
     public static <T, C> @NonNull CursorPage<T> buildPage(
             @NonNull List<T> results, int pageSize, @NonNull Function<T, C> cursorExtractor) {
 
+        return buildPage(results, pageSize, Function.identity(), cursorExtractor);
+    }
+
+    public static <T, R, C> @NonNull CursorPage<R> buildPage(
+            @NonNull List<T> results,
+            int pageSize,
+            @NonNull Function<T, R> contentMapper,
+            @NonNull Function<T, C> cursorExtractor) {
+
         boolean hasNext = results.size() > pageSize;
         List<T> page = hasNext ? results.subList(0, pageSize) : results;
 
@@ -55,6 +64,6 @@ public final class CursorUtils {
                 ? encode(cursorExtractor.apply(page.getLast()))
                 : null;
 
-        return new CursorPage<>(page, nextCursor, null);
+        return new CursorPage<>(page.stream().map(contentMapper).toList(), nextCursor, null);
     }
 }
