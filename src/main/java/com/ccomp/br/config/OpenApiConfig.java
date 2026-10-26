@@ -43,8 +43,8 @@ public class OpenApiConfig {
         final String securitySchemeName = "bearerAuth";
 
         return new OpenAPI()
-                // A URL relative to the OpenAPI document keeps deployments mounted
-                // below a path prefix (for example /ccomp-api/) working.
+                // Use the public prefix configured for this application so Swagger
+                // requests stay under its route when the host is shared.
                 .servers(List.of(new Server().url(apiServerUrl).description("Servidor da API")))
                 .info(new Info()
                         .title("CCOMP API")

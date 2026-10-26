@@ -182,6 +182,10 @@ pelo `docker-compose.prod.yml`:
 ```dotenv
 SPRING_PROFILES_ACTIVE=prod
 
+# Prefixo público exclusivo desta API no proxy reverso (sem barra final).
+# Deve corresponder ao caminho publicado pelo proxy para o backend.
+API_SERVER_URL=/ccomp-api
+
 # Dados da aplicação em produção
 FRONTEND_PASSWORD_RESET_URL=https://frontend.com/reset-password
 FRONTEND_ACCEPT_EDITOR_INVITE_URL=https://frontend.com/accept-editor-invite
@@ -220,6 +224,15 @@ STORAGE_PASSWORD=senha-storage-segura
 STORAGE_BUCKET=images
 STORAGE_REGION=us-east-1
 ```
+
+`API_SERVER_URL` define o endereço base que o OpenAPI anuncia para as
+requisições feitas pelo Swagger UI e pelo Scalar. Use o prefixo reservado
+para esta aplicação quando várias aplicações compartilham o mesmo domínio,
+por exemplo `/ccomp-api`; não use apenas `/`, que apontaria para a raiz
+compartilhada. O proxy reverso também deve encaminhar esse prefixo para este
+backend. O valor pode ser outro caminho ou uma URL completa, conforme a rota
+pública configurada no proxy. O Scalar carrega `/v3/api-docs` relativamente à
+sua própria localização para continuar funcionando sob esse prefixo.
 
 Com as chaves e o `.env` criados, o ambiente é subido com:
 
