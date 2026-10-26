@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -56,12 +57,14 @@ public class InfraLogsService {
         Map<?, ?> response = loki.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/loki/api/v1/query_range")
-                        .queryParam("query", query)
+                        // O placeholder impede que as chaves do seletor LogQL sejam lidas como
+                        // template de URI; o valor expandido é codificado pelo UriBuilder uma vez.
+                        .queryParam("query", "{query}")
                         .queryParam("start", start.toString())
                         .queryParam("end", end.toString())
                         .queryParam("direction", "backward")
                         .queryParam("limit", limit)
-                        .build())
+                        .build(query))
                 .retrieve()
                 .body(Map.class);
 
