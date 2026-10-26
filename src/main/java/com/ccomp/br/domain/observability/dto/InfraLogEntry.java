@@ -5,7 +5,6 @@ import java.time.Instant;
 public record InfraLogEntry(
         Instant timestamp,
         String serviceName,
-        String container,
         String level,
         String message
 ) {

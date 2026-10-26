@@ -5,6 +5,8 @@ somente containers com o rótulo de projeto Compose `ccomp`. Grafana/LGTM guarda
 logs e métricas por 30 dias; os dados ficam nos volumes Docker persistentes.
 Os logs recebem os rótulos `service_name` (serviço Compose) e `container`, para
 filtrar por exemplo `ccomp-backend`, `postgres-db` ou `postgres-exporter`.
+O endpoint da aplicação consulta pelo serviço Compose e agrega suas réplicas;
+ele não recebe nem retorna nomes de containers.
 
 ## Consulta de logs de infraestrutura pela API
 
@@ -14,13 +16,9 @@ de auditoria disponíveis em `/api/admin/audit-logs`.
 
 Filtros opcionais (também tipados e documentados no Swagger):
 
-- `serviceName`: serviço Compose. Valores: `proxy`, `ccomp-backend`, `postgres-db`,
+- `serviceName`: serviço Compose. Padrão `ccomp-backend`. Valores: `proxy`, `ccomp-backend`, `postgres-db`,
   `postgres-exporter`, `seaweeds`, `seaweeds-setup`, `rabbitmq`, `redis`,
   `redis-exporter`, `grafana-lgtm`, `prometheus` e `alloy`.
-- `container`: nome exato de uma instância de container, conforme retornado em
-  cada item. Um serviço pode ter mais de um container, por exemplo as réplicas
-  de `ccomp-backend`; omita o filtro para consultar todas as instâncias daquele
-  serviço.
 - `level`: nível normalizado pelo Alloy. Opções: `info`, `warn`, `error`,
   `fatal`, `panic`, `warning`, `log`, `notice`, `debug1` a `debug5`. O Alloy
   cria esse rótulo apenas para `proxy`, `postgres-db` e `seaweeds`; nos demais
@@ -28,12 +26,18 @@ Filtros opcionais (também tipados e documentados no Swagger):
 - `search`: texto literal contido na mensagem.
 - `start` e `end`: período ISO-8601; por padrão, última hora, com máximo de 7 dias.
 - `limit`: quantidade máxima de linhas, de 1 a 500; padrão 100.
+- `cursor`: valor de `nextCursor` da resposta anterior para carregar a próxima
+  página de logs mais antigos. O cursor preserva o período original; mantenha os
+  mesmos filtros ao navegar.
 
-Exemplo para todos os containers do backend: `/api/admin/infra-logs?serviceName=ccomp-backend&search=ERROR&limit=100`.
+Quando houver mais resultados, a resposta inclui `nextCursor`; quando não houver
+mais páginas, o campo será `null`.
+
+Exemplo usando os valores padrão do serviço e período: `/api/admin/infra-logs`.
 Exemplo de nível no PostgreSQL: `/api/admin/infra-logs?serviceName=postgres-db&level=error`.
-Exemplo completo, incluindo container e período: `/api/admin/infra-logs?serviceName=postgres-db&container=ccomp-postgres-db-1&level=error&search=connection%20refused&start=2026-10-26T12%3A00%3A00Z&end=2026-10-26T13%3A00%3A00Z&limit=100`.
-No Swagger, `serviceName` e `level` aparecem como listas selecionáveis; use um
-valor de `container` devolvido na própria resposta para filtrar uma instância.
+Exemplo com navegação: `/api/admin/infra-logs?serviceName=postgres-db&level=error&limit=100&cursor=<nextCursor da resposta anterior>`.
+No Swagger, `serviceName` e `level` aparecem como listas selecionáveis; `cursor`
+é um campo de texto que recebe o `nextCursor` da resposta anterior.
 O Loki não é publicado externamente; somente o backend acessa sua API pela rede
 Docker.
 
