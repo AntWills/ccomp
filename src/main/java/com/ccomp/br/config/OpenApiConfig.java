@@ -45,7 +45,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 // A URL relative to the OpenAPI document keeps deployments mounted
                 // below a path prefix (for example /ccomp-api/) working.
-                .servers(List.of(new Server().url("/").description("Servidor da API")))
+                .servers(List.of(new Server().url(apiServerUrl).description("Servidor da API")))
                 .info(new Info()
                         .title("CCOMP API")
                         .version(apiVersion)
