@@ -6,6 +6,37 @@ logs e métricas por 30 dias; os dados ficam nos volumes Docker persistentes.
 Os logs recebem os rótulos `service_name` (serviço Compose) e `container`, para
 filtrar por exemplo `ccomp-backend`, `postgres-db` ou `postgres-exporter`.
 
+## Consulta de logs de infraestrutura pela API
+
+O endpoint `GET /api/admin/infra-logs` consulta o Loki internamente e exige um
+JWT com perfil `ADMIN`. Ele retorna os logs em `logs`, separados dos registros
+de auditoria disponíveis em `/api/admin/audit-logs`.
+
+Filtros opcionais (também tipados e documentados no Swagger):
+
+- `serviceName`: serviço Compose. Valores: `proxy`, `ccomp-backend`, `postgres-db`,
+  `postgres-exporter`, `seaweeds`, `seaweeds-setup`, `rabbitmq`, `redis`,
+  `redis-exporter`, `grafana-lgtm`, `prometheus` e `alloy`.
+- `container`: nome exato de uma instância de container, conforme retornado em
+  cada item. Um serviço pode ter mais de um container, por exemplo as réplicas
+  de `ccomp-backend`; omita o filtro para consultar todas as instâncias daquele
+  serviço.
+- `level`: nível normalizado pelo Alloy. Opções: `info`, `warn`, `error`,
+  `fatal`, `panic`, `warning`, `log`, `notice`, `debug1` a `debug5`. O Alloy
+  cria esse rótulo apenas para `proxy`, `postgres-db` e `seaweeds`; nos demais
+  serviços esse filtro não encontra resultados.
+- `search`: texto literal contido na mensagem.
+- `start` e `end`: período ISO-8601; por padrão, última hora, com máximo de 7 dias.
+- `limit`: quantidade máxima de linhas, de 1 a 500; padrão 100.
+
+Exemplo para todos os containers do backend: `/api/admin/infra-logs?serviceName=ccomp-backend&search=ERROR&limit=100`.
+Exemplo de nível no PostgreSQL: `/api/admin/infra-logs?serviceName=postgres-db&level=error`.
+Exemplo completo, incluindo container e período: `/api/admin/infra-logs?serviceName=postgres-db&container=ccomp-postgres-db-1&level=error&search=connection%20refused&start=2026-10-26T12%3A00%3A00Z&end=2026-10-26T13%3A00%3A00Z&limit=100`.
+No Swagger, `serviceName` e `level` aparecem como listas selecionáveis; use um
+valor de `container` devolvido na própria resposta para filtrar uma instância.
+O Loki não é publicado externamente; somente o backend acessa sua API pela rede
+Docker.
+
 ## Métricas
 
 O Alloy coleta métricas do backend (`/actuator/prometheus`, porta interna 8081),
