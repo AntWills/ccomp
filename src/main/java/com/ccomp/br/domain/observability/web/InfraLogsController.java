@@ -32,23 +32,20 @@ public class InfraLogsController {
     @Operation(
             summary = "Consultar logs de infraestrutura",
             description = "Consulta somente logs de infraestrutura coletados pelo Alloy no Loki. Requer perfil ADMIN. " +
-                    "Sem filtros, retorna até 100 linhas da última hora. O filtro container identifica uma instância " +
-                    "específica dentro do serviço; use o valor retornado no campo container. O filtro level só retorna " +
-                    "resultados para serviços nos quais o Alloy extraiu esse rótulo: proxy, postgres-db e seaweeds. " +
-                    "O texto de busca é literal. O período máximo é de 7 dias."
+                    "Sem filtros, consulta ccomp-backend e retorna até 100 linhas da última hora. Use nextCursor da " +
+                    "resposta como cursor para carregar linhas mais antigas; o cursor preserva o período original. " +
+                    "O filtro level só retorna resultados para proxy, postgres-db e seaweeds. Busca literal; período " +
+                    "máximo de 7 dias."
     )
     public InfraLogsResponse search(
-            @Parameter(description = "Serviço Compose. Filtra o rótulo service_name do Alloy.",
+            @Parameter(description = "Serviço Compose. Filtra service_name e inclui todas as réplicas do serviço. " +
+                    "Padrão: ccomp-backend.",
                     schema = @Schema(type = "string", allowableValues = {
                             "proxy", "ccomp-backend", "postgres-db", "postgres-exporter", "seaweeds",
                             "seaweeds-setup", "rabbitmq", "redis", "redis-exporter", "grafana-lgtm",
                             "prometheus", "alloy"
-                    }))
+                    }, defaultValue = "ccomp-backend"))
             @RequestParam(required = false) InfraLogServiceName serviceName,
-            @Parameter(description = "Nome exato do container, conforme o campo container retornado nos logs. " +
-                    "Útil para separar réplicas do mesmo serviço.", example = "ccomp-ccomp-backend-1",
-                    schema = @Schema(type = "string", pattern = "^[a-zA-Z0-9_.-]{1,128}$"))
-            @RequestParam(required = false) String container,
             @Parameter(description = "Nível normalizado pelo Alloy. Aplicável aos serviços proxy, postgres-db e seaweeds.",
                     schema = @Schema(type = "string", allowableValues = {
                             "info", "warn", "error", "fatal", "panic", "warning", "log", "notice",
@@ -66,16 +63,19 @@ public class InfraLogsController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant end,
             @Parameter(description = "Máximo de linhas retornadas. Padrão 100; mínimo 1 e máximo 500.",
                     schema = @Schema(type = "integer", minimum = "1", maximum = "500", defaultValue = "100"))
-            @RequestParam(required = false) Integer limit
+            @RequestParam(required = false) Integer limit,
+            @Parameter(description = "Cursor retornado como nextCursor na resposta anterior. Remove a necessidade " +
+                    "de reenviar start e end e carrega a próxima página de logs mais antigos.", example = "MjAyNi0xMC0yNlQxMjowMDowMFoKMjAyNi0xMC0yNlQxMjo1OTowOS45OTk5OTk5OTla")
+            @RequestParam(required = false) String cursor
     ) {
         return infraLogsService.search(
                 serviceName == null ? null : serviceName.value(),
-                container,
                 level == null ? null : level.value(),
                 search,
                 start,
                 end,
-                limit
+                limit,
+                cursor
         );
     }
 }

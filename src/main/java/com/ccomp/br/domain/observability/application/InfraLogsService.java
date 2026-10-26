@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -31,15 +32,20 @@ public class InfraLogsService {
 
     public InfraLogsResponse search(
             String serviceName,
-            String container,
             String level,
             String search,
             Instant requestedStart,
             Instant requestedEnd,
-            Integer requestedLimit
+            Integer requestedLimit,
+            String cursor
     ) {
-        Instant end = requestedEnd == null ? Instant.now() : requestedEnd;
-        Instant start = requestedStart == null ? end.minus(Duration.ofHours(1)) : requestedStart;
+        CursorWindow cursorWindow = decodeCursor(cursor);
+        Instant end = cursorWindow == null
+                ? (requestedEnd == null ? Instant.now() : requestedEnd)
+                : cursorWindow.end();
+        Instant start = cursorWindow == null
+                ? (requestedStart == null ? end.minus(Duration.ofHours(1)) : requestedStart)
+                : cursorWindow.start();
         int limit = requestedLimit == null ? DEFAULT_LIMIT : requestedLimit;
 
         validateWindow(start, end);
@@ -47,13 +53,12 @@ public class InfraLogsService {
             throw new IllegalArgumentException("O limite deve estar entre 1 e " + MAX_LIMIT + ".");
         }
         validateLabel("serviceName", serviceName);
-        validateLabel("container", container);
         validateLabel("level", level);
         if (search != null && search.length() > 256) {
             throw new IllegalArgumentException("O texto de busca deve ter no máximo 256 caracteres.");
         }
 
-        String query = buildQuery(serviceName, container, level, search);
+        String query = buildQuery(serviceName, level, search);
         Map<?, ?> response = loki.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/loki/api/v1/query_range")
@@ -63,14 +68,25 @@ public class InfraLogsService {
                         .queryParam("start", start.toString())
                         .queryParam("end", end.toString())
                         .queryParam("direction", "backward")
-                        .queryParam("limit", limit)
+                        .queryParam("limit", limit + 1)
                         .build(query))
                 .retrieve()
                 .body(Map.class);
 
         List<InfraLogEntry> logs = flatten(response);
         logs.sort(Comparator.comparing(InfraLogEntry::timestamp).reversed());
-        return new InfraLogsResponse(logs, start, end, limit);
+        boolean hasMore = logs.size() > limit;
+        if (hasMore) {
+            logs = new ArrayList<>(logs.subList(0, limit));
+        }
+        String nextCursor = null;
+        if (hasMore && !logs.isEmpty()) {
+            Instant nextEnd = logs.getLast().timestamp().minusNanos(1);
+            if (!nextEnd.isBefore(start)) {
+                nextCursor = encodeCursor(start, nextEnd);
+            }
+        }
+        return new InfraLogsResponse(logs, start, end, limit, nextCursor);
     }
 
     private static void validateWindow(Instant start, Instant end) {
@@ -88,15 +104,11 @@ public class InfraLogsService {
         }
     }
 
-    private static String buildQuery(String serviceName, String container, String level, String search) {
+    private static String buildQuery(String serviceName, String level, String search) {
         List<String> selectors = new ArrayList<>();
         selectors.add("job=\"ccomp\"");
-        if (serviceName != null && !serviceName.isBlank()) {
-            selectors.add("service_name=\"" + serviceName + "\"");
-        }
-        if (container != null && !container.isBlank()) {
-            selectors.add("container=\"" + container + "\"");
-        }
+        String effectiveService = serviceName == null || serviceName.isBlank() ? "ccomp-backend" : serviceName;
+        selectors.add("service_name=\"" + effectiveService + "\"");
         if (level != null && !level.isBlank()) {
             selectors.add("level=\"" + level + "\"");
         }
@@ -106,6 +118,31 @@ public class InfraLogsService {
             query += " |= \"" + escapeLogQLString(search) + "\"";
         }
         return query;
+    }
+
+    private static String encodeCursor(Instant start, Instant end) {
+        String value = start.toString() + "\n" + end.toString();
+        return Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(value.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static CursorWindow decodeCursor(String cursor) {
+        if (cursor == null || cursor.isBlank()) {
+            return null;
+        }
+        try {
+            String value = new String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8);
+            String[] bounds = value.split("\\n", -1);
+            if (bounds.length != 2) {
+                throw new IllegalArgumentException();
+            }
+            return new CursorWindow(Instant.parse(bounds[0]), Instant.parse(bounds[1]));
+        } catch (RuntimeException exception) {
+            throw new IllegalArgumentException("Cursor de navegação inválido.");
+        }
+    }
+
+    private record CursorWindow(Instant start, Instant end) {
     }
 
     private static String escapeLogQLString(String value) {
@@ -137,7 +174,6 @@ public class InfraLogsService {
                 logs.add(new InfraLogEntry(
                         parseNanosecondTimestamp(String.valueOf(value.get(0))),
                         label(labels, "service_name"),
-                        label(labels, "container"),
                         label(labels, "level"),
                         String.valueOf(value.get(1))
                 ));

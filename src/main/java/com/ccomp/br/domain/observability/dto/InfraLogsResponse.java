@@ -7,6 +7,7 @@ public record InfraLogsResponse(
         List<InfraLogEntry> logs,
         Instant start,
         Instant end,
-        int limit
+        int limit,
+        String nextCursor
 ) {
 }
