@@ -12,6 +12,7 @@ import com.ccomp.br.domain.users.persistence.roles.Roles;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserItemDTO;
 import jakarta.persistence.EntityManager;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,9 @@ public class UserDslRepositoryTest {
 
     @Autowired
     private UserDslRepository userDslRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     @DisplayName("Deve realizar a paginação baseada em cursor ordenada por createdAt decrescente")
@@ -90,6 +94,7 @@ public class UserDslRepositoryTest {
         List<UserSearchResult> page1 = userDslRepository.findByCursor(filter, null, 2);
 
         assertThat(page1).hasSize(2);
+        assertThat(page1).allSatisfy(result -> assertThat(result.similarity()).isNull());
         assertThat(page1.get(0).user().emailAddress().getValue()).isEqualTo("charlie@teste.com");
         assertThat(page1.get(1).user().emailAddress().getValue()).isEqualTo("bob@teste.com");
 
@@ -100,6 +105,58 @@ public class UserDslRepositoryTest {
 
         assertThat(page2).hasSize(1);
         assertThat(page2.getFirst().user().emailAddress().getValue()).isEqualTo("alice@teste.com");
+    }
+
+    @Test
+    @DisplayName("Deve executar a listagem sem busca para inspecionar o plano no auto_explain do PostgreSQL")
+    void shouldRunUnsearchedQueryForAutoExplainInspection() {
+        persistUser("Pessoa para plano", "plano@example.com", EnumUserStatusAccount.ACTIVE,
+                EnumRoles.USER, LocalDateTime.now());
+        entityManager.flush();
+        entityManager.clear();
+
+        var results = userDslRepository.findByCursor(new UserSearchFilter(null, null, null), null, 10);
+
+        assertThat(results).hasSize(1);
+        assertThat(results.getFirst().similarity()).isNull();
+    }
+
+    @Test
+    @DisplayName("Deve inspecionar o uso dos índices trigramáticos com uma tabela grande")
+    void shouldUseTrigramIndexesForSelectiveWordSimilaritySearch() {
+        jdbcTemplate.update("""
+                INSERT INTO tb_users (id, name, email_address, password, status_account, created_at, updated_at)
+                SELECT md5(i::text)::uuid,
+                       CASE WHEN i % 3000 = 0 THEN 'NeedleTarget User ' || i ELSE 'Bulk User ' || i END,
+                       CASE WHEN i % 3000 = 0 THEN 'needle' || i || '@target.test' ELSE 'bulk' || i || '@example.test' END,
+                       'hash', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                FROM generate_series(1, 300000) AS i
+                """);
+        jdbcTemplate.update("""
+                INSERT INTO tb_roles (user_id, role)
+                SELECT id, 'USER' FROM tb_users
+                """);
+        jdbcTemplate.execute("ANALYZE tb_users");
+        jdbcTemplate.execute("ANALYZE tb_roles");
+        jdbcTemplate.queryForObject(
+                "SELECT set_config('pg_trgm.word_similarity_threshold', '0.4', true)", String.class);
+
+        // Roda o método real; auto_explain registra o plano desta consulta no log do PostgreSQL.
+        var results = userDslRepository.findByCursor(
+                new UserSearchFilter(null, null, "NeedleTarget"), null, 10);
+        assertThat(results).isNotEmpty();
+
+        // Este predicado usa o operador indexável equivalente a word_similarity(...) >= 0.4.
+        // A massa grande e seletiva permite verificar que os índices GIN podem ser escolhidos.
+        var plan = String.join("\n", jdbcTemplate.queryForList("""
+                EXPLAIN (ANALYZE, BUFFERS)
+                SELECT id FROM tb_users
+                WHERE ('NeedleTarget' <% name) OR ('NeedleTarget' <% email_address)
+                """, String.class));
+
+        assertThat(plan)
+                .contains("idx_users_name_trgm")
+                .contains("idx_users_email_address_trgm");
     }
 
     @Test
