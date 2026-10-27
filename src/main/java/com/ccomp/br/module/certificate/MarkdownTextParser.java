@@ -11,9 +11,9 @@ import java.util.regex.Pattern;
 
 public class MarkdownTextParser {
 
-    // Regex para identificar ~~riscado~~, **negrito** e *itálico*
+    // Regex para identificar __sublinhado__, ~~riscado~~, **negrito** e *itálico*
     private static final Pattern MARKDOWN_PATTERN = Pattern.compile(
-            "(~~(?<strike>.*?)~~)|(\\*\\*(?<bold>.*?)\\*\\*)|(\\*(?<italic>.*?)\\*)"
+            "(__(?<underline>.*?)__)|(~~(?<strike>.*?)~~)|(\\*\\*(?<bold>.*?)\\*\\*)|(\\*(?<italic>.*?)\\*)"
     );
 
     public static AttributedString parse(String markdownText, Font baseFont, Color fontColor) {
@@ -39,8 +39,12 @@ public class MarkdownTextParser {
             boolean isBold = false;
             boolean isItalic = false;
             boolean isStrike = false;
+            boolean isUnderline = false;
 
-            if (matcher.group("strike") != null) {
+            if (matcher.group("underline") != null) {
+                content = matcher.group("underline");
+                isUnderline = true;
+            } else if (matcher.group("strike") != null) {
                 content = matcher.group("strike");
                 isStrike = true;
             } else if (matcher.group("bold") != null) {
@@ -55,7 +59,7 @@ public class MarkdownTextParser {
             int end = plainText.length();
 
             if (start < end) {
-                ranges.add(new StyleRange(start, end, isBold, isItalic, isStrike));
+                ranges.add(new StyleRange(start, end, isBold, isItalic, isStrike, isUnderline));
             }
 
             lastIndex = matcher.end();
@@ -91,10 +95,14 @@ public class MarkdownTextParser {
             if (range.strikethrough()) {
                 attributedString.addAttribute(TextAttribute.STRIKETHROUGH, TextAttribute.STRIKETHROUGH_ON, range.start(), range.end());
             }
+            if (range.underline()) {
+                attributedString.addAttribute(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_ON, range.start(), range.end());
+            }
         }
 
         return attributedString;
     }
 
-    private record StyleRange(int start, int end, boolean bold, boolean italic, boolean strikethrough) {}
+    private record StyleRange(int start, int end, boolean bold, boolean italic, boolean strikethrough,
+                              boolean underline) {}
 }
