@@ -3,7 +3,13 @@ package com.ccomp.br.domain.events.application;
 import com.ccomp.br.domain.events.core.application.EventsServices;
 import com.ccomp.br.domain.events.core.dto.CreateEventDTO;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.dto.EventCursor;
+import com.ccomp.br.domain.events.core.dto.EventListItemDTO;
+import com.ccomp.br.domain.events.core.dto.EventSearchResult;
+import com.ccomp.br.domain.events.core.dto.EventsFilterRequest;
 import com.ccomp.br.domain.events.core.dto.UpdateEventDTO;
+import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
+import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
 import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
@@ -15,6 +21,7 @@ import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
+import com.ccomp.br.shared.utils.CursorUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -25,7 +32,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -64,6 +73,52 @@ public class EventsServicesTest {
         existingEvent = mock(Event.class);
         expectedEventDTO = mock(EventDTO.class);
 
+    }
+
+    @Test
+    @DisplayName("Busca eventos repassando searchTerm e inclui a relevância no cursor seguinte")
+    void searchEventsWithFilters_preservesSearchRelevanceInNextCursor() {
+        var filter = new EventsFilterRequest(
+                EnumEventCategory.ACADEMIC_EDUCATIONAL,
+                EnumEventFormat.IN_PERSON,
+                "computing"
+        );
+        var first = new EventListItemDTO(10L, "Computing Summit", "computing-summit", null, null,
+                EnumEventCategory.ACADEMIC_EDUCATIONAL, EnumEventFormat.IN_PERSON, EnumEventStatus.PUBLISHED,
+                null, null, null, false, LocalDateTime.parse("2026-11-10T10:00:00"), null, null, null);
+        var second = new EventListItemDTO(9L, "Computing Forum", "computing-forum", null, null,
+                EnumEventCategory.ACADEMIC_EDUCATIONAL, EnumEventFormat.IN_PERSON, EnumEventStatus.PUBLISHED,
+                null, null, null, false, LocalDateTime.parse("2026-11-09T10:00:00"), null, null, null);
+        when(eventDslRepository.findByCursor(filter, null, 2)).thenReturn(List.of(
+                new EventSearchResult(first, 1.8), new EventSearchResult(second, 1.4)));
+
+        var page = eventsServices.searchEventsWithFilters(filter, null, 1);
+
+        assertThat(page.content()).containsExactly(first);
+        EventCursor nextCursor = CursorUtils.decode(page.nextCursor(), EventCursor.class);
+        assertThat(nextCursor).isEqualTo(new EventCursor(1.8, first.startDate(), first.id()));
+        verify(eventDslRepository).findByCursor(filter, null, 2);
+    }
+
+    @Test
+    @DisplayName("Busca sem searchTerm conserva o cursor de data e ID sem score de relevância")
+    void searchEventsWithFiltersOmitsRelevanceFromCursorWithoutSearchTerm() {
+        var filter = new EventsFilterRequest(null, null);
+        var first = new EventListItemDTO(5L, "Evento", "evento", null, null,
+                EnumEventCategory.ACADEMIC_EDUCATIONAL, EnumEventFormat.IN_PERSON, EnumEventStatus.PUBLISHED,
+                null, null, null, false, LocalDateTime.parse("2026-11-10T10:00:00"), null, null, null);
+        var second = new EventListItemDTO(4L, "Outro evento", "outro-evento", null, null,
+                EnumEventCategory.ACADEMIC_EDUCATIONAL, EnumEventFormat.IN_PERSON, EnumEventStatus.PUBLISHED,
+                null, null, null, false, LocalDateTime.parse("2026-11-09T10:00:00"), null, null, null);
+        when(eventDslRepository.findByCursor(filter, null, 2)).thenReturn(List.of(
+                new EventSearchResult(first, null), new EventSearchResult(second, null)));
+
+        var page = eventsServices.searchEventsWithFilters(filter, null, 1);
+
+        assertThat(page.content()).containsExactly(first);
+        EventCursor nextCursor = CursorUtils.decode(page.nextCursor(), EventCursor.class);
+        assertThat(nextCursor).isEqualTo(new EventCursor(null, first.startDate(), first.id()));
+        verify(eventDslRepository).findByCursor(filter, null, 2);
     }
 
     @Nested

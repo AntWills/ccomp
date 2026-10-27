@@ -116,7 +116,8 @@ public class EventsController {
         ### Comportamento da Paginação:
         - **`pageSize`:** Limite de itens por página (máximo ajustado automaticamente para 50).
         - **`nextCursor`:** Token para navegação contínua da próxima página.
-        - **Ordenação:** Ordenado primariamente por `startDate DESC`.
+        - **`searchTerm`:** Busca aproximada no título; quando informado, os eventos são ordenados por relevância.
+        - **Ordenação:** Sem termo, por `startDate DESC`; com termo, por relevância e depois `startDate DESC`.
         """
     )
     @ApiResponses(value = {

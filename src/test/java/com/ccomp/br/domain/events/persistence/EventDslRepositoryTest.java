@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.persistence;
 import com.ccomp.br.config.QueryDslConfig;
 import com.ccomp.br.domain.events.core.dto.EventCursor;
 import com.ccomp.br.domain.events.core.dto.EventListItemDTO;
+import com.ccomp.br.domain.events.core.dto.EventSearchResult;
 import com.ccomp.br.domain.events.core.dto.EventsFilterRequest;
 import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
@@ -73,20 +74,74 @@ public class EventDslRepositoryTest {
         );
 
         // Ação: Busca da Página 1 (limite 2)
-        List<EventListItemDTO> page1 = eventDslRepository.findByCursor(filter, null, 2);
+        List<EventSearchResult> page1 = eventDslRepository.findByCursor(filter, null, 2);
 
         // Asserções Página 1 (Esperados em ordem decrescente de startDate: event3, depois event2)
         assertThat(page1).hasSize(2);
-        assertThat(page1.get(0).id()).isEqualTo(event3.getId());
-        assertThat(page1.get(1).id()).isEqualTo(event2.getId());
+        assertThat(page1.get(0).event().id()).isEqualTo(event3.getId());
+        assertThat(page1.get(1).event().id()).isEqualTo(event2.getId());
+        assertThat(page1).allSatisfy(result -> assertThat(result.relevance()).isNull());
 
         // Ação: Busca da Página 2 usando cursor do último item da Página 1
-        EventCursor cursor = new EventCursor(page1.getLast().startDate(), page1.getLast().id());
-        List<EventListItemDTO> page2 = eventDslRepository.findByCursor(filter, cursor, 2);
+        EventCursor cursor = new EventCursor(page1.getLast().event().startDate(), page1.getLast().event().id());
+        List<EventSearchResult> page2 = eventDslRepository.findByCursor(filter, cursor, 2);
 
         // Asserções Página 2
         assertThat(page2).hasSize(1);
-        assertThat(page2.getFirst().id()).isEqualTo(event1.getId());
+        assertThat(page2.getFirst().event().id()).isEqualTo(event1.getId());
+    }
+
+    @Test
+    @DisplayName("Deve combinar busca aproximada no título com categoria, formato e status publicado")
+    void shouldSearchPublishedEventsByTitleAlongsideOtherFilters() {
+        Event titleMatch = createEvent("Computing Conference 2026", baseTime,
+                EnumEventStatus.PUBLISHED, UUID.randomUUID());
+        createEvent("Computing Conference Draft", baseTime.plusDays(1),
+                EnumEventStatus.DRAFT, UUID.randomUUID());
+        Event wrongCategory = createEvent("Computing Conference Culture", baseTime.plusDays(2),
+                EnumEventStatus.PUBLISHED, UUID.randomUUID());
+        wrongCategory.setCategory(EnumEventCategory.CULTURE_ENTERTAINMENT);
+        eventRepository.saveAndFlush(wrongCategory);
+        Event wrongFormat = createEvent("Computing Conference Online", baseTime.plusDays(3),
+                EnumEventStatus.PUBLISHED, UUID.randomUUID());
+        wrongFormat.setFormat(EnumEventFormat.ONLINE);
+        eventRepository.saveAndFlush(wrongFormat);
+        createEvent("Unrelated title", baseTime.plusDays(4),
+                EnumEventStatus.PUBLISHED, UUID.randomUUID());
+
+        var filter = new EventsFilterRequest(
+                EnumEventCategory.ACADEMIC_EDUCATIONAL,
+                EnumEventFormat.IN_PERSON,
+                "Computing Confernece"
+        );
+
+        var results = eventDslRepository.findByCursor(filter, null, 10);
+
+        assertThat(results).extracting(result -> result.event().id()).containsExactly(titleMatch.getId());
+        assertThat(results.getFirst().relevance()).isNotNull().isPositive();
+    }
+
+    @Test
+    @DisplayName("Deve ordenar por relevância do título e continuar a paginação por cursor")
+    void shouldPaginateTitleSearchInRelevanceOrder() {
+        Event exactMatch = createEvent("Data Science Summit", baseTime,
+                EnumEventStatus.PUBLISHED, UUID.randomUUID());
+        Event partialMatch = createEvent("Data Science Forum", baseTime.plusDays(2),
+                EnumEventStatus.PUBLISHED, UUID.randomUUID());
+        createEvent("Unrelated Seminar", baseTime.plusDays(3),
+                EnumEventStatus.PUBLISHED, UUID.randomUUID());
+        var filter = new EventsFilterRequest(null, null, "Data Science Summit");
+
+        var firstPage = eventDslRepository.findByCursor(filter, null, 1);
+        assertThat(firstPage).hasSize(1);
+        assertThat(firstPage.getFirst().event().id()).isEqualTo(exactMatch.getId());
+
+        var first = firstPage.getFirst();
+        var cursor = new EventCursor(first.relevance(), first.event().startDate(), first.event().id());
+        var secondPage = eventDslRepository.findByCursor(filter, cursor, 1);
+
+        assertThat(secondPage).hasSize(1);
+        assertThat(secondPage.getFirst().event().id()).isEqualTo(partialMatch.getId());
     }
 
     @Test

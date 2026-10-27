@@ -2,6 +2,7 @@ package com.ccomp.br.domain.events.core.persistence;
 
 import com.ccomp.br.domain.events.core.dto.EventCursor;
 import com.ccomp.br.domain.events.core.dto.EventListItemDTO;
+import com.ccomp.br.domain.events.core.dto.EventSearchResult;
 import com.ccomp.br.domain.events.core.dto.EventsFilterRequest;
 import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.editors.enums.EnumEditorsStatus;
@@ -10,6 +11,7 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Repository;
@@ -29,12 +31,14 @@ public class EventDslRepository {
         this.queryFactory = queryFactory;
     }
 
-    public List<EventListItemDTO> findByCursor(
+    public List<EventSearchResult> findByCursor(
             EventsFilterRequest filter,
             @Nullable EventCursor cursor,
             int limit
     ) {
         BooleanBuilder whereClause = new BooleanBuilder();
+        var searchTerm = filter.searchTermOpt();
+        NumberExpression<Double> relevance = searchTerm.map(this::relevanceExpression).orElse(null);
 
         whereClause.and(event.status.eq(EnumEventStatus.PUBLISHED));
 
@@ -46,7 +50,28 @@ public class EventDslRepository {
                 whereClause.and(event.format.eq(format))
         );
 
-        if (cursor != null && cursor.id() != null && cursor.startDate() != null) {
+        searchTerm.ifPresent(term -> {
+            var wordSimilarity = Expressions.numberTemplate(
+                    Double.class,
+                    "cast(function('word_similarity', {0}, {1}) as double)",
+                    Expressions.constant(term),
+                    event.title
+            );
+            whereClause.and(wordSimilarity.goe(0.4));
+        });
+
+        if (cursor != null && cursor.id() != null && cursor.startDate() != null
+                && searchTerm.isPresent() && cursor.relevance() != null) {
+            whereClause.and(Expressions.booleanTemplate(
+                    "({0}, {1}, {2}) < ({3}, {4}, {5})",
+                    relevance,
+                    event.startDate,
+                    event.id,
+                    Expressions.constant(cursor.relevance()),
+                    Expressions.constant(cursor.startDate()),
+                    Expressions.constant(cursor.id())
+            ));
+        } else if (cursor != null && cursor.id() != null && cursor.startDate() != null) {
             BooleanExpression cursorCondition = Expressions.booleanTemplate(
                     "( {0}, {1} ) < ( {2}, {3} )",
                     event.startDate,
@@ -57,36 +82,59 @@ public class EventDslRepository {
             whereClause.and(cursorCondition);
         }
 
-        return queryFactory
+        var query = queryFactory
                 .select(
                         Projections.constructor(
-                                EventListItemDTO.class,
-                                event.id,
-                                event.title,
-                                event.slug,
-                                event.summary,
-                                event.content,
-                                event.category,
-                                event.format,
-                                event.status,
-                                event.coverImageKey,
-                                event.enrollmentStartDate,
-                                event.enrollmentEndDate,
-                                event.enrollmentPaused,
-                                event.startDate,
-                                event.endDate,
-                                event.address,
-                                event.onlineUrl
+                                EventSearchResult.class,
+                                Projections.constructor(
+                                        EventListItemDTO.class,
+                                        event.id,
+                                        event.title,
+                                        event.slug,
+                                        event.summary,
+                                        event.content,
+                                        event.category,
+                                        event.format,
+                                        event.status,
+                                        event.coverImageKey,
+                                        event.enrollmentStartDate,
+                                        event.enrollmentEndDate,
+                                        event.enrollmentPaused,
+                                        event.startDate,
+                                        event.endDate,
+                                        event.address,
+                                        event.onlineUrl
+                                ),
+                                searchTerm.isPresent() ? relevance : Expressions.nullExpression(Double.class)
                         )
                 )
                 .from(event)
-                .where(whereClause)
-                .orderBy(
-                        event.startDate.desc(),
-                        event.id.desc()
-                )
-                .limit(limit)
-                .fetch();
+                .where(whereClause);
+
+        if (searchTerm.isPresent()) {
+            query.orderBy(relevance.desc(), event.startDate.desc(), event.id.desc());
+        } else {
+            query.orderBy(event.startDate.desc(), event.id.desc());
+        }
+
+        return query.limit(limit).fetch();
+    }
+
+    private NumberExpression<Double> relevanceExpression(String term) {
+        var termExpression = Expressions.constant(term);
+        var wordSimilarity = Expressions.numberTemplate(
+                Double.class,
+                "cast(function('word_similarity', {0}, {1}) as double)",
+                termExpression,
+                event.title
+        );
+        var similarity = Expressions.numberTemplate(
+                Double.class,
+                "cast(function('similarity', {0}, {1}) as double)",
+                termExpression,
+                event.title
+        );
+        return wordSimilarity.add(similarity);
     }
 
     public List<EventListItemDTO> findAllByOwnerId(

@@ -76,12 +76,17 @@ public class EventsServices {
         EventCursor decodedCursor = CursorUtils.decode(cursor, EventCursor.class);
 
 //        List<EventListItemView> events = eventBlaze.findByCursor(filter, decodedCursor, finalPageSize + 1);
-        List<EventListItemDTO> events = eventDslRepository.findByCursor(filter, decodedCursor, finalPageSize + 1);
+        List<EventSearchResult> events = eventDslRepository.findByCursor(filter, decodedCursor, finalPageSize + 1);
 
         return CursorUtils.buildPage(
                 events,
                 finalPageSize,
-                e -> new EventCursor(e.startDate(), e.id()));
+                EventSearchResult::event,
+                result -> new EventCursor(
+                        filter.searchTermOpt().isPresent() ? result.relevance() : null,
+                        result.event().startDate(),
+                        result.event().id()
+                ));
     }
 
     @Transactional(readOnly = true)
