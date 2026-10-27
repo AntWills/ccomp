@@ -30,30 +30,9 @@ public class UserDslRepository {
         BooleanBuilder whereClause = new BooleanBuilder();
         var searchTerm = filter.searchTermOpt();
 
-        var termExpr = searchTerm.map(Expressions::constant).orElseGet(() -> Expressions.constant(""));
-
-        // Força o tipo Double via cast() no HQL para o TypecheckUtil do Hibernate 7 aceitar a operação de adição (+)
-        NumberExpression<Double> nameWordSim = Expressions.numberTemplate(
-                Double.class, "cast(function('word_similarity', {0}, {1}) as double)", termExpr, userModel.name);
-        NumberExpression<Double> nameSim = Expressions.numberTemplate(
-                Double.class, "cast(function('similarity', {0}, {1}) as double)", termExpr, userModel.name);
-
-        NumberExpression<Double> emailWordSim = Expressions.numberTemplate(
-                Double.class, "cast(function('word_similarity', {0}, {1}) as double)", termExpr, userModel.emailAddress.value);
-        NumberExpression<Double> emailSim = Expressions.numberTemplate(
-                Double.class, "cast(function('similarity', {0}, {1}) as double)", termExpr, userModel.emailAddress.value);
-
-        // Soma os scores de substring (word_similarity) e exatidão (similarity)
-        NumberExpression<Double> nameScore = nameWordSim.add(nameSim);
-        NumberExpression<Double> emailScore = emailWordSim.add(emailSim);
-
-        // Maior pontuação entre nome e e-mail
-        NumberExpression<Double> similarity = Expressions.numberTemplate(
-                Double.class,
-                "greatest({0}, {1})",
-                nameScore,
-                emailScore
-        );
+        NumberExpression<Double> similarity = searchTerm
+                .map(this::similarityExpression)
+                .orElse(null);
 
         filter.statusAccountOpt().ifPresent(sa ->
                 whereClause.and(userModel.statusAccount.eq(sa))
@@ -118,7 +97,7 @@ public class UserDslRepository {
                                         userModel.updatedAt,
                                         roles.role
                                 ),
-                                similarity
+                                searchTerm.isPresent() ? similarity : Expressions.nullExpression(Double.class)
                         )
                 )
                 .from(userModel)
@@ -134,5 +113,26 @@ public class UserDslRepository {
         return query
                 .limit(limit)
                 .fetch();
+    }
+
+    private NumberExpression<Double> similarityExpression(String term) {
+        var termExpr = Expressions.constant(term);
+
+        // Força Double para o Hibernate aceitar a soma no HQL.
+        NumberExpression<Double> nameWordSim = Expressions.numberTemplate(
+                Double.class, "cast(function('word_similarity', {0}, {1}) as double)", termExpr, userModel.name);
+        NumberExpression<Double> nameSim = Expressions.numberTemplate(
+                Double.class, "cast(function('similarity', {0}, {1}) as double)", termExpr, userModel.name);
+        NumberExpression<Double> emailWordSim = Expressions.numberTemplate(
+                Double.class, "cast(function('word_similarity', {0}, {1}) as double)", termExpr, userModel.emailAddress.value);
+        NumberExpression<Double> emailSim = Expressions.numberTemplate(
+                Double.class, "cast(function('similarity', {0}, {1}) as double)", termExpr, userModel.emailAddress.value);
+
+        return Expressions.numberTemplate(
+                Double.class,
+                "greatest({0}, {1})",
+                nameWordSim.add(nameSim),
+                emailWordSim.add(emailSim)
+        );
     }
 }

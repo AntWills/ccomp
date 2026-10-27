@@ -12,6 +12,7 @@ import com.ccomp.br.domain.users.persistence.roles.Roles;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserItemDTO;
 import jakarta.persistence.EntityManager;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,9 @@ public class UserDslRepositoryTest {
 
     @Autowired
     private UserDslRepository userDslRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     @DisplayName("Deve realizar a paginação baseada em cursor ordenada por createdAt decrescente")
@@ -90,6 +94,7 @@ public class UserDslRepositoryTest {
         List<UserSearchResult> page1 = userDslRepository.findByCursor(filter, null, 2);
 
         assertThat(page1).hasSize(2);
+        assertThat(page1).allSatisfy(result -> assertThat(result.similarity()).isNull());
         assertThat(page1.get(0).user().emailAddress().getValue()).isEqualTo("charlie@teste.com");
         assertThat(page1.get(1).user().emailAddress().getValue()).isEqualTo("bob@teste.com");
 
@@ -100,6 +105,67 @@ public class UserDslRepositoryTest {
 
         assertThat(page2).hasSize(1);
         assertThat(page2.getFirst().user().emailAddress().getValue()).isEqualTo("alice@teste.com");
+    }
+
+    @Test
+    @DisplayName("Deve executar a listagem sem busca para inspecionar o plano no auto_explain do PostgreSQL")
+    void shouldRunUnsearchedQueryForAutoExplainInspection() {
+        persistUser("Pessoa para plano", "plano@example.com", EnumUserStatusAccount.ACTIVE,
+                EnumRoles.USER, LocalDateTime.now());
+        entityManager.flush();
+        entityManager.clear();
+
+        var results = userDslRepository.findByCursor(new UserSearchFilter(null, null, null), null, 10);
+
+        assertThat(results).hasSize(1);
+        assertThat(results.getFirst().similarity()).isNull();
+    }
+
+    @Test
+    @DisplayName("Deve inspecionar o uso dos índices trigramáticos com busca por similaridade")
+    void shouldUseTrigramIndexesForSelectiveWordSimilaritySearch() {
+        // 1. Carga otimizada: 10.000 registros em tb_users
+        jdbcTemplate.update("""
+            INSERT INTO tb_users (id, name, email_address, password, status_account, created_at, updated_at)
+            SELECT md5(i::text)::uuid,
+                   CASE WHEN i % 1000 = 0 THEN 'NeedleTarget User ' || i ELSE 'Bulk User ' || i END,
+                   CASE WHEN i % 1000 = 0 THEN 'needle' || i || '@target.test' ELSE 'bulk' || i || '@example.test' END,
+                   'hash', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            FROM generate_series(1, 10000) AS i
+            """);
+
+        // 2. Carga em tb_roles necessária para satisfazer o INNER JOIN do repositório
+        jdbcTemplate.update("""
+            INSERT INTO tb_roles (user_id, role)
+            SELECT id, 'USER' FROM tb_users
+            """);
+
+        // 3. Atualiza as estatísticas do otimizador do Postgres
+        jdbcTemplate.execute("ANALYZE tb_users");
+        jdbcTemplate.execute("ANALYZE tb_roles");
+
+        // 4. Configura o threshold trigramático na sessão
+        jdbcTemplate.execute("SET pg_trgm.word_similarity_threshold = 0.4");
+
+        // 5. Executa a consulta real do repositório
+        var results = userDslRepository.findByCursor(
+                new UserSearchFilter(null, null, "NeedleTarget"), null, 10);
+        assertThat(results).isNotEmpty();
+
+        // 6. Garante o uso de índices no EXPLAIN para tabelas de tamanho moderado
+        jdbcTemplate.execute("SET LOCAL enable_seqscan = off");
+
+        var plan = String.join("\n", jdbcTemplate.queryForList("""
+            EXPLAIN (ANALYZE, BUFFERS)
+            SELECT id FROM tb_users
+            WHERE ('NeedleTarget' <% name) OR ('NeedleTarget' <% email_address)
+            """, String.class));
+
+        jdbcTemplate.execute("SET LOCAL enable_seqscan = on");
+
+        assertThat(plan)
+                .contains("idx_users_name_trgm")
+                .contains("idx_users_email_address_trgm");
     }
 
     @Test

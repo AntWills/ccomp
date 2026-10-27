@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-@Tag(name = "events/me")
+@Tag(name = "events/me", description = "Listagens autenticadas dos eventos relacionados ao usuário atual")
 @RestController
 @RequestMapping("api/events/me")
 public class EventsMeController {
@@ -33,11 +33,17 @@ public class EventsMeController {
 
     @Operation(
             summary = "Lista os eventos criados pelo usuário",
-            description = "Retorna uma página contendo os eventos organizados/criados pelo usuário autenticado.",
+            description = """
+                    Retorna eventos cujo ownerId corresponde ao usuário do JWT, sem filtrar status. Ordena por
+                    startDate e ID decrescentes. Retorna CursorPage com content, next_cursor e previous_cursor.
+                    pageSize tem padrão 10 e máximo 50; nextCursor é opaco e vem da página anterior.
+                    """,
             responses = {
                     @ApiResponse(
                             responseCode = "200",
-                            description = "Página de eventos encontrados com sucesso."
+                            description = "Página de eventos do usuário",
+                            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = CursorPage.class))
                     ),
                     @ApiResponse(
                             responseCode = "401",
@@ -46,14 +52,17 @@ public class EventsMeController {
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = ErrorResponse.class)
                             )
-                    )
+                    ),
+                    @ApiResponse(responseCode = "400", description = "Cursor inválido ou pageSize inválido",
+                            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ErrorResponse.class)))
             }
     )
     @GetMapping("created")
     public ResponseEntity<CursorPage<EventListItemDTO>> getCreatedEvents(
-            @Parameter(description = "Cursor para carregar a próxima página")
+            @Parameter(description = "Cursor opaco da página anterior", example = "eyJzdGFydERhdGUiOiIyMDI2LTAxLTAxVDAwOjAwIiwiaWQiOjQyfQ")
             @RequestParam(required = false) String nextCursor,
-            @Parameter(description = "Quantidade de registros por página (Padrão: 10, Máximo: 50)")
+            @Parameter(description = "Itens por página; padrão 10, máximo 50", example = "10")
             @RequestParam(defaultValue = "10") int pageSize,
             @AuthenticationPrincipal Jwt jwt
     ) {
@@ -65,11 +74,18 @@ public class EventsMeController {
     @GetMapping("/subscriptions")
     @Operation(
             summary = "Lista as inscrições do usuário em eventos",
-            description = "Retorna uma página contendo todos os eventos nos quais o usuário logado se inscreveu como participante.",
+            description = """
+                    Retorna eventos em que o usuário do JWT possui inscrição CONFIRMED ou CHECKED_IN; não filtra
+                    pelo status do evento. Outras situações de inscrição não entram na lista. Ordena por startDate e
+                    ID decrescentes e retorna CursorPage
+                    com content, next_cursor e previous_cursor. pageSize tem padrão 10 e máximo 50.
+                    """,
             responses = {
                     @ApiResponse(
                             responseCode = "200",
-                            description = "Página de inscrições encontrada com sucesso."
+                            description = "Página de eventos inscritos",
+                            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = CursorPage.class))
                     ),
                     @ApiResponse(
                             responseCode = "401",
@@ -78,13 +94,16 @@ public class EventsMeController {
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = ErrorResponse.class)
                             )
-                    )
+                    ),
+                    @ApiResponse(responseCode = "400", description = "Cursor inválido ou pageSize inválido",
+                            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ErrorResponse.class)))
             }
     )
     public ResponseEntity<CursorPage<EventListItemDTO>> getSubscriptions(
-            @Parameter(description = "Cursor para carregar a próxima página")
+            @Parameter(description = "Cursor opaco da página anterior")
             @RequestParam(required = false) String nextCursor,
-            @Parameter(description = "Quantidade de registros por página (Padrão: 10, Máximo: 50)")
+            @Parameter(description = "Itens por página; padrão 10, máximo 50", example = "10")
             @RequestParam(defaultValue = "10") int pageSize,
             @AuthenticationPrincipal Jwt jwt
     ) {
@@ -95,11 +114,17 @@ public class EventsMeController {
     @GetMapping("/editors")
     @Operation(
             summary = "Lista todos os eventos onde o usuário é editor",
-            description = "Retorna uma página contendo todos os eventos nos quais o usuário logado se inscreveu como participante.",
+            description = """
+                    Retorna eventos em que o usuário do JWT tem vínculo de editor ACTIVE. Convites pendentes ou
+                    revogados não aparecem. Ordena por startDate e ID decrescentes e retorna CursorPage com content,
+                    next_cursor e previous_cursor. pageSize tem padrão 10 e máximo 50.
+                    """,
             responses = {
                     @ApiResponse(
                             responseCode = "200",
-                            description = "Página de edições encontrada com sucesso."
+                            description = "Página de eventos editáveis",
+                            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = CursorPage.class))
                     ),
                     @ApiResponse(
                             responseCode = "401",
@@ -108,13 +133,16 @@ public class EventsMeController {
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = ErrorResponse.class)
                             )
-                    )
+                    ),
+                    @ApiResponse(responseCode = "400", description = "Cursor inválido ou pageSize inválido",
+                            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ErrorResponse.class)))
             }
     )
     public ResponseEntity<CursorPage<EventListItemDTO>> getMeEventsEditors(
-            @Parameter(description = "Cursor para carregar a próxima página")
+            @Parameter(description = "Cursor opaco da página anterior")
             @RequestParam(required = false) String nextCursor,
-            @Parameter(description = "Quantidade de registros por página (Padrão: 10, Máximo: 50)")
+            @Parameter(description = "Itens por página; padrão 10, máximo 50", example = "10")
             @RequestParam(defaultValue = "10") int pageSize,
             @AuthenticationPrincipal Jwt jwt
     ) {

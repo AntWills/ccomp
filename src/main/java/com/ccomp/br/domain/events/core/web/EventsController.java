@@ -38,40 +38,39 @@ public class EventsController {
     @Operation(
             summary = "Busca detalhes de um evento por ID",
             description = """
-        Exibe as informações detalhadas de um evento respeitando suas regras de publicação e permissão.
+        Retorna os detalhes do evento identificado pelo ID.
 
-        ### Regras de Acesso:
-        1. **Evento Público ou Oculto (PUBLISHED / UNLISTED):**
-           - Acessível por qualquer cliente (**público / anônimo** ou **autenticado**).
-           - `-> 200 OK`
+        **Acesso:** eventos `PUBLISHED` podem ser consultados sem autenticação. Para `DRAFT`, `UNLISTED` ou
+        `CANCELED`, envie um JWT pertencente ao proprietário, a um editor ativo, `MODERATOR` ou `ADMIN`.
 
-        2. **Evento Restrito (DRAFT / CANCELED):**
-           - Acessível apenas se o usuário estiver **autenticado** E for o **Proprietário**, **Editor** atribuído ou **ADMIN**.
-           - `-> 200 OK`
-
-        ### Falhas e Exceções:
-        - **403 Forbidden:** Evento privado/rascunho sem autorização.
-        - **404 Not Found:** ID de evento inexistente.
+        **Respostas:** `200` com `EventDTO`; `403` quando o evento existe, mas o usuário não tem acesso;
+        `404` sem corpo quando o evento não existe.
         """
     )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Evento encontrado e acesso permitido"
+                    description = "Evento retornado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = EventDTO.class))
             ),
             @ApiResponse(
                     responseCode = "403",
                     description = "Acesso negado (evento em rascunho sem permissão suficiente)",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             ),
+            @ApiResponse(responseCode = "400", description = "ID inválido",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(
                     responseCode = "404",
                     description = "Evento não encontrado",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                    content = @Content
             )
     })
+    @SecurityRequirements
     @GetMapping("/{eventId}")
-    public ResponseEntity<EventDTO> getById(@PathVariable Long eventId, @AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<EventDTO> getById(
+            @Parameter(description = "ID numérico do evento", example = "42") @PathVariable Long eventId,
+            @AuthenticationPrincipal Jwt jwt) {
         UUID userId = (jwt == null) ? null : extractUserId(jwt);
 
         return eventsServices.getById(eventId, userId)
@@ -92,12 +91,13 @@ public class EventsController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Evento público encontrado"
+                    description = "Evento publicado retornado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = EventDTO.class))
             ),
             @ApiResponse(
                     responseCode = "404",
                     description = "Evento não encontrado ou indisponível publicamente",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                    content = @Content
             )
     })
     @SecurityRequirements
@@ -113,16 +113,24 @@ public class EventsController {
             description = """
         Realiza consultas no catálogo de eventos com suporte a paginação contínua (*Cursor-based Pagination*).
 
-        ### Comportamento da Paginação:
-        - **`pageSize`:** Limite de itens por página (máximo ajustado automaticamente para 50).
-        - **`nextCursor`:** Token para navegação contínua da próxima página.
-        - **Ordenação:** Ordenado primariamente por `startDate DESC`.
+        O corpo aceita filtros opcionais `category` e `format`, além de `searchTerm`. A busca considera somente
+        o título de eventos `PUBLISHED`; aceita o resultado quando `word_similarity(searchTerm, title) >= 0.4`.
+        Com termo, ordena por `word_similarity + similarity` decrescente e desempata por `startDate` e ID
+        decrescentes. Sem termo, ordena por `startDate` e ID decrescentes.
+
+        O corpo JSON segue `EventsFilterRequest`; a resposta é `CursorPage<EventListItemDTO>` com `content`,
+        `next_cursor` e `previous_cursor`.
+
+        `pageSize` é um parâmetro de consulta opcional, padrão `10` e limitado a `50`. `nextCursor` é um token
+        opaco retornado pela página anterior; continue usando o mesmo termo e os mesmos filtros. A resposta tem
+        `content` (itens `EventListItemDTO`), `next_cursor` e `previous_cursor`.
         """
     )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Página de eventos retornada com sucesso"
+                    description = "Página de eventos retornada",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = CursorPage.class))
             ),
             @ApiResponse(
                     responseCode = "400",
@@ -134,9 +142,9 @@ public class EventsController {
     @PostMapping("search")
     public ResponseEntity<CursorPage<EventListItemDTO>> searchEvents(
             @Valid @RequestBody EventsFilterRequest filter,
-            @Parameter(description = "Cursor para carregar a próxima página")
+            @Parameter(description = "Cursor opaco retornado pela página anterior; use os mesmos filtros")
             @RequestParam(required = false) String nextCursor,
-            @Parameter(description = "Quantidade de registros por página (Padrão: 10, Máximo: 50)")
+            @Parameter(description = "Itens solicitados na página; padrão 10 e máximo 50", example = "10")
             @RequestParam(defaultValue = "10") int pageSize
     ) {
         return ResponseEntity.ok(eventsServices.searchEventsWithFilters(filter, nextCursor, pageSize));
@@ -149,15 +157,15 @@ public class EventsController {
             description = """
         Cria um novo evento atribuindo o status inicial como `DRAFT` (Rascunho).
 
-        ### Requisitos de Permissão:
-        - Requer autenticação do usuário.
-        - O criador deve ter a role **ADMIN** ou **STAFF**.
+        Envie `title`, `category` e `format`; `startDate` e `endDate` são opcionais. O evento é criado como
+        `DRAFT`. Requer JWT de usuário com papel `ADMIN`, `MODERATOR` ou `STAFF`.
         """
     )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
-                    description = "Evento criado com sucesso"
+                    description = "Evento criado em estado DRAFT",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = EventDTO.class))
             ),
             @ApiResponse(
                     responseCode = "400",
@@ -171,7 +179,7 @@ public class EventsController {
             ),
             @ApiResponse(
                     responseCode = "403",
-                    description = "Acesso negado (Usuário não pertence à equipe)",
+                    description = "O usuário autenticado não tem papel ADMIN, MODERATOR ou STAFF",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             )
     })
@@ -186,26 +194,26 @@ public class EventsController {
     @Operation(
             summary = "Atualiza parcialmente um evento existente",
             description = """
-        Permite alterar dados gerais do evento, tais como titulo, descrição, datas de inscrições ou período de realização.
-        
-        ---
-        
-        > **Atenção:** As alterações abaixo possuem endpoints exclusivos e **não** são afetadas por esta rota:
-        >
-        > ️**Imagem de capa (`cover image`):** `POST /api/events/{eventId}/images`
-        > **Status do evento:** `PATCH /api/events/{eventId}/status/{status}`
-        
-        ---
+        Atualiza somente os campos enviados em `UpdateEventDTO`: `title`, `summary`, `content`, `category`, `format`,
+        `scheduleConflictPolicy`, datas de realização e de inscrição, e `enrollmentPaused`. Campos omitidos ficam
+        inalterados. Alterar título também regenera o slug. Capa e status têm endpoints próprios.
+
+        Requer JWT do proprietário, de um editor ativo, `MODERATOR` ou `ADMIN`.
         """
     )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Evento atualizado com sucesso"
+                    description = "Evento atualizado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = EventDTO.class))
             ),
+            @ApiResponse(responseCode = "400", description = "ID inválido ou corpo malformado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Autenticação ausente ou inválida",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(
                     responseCode = "403",
-                    description = "Acesso negado (Usuário não é Administrador, Proprietário ou Editor)",
+                    description = "Usuário sem permissão de edição",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
@@ -226,20 +234,20 @@ public class EventsController {
     @Operation(
             summary = "Atualiza o status de publicação de um evento",
             description = """
-        Altera o estado de publicação do evento (`DRAFT`, `PUBLISHED`, `UNLISTED`, `CANCELED`).
-
-        ### Requisitos de Permissão:
-        - Requer permissão de edição do evento: **ADMIN/MODERATOR**, **Proprietário** ou **Editor ativo**.
+        Transiciona o evento para o status informado no caminho: `DRAFT`, `PUBLISHED`, `UNLISTED` ou `CANCELED`.
+        As regras de domínio podem rejeitar a transição, por exemplo, publicar sem datas. Requer JWT do proprietário,
+        de um editor ativo, `MODERATOR` ou `ADMIN`.
         """
     )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Status do evento alterado com sucesso"
+                    description = "Status alterado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = MessageResponse.class))
             ),
             @ApiResponse(
                     responseCode = "400",
-                    description = "Status informado é inválido",
+                    description = "ID/status inválido ou transição rejeitada por regra de domínio",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
@@ -267,11 +275,13 @@ public class EventsController {
     }
 
     @DeleteMapping("/{eventId}")
-    @Operation(summary = "Exclui um evento por ID", description = "Requer permissão de edição do evento: ADMIN/MODERATOR, proprietário ou editor ativo.")
+    @Operation(summary = "Exclui um evento por ID", description = "Exclui o evento e seus dados dependentes. Requer JWT do proprietário, de um editor ativo, MODERATOR ou ADMIN. A resposta de sucesso não tem corpo.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Evento excluído com sucesso"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado"),
-            @ApiResponse(responseCode = "404", description = "Evento não encontrado")
+            @ApiResponse(responseCode = "401", description = "Autenticação ausente ou inválida", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "400", description = "ID inválido", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Acesso negado", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<Void> deleteEvent(
             @PathVariable Long eventId,

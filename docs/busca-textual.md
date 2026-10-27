@@ -20,6 +20,12 @@ Para ordenar esse exemplo, a aplicação soma `word_similarity` e `similarity` p
 
 Quando `searchTerm` está ausente, nulo ou vazio, não há busca textual nem ordenação por relevância: a listagem segue `createdAt` e ID decrescentes. Os filtros de status e cargo continuam aplicados.
 
+### Busca pública de eventos
+
+O endpoint `POST /api/events/search` também aceita `searchTerm`, aplicado somente ao título. O evento precisa estar publicado e continuar atendendo aos filtros opcionais de categoria e formato. O termo é aceito quando `word_similarity(termo, título) >= 0.4`; a relevância ordena por `word_similarity + similarity`, seguida de `startDate` e ID decrescentes. O cursor inclui essa pontuação enquanto a busca está ativa.
+
+Sem termo, o score não é projetado nem calculado; a ordenação continua por `startDate` e ID decrescentes. A migration `V23__add_event_title_text_search.sql` cria o índice GIN trigramático do título. Assim como na busca de usuários, o filtro por função `word_similarity(...) >= 0.4` não garante que o índice seja escolhido; avalie o plano com `EXPLAIN (ANALYZE, BUFFERS)` em dados representativos.
+
 ## Índices e planos de consulta
 
 O PostgreSQL permite criar índices GIN trigramáticos usando `gin_trgm_ops` para os campos pesquisáveis. No exemplo de usuários, a migração `V22__add_user_text_search.sql` habilita `pg_trgm` e cria índices para `tb_users.name` e `tb_users.email_address`.
