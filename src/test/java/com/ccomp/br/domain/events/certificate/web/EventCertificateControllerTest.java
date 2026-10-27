@@ -29,8 +29,14 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.LocalDateTime;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import javax.imageio.ImageIO;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,6 +44,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -57,6 +64,9 @@ class EventCertificateControllerTest {
     private static final String BOX_TEMPLATE_URL = "/api/events/50/certificate-box-template";
     private static final String ACTIVITY_BOX_TEMPLATE_URL = "/api/events/50/activity-certificate-box-template";
     private static final String COVER_TEMPLATE_URL = "/api/events/50/certificate-cover-template";
+    private static final String EVENT_CERTIFICATE_URL = "/api/events/50/certificate";
+    private static final String ACTIVITY_PREVIEW_URL = "/api/events/50/activity-certificate-preview";
+    private static final String ACTIVITY_SAVE_BOX_URL = "/api/events/50/activity-certificate-box-template";
     private static final String SAVE_BOX_BODY = """
             {
               "boxes": [
@@ -133,6 +143,30 @@ class EventCertificateControllerTest {
     }
 
     @Test
+    void generatePreview_validTemplate_returnsInlinePng() throws Exception {
+        when(certificateCoverService.loadCoverTemplate(eq(50L), any())).thenReturn(testCover());
+        when(certificateBoxServices.loadBoxTemplate(eq(50L), any())).thenReturn(eventTemplate());
+
+        mockMvc.perform(get(PREVIEW_URL).accept(MediaType.IMAGE_PNG))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"certificado-previa.png\""));
+    }
+
+    @Test
+    void generateActivityPreview_validTemplate_returnsInlinePng() throws Exception {
+        when(certificateCoverService.loadCoverTemplate(eq(50L), any())).thenReturn(testCover());
+        when(activityCertificateBoxServices.loadBoxTemplate(eq(50L), any())).thenReturn(activityTemplate());
+
+        mockMvc.perform(get(ACTIVITY_PREVIEW_URL).accept(MediaType.IMAGE_PNG))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"certificado-previa.png\""));
+    }
+
+    @Test
     void saveBoxTemplate_accessDenied_returns403Json() throws Exception {
         doThrow(new AccessDeniedException("O usuário não tem acesso a este recurso."))
                 .when(certificateBoxServices).saveBoxTemplate(eq(50L), any(), any());
@@ -156,6 +190,30 @@ class EventCertificateControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.messages[0]").value("A lista de caixas não pode estar vazia."));
+    }
+
+    @Test
+    void saveBoxTemplate_validRequest_returnsSuccess() throws Exception {
+        mockMvc.perform(post(SAVE_BOX_URL).contentType(MediaType.APPLICATION_JSON).content(SAVE_BOX_BODY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response").value("Template de caixas salvo com sucesso."));
+        verify(certificateBoxServices).saveBoxTemplate(eq(50L), eq(PARTICIPANT_ID), any());
+    }
+
+    @Test
+    void saveActivityBoxTemplate_validRequest_returnsSuccess() throws Exception {
+        mockMvc.perform(post(ACTIVITY_SAVE_BOX_URL).contentType(MediaType.APPLICATION_JSON).content(SAVE_BOX_BODY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response").value("Template de caixas do certificado de atividade salvo com sucesso."));
+        verify(activityCertificateBoxServices).saveBoxTemplate(eq(50L), eq(PARTICIPANT_ID), any());
+    }
+
+    @Test
+    void loadCertificateVariables_returnsSupportedVariables() throws Exception {
+        mockMvc.perform(get("/api/events/certificate-variables"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").value("{participante.nome}"))
+                .andExpect(jsonPath("$").isArray());
     }
 
     @Test
@@ -205,6 +263,31 @@ class EventCertificateControllerTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"certificado-atividade-77.png\""));
+    }
+
+    @Test
+    void buildCertificateFromEvent_validRequest_returnsPngWithDisposition() throws Exception {
+        when(certificateServices.buildCertificateFromEvent(eq(50L), any()))
+                .thenReturn(new StorageExternal.StoredFile(
+                        new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
+                        MediaType.IMAGE_PNG_VALUE));
+
+        mockMvc.perform(get(EVENT_CERTIFICATE_URL))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"certificado-evento-50.png\""));
+    }
+
+    @Test
+    void uploadCoverTemplate_validFile_returnsSuccess() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "cover.png", "image/png", new byte[]{1, 2, 3});
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .multipart(COVER_TEMPLATE_URL).file(file))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response").value("Fundo do certificado atualizado com sucesso."));
+        verify(certificateCoverService).uploadCoverTemplate(eq(50L), eq(PARTICIPANT_ID), any());
     }
 
     @Test
@@ -350,5 +433,33 @@ class EventCertificateControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.messages[0]").value("O usuário não tem acesso a este recurso."));
+    }
+
+    private EventBoxTemplate eventTemplate() {
+        return EventBoxTemplate.builder()
+                .eventId(50L)
+                .boxes(List.of(new BoxElementDTO("Evento {evento.title}", 0.1, 0.1, 0.8, 24f, "#000000", null)))
+                .variables(List.of("{evento.title}"))
+                .build();
+    }
+
+    private EventActivityBoxTemplate activityTemplate() {
+        return EventActivityBoxTemplate.builder()
+                .eventId(50L)
+                .boxes(List.of(new BoxElementDTO("Atividade {atividade.nome}", 0.1, 0.1, 0.8, 24f, "#000000", null)))
+                .variables(List.of("{atividade.nome}"))
+                .build();
+    }
+
+    private StorageExternal.StoredFile testCover() throws Exception {
+        BufferedImage image = new BufferedImage(400, 200, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = image.createGraphics();
+        graphics.setColor(Color.WHITE);
+        graphics.fillRect(0, 0, image.getWidth(), image.getHeight());
+        graphics.dispose();
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", output);
+        return new StorageExternal.StoredFile(
+                new org.springframework.core.io.ByteArrayResource(output.toByteArray()), MediaType.IMAGE_PNG_VALUE);
     }
 }
