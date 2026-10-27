@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.web;
 import com.ccomp.br.domain.events.core.application.EventsServices;
 import com.ccomp.br.domain.events.core.dto.EventListItemDTO;
 import com.ccomp.br.domain.events.core.web.EventsMeController;
+import com.ccomp.br.shared.exceptions.GlobalExceptionHandler;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
@@ -46,6 +47,7 @@ class EventsMeControllerTest {
                 .findAndRegisterModules()
                 .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
         mockMvc = MockMvcBuilders.standaloneSetup(new EventsMeController(eventsServices))
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .build();
@@ -106,7 +108,8 @@ class EventsMeControllerTest {
     @Test
     void invalidPageSizeReturnsBadRequest() throws Exception {
         mockMvc.perform(get("/api/events/me/created").param("pageSize", "not-a-number"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
 
         verifyNoInteractions(eventsServices);
     }

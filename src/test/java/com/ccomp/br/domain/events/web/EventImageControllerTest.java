@@ -63,7 +63,7 @@ class EventImageControllerTest {
 
         mockMvc.perform(multipart("/api/events/{eventId}/images/cover", EVENT_ID).file(file))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.response").value("Imavem de fundo atualizada com sucesso."));
+                .andExpect(jsonPath("$.response").value("Imagem de capa atualizada com sucesso."));
 
         verify(eventImageService).uploadCoverImage(eq(EVENT_ID), eq(USER_ID), any());
     }

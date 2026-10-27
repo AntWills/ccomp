@@ -209,6 +209,15 @@ class EventsControllerTest {
         verify(eventsServices).delete(9L, USER_ID);
     }
 
+    @Test
+    void mvcInvalidEventStatusReturnsDocumentedBadRequest() throws Exception {
+        mockMvc.perform(patch("/api/events/9/status/NOT_A_STATUS"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+
+        verifyNoInteractions(eventsServices);
+    }
+
     private static Jwt jwt(UUID userId) {
         return Jwt.withTokenValue("token").header("alg", "RS256").subject(userId.toString()).build();
     }
