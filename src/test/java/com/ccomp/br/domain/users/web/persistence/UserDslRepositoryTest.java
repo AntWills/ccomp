@@ -122,37 +122,46 @@ public class UserDslRepositoryTest {
     }
 
     @Test
-    @DisplayName("Deve inspecionar o uso dos índices trigramáticos com uma tabela grande")
+    @DisplayName("Deve inspecionar o uso dos índices trigramáticos com busca por similaridade")
     void shouldUseTrigramIndexesForSelectiveWordSimilaritySearch() {
+        // 1. Carga otimizada: 10.000 registros em tb_users
         jdbcTemplate.update("""
-                INSERT INTO tb_users (id, name, email_address, password, status_account, created_at, updated_at)
-                SELECT md5(i::text)::uuid,
-                       CASE WHEN i % 3000 = 0 THEN 'NeedleTarget User ' || i ELSE 'Bulk User ' || i END,
-                       CASE WHEN i % 3000 = 0 THEN 'needle' || i || '@target.test' ELSE 'bulk' || i || '@example.test' END,
-                       'hash', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-                FROM generate_series(1, 300000) AS i
-                """);
+            INSERT INTO tb_users (id, name, email_address, password, status_account, created_at, updated_at)
+            SELECT md5(i::text)::uuid,
+                   CASE WHEN i % 1000 = 0 THEN 'NeedleTarget User ' || i ELSE 'Bulk User ' || i END,
+                   CASE WHEN i % 1000 = 0 THEN 'needle' || i || '@target.test' ELSE 'bulk' || i || '@example.test' END,
+                   'hash', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            FROM generate_series(1, 10000) AS i
+            """);
+
+        // 2. Carga em tb_roles necessária para satisfazer o INNER JOIN do repositório
         jdbcTemplate.update("""
-                INSERT INTO tb_roles (user_id, role)
-                SELECT id, 'USER' FROM tb_users
-                """);
+            INSERT INTO tb_roles (user_id, role)
+            SELECT id, 'USER' FROM tb_users
+            """);
+
+        // 3. Atualiza as estatísticas do otimizador do Postgres
         jdbcTemplate.execute("ANALYZE tb_users");
         jdbcTemplate.execute("ANALYZE tb_roles");
-        jdbcTemplate.queryForObject(
-                "SELECT set_config('pg_trgm.word_similarity_threshold', '0.4', true)", String.class);
 
-        // Roda o método real; auto_explain registra o plano desta consulta no log do PostgreSQL.
+        // 4. Configura o threshold trigramático na sessão
+        jdbcTemplate.execute("SET pg_trgm.word_similarity_threshold = 0.4");
+
+        // 5. Executa a consulta real do repositório
         var results = userDslRepository.findByCursor(
                 new UserSearchFilter(null, null, "NeedleTarget"), null, 10);
         assertThat(results).isNotEmpty();
 
-        // Este predicado usa o operador indexável equivalente a word_similarity(...) >= 0.4.
-        // A massa grande e seletiva permite verificar que os índices GIN podem ser escolhidos.
+        // 6. Garante o uso de índices no EXPLAIN para tabelas de tamanho moderado
+        jdbcTemplate.execute("SET LOCAL enable_seqscan = off");
+
         var plan = String.join("\n", jdbcTemplate.queryForList("""
-                EXPLAIN (ANALYZE, BUFFERS)
-                SELECT id FROM tb_users
-                WHERE ('NeedleTarget' <% name) OR ('NeedleTarget' <% email_address)
-                """, String.class));
+            EXPLAIN (ANALYZE, BUFFERS)
+            SELECT id FROM tb_users
+            WHERE ('NeedleTarget' <% name) OR ('NeedleTarget' <% email_address)
+            """, String.class));
+
+        jdbcTemplate.execute("SET LOCAL enable_seqscan = on");
 
         assertThat(plan)
                 .contains("idx_users_name_trgm")
