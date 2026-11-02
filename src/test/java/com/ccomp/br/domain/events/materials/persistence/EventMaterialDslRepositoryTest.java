@@ -4,7 +4,7 @@ import com.ccomp.br.config.QueryDslConfig;
 import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
 import com.ccomp.br.domain.events.core.persistence.Event;
-import com.ccomp.br.domain.events.materials.dto.EventMaterialCursor;
+import com.ccomp.br.domain.events.materials.dto.MaterialCursor;
 import com.ccomp.br.domain.events.materials.enums.EnumMaterialType;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
@@ -68,7 +68,7 @@ class EventMaterialDslRepositoryTest {
                 .containsExactly(third.getId(), second.getId());
 
         EventMaterial last = page1.getLast();
-        var cursor = new EventMaterialCursor(last.getCreatedAt(), last.getId());
+        var cursor = new MaterialCursor(last.getCreatedAt(), last.getId());
         var page2 = repository.findAllByEventIdWithCursor(event.getId(), cursor, 2);
 
         assertThat(page2).extracting(EventMaterial::getId).containsExactly(first.getId());

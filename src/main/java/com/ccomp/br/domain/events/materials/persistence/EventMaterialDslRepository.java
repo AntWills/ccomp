@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.events.materials.persistence;
 
-import com.ccomp.br.domain.events.materials.dto.EventMaterialCursor;
+import com.ccomp.br.domain.events.materials.dto.MaterialCursor;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.jspecify.annotations.Nullable;
@@ -26,7 +26,7 @@ public class EventMaterialDslRepository {
     }
 
     public List<EventMaterial> findAllByEventIdWithCursor(
-            Long eventId, @Nullable EventMaterialCursor cursor, int limit) {
+            Long eventId, @Nullable MaterialCursor cursor, int limit) {
         BooleanExpression eventCondition = eventMaterial.eventId.eq(eventId);
         BooleanExpression whereCondition = eventCondition;
 

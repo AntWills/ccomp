@@ -4,6 +4,7 @@ import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.materials.dto.CreateMaterialLinkRequest;
+import com.ccomp.br.domain.events.materials.dto.MaterialCursor;
 import com.ccomp.br.domain.events.materials.dto.MaterialResponse;
 import com.ccomp.br.domain.events.materials.enums.EnumMaterialType;
 import com.ccomp.br.domain.events.materials.persistence.EventMaterial;
@@ -14,6 +15,8 @@ import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.domain.storage.external.StorageKeyGenerator;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
+import com.ccomp.br.shared.utils.CursorPage;
+import com.ccomp.br.shared.utils.CursorUtils;
 import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -53,10 +56,15 @@ public class EventMaterialsService {
     }
 
     @Transactional(readOnly = true)
-    public List<MaterialResponse> list(Long eventId, @Nullable UUID userId) {
+    public CursorPage<MaterialResponse> list(Long eventId, @Nullable UUID userId, String cursorRaw, int pageSize) {
         Event event = findEvent(eventId);
         accessPolicy.assertCanView(event, userId);
-        return materialDslRepository.findAllByEventId(eventId).stream().map(mapper::toDTO).toList();
+
+        int limit = Math.min(pageSize, 50);
+        MaterialCursor cursor = CursorUtils.decode(cursorRaw, MaterialCursor.class);
+        List<EventMaterial> results = materialDslRepository.findAllByEventIdWithCursor(eventId, cursor, limit + 1);
+        return CursorUtils.buildPage(results, limit, mapper::toDTO,
+                material -> new MaterialCursor(material.getCreatedAt(), material.getId()));
     }
 
     @Transactional

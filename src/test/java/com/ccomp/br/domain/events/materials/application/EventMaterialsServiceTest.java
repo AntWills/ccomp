@@ -4,6 +4,7 @@ import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.materials.dto.CreateMaterialLinkRequest;
+import com.ccomp.br.domain.events.materials.dto.MaterialCursor;
 import com.ccomp.br.domain.events.materials.enums.EnumMaterialType;
 import com.ccomp.br.domain.events.materials.persistence.EventMaterial;
 import com.ccomp.br.domain.events.materials.persistence.EventMaterialRepository;
@@ -13,6 +14,7 @@ import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.domain.storage.external.StorageKeyGenerator;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
+import com.ccomp.br.shared.utils.CursorUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +24,7 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -59,6 +62,15 @@ class EventMaterialsServiceTest {
         assertThatThrownBy(() -> service.addLink(EVENT_ID, USER_ID, new CreateMaterialLinkRequest("Link", null, "javascript:alert(1)")))
                 .isInstanceOf(DomainException.class);
         verifyNoInteractions(materials);
+    }
+
+    @Test void listsMaterialsUsingDecodedCursorAndRequestsOneExtraRow() {
+        MaterialCursor cursor = new MaterialCursor(LocalDateTime.now(), 12L);
+        String encodedCursor = CursorUtils.encode(cursor);
+
+        service.list(EVENT_ID, null, encodedCursor, 10);
+
+        verify(materialDsl).findAllByEventIdWithCursor(EVENT_ID, cursor, 11);
     }
 
     @Test void uploadsAllowedPdfAndSavesItsMetadata() {

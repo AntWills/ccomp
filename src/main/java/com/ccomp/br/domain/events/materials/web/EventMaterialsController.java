@@ -6,10 +6,10 @@ import com.ccomp.br.domain.events.materials.dto.MaterialResponse;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
+import com.ccomp.br.shared.utils.CursorPage;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -17,7 +17,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,7 +25,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,16 +35,20 @@ public class EventMaterialsController {
     private final EventMaterialsService service;
     public EventMaterialsController(EventMaterialsService service) { this.service = service; }
 
-    @Operation(summary = "Lista os materiais de um evento", description = "Retorna metadados dos materiais, sem o conteúdo dos arquivos. Eventos publicados são visíveis publicamente; eventos em outros estados exigem acesso do proprietário, editor ativo, MODERATOR ou ADMIN.")
+    @Operation(summary = "Lista os materiais de um evento", description = "Retorna uma página de metadados dos materiais, sem o conteúdo dos arquivos. `pageSize` é opcional, padrão 10 e limitado a 50. Use o `next_cursor` retornado como `nextCursor` para buscar a próxima página, mantendo o mesmo tamanho. Eventos publicados são visíveis publicamente; eventos em outros estados exigem acesso do proprietário, editor ativo, MODERATOR ou ADMIN.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Lista retornada", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = MaterialResponse.class)))),
+            @ApiResponse(responseCode = "200", description = "Página retornada", content = @Content(mediaType = "application/json", schema = @Schema(implementation = CursorPage.class))),
             @ApiResponse(responseCode = "403", description = "Sem permissão para visualizar o evento", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Evento não encontrado", content = @Content)
     })
     @SecurityRequirements
     @GetMapping
-    public ResponseEntity<List<MaterialResponse>> list(@Parameter(description = "ID numérico do evento", example = "42") @PathVariable Long eventId, @AuthenticationPrincipal @Nullable Jwt jwt) {
-        return ResponseEntity.ok(service.list(eventId, userId(jwt)));
+    public ResponseEntity<CursorPage<MaterialResponse>> list(
+            @Parameter(description = "ID numérico do evento", example = "42") @PathVariable Long eventId,
+            @Parameter(description = "Cursor opaco retornado na página anterior") @RequestParam(required = false) String nextCursor,
+            @Parameter(description = "Itens solicitados; padrão 10 e máximo 50", example = "10") @RequestParam(defaultValue = "10") int pageSize,
+            @AuthenticationPrincipal @Nullable Jwt jwt) {
+        return ResponseEntity.ok(service.list(eventId, userId(jwt), nextCursor, pageSize));
     }
 
     @Operation(summary = "Adiciona um link aos materiais do evento", description = "Cria um material do tipo LINK. `title` é obrigatório (até 255 caracteres), `description` é opcional (até 1000) e `url` deve ser um endereço HTTP ou HTTPS (até 2048). Requer JWT do proprietário, de um editor ativo, MODERATOR ou ADMIN.")

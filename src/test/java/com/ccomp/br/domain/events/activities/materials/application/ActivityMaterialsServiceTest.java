@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.activities.materials.application;
 
 import com.ccomp.br.domain.events.activities.materials.persistence.ActivityMaterialRepository;
+import com.ccomp.br.domain.events.activities.materials.persistence.ActivityMaterialDslRepository;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
@@ -30,6 +31,7 @@ class ActivityMaterialsServiceTest {
     @Mock EventActivityRepository activities;
     @Mock EventRepository events;
     @Mock ActivityMaterialRepository materials;
+    @Mock ActivityMaterialDslRepository materialDsl;
     @Mock EventAccessPolicy access;
     @Mock StorageExternal storage;
     @Mock StorageKeyGenerator keyGenerator;
@@ -38,7 +40,7 @@ class ActivityMaterialsServiceTest {
     private Event event;
 
     @BeforeEach void setUp() {
-        service = new ActivityMaterialsService(activities, events, materials, access, storage, keyGenerator, new MaterialMapper());
+        service = new ActivityMaterialsService(activities, events, materials, access, materialDsl, storage, keyGenerator, new MaterialMapper());
         activity = mock(EventActivity.class); event = Event.builder().id(EVENT_ID).build();
         when(activities.findById(ACTIVITY_ID)).thenReturn(Optional.of(activity));
         when(activity.getEventId()).thenReturn(EVENT_ID);
@@ -54,8 +56,8 @@ class ActivityMaterialsServiceTest {
     }
 
     @Test void listChecksParentEventVisibility() {
-        service.list(ACTIVITY_ID, null);
+        service.list(ACTIVITY_ID, null, null, 10);
         verify(access).assertCanView(event, null);
-        verify(materials).findAllByActivityIdOrderByCreatedAtDescIdDesc(ACTIVITY_ID);
+        verify(materialDsl).findAllByActivityIdWithCursor(ACTIVITY_ID, null, 11);
     }
 }

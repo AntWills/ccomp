@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.activities.materials.application;
 
 import com.ccomp.br.domain.events.activities.materials.persistence.ActivityMaterial;
+import com.ccomp.br.domain.events.activities.materials.persistence.ActivityMaterialDslRepository;
 import com.ccomp.br.domain.events.activities.materials.persistence.ActivityMaterialRepository;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
@@ -8,6 +9,7 @@ import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.materials.dto.CreateMaterialLinkRequest;
+import com.ccomp.br.domain.events.materials.dto.MaterialCursor;
 import com.ccomp.br.domain.events.materials.dto.MaterialResponse;
 import com.ccomp.br.domain.events.materials.enums.EnumMaterialType;
 import com.ccomp.br.domain.events.materials.utils.MaterialMapper;
@@ -15,6 +17,8 @@ import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.domain.storage.external.StorageKeyGenerator;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
+import com.ccomp.br.shared.utils.CursorPage;
+import com.ccomp.br.shared.utils.CursorUtils;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +42,7 @@ public class ActivityMaterialsService {
     private final EventActivityRepository activityRepository;
     private final EventRepository eventRepository;
     private final ActivityMaterialRepository materialRepository;
+    private final ActivityMaterialDslRepository materialDslRepository;
     private final EventAccessPolicy accessPolicy;
     private final StorageExternal storage;
     private final StorageKeyGenerator keyGenerator;
@@ -45,16 +50,22 @@ public class ActivityMaterialsService {
 
     public ActivityMaterialsService(EventActivityRepository activityRepository, EventRepository eventRepository,
                                     ActivityMaterialRepository materialRepository, EventAccessPolicy accessPolicy,
-                                    StorageExternal storage, StorageKeyGenerator keyGenerator, MaterialMapper mapper) {
+                                    ActivityMaterialDslRepository materialDslRepository, StorageExternal storage,
+                                    StorageKeyGenerator keyGenerator, MaterialMapper mapper) {
         this.activityRepository = activityRepository; this.eventRepository = eventRepository;
         this.materialRepository = materialRepository; this.accessPolicy = accessPolicy;
+        this.materialDslRepository = materialDslRepository;
         this.storage = storage; this.keyGenerator = keyGenerator; this.mapper = mapper;
     }
 
     @Transactional(readOnly = true)
-    public List<MaterialResponse> list(Long activityId, @Nullable UUID userId) {
+    public CursorPage<MaterialResponse> list(Long activityId, @Nullable UUID userId, String cursorRaw, int pageSize) {
         EventActivity activity = findActivity(activityId); accessPolicy.assertCanView(findEvent(activity), userId);
-        return materialRepository.findAllByActivityIdOrderByCreatedAtDescIdDesc(activityId).stream().map(mapper::toDTO).toList();
+        int limit = Math.min(pageSize, 50);
+        MaterialCursor cursor = CursorUtils.decode(cursorRaw, MaterialCursor.class);
+        List<ActivityMaterial> results = materialDslRepository.findAllByActivityIdWithCursor(activityId, cursor, limit + 1);
+        return CursorUtils.buildPage(results, limit, mapper::toDTO,
+                material -> new MaterialCursor(material.getCreatedAt(), material.getId()));
     }
 
     @Transactional

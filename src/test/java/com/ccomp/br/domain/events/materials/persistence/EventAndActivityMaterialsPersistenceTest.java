@@ -4,6 +4,7 @@ import com.ccomp.br.config.QueryDslConfig;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
 import com.ccomp.br.domain.events.activities.materials.persistence.ActivityMaterial;
+import com.ccomp.br.domain.events.activities.materials.persistence.ActivityMaterialDslRepository;
 import com.ccomp.br.domain.events.activities.materials.persistence.ActivityMaterialRepository;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
@@ -24,12 +25,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import({QueryDslConfig.class, EventMaterialDslRepository.class})
+@Import({QueryDslConfig.class, EventMaterialDslRepository.class, ActivityMaterialDslRepository.class})
 class EventAndActivityMaterialsPersistenceTest {
     @Autowired EntityManager entityManager;
     @Autowired EventMaterialRepository eventMaterials;
     @Autowired EventMaterialDslRepository eventMaterialDsl;
     @Autowired ActivityMaterialRepository activityMaterials;
+    @Autowired ActivityMaterialDslRepository activityMaterialDsl;
 
     @Test void savesAndQueriesLinksAndFilesPerOwningEntity() {
         Event event = Event.builder().title("Evento materiais").slug("evento-materiais-" + UUID.randomUUID())
@@ -51,7 +53,7 @@ class EventAndActivityMaterialsPersistenceTest {
                 .extracting(EventMaterial::getId).containsExactly(link.getId());
         assertThat(eventMaterials.findByIdAndEventId(link.getId(), event.getId())).isPresent();
         assertThat(eventMaterials.findByIdAndEventId(link.getId(), event.getId() + 999)).isEmpty();
-        assertThat(activityMaterials.findAllByActivityIdOrderByCreatedAtDescIdDesc(activity.getId()))
+        assertThat(activityMaterialDsl.findAllByActivityIdWithCursor(activity.getId(), null, 10))
                 .extracting(ActivityMaterial::getId).containsExactly(file.getId());
         assertThat(activityMaterials.findByIdAndActivityId(file.getId(), activity.getId())).isPresent();
     }
