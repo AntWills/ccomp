@@ -75,7 +75,11 @@ public class SecurityConfig {
     };
 
     private static final String[] PUBLIC_FILES_ROUTES = {
-            "/api/events/{eventId}/images/cover"
+            "/api/events/{eventId}/images/cover",
+            "/api/events/{eventId}/materials",
+            "/api/events/{eventId}/materials/{materialId}/file",
+            "/api/events/activities/{activityId}/materials",
+            "/api/events/activities/{activityId}/materials/{materialId}/file"
     };
 
     private static final String[] PUBLIC_HIGHLIGHTS_ROUTES = {
