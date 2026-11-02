@@ -7,6 +7,7 @@ import com.ccomp.br.domain.events.materials.dto.CreateMaterialLinkRequest;
 import com.ccomp.br.domain.events.materials.enums.EnumMaterialType;
 import com.ccomp.br.domain.events.materials.persistence.EventMaterial;
 import com.ccomp.br.domain.events.materials.persistence.EventMaterialRepository;
+import com.ccomp.br.domain.events.materials.persistence.EventMaterialDslRepository;
 import com.ccomp.br.domain.events.materials.utils.MaterialMapper;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.domain.storage.external.StorageKeyGenerator;
@@ -32,6 +33,7 @@ class EventMaterialsServiceTest {
     private static final UUID USER_ID = UUID.randomUUID();
     @Mock EventRepository events;
     @Mock EventMaterialRepository materials;
+    @Mock EventMaterialDslRepository materialDsl;
     @Mock EventAccessPolicy access;
     @Mock StorageExternal storage;
     @Mock StorageKeyGenerator keyGenerator;
@@ -39,7 +41,7 @@ class EventMaterialsServiceTest {
     private Event event;
 
     @BeforeEach void setUp() {
-        service = new EventMaterialsService(events, materials, access, storage, keyGenerator, new MaterialMapper());
+        service = new EventMaterialsService(events, materials, access, storage, materialDsl, keyGenerator, new MaterialMapper());
         event = Event.builder().id(EVENT_ID).build();
         when(events.findById(EVENT_ID)).thenReturn(Optional.of(event));
     }

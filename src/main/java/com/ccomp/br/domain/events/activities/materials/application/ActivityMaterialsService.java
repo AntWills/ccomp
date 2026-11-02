@@ -19,6 +19,10 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.util.List;
@@ -28,6 +32,7 @@ import java.io.IOException;
 
 @Service
 public class ActivityMaterialsService {
+    private static final Logger log = LoggerFactory.getLogger(ActivityMaterialsService.class);
     private static final long MAX_FILE_SIZE = 10L * 1024 * 1024;
     private static final List<String> ALLOWED_TYPES = List.of("application/pdf", "image/png", "image/jpeg", "image/webp");
     private final EventActivityRepository activityRepository;
@@ -66,12 +71,11 @@ public class ActivityMaterialsService {
         String contentType = file.getContentType(); validateFileSignature(contentType, file);
         String key = keyGenerator.generate("activities/%d/materials".formatted(activityId), "material." + extensionFor(contentType));
         storage.putObject(key, file);
-        try {
-            return mapper.toDTO(materialRepository.save(ActivityMaterial.builder().activityId(activityId).createdBy(userId)
-                    .title(title.trim()).description(description).type(contentType.startsWith("image/") ? EnumMaterialType.IMAGE : EnumMaterialType.FILE).fileKey(key)
-                    .originalFileName(safeFileName(file.getOriginalFilename())).contentType(contentType)
-                    .sizeBytes(file.getSize()).build()));
-        } catch (RuntimeException e) { storage.deleteObject(key); throw e; }
+        registerStorageCleanupOnRollback(key);
+        return mapper.toDTO(materialRepository.save(ActivityMaterial.builder().activityId(activityId).createdBy(userId)
+                .title(title.trim()).description(description).type(contentType.startsWith("image/") ? EnumMaterialType.IMAGE : EnumMaterialType.FILE).fileKey(key)
+                .originalFileName(safeFileName(file.getOriginalFilename())).contentType(contentType)
+                .sizeBytes(file.getSize()).build()));
     }
 
     @Transactional(readOnly = true)
@@ -86,7 +90,33 @@ public class ActivityMaterialsService {
     public void delete(Long activityId, Long materialId, UUID userId) {
         EventActivity activity = findActivity(activityId); accessPolicy.assertCanEdit(findEvent(activity), userId);
         ActivityMaterial material = findMaterial(activityId, materialId); materialRepository.delete(material);
-        if (material.getType() != EnumMaterialType.LINK) storage.deleteObject(material.getFileKey());
+        if (material.getType() != EnumMaterialType.LINK) registerStorageDeletionAfterCommit(material.getFileKey());
+    }
+
+    private void registerStorageCleanupOnRollback(String key) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) return;
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == STATUS_ROLLED_BACK) deleteStorageObject(key, "compensar upload revertido");
+            }
+        });
+    }
+
+    private void registerStorageDeletionAfterCommit(String key) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            deleteStorageObject(key, "excluir material removido");
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() { deleteStorageObject(key, "excluir material removido"); }
+        });
+    }
+
+    private void deleteStorageObject(String key, String operation) {
+        try { storage.deleteObject(key); }
+        catch (RuntimeException e) { log.error("Falha ao {} no storage: {}", operation, key, e); }
     }
 
     private EventActivity findActivity(Long id) { return activityRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada.")); }

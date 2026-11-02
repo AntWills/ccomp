@@ -24,10 +24,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import(QueryDslConfig.class)
+@Import({QueryDslConfig.class, EventMaterialDslRepository.class})
 class EventAndActivityMaterialsPersistenceTest {
     @Autowired EntityManager entityManager;
     @Autowired EventMaterialRepository eventMaterials;
+    @Autowired EventMaterialDslRepository eventMaterialDsl;
     @Autowired ActivityMaterialRepository activityMaterials;
 
     @Test void savesAndQueriesLinksAndFilesPerOwningEntity() {
@@ -46,7 +47,7 @@ class EventAndActivityMaterialsPersistenceTest {
                 .originalFileName("a.png").contentType("image/png").sizeBytes(12L).build());
         entityManager.clear();
 
-        assertThat(eventMaterials.findAllByEventIdOrderByCreatedAtDescIdDesc(event.getId()))
+        assertThat(eventMaterialDsl.findAllByEventId(event.getId()))
                 .extracting(EventMaterial::getId).containsExactly(link.getId());
         assertThat(eventMaterials.findByIdAndEventId(link.getId(), event.getId())).isPresent();
         assertThat(eventMaterials.findByIdAndEventId(link.getId(), event.getId() + 999)).isEmpty();
