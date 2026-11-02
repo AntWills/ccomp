@@ -145,7 +145,7 @@ public class SecurityConfig {
                             // Auth
                             authorize.requestMatchers(PUBLIC_AUTH_ROUTES).permitAll();
                             // Clubs
-                            authorize.requestMatchers(HttpMethod.POST, "/api/clubs/search").permitAll();
+                            authorize.requestMatchers(HttpMethod.GET, "/api/clubs/search").permitAll();
                             authorize.requestMatchers(HttpMethod.GET, PUBLIC_CLUB_ROUTES).permitAll();
                             // Event
                             authorize.requestMatchers(HttpMethod.GET, PUBLIC_EVENT_ROUTES).permitAll();

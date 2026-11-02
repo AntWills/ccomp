@@ -158,12 +158,15 @@ public class ClubMemberService {
     @Transactional
     public void changeMemberStatus(UUID userLoggedId, Long clubId, Long memberId, EnumClubMemberStatus newStatus) {
         ClubMember member = clubMemberRepository.findById(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("Membro não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Membro não encontrado."));
+
+        if (!member.getClub().getId().equals(clubId))
+            throw new ResourceNotFoundException("Membro não encontrado neste clube.");
 
         if(member.getUserId().equals(userLoggedId) && !SecurityUtils.isModeratorOrAdmin())
             throw new ConflictException("O usuário não pode alterar o próprio status.");
 
-        boolean canAccess = member.isInstructor(clubId)
+        boolean canAccess = clubAccessPolicy.isInstructor(clubId, userLoggedId)
                 || SecurityUtils.isModeratorOrAdmin();
 
         if (!canAccess)
@@ -173,6 +176,8 @@ public class ClubMemberService {
             member.deactivate();
         } else if (newStatus == EnumClubMemberStatus.ACTIVE) {
             member.activate();
+        } else if (newStatus == EnumClubMemberStatus.CANCELLED) {
+            member.unsubscribe();
         }
         clubMemberRepository.save(member);
     }
