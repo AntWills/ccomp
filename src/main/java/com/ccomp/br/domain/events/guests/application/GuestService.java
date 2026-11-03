@@ -2,30 +2,33 @@ package com.ccomp.br.domain.events.guests.application;
 
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
+import com.ccomp.br.domain.events.activities.persistence.EventActivity;
+import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
+import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.guests.dto.CreateGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
-import com.ccomp.br.domain.events.guests.dto.CreateGuestDTO;
+import com.ccomp.br.domain.events.guests.dto.UpdateGuestProfileDTO;
+import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
+import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
-import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
-import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
-import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
-import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.guests.persistence.dsl.ActivityGuestDslRepository;
 import com.ccomp.br.domain.events.guests.persistence.dsl.EventGuestDslRepository;
+import com.ccomp.br.domain.users.external.UserManagement;
+import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.CursorUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.ccomp.br.domain.events.core.persistence.EventRepository;
-import com.ccomp.br.domain.events.core.persistence.Event;
 
 import java.util.List;
 import java.util.UUID;
@@ -42,16 +45,20 @@ public class GuestService {
     private final EventRepository eventRepository;
     private final EventActivityRepository activityRepository;
     private final ActivityGuestRepository activityGuestRepository;
+    private final UserManagement userManagement;
 
-    public GuestService(EventGuestRepository eventGuestRepository,
-                        EventCache eventCache,
-                        ActivityCache activityCache,
-                        EventAccessPolicy eventAccessPolicy,
-                        EventGuestDslRepository eventGuestDslRepository,
-                        ActivityGuestDslRepository activityGuestDslRepository,
-                        EventRepository eventRepository,
-                        EventActivityRepository activityRepository,
-                        ActivityGuestRepository activityGuestRepository) {
+    public GuestService(
+            EventGuestRepository eventGuestRepository,
+            EventCache eventCache,
+            ActivityCache activityCache,
+            EventAccessPolicy eventAccessPolicy,
+            EventGuestDslRepository eventGuestDslRepository,
+            ActivityGuestDslRepository activityGuestDslRepository,
+            EventRepository eventRepository,
+            EventActivityRepository activityRepository,
+            ActivityGuestRepository activityGuestRepository,
+            UserManagement userManagement
+    ) {
         this.eventGuestRepository = eventGuestRepository;
         this.eventCache = eventCache;
         this.activityCache = activityCache;
@@ -61,10 +68,11 @@ public class GuestService {
         this.eventRepository = eventRepository;
         this.activityRepository = activityRepository;
         this.activityGuestRepository = activityGuestRepository;
+        this.userManagement = userManagement;
     }
 
     @Transactional
-    public void linkAccount(Long eventId, Long guestId, UUID requesterId, UUID guestUserId, Long activityId) {
+    public void linkAccount(Long eventId, Long guestId, UUID requesterId, String guestEmail, Long activityId) {
         EventGuest guest = eventGuestRepository.findByIdAndEventId(guestId, eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado neste evento."));
 
@@ -79,6 +87,11 @@ public class GuestService {
 
         if (!activity.getEventId().equals(eventId))
             throw new ResourceNotFoundException("A atividade não pertence a este evento.");
+
+        var guestUser = userManagement.findByEmailAddress(new EmailAddress(guestEmail))
+                .filter(user -> user.isActive())
+                .orElseThrow(() -> new ResourceNotFoundException("Não há uma conta ativa com este e-mail."));
+        UUID guestUserId = guestUser.id();
 
         guest.setUserId(guestUserId);
         eventGuestRepository.save(guest);
@@ -98,16 +111,26 @@ public class GuestService {
         if (!eventAccessPolicy.canEdit(eventDto, requesterId))
             throw new AccessDeniedException("Você não tem permissão para gerenciar convidados deste evento.");
 
-        EventGuest guest = eventGuestRepository.save(EventGuest.builder()
-                .event(event).name(request.name()).description(request.description())
-                .imageUrl(request.imageUrl()).build());
+        EventGuest guest = eventGuestRepository.save(
+                EventGuest.builder()
+                        .event(event)
+                        .name(request.name())
+                        .description(request.description())
+                        .imageUrl(request.imageUrl())
+                        .build()
+        );
 
         if (request.activityId() != null) {
             EventActivity activity = activityRepository.findById(request.activityId())
                     .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
             if (!activity.getEventId().equals(eventId))
                 throw new ResourceNotFoundException("A atividade não pertence a este evento.");
-            activityGuestRepository.save(ActivityGuest.builder().activity(activity).eventGuest(guest).build());
+            activityGuestRepository.save(
+                    ActivityGuest.builder()
+                            .activity(activity)
+                            .eventGuest(guest)
+                            .build()
+            );
         }
 
         return guest;
@@ -174,6 +197,30 @@ public class GuestService {
         if (dto.visibility() != null) {
             guest.setVisibility(dto.visibility());
         }
+
+        eventGuestRepository.save(guest);
+    }
+
+    @Transactional
+    public void updateGuestProfile(
+            Long eventId,
+            Long guestId,
+            UUID requesterId,
+            UpdateGuestProfileDTO request
+    ) {
+        EventGuest guest = eventGuestRepository.findByIdAndEventId(guestId, eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado neste evento."));
+
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        if (!eventAccessPolicy.canEdit(event, requesterId)) {
+            throw new AccessDeniedException("Você não tem permissão para editar este convidado.");
+        }
+
+        guest.setName(request.name());
+        guest.setDescription(request.description());
+        guest.setImageUrl(request.imageUrl());
 
         eventGuestRepository.save(guest);
     }

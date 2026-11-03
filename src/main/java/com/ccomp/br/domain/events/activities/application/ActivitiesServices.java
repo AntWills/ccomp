@@ -14,6 +14,7 @@ import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
+import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -37,6 +38,7 @@ public class ActivitiesServices {
     private final EventActivityDslRepository activityDslRepository;
     private final ActivityMapper activityMapper;
     private final ActivityCache activityCache;
+    private final ActivityGuestRepository activityGuestRepository;
 
     public ActivitiesServices(EventRepository eventRepository,
                               EventAccessPolicy eventAccessPolicy,
@@ -44,7 +46,8 @@ public class ActivitiesServices {
                               EventActivityRepository activityRepository,
                               EventActivityDslRepository activityDslRepository,
                               ActivityMapper activityMapper,
-                              ActivityCache activityCache) {
+                              ActivityCache activityCache,
+                              ActivityGuestRepository activityGuestRepository) {
         this.eventRepository = eventRepository;
         this.eventAccessPolicy = eventAccessPolicy;
         this.eventCache = eventCache;
@@ -53,6 +56,7 @@ public class ActivitiesServices {
         this.activityDslRepository = activityDslRepository;
         this.activityMapper = activityMapper;
         this.activityCache = activityCache;
+        this.activityGuestRepository = activityGuestRepository;
     }
 
     @Transactional(readOnly = true)
@@ -105,7 +109,8 @@ public class ActivitiesServices {
         EventDTO event = eventCache.findById(activity.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não existe."));
 
-        if (!eventAccessPolicy.canEdit(event, userId))
+        if (!eventAccessPolicy.canEdit(event, userId)
+                && !activityGuestRepository.existsByActivityIdAndEventGuestUserId(activityId, userId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         activityMapper.updateEventActivityFromRequest(request, activity);
