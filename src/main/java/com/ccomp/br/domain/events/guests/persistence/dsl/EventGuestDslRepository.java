@@ -51,7 +51,7 @@ public class EventGuestDslRepository {
                         eventGuest.eventId,
                         eventGuest.name,
                         eventGuest.description,
-                        eventGuest.imageUrl,
+                        eventGuest.imageKey,
                         eventGuest.status,
                         eventGuest.visibility,
                         eventGuest.createdAt

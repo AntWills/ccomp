@@ -2,7 +2,7 @@
 ALTER TABLE tb_event_guests ALTER COLUMN user_id DROP NOT NULL;
 ALTER TABLE tb_event_guests ADD COLUMN name VARCHAR(255);
 ALTER TABLE tb_event_guests ADD COLUMN description TEXT;
-ALTER TABLE tb_event_guests ADD COLUMN image_url VARCHAR(2048);
+ALTER TABLE tb_event_guests ADD COLUMN image_key VARCHAR(2048);
 
 -- Preserva registros existentes ao introduzir o nome obrigatório.
 UPDATE tb_event_guests eg

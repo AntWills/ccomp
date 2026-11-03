@@ -53,7 +53,7 @@ public class ActivityGuestDslRepository {
                         activityGuest.eventGuest.id,
                         activityGuest.eventGuest.name,
                         activityGuest.eventGuest.description,
-                        activityGuest.eventGuest.imageUrl,
+                        activityGuest.eventGuest.imageKey,
                         activityGuest.eventGuest.status,
                         activityGuest.eventGuest.visibility,
                         activityGuest.createdAt

@@ -44,8 +44,8 @@ public class EventGuest {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "image_url", length = 2048)
-    private String imageUrl;
+    @Column(name = "image_key", length = 2048)
+    private String imageKey;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

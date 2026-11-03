@@ -11,7 +11,7 @@ public record ActivityGuestDTO(
         Long eventGuestId,
         String name,
         String description,
-        String imageUrl,
+        String imageKey,
         EnumGuestStatus status,
         EnumGuestVisibility visibility,
         LocalDateTime createdAt

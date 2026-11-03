@@ -116,7 +116,6 @@ public class GuestService {
                         .event(event)
                         .name(request.name())
                         .description(request.description())
-                        .imageUrl(request.imageUrl())
                         .build()
         );
 
@@ -220,8 +219,6 @@ public class GuestService {
 
         guest.setName(request.name());
         guest.setDescription(request.description());
-        guest.setImageUrl(request.imageUrl());
-
         eventGuestRepository.save(guest);
     }
 }
