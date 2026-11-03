@@ -104,6 +104,9 @@ class ActivityGuestDslRepositoryTest {
         assertThat(page1).hasSize(2);
         assertThat(page1.get(0).id()).isEqualTo(ag3.getId());
         assertThat(page1.get(1).id()).isEqualTo(ag2.getId());
+        assertThat(page1.get(0).name()).isEqualTo(eg3.getName());
+        assertThat(page1.get(0).description()).isEqualTo(eg3.getDescription());
+        assertThat(page1.get(0).imageKey()).isEqualTo(eg3.getImageKey());
 
         // Cursor do último item da página 1
         ActivityGuestDTO lastActivityGuest = page1.getLast();
@@ -165,7 +168,7 @@ class ActivityGuestDslRepositoryTest {
         // Asserções Não-Gerente (Deve retornar somente o vínculo com EventGuest público e confirmado)
         assertThat(publicView).hasSize(1);
         assertThat(publicView.getFirst().id()).isEqualTo(agPublic.getId());
-        assertThat(publicView.getFirst().userId()).isEqualTo(publicConfirmed.getUserId());
+        assertThat(publicView.getFirst().name()).isEqualTo(publicConfirmed.getName());
 
         // Ação 2: Consulta por gerente
         List<ActivityGuestDTO> managerView = activityGuestDslRepository.findActivityGuestsWithCursor(activity.getId(), true, null, 10);
@@ -177,7 +180,9 @@ class ActivityGuestDslRepositoryTest {
     private EventGuest createEventGuest(Event event, EnumGuestVisibility visibility, EnumGuestStatus status, LocalDateTime createdAt) {
         EventGuest guest = EventGuest.builder()
                 .event(event)
-                .userId(UUID.randomUUID())
+                .name("Guest " + UUID.randomUUID())
+                .description("Guest description")
+                .imageKey("events/1/guests/1/image.webp")
                 .visibility(visibility)
                 .status(status)
                 .createdAt(createdAt)

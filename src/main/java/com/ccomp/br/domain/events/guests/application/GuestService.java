@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -184,7 +185,7 @@ public class GuestService {
         EventDTO event = eventCache.findById(guest.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         boolean isManager = eventAccessPolicy.canEdit(event, requesterId);
-        boolean isTheGuestHimself = guest.getUserId().equals(requesterId);
+        boolean isTheGuestHimself = Objects.equals(guest.getUserId(), requesterId);
 
         if (!isManager && !isTheGuestHimself) {
             throw new AccessDeniedException("Você não tem permissão para alterar os dados deste convidado.");
