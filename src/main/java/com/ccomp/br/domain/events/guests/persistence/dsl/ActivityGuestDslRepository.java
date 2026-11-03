@@ -51,7 +51,9 @@ public class ActivityGuestDslRepository {
                         activityGuest.id,
                         activityGuest.activity.id,
                         activityGuest.eventGuest.id,
-                        activityGuest.eventGuest.userId,
+                        activityGuest.eventGuest.name,
+                        activityGuest.eventGuest.description,
+                        activityGuest.eventGuest.imageUrl,
                         activityGuest.eventGuest.status,
                         activityGuest.eventGuest.visibility,
                         activityGuest.createdAt

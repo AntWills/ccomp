@@ -4,6 +4,8 @@ import com.ccomp.br.domain.events.guests.application.GuestService;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
+import com.ccomp.br.domain.events.guests.dto.CreateGuestDTO;
+import com.ccomp.br.domain.events.guests.dto.LinkGuestAccountDTO;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +28,28 @@ public class GuestController {
 
     public GuestController(GuestService guestService) {
         this.guestService = guestService;
+    }
+
+    @PostMapping("/{eventId}/guests")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Adicionar convidado ao evento")
+    public ResponseEntity<Long> addGuest(
+            @Parameter(hidden = true) @RequestAttribute("userId") UUID userId,
+            @PathVariable Long eventId,
+            @Valid @RequestBody CreateGuestDTO request
+    ) {
+        return ResponseEntity.status(201).body(guestService.createGuest(eventId, userId, request).getId());
+    }
+
+    @PatchMapping("/{eventId}/guests/{guestId}/account")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Vincular conta do convidado à atividade")
+    public ResponseEntity<Void> linkGuestAccount(
+            @Parameter(hidden = true) @RequestAttribute("userId") UUID userId,
+            @PathVariable Long eventId,
+            @PathVariable Long guestId,
+            @Valid @RequestBody LinkGuestAccountDTO request
+    ) {
+        guestService.linkAccount(eventId, guestId, userId, request.userId(), request.activityId());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{eventId}/guests")
