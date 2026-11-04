@@ -14,6 +14,7 @@ import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
+import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -28,7 +29,7 @@ import java.util.UUID;
 
 @Service
 @Slf4j
-public class ActivitiesServices {
+public class ActivityServices {
     private final EventRepository eventRepository;
     private final EventAccessPolicy eventAccessPolicy;
     private final EventCache eventCache;
@@ -37,14 +38,16 @@ public class ActivitiesServices {
     private final EventActivityDslRepository activityDslRepository;
     private final ActivityMapper activityMapper;
     private final ActivityCache activityCache;
+    private final ActivityGuestRepository activityGuestRepository;
 
-    public ActivitiesServices(EventRepository eventRepository,
-                              EventAccessPolicy eventAccessPolicy,
-                              EventCache eventCache, EventMapper eventMapper,
-                              EventActivityRepository activityRepository,
-                              EventActivityDslRepository activityDslRepository,
-                              ActivityMapper activityMapper,
-                              ActivityCache activityCache) {
+    public ActivityServices(EventRepository eventRepository,
+                            EventAccessPolicy eventAccessPolicy,
+                            EventCache eventCache, EventMapper eventMapper,
+                            EventActivityRepository activityRepository,
+                            EventActivityDslRepository activityDslRepository,
+                            ActivityMapper activityMapper,
+                            ActivityCache activityCache,
+                            ActivityGuestRepository activityGuestRepository) {
         this.eventRepository = eventRepository;
         this.eventAccessPolicy = eventAccessPolicy;
         this.eventCache = eventCache;
@@ -53,6 +56,7 @@ public class ActivitiesServices {
         this.activityDslRepository = activityDslRepository;
         this.activityMapper = activityMapper;
         this.activityCache = activityCache;
+        this.activityGuestRepository = activityGuestRepository;
     }
 
     @Transactional(readOnly = true)

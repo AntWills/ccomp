@@ -76,6 +76,7 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC_FILES_ROUTES = {
             "/api/events/{eventId}/images/cover",
+            "/api/events/{eventId}/guests/{guestId}/image",
             "/api/events/{eventId}/materials",
             "/api/events/{eventId}/materials/{materialId}/file",
             "/api/events/activities/{activityId}/materials",
@@ -154,6 +155,9 @@ public class SecurityConfig {
                             authorize.requestMatchers(HttpMethod.POST, "/api/events/search").permitAll();
                             // Event-Activity
                             authorize.requestMatchers(HttpMethod.GET,"/api/events/{eventId}/activities").permitAll();
+                            // Event-Guests
+                            authorize.requestMatchers(HttpMethod.GET,"/api/events/{eventId}/guests").permitAll();
+                            authorize.requestMatchers(HttpMethod.GET,"/api/events/activities/{activityId}/guests").permitAll();
                             // Highlights
                             authorize.requestMatchers(HttpMethod.GET, PUBLIC_HIGHLIGHTS_ROUTES).permitAll();
                             // News

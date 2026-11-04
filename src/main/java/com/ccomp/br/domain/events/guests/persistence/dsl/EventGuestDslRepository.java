@@ -49,7 +49,9 @@ public class EventGuestDslRepository {
                         EventGuestDTO.class,
                         eventGuest.id,
                         eventGuest.eventId,
-                        eventGuest.userId,
+                        eventGuest.name,
+                        eventGuest.description,
+                        eventGuest.imageKey,
                         eventGuest.status,
                         eventGuest.visibility,
                         eventGuest.createdAt

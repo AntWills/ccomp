@@ -35,8 +35,17 @@ public class EventGuest {
     @Column(name = "event_id", insertable = false, updatable = false)
     private Long eventId;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id")
     private UUID userId;
+
+    @Column(nullable = false, length = 255)
+    private String name;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "image_key", length = 2048)
+    private String imageKey;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

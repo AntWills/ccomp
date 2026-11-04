@@ -2,15 +2,18 @@ package com.ccomp.br.domain.events.guests.dto;
 
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
+import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 public record ActivityGuestDTO(
         Long id,
         Long activityId,
         Long eventGuestId,
-        UUID userId,
+        String name,
+        String description,
+        String imageKey,
+        EnumActivityGuestRole role,
         EnumGuestStatus status,
         EnumGuestVisibility visibility,
         LocalDateTime createdAt

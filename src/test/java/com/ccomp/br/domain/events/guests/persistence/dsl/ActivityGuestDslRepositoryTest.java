@@ -11,7 +11,9 @@ import com.ccomp.br.domain.events.guests.dto.GuestCursor;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
+import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
+import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
@@ -39,6 +41,9 @@ class ActivityGuestDslRepositoryTest {
 
     @Autowired
     private ActivityGuestDslRepository activityGuestDslRepository;
+
+    @Autowired
+    private ActivityGuestRepository activityGuestRepository;
 
     @Test
     @DisplayName("Deve realizar a paginação de convidados de atividade baseada em cursor ordenada por createdAt decrescente")
@@ -87,6 +92,7 @@ class ActivityGuestDslRepositoryTest {
         ActivityGuest ag3 = ActivityGuest.builder()
                 .activity(activity)
                 .eventGuest(eg3)
+                .role(EnumActivityGuestRole.MODERATOR)
                 .createdAt(now.minusHours(1))
                 .build();
 
@@ -95,6 +101,17 @@ class ActivityGuestDslRepositoryTest {
         entityManager.persist(ag3);
 
         entityManager.flush();
+        assertThat(activityGuestRepository
+                .existsByActivityIdAndEventGuestId(activity.getId(), eg1.getId()))
+                .isTrue();
+        assertThat(activityGuestRepository
+                .existsByActivityIdAndEventGuestId(activity.getId(), 999999L))
+                .isFalse();
+        assertThat(activityGuestRepository
+                .findByActivityIdAndEventGuestId(activity.getId(), eg3.getId()))
+                .get()
+                .extracting(ActivityGuest::getRole)
+                .isEqualTo(EnumActivityGuestRole.MODERATOR);
         entityManager.clear();
 
         // Ação: Primeira página (limite = 2) como Gerente
@@ -104,6 +121,10 @@ class ActivityGuestDslRepositoryTest {
         assertThat(page1).hasSize(2);
         assertThat(page1.get(0).id()).isEqualTo(ag3.getId());
         assertThat(page1.get(1).id()).isEqualTo(ag2.getId());
+        assertThat(page1.get(0).name()).isEqualTo(eg3.getName());
+        assertThat(page1.get(0).description()).isEqualTo(eg3.getDescription());
+        assertThat(page1.get(0).imageKey()).isEqualTo(eg3.getImageKey());
+        assertThat(page1.get(0).role()).isEqualTo(EnumActivityGuestRole.MODERATOR);
 
         // Cursor do último item da página 1
         ActivityGuestDTO lastActivityGuest = page1.getLast();
@@ -165,7 +186,7 @@ class ActivityGuestDslRepositoryTest {
         // Asserções Não-Gerente (Deve retornar somente o vínculo com EventGuest público e confirmado)
         assertThat(publicView).hasSize(1);
         assertThat(publicView.getFirst().id()).isEqualTo(agPublic.getId());
-        assertThat(publicView.getFirst().userId()).isEqualTo(publicConfirmed.getUserId());
+        assertThat(publicView.getFirst().name()).isEqualTo(publicConfirmed.getName());
 
         // Ação 2: Consulta por gerente
         List<ActivityGuestDTO> managerView = activityGuestDslRepository.findActivityGuestsWithCursor(activity.getId(), true, null, 10);
@@ -177,7 +198,9 @@ class ActivityGuestDslRepositoryTest {
     private EventGuest createEventGuest(Event event, EnumGuestVisibility visibility, EnumGuestStatus status, LocalDateTime createdAt) {
         EventGuest guest = EventGuest.builder()
                 .event(event)
-                .userId(UUID.randomUUID())
+                .name("Guest " + UUID.randomUUID())
+                .description("Guest description")
+                .imageKey("events/1/guests/1/image.webp")
                 .visibility(visibility)
                 .status(status)
                 .createdAt(createdAt)

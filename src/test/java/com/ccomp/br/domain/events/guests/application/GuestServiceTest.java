@@ -3,19 +3,32 @@ package com.ccomp.br.domain.events.guests.application;
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
+import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
+import com.ccomp.br.domain.events.core.persistence.Event;
+import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.guests.dto.CreateGuestDTO;
+import com.ccomp.br.domain.events.guests.dto.UpdateGuestProfileDTO;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
+import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
+import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
+import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
 import com.ccomp.br.domain.events.guests.persistence.dsl.ActivityGuestDslRepository;
 import com.ccomp.br.domain.events.guests.persistence.dsl.EventGuestDslRepository;
+import com.ccomp.br.domain.users.external.UserManagement;
+import com.ccomp.br.module.email.EmailAddress;
+import com.ccomp.br.shared.dto.UserDTO;
+import com.ccomp.br.domain.users.enums.EnumRoles;
+import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -47,6 +60,10 @@ class GuestServiceTest {
     @Mock private EventAccessPolicy eventAccessPolicy;
     @Mock private EventGuestDslRepository eventGuestDslRepository;
     @Mock private ActivityGuestDslRepository activityGuestDslRepository;
+    @Mock private EventRepository eventRepository;
+    @Mock private EventActivityRepository activityRepository;
+    @Mock private ActivityGuestRepository activityGuestRepository;
+    @Mock private UserManagement userManagement;
 
     @InjectMocks private GuestService guestService;
 
@@ -244,6 +261,144 @@ class GuestServiceTest {
                     new UpdateGuestDTO(null, null)))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessage("Convidado não encontrado neste evento.");
+        }
+    }
+
+    @Nested
+    class ManageGuestProfiles {
+        @Test
+        @DisplayName("Cria convidado sem conta somente no evento")
+        void createsAccountlessGuestOnEventOnly() {
+            Event persistedEvent = mock(Event.class);
+            when(eventRepository.findById(eventId)).thenReturn(Optional.of(persistedEvent));
+            givenEventExists();
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
+            when(eventGuestRepository.save(any(EventGuest.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+
+            EventGuest result = guestService.createGuest(
+                    eventId,
+                    requesterId,
+                    new CreateGuestDTO("Ada Lovelace", "Palestrante")
+            );
+
+            assertThat(result.getName()).isEqualTo("Ada Lovelace");
+            assertThat(result.getDescription()).isEqualTo("Palestrante");
+            assertThat(result.getUserId()).isNull();
+            verifyNoInteractions(activityRepository, activityGuestRepository);
+        }
+
+        @Test
+        @DisplayName("Associa convidado existente a outra atividade do mesmo evento")
+        void addsExistingEventGuestToActivity() {
+            EventGuest guest = mock(EventGuest.class);
+            EventActivity activity = mock(EventActivity.class);
+            when(eventGuestRepository.findByIdAndEventId(5L, eventId)).thenReturn(Optional.of(guest));
+            givenEventExists();
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
+            when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
+            when(activity.getEventId()).thenReturn(eventId);
+            when(activityGuestRepository.findByActivityIdAndEventGuestId(activityId, 5L))
+                    .thenReturn(Optional.empty());
+
+            guestService.addGuestToActivity(
+                    eventId,
+                    5L,
+                    activityId,
+                    EnumActivityGuestRole.SPECIAL_GUEST,
+                    requesterId
+            );
+
+            verify(activityGuestRepository).save(argThat(link ->
+                    link.getActivity() == activity
+                            && link.getEventGuest() == guest
+                            && link.getRole() == EnumActivityGuestRole.SPECIAL_GUEST
+            ));
+        }
+
+        @Test
+        @DisplayName("Atualiza a função quando o vínculo com a atividade já existe")
+        void updatesRoleOnExistingActivityLink() {
+            EventGuest guest = mock(EventGuest.class);
+            EventActivity activity = mock(EventActivity.class);
+            ActivityGuest activityGuest = ActivityGuest.builder()
+                    .activity(activity)
+                    .eventGuest(guest)
+                    .role(EnumActivityGuestRole.PRESENTER)
+                    .build();
+            when(eventGuestRepository.findByIdAndEventId(5L, eventId)).thenReturn(Optional.of(guest));
+            givenEventExists();
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
+            when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
+            when(activity.getEventId()).thenReturn(eventId);
+            when(activityGuestRepository.findByActivityIdAndEventGuestId(activityId, 5L))
+                    .thenReturn(Optional.of(activityGuest));
+
+            guestService.addGuestToActivity(
+                    eventId,
+                    5L,
+                    activityId,
+                    EnumActivityGuestRole.MODERATOR,
+                    requesterId
+            );
+
+            assertThat(activityGuest.getRole()).isEqualTo(EnumActivityGuestRole.MODERATOR);
+            verify(activityGuestRepository).save(activityGuest);
+        }
+
+        @Test
+        @DisplayName("Atualiza nome e descrição somente para quem pode editar o evento")
+        void updatesGuestProfileForEventEditor() {
+            EventGuest guest = mock(EventGuest.class);
+            when(eventGuestRepository.findByIdAndEventId(5L, eventId)).thenReturn(Optional.of(guest));
+            givenEventExists();
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
+
+            guestService.updateGuestProfile(
+                    eventId,
+                    5L,
+                    requesterId,
+                    new UpdateGuestProfileDTO("Grace Hopper", "Convidada especial")
+            );
+
+            verify(guest).setName("Grace Hopper");
+            verify(guest).setDescription("Convidada especial");
+            verify(eventGuestRepository).save(guest);
+        }
+
+        @Test
+        @DisplayName("Vincula a conta encontrada por e-mail à atividade do convidado")
+        void linksAccountByEmailToActivity() {
+            Long guestId = 5L;
+            String email = "ada@example.com";
+            UUID guestUserId = UUID.randomUUID();
+            EventGuest guest = mock(EventGuest.class);
+            EventActivity activity = mock(EventActivity.class);
+            UserDTO user = new UserDTO(
+                    guestUserId,
+                    "Ada Lovelace",
+                    new EmailAddress(email),
+                    EnumUserStatusAccount.ACTIVE,
+                    null,
+                    null,
+                    EnumRoles.USER,
+                    null
+            );
+
+            when(eventGuestRepository.findByIdAndEventId(guestId, eventId)).thenReturn(Optional.of(guest));
+            givenEventExists();
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
+            when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
+            when(activity.getEventId()).thenReturn(eventId);
+            when(userManagement.findByEmailAddress(new EmailAddress(email))).thenReturn(Optional.of(user));
+            when(activityGuestRepository.existsByActivityIdAndEventGuestUserId(activityId, guestUserId))
+                    .thenReturn(false);
+
+            guestService.linkAccount(eventId, guestId, requesterId, email, activityId);
+
+            verify(guest).setUserId(guestUserId);
+            verify(eventGuestRepository).save(guest);
+            verify(activityGuestRepository).save(any(ActivityGuest.class));
         }
     }
 }

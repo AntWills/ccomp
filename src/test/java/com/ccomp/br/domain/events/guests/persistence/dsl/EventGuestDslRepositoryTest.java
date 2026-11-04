@@ -54,7 +54,9 @@ class EventGuestDslRepositoryTest {
 
         EventGuest guest1 = EventGuest.builder()
                 .event(event)
-                .userId(UUID.randomUUID())
+                .name("Guest 1")
+                .description("Description 1")
+                .imageKey("events/1/guests/1/guest-1.webp")
                 .status(EnumGuestStatus.CONFIRMED)
                 .visibility(EnumGuestVisibility.PUBLIC)
                 .createdAt(now.minusHours(3))
@@ -62,7 +64,7 @@ class EventGuestDslRepositoryTest {
 
         EventGuest guest2 = EventGuest.builder()
                 .event(event)
-                .userId(UUID.randomUUID())
+                .name("Guest 2")
                 .status(EnumGuestStatus.CONFIRMED)
                 .visibility(EnumGuestVisibility.PUBLIC)
                 .createdAt(now.minusHours(2))
@@ -70,7 +72,8 @@ class EventGuestDslRepositoryTest {
 
         EventGuest guest3 = EventGuest.builder()
                 .event(event)
-                .userId(UUID.randomUUID())
+                .name("Guest 3")
+                .imageKey("events/1/guests/3/guest-3.webp")
                 .status(EnumGuestStatus.CONFIRMED)
                 .visibility(EnumGuestVisibility.PUBLIC)
                 .createdAt(now.minusHours(1))
@@ -90,6 +93,8 @@ class EventGuestDslRepositoryTest {
         assertThat(page1).hasSize(2);
         assertThat(page1.get(0).id()).isEqualTo(guest3.getId());
         assertThat(page1.get(1).id()).isEqualTo(guest2.getId());
+        assertThat(page1.get(0).name()).isEqualTo("Guest 3");
+        assertThat(page1.get(0).imageKey()).isEqualTo("events/1/guests/3/guest-3.webp");
 
         // Construção do cursor com base no último item retornado
         EventGuestDTO lastGuest = page1.getLast();
@@ -122,7 +127,7 @@ class EventGuestDslRepositoryTest {
         // Convidado 1: Público e Confirmado (Deve aparecer para todos)
         EventGuest publicConfirmedGuest = EventGuest.builder()
                 .event(event)
-                .userId(UUID.randomUUID())
+                .name("Public Guest")
                 .status(EnumGuestStatus.CONFIRMED)
                 .visibility(EnumGuestVisibility.PUBLIC)
                 .createdAt(now.minusHours(3))
@@ -131,7 +136,7 @@ class EventGuestDslRepositoryTest {
         // Convidado 2: Privado e Confirmado (Apenas gerentes devem ver)
         EventGuest privateGuest = EventGuest.builder()
                 .event(event)
-                .userId(UUID.randomUUID())
+                .name("Private Guest")
                 .status(EnumGuestStatus.CONFIRMED)
                 .visibility(EnumGuestVisibility.PRIVATE)
                 .createdAt(now.minusHours(2))
@@ -140,7 +145,7 @@ class EventGuestDslRepositoryTest {
         // Convidado 3: Público e Cancelado (Apenas gerentes devem ver)
         EventGuest canceledGuest = EventGuest.builder()
                 .event(event)
-                .userId(UUID.randomUUID())
+                .name("Canceled Guest")
                 .status(EnumGuestStatus.CANCELED)
                 .visibility(EnumGuestVisibility.PUBLIC)
                 .createdAt(now.minusHours(1))
