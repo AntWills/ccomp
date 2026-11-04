@@ -17,7 +17,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.jspecify.annotations.Nullable;
@@ -70,10 +69,11 @@ public class GuestController {
     })
     public ResponseEntity<Long> addGuest(
             @Parameter(description = "ID do evento", example = "12") @PathVariable Long eventId,
-            @Parameter(hidden = true) @RequestAttribute("userId") UUID userId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateGuestDTO request
     ) {
-        return ResponseEntity.status(201).body(guestService.createGuest(eventId, userId, request).getId());
+        return ResponseEntity.status(201)
+                .body(guestService.createGuest(eventId, extractUserId(jwt), request).getId());
     }
 
     @PatchMapping("/{eventId}/guests/{guestId}/account")
@@ -97,10 +97,16 @@ public class GuestController {
     public ResponseEntity<Void> linkGuestAccount(
             @Parameter(description = "ID do evento", example = "12") @PathVariable Long eventId,
             @Parameter(description = "ID do convidado", example = "35") @PathVariable Long guestId,
-            @Parameter(hidden = true) @RequestAttribute("userId") UUID userId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody LinkGuestAccountDTO request
     ) {
-        guestService.linkAccount(eventId, guestId, userId, request.email(), request.activityId());
+        guestService.linkAccount(
+                eventId,
+                guestId,
+                extractUserId(jwt),
+                request.email(),
+                request.activityId()
+        );
         return ResponseEntity.noContent().build();
     }
 
@@ -124,15 +130,16 @@ public class GuestController {
             @ApiResponse(responseCode = "404", description = "Evento não encontrado",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     })
-    @SecurityRequirements
     public ResponseEntity<CursorPage<EventGuestDTO>> searchEventGuests(
-            @Parameter(hidden = true) @RequestAttribute(value = "userId", required = false) UUID userId,
+            @Parameter(hidden = true) @AuthenticationPrincipal @Nullable Jwt jwt,
             @Parameter(description = "ID do evento", example = "12") @PathVariable Long eventId,
             @Parameter(description = "Cursor opaco da página anterior") @RequestParam(required = false) String cursor,
             @Parameter(description = "Quantidade de itens; padrão 20, máximo 50", example = "20")
             @RequestParam(defaultValue = "20") int pageSize
     ) {
-        return ResponseEntity.ok(guestService.searchEventGuests(eventId, userId, cursor, pageSize));
+        return ResponseEntity.ok(
+                guestService.searchEventGuests(eventId, extractUserId(jwt), cursor, pageSize)
+        );
     }
 
     @GetMapping("/activities/{activityId}/guests")
@@ -156,15 +163,16 @@ public class GuestController {
             @ApiResponse(responseCode = "404", description = "Atividade ou evento pai não encontrado",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     })
-    @SecurityRequirements
     public ResponseEntity<CursorPage<ActivityGuestDTO>> searchActivityGuests(
-            @Parameter(hidden = true) @RequestAttribute(value = "userId", required = false) UUID userId,
+            @AuthenticationPrincipal @Nullable Jwt jwt,
             @Parameter(description = "ID da atividade", example = "78") @PathVariable Long activityId,
             @Parameter(description = "Cursor opaco da página anterior") @RequestParam(required = false) String cursor,
             @Parameter(description = "Quantidade de itens; padrão 20, máximo 50", example = "20")
             @RequestParam(defaultValue = "20") int pageSize
     ) {
-        return ResponseEntity.ok(guestService.searchActivityGuests(activityId, userId, cursor, pageSize));
+        return ResponseEntity.ok(
+                guestService.searchActivityGuests(activityId, extractUserId(jwt), cursor, pageSize)
+        );
     }
 
     @PatchMapping("/{eventId}/guests/{guestId}")
@@ -188,12 +196,12 @@ public class GuestController {
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<MessageResponse> updateGuest(
-            @Parameter(hidden = true) @RequestAttribute("userId") UUID userId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long eventId,
             @PathVariable Long guestId,
             @Valid @RequestBody UpdateGuestDTO request
     ) {
-        guestService.updateEventGuest(eventId, guestId, userId, request);
+        guestService.updateEventGuest(eventId, guestId, extractUserId(jwt), request);
         return ResponseEntity.ok(new MessageResponse("Preferências do convidado atualizadas com sucesso."));
     }
 
@@ -215,12 +223,12 @@ public class GuestController {
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<MessageResponse> updateGuestProfile(
-            @Parameter(hidden = true) @RequestAttribute("userId") UUID userId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long eventId,
             @PathVariable Long guestId,
             @Valid @RequestBody UpdateGuestProfileDTO request
     ) {
-        guestService.updateGuestProfile(eventId, guestId, userId, request);
+        guestService.updateGuestProfile(eventId, guestId, extractUserId(jwt), request);
         return ResponseEntity.ok(new MessageResponse("Dados do convidado atualizados com sucesso."));
     }
 
@@ -250,9 +258,9 @@ public class GuestController {
             @Parameter(description = "ID do convidado", example = "35") @PathVariable Long guestId,
             @Parameter(description = "Arquivo PNG, JPEG ou WebP", required = true)
             @RequestParam("file") MultipartFile file,
-            @RequestAttribute("userId") UUID userId
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
     ) {
-        guestImageService.uploadImage(eventId, guestId, userId, file);
+        guestImageService.uploadImage(eventId, guestId, extractUserId(jwt), file);
         return ResponseEntity.ok(new MessageResponse("Imagem do convidado atualizada com sucesso."));
     }
 
@@ -278,7 +286,6 @@ public class GuestController {
             @ApiResponse(responseCode = "500", description = "Falha inesperada ao ler a imagem do storage",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     })
-    @SecurityRequirements
     public ResponseEntity<Resource> getGuestImage(
             @PathVariable Long eventId,
             @PathVariable Long guestId,
@@ -318,9 +325,9 @@ public class GuestController {
     public ResponseEntity<Void> removeGuestImage(
             @PathVariable Long eventId,
             @PathVariable Long guestId,
-            @RequestAttribute("userId") UUID userId
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
     ) {
-        boolean removed = guestImageService.removeImage(eventId, guestId, userId);
+        boolean removed = guestImageService.removeImage(eventId, guestId, extractUserId(jwt));
         return removed ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 

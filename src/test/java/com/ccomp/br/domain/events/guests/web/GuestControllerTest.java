@@ -8,8 +8,12 @@ import com.ccomp.br.domain.events.guests.dto.UpdateGuestProfileDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
+import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.shared.exceptions.GlobalExceptionHandler;
 import com.ccomp.br.shared.utils.CursorPage;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,10 +22,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
+import org.springframework.http.converter.ResourceHttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
-import com.ccomp.br.domain.storage.external.StorageExternal;
 
 import java.util.List;
 import java.util.UUID;
@@ -52,10 +62,26 @@ class GuestControllerTest {
 
     @BeforeEach
     void setUp() {
+        authenticate(USER_ID);
+
+        ObjectMapper objectMapper = new ObjectMapper()
+                .findAndRegisterModules()
+                .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+
         mockMvc = MockMvcBuilders.standaloneSetup(new GuestController(guestService, guestImageService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
+                .setMessageConverters(
+                        new ByteArrayHttpMessageConverter(),
+                        new ResourceHttpMessageConverter(),
+                        new MappingJackson2HttpMessageConverter(objectMapper)
+                )
                 .build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -65,13 +91,12 @@ class GuestControllerTest {
         when(guestService.createGuest(eq(EVENT_ID), eq(USER_ID), any(CreateGuestDTO.class))).thenReturn(guest);
 
         mockMvc.perform(post("/api/events/{eventId}/guests", EVENT_ID)
-                        .requestAttr("userId", USER_ID)
                         .contentType("application/json")
                         .content("""
                                 {
                                   "name": "Ada Lovelace",
                                   "description": "Palestrante convidada",
-                                  "activityId": 78
+                                  "activity_id": 78
                                 }
                                 """))
                 .andExpect(status().isCreated())
@@ -87,7 +112,6 @@ class GuestControllerTest {
     @Test
     void updateGuestProfileDeserializesTextFields() throws Exception {
         mockMvc.perform(patch("/api/events/{eventId}/guests/{guestId}/profile", EVENT_ID, GUEST_ID)
-                        .requestAttr("userId", USER_ID)
                         .contentType("application/json")
                         .content("""
                                 {
@@ -107,12 +131,11 @@ class GuestControllerTest {
     @Test
     void linkAccountDeserializesEmailRatherThanUserId() throws Exception {
         mockMvc.perform(patch("/api/events/{eventId}/guests/{guestId}/account", EVENT_ID, GUEST_ID)
-                        .requestAttr("userId", USER_ID)
                         .contentType("application/json")
                         .content("""
                                 {
                                   "email": "ada@example.com",
-                                  "activityId": 78
+                                  "activity_id": 78
                                 }
                                 """))
                 .andExpect(status().isNoContent());
@@ -123,6 +146,7 @@ class GuestControllerTest {
 
     @Test
     void guestListSerializesPublicProfileWithoutAccountIdOrEmail() throws Exception {
+        SecurityContextHolder.clearContext();
         EventGuestDTO guest = new EventGuestDTO(
                 GUEST_ID,
                 EVENT_ID,
@@ -140,8 +164,9 @@ class GuestControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].name").value("Ada Lovelace"))
                 .andExpect(jsonPath("$.content[0].description").value("Palestrante"))
-                .andExpect(jsonPath("$.content[0].imageKey").value("events/12/guests/35/ada.webp"))
-                .andExpect(jsonPath("$.content[0].userId").doesNotExist())
+                .andExpect(jsonPath("$.content[0].image_key").value("events/12/guests/35/ada.webp"))
+                .andExpect(jsonPath("$.content[0].event_id").value(EVENT_ID))
+                .andExpect(jsonPath("$.content[0].user_id").doesNotExist())
                 .andExpect(jsonPath("$.content[0].email").doesNotExist());
     }
 
@@ -155,8 +180,7 @@ class GuestControllerTest {
         );
 
         mockMvc.perform(multipart("/api/events/{eventId}/guests/{guestId}/image", EVENT_ID, GUEST_ID)
-                        .file(file)
-                        .requestAttr("userId", USER_ID))
+                        .file(file))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.response").value("Imagem do convidado atualizada com sucesso."));
 
@@ -165,6 +189,7 @@ class GuestControllerTest {
 
     @Test
     void getGuestImageSerializesStoredBytesWithContentType() throws Exception {
+        SecurityContextHolder.clearContext();
         when(guestImageService.getImage(EVENT_ID, GUEST_ID, null))
                 .thenReturn(java.util.Optional.of(new StorageExternal.StoredFile(
                         new ByteArrayResource(new byte[]{4, 5, 6}),
@@ -177,5 +202,14 @@ class GuestControllerTest {
                         .contentType("image/webp"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
                         .bytes(new byte[]{4, 5, 6}));
+    }
+
+    private void authenticate(UUID userId) {
+        Jwt jwt = Jwt.withTokenValue("test-token")
+                .header("alg", "RS256")
+                .subject(userId.toString())
+                .build();
+        Authentication authentication = new UsernamePasswordAuthenticationToken(jwt, null, List.of());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 }
