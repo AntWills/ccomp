@@ -11,6 +11,7 @@ import com.ccomp.br.domain.events.guests.dto.GuestCursor;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
+import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
@@ -91,6 +92,7 @@ class ActivityGuestDslRepositoryTest {
         ActivityGuest ag3 = ActivityGuest.builder()
                 .activity(activity)
                 .eventGuest(eg3)
+                .role(EnumActivityGuestRole.MODERATOR)
                 .createdAt(now.minusHours(1))
                 .build();
 
@@ -105,6 +107,11 @@ class ActivityGuestDslRepositoryTest {
         assertThat(activityGuestRepository
                 .existsByActivityIdAndEventGuestId(activity.getId(), 999999L))
                 .isFalse();
+        assertThat(activityGuestRepository
+                .findByActivityIdAndEventGuestId(activity.getId(), eg3.getId()))
+                .get()
+                .extracting(ActivityGuest::getRole)
+                .isEqualTo(EnumActivityGuestRole.MODERATOR);
         entityManager.clear();
 
         // Ação: Primeira página (limite = 2) como Gerente
@@ -117,6 +124,7 @@ class ActivityGuestDslRepositoryTest {
         assertThat(page1.get(0).name()).isEqualTo(eg3.getName());
         assertThat(page1.get(0).description()).isEqualTo(eg3.getDescription());
         assertThat(page1.get(0).imageKey()).isEqualTo(eg3.getImageKey());
+        assertThat(page1.get(0).role()).isEqualTo(EnumActivityGuestRole.MODERATOR);
 
         // Cursor do último item da página 1
         ActivityGuestDTO lastActivityGuest = page1.getLast();

@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.guests.persistence;
 
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
+import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -31,6 +32,11 @@ public class ActivityGuest {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_guest_id", nullable = false)
     private EventGuest eventGuest;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    @Builder.Default
+    private EnumActivityGuestRole role = EnumActivityGuestRole.PRESENTER;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

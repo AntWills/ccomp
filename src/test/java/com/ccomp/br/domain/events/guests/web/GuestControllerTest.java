@@ -3,11 +3,12 @@ package com.ccomp.br.domain.events.guests.web;
 import com.ccomp.br.domain.events.guests.application.GuestImageService;
 import com.ccomp.br.domain.events.guests.application.GuestService;
 import com.ccomp.br.domain.events.guests.dto.CreateGuestDTO;
+import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestProfileDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
-import com.ccomp.br.domain.events.guests.persistence.EventGuest;
+import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.shared.exceptions.GlobalExceptionHandler;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -86,10 +87,6 @@ class GuestControllerTest {
 
     @Test
     void createGuestDeserializesProfileWithoutActivityAssociation() throws Exception {
-        EventGuest guest = mock(EventGuest.class);
-        when(guest.getId()).thenReturn(GUEST_ID);
-        when(guestService.createGuest(eq(EVENT_ID), eq(USER_ID), any(CreateGuestDTO.class))).thenReturn(guest);
-
         mockMvc.perform(post("/api/events/{eventId}/guests", EVENT_ID)
                         .contentType("application/json")
                         .content("""
@@ -99,7 +96,7 @@ class GuestControllerTest {
                                 }
                                 """))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$").value(GUEST_ID));
+                .andExpect(jsonPath("$.response").value("Convidado adicionado com sucesso ao evento."));
 
         ArgumentCaptor<CreateGuestDTO> request = ArgumentCaptor.forClass(CreateGuestDTO.class);
         verify(guestService).createGuest(eq(EVENT_ID), eq(USER_ID), request.capture());
@@ -114,10 +111,20 @@ class GuestControllerTest {
                         EVENT_ID,
                         GUEST_ID,
                         78L
-                ))
+                )
+                        .contentType("application/json")
+                        .content("""
+                                {"role":"MODERATOR"}
+                                """))
                 .andExpect(status().isNoContent());
 
-        verify(guestService).addGuestToActivity(EVENT_ID, GUEST_ID, 78L, USER_ID);
+        verify(guestService).addGuestToActivity(
+                EVENT_ID,
+                GUEST_ID,
+                78L,
+                com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole.MODERATOR,
+                USER_ID
+        );
     }
 
     @Test
@@ -179,6 +186,30 @@ class GuestControllerTest {
                 .andExpect(jsonPath("$.content[0].event_id").value(EVENT_ID))
                 .andExpect(jsonPath("$.content[0].user_id").doesNotExist())
                 .andExpect(jsonPath("$.content[0].email").doesNotExist());
+    }
+
+    @Test
+    void activityGuestListSerializesAssignedRole() throws Exception {
+        SecurityContextHolder.clearContext();
+        Long activityId = 78L;
+        ActivityGuestDTO guest = new ActivityGuestDTO(
+                4L,
+                activityId,
+                GUEST_ID,
+                "Ada Lovelace",
+                "Palestrante",
+                null,
+                EnumActivityGuestRole.SPECIAL_GUEST,
+                EnumGuestStatus.CONFIRMED,
+                EnumGuestVisibility.PUBLIC,
+                null
+        );
+        when(guestService.searchActivityGuests(activityId, null, null, 20))
+                .thenReturn(new CursorPage<>(List.of(guest), null, null));
+
+        mockMvc.perform(get("/api/events/activities/{activityId}/guests", activityId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].role").value("SPECIAL_GUEST"));
     }
 
     @Test

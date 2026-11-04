@@ -2,6 +2,7 @@ package com.ccomp.br.domain.events.guests.dto;
 
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
+import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 
 import java.time.LocalDateTime;
 
@@ -12,6 +13,7 @@ public record ActivityGuestDTO(
         String name,
         String description,
         String imageKey,
+        EnumActivityGuestRole role,
         EnumGuestStatus status,
         EnumGuestVisibility visibility,
         LocalDateTime createdAt

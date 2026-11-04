@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.guests.web;
 import com.ccomp.br.domain.events.guests.application.GuestService;
 import com.ccomp.br.domain.events.guests.application.GuestImageService;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
+import com.ccomp.br.domain.events.guests.dto.AddGuestToActivityDTO;
 import com.ccomp.br.domain.events.guests.dto.CreateGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.LinkGuestAccountDTO;
@@ -50,13 +51,13 @@ public class GuestController {
     @PostMapping("/{eventId}/guests")
     @Operation(
             summary = "Adiciona um convidado ao evento",
-            description = "Cria o perfil público de um convidado sem exigir conta ou e-mail. O corpo aceita `name`, " +
+            description = "Cria o perfil público de um convidado sem exigir conta ou e-mail. O corpo aceita `name` " +
                     "e `description`. O convidado fica associado ao evento; atividades são vinculadas por uma rota própria. Requer JWT " +
-                    "de proprietário, editor ativo, MODERATOR ou ADMIN. Retorna `201` com o ID do novo convidado."
+                    "de proprietário, editor ativo, MODERATOR ou ADMIN. Retorna `201` com `MessageResponse`."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Convidado cadastrado; corpo contém seu ID",
-                    content = @Content(mediaType = "application/json", schema = @Schema(type = "integer", format = "int64", example = "35"))),
+            @ApiResponse(responseCode = "201", description = "Convidado cadastrado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = MessageResponse.class))),
             @ApiResponse(responseCode = "400", description = "Nome ausente, campo acima do limite ou corpo inválido",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "JWT ausente ou inválido",
@@ -81,12 +82,16 @@ public class GuestController {
     @Operation(
             summary = "Associa um convidado existente a uma atividade",
             description = "Vincula um convidado já cadastrado no evento à atividade indicada, sem recriar seu perfil. " +
+                    "O corpo JSON é opcional e aceita `role`: `PRESENTER` (ministrante), `SPECIAL_GUEST` " +
+                    "(convidado especial), `MODERATOR` (mediador) ou `LISTENER` (ouvinte). Sem corpo ou sem `role`, " +
+                    "o padrão é `PRESENTER`. Se o vínculo já existir e a função enviada for diferente, atualiza a função. " +
                     "A atividade precisa pertencer ao mesmo evento. Requer JWT de proprietário, editor ativo, MODERATOR " +
-                    "ou ADMIN. A operação pode ser repetida com segurança: se o vínculo já existe, mantém o vínculo " +
-                    "atual e retorna `204` sem corpo."
+                    "ou ADMIN. Retorna `204` sem corpo."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Convidado associado à atividade", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Valor de `role` inválido ou corpo JSON malformado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "JWT ausente ou inválido",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "Usuário sem permissão para editar o evento",
@@ -100,9 +105,16 @@ public class GuestController {
             @PathVariable Long guestId,
             @Parameter(description = "ID da atividade que receberá o convidado", example = "78")
             @PathVariable Long activityId,
-            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody(required = false) AddGuestToActivityDTO request
     ) {
-        guestService.addGuestToActivity(eventId, guestId, activityId, extractUserId(jwt));
+        guestService.addGuestToActivity(
+                eventId,
+                guestId,
+                activityId,
+                request == null ? null : request.role(),
+                extractUserId(jwt)
+        );
         return ResponseEntity.noContent().build();
     }
 
@@ -177,7 +189,7 @@ public class GuestController {
             summary = "Lista os convidados associados a uma atividade",
             description = "Retorna `CursorPage<ActivityGuestDTO>` com `content`, `next_cursor` e `previous_cursor`. " +
                     "Cada item contém `id`, `activity_id`, `event_guest_id`, `name`, `description`, `image_key`, " +
-                    "`status`, `visibility` e `created_at`; " +
+                    "`role` (`PRESENTER`, `SPECIAL_GUEST`, `MODERATOR` ou `LISTENER`), `status`, `visibility` e `created_at`; " +
                     "A lista pública contém apenas convidados confirmados e públicos; proprietário, editor ativo, " +
                     "MODERATOR ou ADMIN também podem consultar perfis privados e cancelados. `pageSize` usa padrão 20 " +
                     "e máximo 50; `cursor` é opaco e deve ser reutilizado com a mesma atividade. O acesso segue a " +

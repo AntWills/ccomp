@@ -15,6 +15,7 @@ import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
+import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
@@ -297,30 +298,52 @@ class GuestServiceTest {
             when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
             when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
             when(activity.getEventId()).thenReturn(eventId);
-            when(activityGuestRepository.existsByActivityIdAndEventGuestId(activityId, 5L)).thenReturn(false);
+            when(activityGuestRepository.findByActivityIdAndEventGuestId(activityId, 5L))
+                    .thenReturn(Optional.empty());
 
-            guestService.addGuestToActivity(eventId, 5L, activityId, requesterId);
+            guestService.addGuestToActivity(
+                    eventId,
+                    5L,
+                    activityId,
+                    EnumActivityGuestRole.SPECIAL_GUEST,
+                    requesterId
+            );
 
             verify(activityGuestRepository).save(argThat(link ->
-                    link.getActivity() == activity && link.getEventGuest() == guest
+                    link.getActivity() == activity
+                            && link.getEventGuest() == guest
+                            && link.getRole() == EnumActivityGuestRole.SPECIAL_GUEST
             ));
         }
 
         @Test
-        @DisplayName("Não duplica um vínculo de convidado já existente")
-        void doesNotDuplicateExistingActivityLink() {
+        @DisplayName("Atualiza a função quando o vínculo com a atividade já existe")
+        void updatesRoleOnExistingActivityLink() {
             EventGuest guest = mock(EventGuest.class);
             EventActivity activity = mock(EventActivity.class);
+            ActivityGuest activityGuest = ActivityGuest.builder()
+                    .activity(activity)
+                    .eventGuest(guest)
+                    .role(EnumActivityGuestRole.PRESENTER)
+                    .build();
             when(eventGuestRepository.findByIdAndEventId(5L, eventId)).thenReturn(Optional.of(guest));
             givenEventExists();
             when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
             when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
             when(activity.getEventId()).thenReturn(eventId);
-            when(activityGuestRepository.existsByActivityIdAndEventGuestId(activityId, 5L)).thenReturn(true);
+            when(activityGuestRepository.findByActivityIdAndEventGuestId(activityId, 5L))
+                    .thenReturn(Optional.of(activityGuest));
 
-            guestService.addGuestToActivity(eventId, 5L, activityId, requesterId);
+            guestService.addGuestToActivity(
+                    eventId,
+                    5L,
+                    activityId,
+                    EnumActivityGuestRole.MODERATOR,
+                    requesterId
+            );
 
-            verify(activityGuestRepository, never()).save(any());
+            assertThat(activityGuest.getRole()).isEqualTo(EnumActivityGuestRole.MODERATOR);
+            verify(activityGuestRepository).save(activityGuest);
         }
 
         @Test

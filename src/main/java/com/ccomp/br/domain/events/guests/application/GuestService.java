@@ -12,6 +12,7 @@ import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.guests.dto.CreateGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
+import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestProfileDTO;
@@ -73,7 +74,13 @@ public class GuestService {
     }
 
     @Transactional
-    public void addGuestToActivity(Long eventId, Long guestId, Long activityId, UUID requesterId) {
+    public void addGuestToActivity(
+            Long eventId,
+            Long guestId,
+            Long activityId,
+            EnumActivityGuestRole role,
+            UUID requesterId
+    ) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -91,16 +98,28 @@ public class GuestService {
             throw new ResourceNotFoundException("A atividade não pertence a este evento.");
         }
 
-        if (activityGuestRepository.existsByActivityIdAndEventGuestId(activityId, guestId)) {
+        EnumActivityGuestRole selectedRole = role == null
+                ? EnumActivityGuestRole.PRESENTER
+                : role;
+        ActivityGuest activityGuest = activityGuestRepository
+                .findByActivityIdAndEventGuestId(activityId, guestId)
+                .orElse(null);
+
+        if (activityGuest == null) {
+            activityGuestRepository.save(
+                    ActivityGuest.builder()
+                            .activity(activity)
+                            .eventGuest(guest)
+                            .role(selectedRole)
+                            .build()
+            );
             return;
         }
 
-        activityGuestRepository.save(
-                ActivityGuest.builder()
-                        .activity(activity)
-                        .eventGuest(guest)
-                        .build()
-        );
+        if (activityGuest.getRole() != selectedRole) {
+            activityGuest.setRole(selectedRole);
+            activityGuestRepository.save(activityGuest);
+        }
     }
 
     @Transactional
@@ -129,7 +148,12 @@ public class GuestService {
         eventGuestRepository.save(guest);
 
         if (!activityGuestRepository.existsByActivityIdAndEventGuestUserId(activityId, guestUserId))
-            activityGuestRepository.save(ActivityGuest.builder().activity(activity).eventGuest(guest).build());
+            activityGuestRepository.save(
+                    ActivityGuest.builder()
+                            .activity(activity)
+                            .eventGuest(guest)
+                            .build()
+            );
     }
 
     @Transactional
