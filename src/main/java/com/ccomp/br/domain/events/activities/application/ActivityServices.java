@@ -29,7 +29,7 @@ import java.util.UUID;
 
 @Service
 @Slf4j
-public class ActivitiesServices {
+public class ActivityServices {
     private final EventRepository eventRepository;
     private final EventAccessPolicy eventAccessPolicy;
     private final EventCache eventCache;
@@ -40,14 +40,14 @@ public class ActivitiesServices {
     private final ActivityCache activityCache;
     private final ActivityGuestRepository activityGuestRepository;
 
-    public ActivitiesServices(EventRepository eventRepository,
-                              EventAccessPolicy eventAccessPolicy,
-                              EventCache eventCache, EventMapper eventMapper,
-                              EventActivityRepository activityRepository,
-                              EventActivityDslRepository activityDslRepository,
-                              ActivityMapper activityMapper,
-                              ActivityCache activityCache,
-                              ActivityGuestRepository activityGuestRepository) {
+    public ActivityServices(EventRepository eventRepository,
+                            EventAccessPolicy eventAccessPolicy,
+                            EventCache eventCache, EventMapper eventMapper,
+                            EventActivityRepository activityRepository,
+                            EventActivityDslRepository activityDslRepository,
+                            ActivityMapper activityMapper,
+                            ActivityCache activityCache,
+                            ActivityGuestRepository activityGuestRepository) {
         this.eventRepository = eventRepository;
         this.eventAccessPolicy = eventAccessPolicy;
         this.eventCache = eventCache;
@@ -109,8 +109,7 @@ public class ActivitiesServices {
         EventDTO event = eventCache.findById(activity.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não existe."));
 
-        if (!eventAccessPolicy.canEdit(event, userId)
-                && !activityGuestRepository.existsByActivityIdAndEventGuestUserId(activityId, userId))
+        if (!eventAccessPolicy.canEdit(event, userId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         activityMapper.updateEventActivityFromRequest(request, activity);

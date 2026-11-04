@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.events.activities.web;
 
-import com.ccomp.br.domain.events.activities.application.ActivitiesServices;
+import com.ccomp.br.domain.events.activities.application.ActivityServices;
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.CreateActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ActivitiesControllerTest {
     @Mock
-    private ActivitiesServices activitiesServices;
+    private ActivityServices activityServices;
 
     @InjectMocks
     private ActivitiesController controller;
@@ -36,13 +36,13 @@ class ActivitiesControllerTest {
         Long eventId = 12L;
         String cursor = "encoded-cursor";
         CursorPage<EventActivityDTO> expected = new CursorPage<>(List.of(), null, null);
-        when(activitiesServices.searchByCursor(eventId, cursor, null)).thenReturn(expected);
+        when(activityServices.searchByCursor(eventId, cursor, null)).thenReturn(expected);
 
         var response = controller.getActivities(eventId, cursor, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isSameAs(expected);
-        verify(activitiesServices).searchByCursor(eventId, cursor, null);
+        verify(activityServices).searchByCursor(eventId, cursor, null);
     }
 
     @Test
@@ -51,7 +51,7 @@ class ActivitiesControllerTest {
         Jwt jwt = jwt(userId);
         CreateActivityDTO request = new CreateActivityDTO("Palestra", "Descrição");
         ActivityDTO expected = activity();
-        when(activitiesServices.createActivity(userId, 12L, request)).thenReturn(expected);
+        when(activityServices.createActivity(userId, 12L, request)).thenReturn(expected);
 
         var response = controller.createActivity(12L, request, jwt);
 
@@ -65,7 +65,7 @@ class ActivitiesControllerTest {
         Jwt jwt = jwt(userId);
         UpdateActivityDTO request = UpdateActivityDTO.builder().title("Título alterado").build();
         ActivityDTO expected = activity();
-        when(activitiesServices.updateActivity(userId, 44L, request)).thenReturn(expected);
+        when(activityServices.updateActivity(userId, 44L, request)).thenReturn(expected);
 
         var response = controller.updateActivity(44L, request, jwt);
 
@@ -80,7 +80,7 @@ class ActivitiesControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(new MessageResponse("Atividade removida com sucesso."));
-        verify(activitiesServices).deleteActivity(userId, 44L);
+        verify(activityServices).deleteActivity(userId, 44L);
     }
 
     @Test
@@ -88,7 +88,7 @@ class ActivitiesControllerTest {
         assertThatThrownBy(() -> controller.createActivity(12L,
                 new CreateActivityDTO("Palestra", null), null))
                 .isInstanceOf(UserNotFoundException.class);
-        verifyNoInteractions(activitiesServices);
+        verifyNoInteractions(activityServices);
     }
 
     private static Jwt jwt(UUID userId) {

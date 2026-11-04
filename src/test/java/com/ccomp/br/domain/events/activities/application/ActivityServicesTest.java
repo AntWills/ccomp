@@ -1,6 +1,5 @@
-package com.ccomp.br.domain.events.application;
+package com.ccomp.br.domain.events.activities.application;
 
-import com.ccomp.br.domain.events.activities.application.ActivitiesServices;
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.CreateActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
@@ -15,7 +14,6 @@ import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
-import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
 
 import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
@@ -61,7 +59,7 @@ public class ActivityServicesTest {
     private ActivityMapper activityMapper;
 
     @InjectMocks
-    private ActivitiesServices activityServices;
+    private ActivityServices activityServices;
 
     private UUID userId;
     private Long eventId;

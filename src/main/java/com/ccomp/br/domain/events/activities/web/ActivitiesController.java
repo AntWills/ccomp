@@ -1,16 +1,11 @@
 package com.ccomp.br.domain.events.activities.web;
 
 import com.ccomp.br.domain.events.activities.dto.*;
-import com.ccomp.br.domain.events.shared.application.ActivitiesEnrollmentsServices;
-import com.ccomp.br.domain.events.activities.application.ActivitiesServices;
-import com.ccomp.br.domain.events.enrollments.dto.UserActivitySummaryDTO;
+import com.ccomp.br.domain.events.activities.application.ActivityServices;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
@@ -29,10 +24,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("api/events")
 public class ActivitiesController {
-    private final ActivitiesServices activitiesServices;
+    private final ActivityServices activityServices;
 
-    public ActivitiesController(ActivitiesServices activitiesServices) {
-        this.activitiesServices = activitiesServices;
+    public ActivitiesController(ActivityServices activityServices) {
+        this.activityServices = activityServices;
     }
 
     @Operation(summary = "Lista as atividades de um evento", description = "Retorna uma lista paginada (por cursor) de todas as atividades associadas a um evento específico. Acesso restrito a eventos abertos, dono do evento, editores ou administradores.")
@@ -48,7 +43,7 @@ public class ActivitiesController {
             @RequestParam(required = false) String cursor,
             @AuthenticationPrincipal Jwt jwt) {
         UUID userId = jwt != null ? UUID.fromString(jwt.getSubject()) : null;
-        return ResponseEntity.ok(activitiesServices.searchByCursor(eventId, cursor, userId));
+        return ResponseEntity.ok(activityServices.searchByCursor(eventId, cursor, userId));
     }
 
     @Operation(summary = "Cria uma nova atividade", description = "Cria uma nova atividade para um evento específico. Requer autenticação do usuário e dados da atividade.")
@@ -66,7 +61,7 @@ public class ActivitiesController {
                 .map(UUID::fromString)
                 .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(activitiesServices.createActivity(userId, eventId, request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(activityServices.createActivity(userId, eventId, request));
     }
 
     @Operation(summary = "Deleta uma atividade", description = "Remove uma atividade existente usando o seu ID. Requer autenticação do usuário.")
@@ -85,7 +80,7 @@ public class ActivitiesController {
                 .map(UUID::fromString)
                 .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
 
-        activitiesServices.deleteActivity(userId, id);
+        activityServices.deleteActivity(userId, id);
         return ResponseEntity.ok(new MessageResponse("Atividade removida com sucesso."));
     }
 
@@ -107,6 +102,6 @@ public class ActivitiesController {
                 .map(UUID::fromString)
                 .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
 
-        return ResponseEntity.ok(activitiesServices.updateActivity(userId, id, request));
+        return ResponseEntity.ok(activityServices.updateActivity(userId, id, request));
     }
 }
