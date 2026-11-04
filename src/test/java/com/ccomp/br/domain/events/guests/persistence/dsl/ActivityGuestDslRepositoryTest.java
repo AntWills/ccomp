@@ -12,6 +12,7 @@ import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
+import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
@@ -39,6 +40,9 @@ class ActivityGuestDslRepositoryTest {
 
     @Autowired
     private ActivityGuestDslRepository activityGuestDslRepository;
+
+    @Autowired
+    private ActivityGuestRepository activityGuestRepository;
 
     @Test
     @DisplayName("Deve realizar a paginação de convidados de atividade baseada em cursor ordenada por createdAt decrescente")
@@ -95,6 +99,12 @@ class ActivityGuestDslRepositoryTest {
         entityManager.persist(ag3);
 
         entityManager.flush();
+        assertThat(activityGuestRepository
+                .existsByActivityIdAndEventGuestId(activity.getId(), eg1.getId()))
+                .isTrue();
+        assertThat(activityGuestRepository
+                .existsByActivityIdAndEventGuestId(activity.getId(), 999999L))
+                .isFalse();
         entityManager.clear();
 
         // Ação: Primeira página (limite = 2) como Gerente

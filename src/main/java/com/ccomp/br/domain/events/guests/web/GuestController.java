@@ -51,8 +51,7 @@ public class GuestController {
     @Operation(
             summary = "Adiciona um convidado ao evento",
             description = "Cria o perfil público de um convidado sem exigir conta ou e-mail. O corpo aceita `name`, " +
-                    "`description` e, opcionalmente, `activity_id`. Se `activity_id` for " +
-                    "informado, também associa o convidado à atividade, que precisa pertencer ao evento. Requer JWT " +
+                    "e `description`. O convidado fica associado ao evento; atividades são vinculadas por uma rota própria. Requer JWT " +
                     "de proprietário, editor ativo, MODERATOR ou ADMIN. Retorna `201` com o ID do novo convidado."
     )
     @ApiResponses({
@@ -64,16 +63,47 @@ public class GuestController {
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "Usuário sem permissão para editar o evento",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Evento ou atividade não encontrada, ou atividade fora do evento",
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     })
-    public ResponseEntity<Long> addGuest(
+    public ResponseEntity<MessageResponse> addGuest(
             @Parameter(description = "ID do evento", example = "12") @PathVariable Long eventId,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateGuestDTO request
     ) {
+        guestService.createGuest(eventId, extractUserId(jwt), request);
+
         return ResponseEntity.status(201)
-                .body(guestService.createGuest(eventId, extractUserId(jwt), request).getId());
+                .body(new MessageResponse("Convidado adicionado com sucesso ao evento."));
+    }
+
+    @PostMapping("/{eventId}/guests/{guestId}/activities/{activityId}")
+    @Operation(
+            summary = "Associa um convidado existente a uma atividade",
+            description = "Vincula um convidado já cadastrado no evento à atividade indicada, sem recriar seu perfil. " +
+                    "A atividade precisa pertencer ao mesmo evento. Requer JWT de proprietário, editor ativo, MODERATOR " +
+                    "ou ADMIN. A operação pode ser repetida com segurança: se o vínculo já existe, mantém o vínculo " +
+                    "atual e retorna `204` sem corpo."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Convidado associado à atividade", content = @Content),
+            @ApiResponse(responseCode = "401", description = "JWT ausente ou inválido",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão para editar o evento",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento, convidado ou atividade não encontrado, ou atividade fora do evento",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<Void> addGuestToActivity(
+            @Parameter(description = "ID do evento", example = "12") @PathVariable Long eventId,
+            @Parameter(description = "ID do convidado já cadastrado no evento", example = "35")
+            @PathVariable Long guestId,
+            @Parameter(description = "ID da atividade que receberá o convidado", example = "78")
+            @PathVariable Long activityId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
+    ) {
+        guestService.addGuestToActivity(eventId, guestId, activityId, extractUserId(jwt));
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{eventId}/guests/{guestId}/account")

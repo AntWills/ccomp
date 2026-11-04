@@ -85,7 +85,7 @@ class GuestControllerTest {
     }
 
     @Test
-    void createGuestDeserializesProfileAndActivityId() throws Exception {
+    void createGuestDeserializesProfileWithoutActivityAssociation() throws Exception {
         EventGuest guest = mock(EventGuest.class);
         when(guest.getId()).thenReturn(GUEST_ID);
         when(guestService.createGuest(eq(EVENT_ID), eq(USER_ID), any(CreateGuestDTO.class))).thenReturn(guest);
@@ -95,8 +95,7 @@ class GuestControllerTest {
                         .content("""
                                 {
                                   "name": "Ada Lovelace",
-                                  "description": "Palestrante convidada",
-                                  "activity_id": 78
+                                  "description": "Palestrante convidada"
                                 }
                                 """))
                 .andExpect(status().isCreated())
@@ -106,7 +105,19 @@ class GuestControllerTest {
         verify(guestService).createGuest(eq(EVENT_ID), eq(USER_ID), request.capture());
         assertThat(request.getValue().name()).isEqualTo("Ada Lovelace");
         assertThat(request.getValue().description()).isEqualTo("Palestrante convidada");
-        assertThat(request.getValue().activityId()).isEqualTo(78L);
+    }
+
+    @Test
+    void addGuestToActivityUsesEventGuestAndActivityIdsFromPath() throws Exception {
+        mockMvc.perform(post(
+                        "/api/events/{eventId}/guests/{guestId}/activities/{activityId}",
+                        EVENT_ID,
+                        GUEST_ID,
+                        78L
+                ))
+                .andExpect(status().isNoContent());
+
+        verify(guestService).addGuestToActivity(EVENT_ID, GUEST_ID, 78L, USER_ID);
     }
 
     @Test

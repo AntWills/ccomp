@@ -73,6 +73,37 @@ public class GuestService {
     }
 
     @Transactional
+    public void addGuestToActivity(Long eventId, Long guestId, Long activityId, UUID requesterId) {
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        if (!eventAccessPolicy.canEdit(event, requesterId)) {
+            throw new AccessDeniedException("Você não tem permissão para gerenciar convidados deste evento.");
+        }
+
+        EventGuest guest = eventGuestRepository.findByIdAndEventId(guestId, eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado neste evento."));
+
+        EventActivity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+
+        if (!activity.getEventId().equals(eventId)) {
+            throw new ResourceNotFoundException("A atividade não pertence a este evento.");
+        }
+
+        if (activityGuestRepository.existsByActivityIdAndEventGuestId(activityId, guestId)) {
+            return;
+        }
+
+        activityGuestRepository.save(
+                ActivityGuest.builder()
+                        .activity(activity)
+                        .eventGuest(guest)
+                        .build()
+        );
+    }
+
+    @Transactional
     public void linkAccount(Long eventId, Long guestId, UUID requesterId, String guestEmail, Long activityId) {
         EventGuest guest = eventGuestRepository.findByIdAndEventId(guestId, eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado neste evento."));
@@ -119,19 +150,6 @@ public class GuestService {
                         .description(request.description())
                         .build()
         );
-
-        if (request.activityId() != null) {
-            EventActivity activity = activityRepository.findById(request.activityId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
-            if (!activity.getEventId().equals(eventId))
-                throw new ResourceNotFoundException("A atividade não pertence a este evento.");
-            activityGuestRepository.save(
-                    ActivityGuest.builder()
-                            .activity(activity)
-                            .eventGuest(guest)
-                            .build()
-            );
-        }
 
         return guest;
     }

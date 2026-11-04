@@ -5,6 +5,5 @@ import jakarta.validation.constraints.Size;
 
 public record CreateGuestDTO(
         @NotBlank @Size(max = 255) String name,
-        @Size(max = 5000) String description,
-        Long activityId
+        @Size(max = 5000) String description
 ) {}

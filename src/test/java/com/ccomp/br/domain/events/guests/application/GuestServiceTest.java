@@ -266,30 +266,61 @@ class GuestServiceTest {
     @Nested
     class ManageGuestProfiles {
         @Test
-        @DisplayName("Cria convidado sem conta e o associa à atividade informada")
-        void createsAccountlessGuestAndAssociatesActivity() {
+        @DisplayName("Cria convidado sem conta somente no evento")
+        void createsAccountlessGuestOnEventOnly() {
             Event persistedEvent = mock(Event.class);
-            EventActivity activity = mock(EventActivity.class);
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(persistedEvent));
             givenEventExists();
             when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
-            when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
-            when(activity.getEventId()).thenReturn(eventId);
             when(eventGuestRepository.save(any(EventGuest.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
             EventGuest result = guestService.createGuest(
                     eventId,
                     requesterId,
-                    new CreateGuestDTO("Ada Lovelace", "Palestrante", activityId)
+                    new CreateGuestDTO("Ada Lovelace", "Palestrante")
             );
 
             assertThat(result.getName()).isEqualTo("Ada Lovelace");
             assertThat(result.getDescription()).isEqualTo("Palestrante");
             assertThat(result.getUserId()).isNull();
+            verifyNoInteractions(activityRepository, activityGuestRepository);
+        }
+
+        @Test
+        @DisplayName("Associa convidado existente a outra atividade do mesmo evento")
+        void addsExistingEventGuestToActivity() {
+            EventGuest guest = mock(EventGuest.class);
+            EventActivity activity = mock(EventActivity.class);
+            when(eventGuestRepository.findByIdAndEventId(5L, eventId)).thenReturn(Optional.of(guest));
+            givenEventExists();
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
+            when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
+            when(activity.getEventId()).thenReturn(eventId);
+            when(activityGuestRepository.existsByActivityIdAndEventGuestId(activityId, 5L)).thenReturn(false);
+
+            guestService.addGuestToActivity(eventId, 5L, activityId, requesterId);
+
             verify(activityGuestRepository).save(argThat(link ->
-                    link.getActivity() == activity && link.getEventGuest() == result
+                    link.getActivity() == activity && link.getEventGuest() == guest
             ));
+        }
+
+        @Test
+        @DisplayName("Não duplica um vínculo de convidado já existente")
+        void doesNotDuplicateExistingActivityLink() {
+            EventGuest guest = mock(EventGuest.class);
+            EventActivity activity = mock(EventActivity.class);
+            when(eventGuestRepository.findByIdAndEventId(5L, eventId)).thenReturn(Optional.of(guest));
+            givenEventExists();
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
+            when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
+            when(activity.getEventId()).thenReturn(eventId);
+            when(activityGuestRepository.existsByActivityIdAndEventGuestId(activityId, 5L)).thenReturn(true);
+
+            guestService.addGuestToActivity(eventId, 5L, activityId, requesterId);
+
+            verify(activityGuestRepository, never()).save(any());
         }
 
         @Test
