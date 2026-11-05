@@ -5,5 +5,6 @@ public enum EnumTargetType {
     NEWS,
     CLUB,
     EVENT,
-    ACTIVITY
+    ACTIVITY,
+    CREDENTIAL
 }
