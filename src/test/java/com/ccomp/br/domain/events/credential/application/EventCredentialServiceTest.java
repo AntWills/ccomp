@@ -16,7 +16,10 @@ import com.ccomp.br.domain.events.credential.persistence.EventCredentialOperator
 import com.ccomp.br.domain.events.credential.persistence.EventCredentialRepository;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
+import com.ccomp.br.domain.events.enrollments.dto.EnrollmentListItem;
+import com.ccomp.br.domain.events.credential.persistence.EventCredentialDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
+import com.ccomp.br.shared.dto.UserSummaryDTO;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.module.email.EmailAddress;
@@ -28,7 +31,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -43,6 +45,7 @@ import static org.mockito.Mockito.*;
 class EventCredentialServiceTest {
     @Mock private EventRepository eventRepository;
     @Mock private EnrollmentRepository enrollmentRepository;
+    @Mock private EventCredentialDslRepository credentialDslRepository;
     @Mock private EventCredentialRepository credentialRepository;
     @Mock private EventCredentialOperatorRepository operatorRepository;
     @Mock private UserModelRepository userRepository;
@@ -149,16 +152,18 @@ class EventCredentialServiceTest {
     }
 
     @Test
-    void searchReturnsMaskedEmailAndEligibility() {
-        when(enrollmentRepository.searchForCredentialing(eventId, "Ana", PageRequest.of(0, 20)))
-                .thenReturn(java.util.List.of(enrollment));
-        when(credentialRepository.findByEventIdAndEnrollmentId(eventId, enrollmentId)).thenReturn(Optional.empty());
+    void searchReturnsEnrollmentDomainProjection() {
+        var listItem = new EnrollmentListItem(
+                new UserSummaryDTO(actor, "Ana Souza", new EmailAddress("ana.souza@example.org")),
+                enrollmentId, EnumEnrollmentState.CONFIRMED, LocalDateTime.now());
+        var result = new com.ccomp.br.domain.events.credential.dto.CredentialSearchItem(listItem, true, false);
+        when(credentialDslRepository.searchForCredentialing(eventId, "Ana", 20)).thenReturn(java.util.List.of(result));
 
         var results = service.search(eventId, actor, new CredentialSearchRequest(" Ana "));
 
         assertThat(results).hasSize(1);
-        assertThat(results.getFirst().name()).isEqualTo("Ana Souza");
-        assertThat(results.getFirst().emailMasked()).isEqualTo("a***@example.org");
+        assertThat(results.getFirst().enrollment().user().name()).isEqualTo("Ana Souza");
+        assertThat(results.getFirst().enrollment().user().emailAddress().getValue()).isEqualTo("ana.souza@example.org");
         assertThat(results.getFirst().eligible()).isTrue();
         assertThat(results.getFirst().credentialed()).isFalse();
     }

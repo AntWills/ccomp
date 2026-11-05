@@ -1,10 +1,5 @@
 package com.ccomp.br.domain.events.credential.dto;
 
-public record CredentialSearchItem(
-        Long enrollmentId,
-        String name,
-        String emailMasked,
-        String enrollmentStatus,
-        boolean eligible,
-        boolean credentialed
-) {}
+import com.ccomp.br.domain.events.enrollments.dto.EnrollmentListItem;
+
+public record CredentialSearchItem(EnrollmentListItem enrollment, boolean eligible, boolean credentialed) {}

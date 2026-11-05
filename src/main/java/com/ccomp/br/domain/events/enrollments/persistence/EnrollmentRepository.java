@@ -25,18 +25,6 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
     Optional<Enrollment> findForCredentialByUserIdAndEventId(
             @Param("userId") UUID userId, @Param("eventId") Long eventId);
 
-    @org.springframework.data.jpa.repository.Query("""
-            select e from Enrollment e join UserModel u on u.id = e.userId
-            where e.event.id = :eventId and
-            (lower(u.name) like lower(concat('%', :term, '%')) or
-             lower(u.emailAddress.value) like lower(concat('%', :term, '%')))
-            order by e.createdAt desc, e.id desc
-            """)
-    java.util.List<Enrollment> searchForCredentialing(
-            @org.springframework.data.repository.query.Param("eventId") Long eventId,
-            @org.springframework.data.repository.query.Param("term") String term,
-            org.springframework.data.domain.Pageable pageable);
-
     long countByEventIdAndStatusIn(Long eventId,
             java.util.Collection<com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState> statuses);
 

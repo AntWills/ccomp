@@ -21,7 +21,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/events/{eventId}/credentials")
-@Tag(name = "events/credentials", description = "Credenciamento de participantes, tokens QR e equipe de recepção de um evento.")
+@Tag(name = "events/credentials (Credenciais)", description = "Credenciamento de participantes, tokens QR e equipe de recepção de um evento.")
 public class EventCredentialController {
     private final EventCredentialService service;
 
@@ -30,7 +30,6 @@ public class EventCredentialController {
     }
 
     @Operation(
-            tags = {"DEV — NÃO INTEGRAR"},
             summary = "[DEV] Credencia participante por QR Code",
             description = """
                     **Status: DEV — não usar no frontend.** Rota mantida para uma possível futura recepção por QR Code;
@@ -65,8 +64,8 @@ public class EventCredentialController {
     @Operation(
             summary = "Busca inscrições para credenciamento manual",
             description = """
-                    Pesquisa inscrições do evento por nome ou e-mail. Retorna no máximo 20 resultados com nome,
-                    e-mail mascarado, estado e indicadores de elegibilidade e credenciamento. CPF não é pesquisado
+                    Pesquisa inscrições do evento por nome ou e-mail. Retorna no máximo 20 resultados usando
+                    `EnrollmentListItem` e `UserSummaryDTO`, com estado e indicadores de elegibilidade e credenciamento. CPF não é pesquisado
                     nem retornado por esta rota. Requer operador de credenciamento ou permissão de gestão do evento.
 
                     **Respostas:** `200` com os resultados; `400` se o termo for inválido; `401` sem JWT; `403` sem permissão.
@@ -113,7 +112,6 @@ public class EventCredentialController {
     }
 
     @Operation(
-            tags = {"DEV — NÃO INTEGRAR"},
             summary = "[DEV] Registra impressão ou reimpressão de crachá",
             description = """
                     **Status: DEV — não usar no frontend.** O fluxo atual não controla impressão nem gera arquivo de crachá.
@@ -146,7 +144,6 @@ public class EventCredentialController {
     }
 
     @Operation(
-            tags = {"DEV — NÃO INTEGRAR"},
             summary = "[DEV] Emite o QR pessoal da inscrição",
             description = """
                     **Status: DEV — não usar no frontend.** Só será necessária se o fluxo de recepção passar a usar QR Code.
@@ -171,7 +168,6 @@ public class EventCredentialController {
     }
 
     @Operation(
-            tags = {"DEV — NÃO INTEGRAR"},
             summary = "[DEV] Rotaciona o QR pessoal",
             description = "**Status: DEV — não usar no frontend.** Só será necessária se o fluxo de recepção passar a usar QR Code. Revoga o token anterior e emite outro para a inscrição do usuário autenticado; não altera a presença no evento.")
     @ApiResponses(value = {
@@ -189,7 +185,6 @@ public class EventCredentialController {
     }
 
     @Operation(
-            tags = {"DEV — NÃO INTEGRAR"},
             summary = "[DEV] Rotaciona o QR de uma inscrição",
             description = "**Status: DEV — não usar no frontend.** Só será necessária se o fluxo de recepção passar a usar QR Code. Invalida o token atual e emite outro. Esta ação não desfaz o credenciamento nem modifica a inscrição; exige operador ou gestão do evento e fica auditada.")
     @ApiResponses(value = {

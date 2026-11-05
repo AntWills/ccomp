@@ -64,7 +64,7 @@ Não existe `PENDING` em `EnumEnrollmentState` atualmente. Se surgir aprovação
 
 O projeto não tinha um enum de permissão por editor. O MVP implementa a permissão operacional como concessão por evento na tabela `tb_event_credential_operators`: `PUT/DELETE /operators/{userId}` permite ao proprietário, editor ativo, `MODERATOR` ou `ADMIN` conceder/remover operador. Um operador ativo pode buscar, escanear, credenciar, imprimir e consultar o resumo, sem ganhar edição geral. Conta do operador precisa estar ativa. Não presumir que o cargo global `STAFF`, sozinho, dá acesso ao credenciamento de qualquer evento.
 
-As rotas de staff exigem JWT e autorização no serviço, além das regras HTTP. Busca por nome/e-mail/CPF retorna campos mínimos: ID da inscrição, nome para conferência, estado e indicação de elegibilidade/credenciamento. CPF não deve ser devolvido nem aparecer em logs; se for usado como critério, aplicar mascaramento na interface e limitar resultados. A busca textual pode reaproveitar infraestrutura `pg_trgm`/DSL, mas deve escolher campos e limiar próprios, limitar tamanho e quantidade de resultados e não ampliar o endpoint administrativo de usuários.
+As rotas de staff exigem JWT e autorização no serviço, além das regras HTTP. A busca QueryDSL por nome/e-mail retorna no máximo 20 resultados usando `EnrollmentListItem` e `UserSummaryDTO`, que contém o e-mail completo; o CPF não é pesquisado nem devolvido. A busca não amplia o endpoint administrativo de usuários.
 
 Auditar, no mínimo: credenciamento inicial, reconciliação, tentativa administrativa de correção, correção executada, revogação/rotação de token e impressão/reimpressão. Registrar ator, evento/inscrição, timestamp, estação e motivo quando aplicável; nunca token bruto, QR ou CPF. Usar `AuditService`/`EnumActionType` conforme o formato existente. A trilha de auditoria é restrita a quem já pode consultar auditoria administrativa.
 
@@ -86,7 +86,7 @@ No OpenAPI, as rotas de QR (`/scan`, `/my-token` e rotas `/token/rotate`) e impr
 | `POST /enrollments/{enrollmentId}/token/rotate` | Revogar o QR atual e emitir outro. | `CREDENTIALING` ou gestão do evento. |
 | `PUT /operators/{userId}` / `DELETE /operators/{operatorUserId}` | Conceder/remover o operador temporário do evento. | Gestão do evento. |
 
-O corpo de busca manual é `{ "searchTerm": "..." }`; a resposta limita a 20 inscrições e mascara o e-mail. O credenciamento manual recebe `enrollmentId` e `station`. As respostas de scan/manual incluem `credentialId`, estado, resultado e dados mínimos do participante. Use `credentialId` na operação de impressão/reimpressão; a API ainda não gera o PDF do crachá.
+O corpo de busca manual é `{ "searchTerm": "..." }`; a resposta limita a 20 inscrições e reutiliza `EnrollmentListItem`/`UserSummaryDTO` com e-mail completo, além dos indicadores `eligible` e `credentialed`. O credenciamento manual recebe `enrollmentId` e `station`. As respostas de scan/manual incluem `credentialId`, estado, resultado e dados mínimos do participante. Use `credentialId` na operação de impressão/reimpressão; a API ainda não gera o PDF do crachá.
 
 Não criar `DELETE /credentials/{id}` no MVP. Correção de presença terá rota/contrato próprio depois de definida a invalidação de certificados. Walk-in também fica fora do MVP porque requer criação/reativação de usuário e inscrição e não deve ser improvisado no scanner.
 
@@ -173,8 +173,8 @@ O resumo deve derivar contagens de `Enrollment` e `EventCredential`, e não de c
 ## Testes
 
 - `EventCredentialControllerTest`: binding das rotas HTTP, principal JWT, validação do corpo, resposta do resumo e delegação das rotas de QR/operador.
-- `EventCredentialServiceTest`: chegada inicial, idempotência, reconciliação/QR rotacionado, estados cancelado e bloqueado, busca mascarada, resumo e hash do token.
-- `CredentialEnrollmentQueryTest`: consulta real no PostgreSQL para busca por nome/e-mail e evento, lookup por hash de QR, FK/gravacão da credencial e contagem.
+- `EventCredentialServiceTest`: chegada inicial, idempotência, reconciliação/QR rotacionado, estados cancelado e bloqueado, projeção DSL, resumo e hash do token.
+- `EventCredentialDslRepository` e `CredentialEnrollmentQueryTest`: consulta QueryDSL real no PostgreSQL para busca por nome/e-mail e evento, lookup por hash de QR, FK/gravação da credencial e contagem.
 
 Comandos direcionados:
 

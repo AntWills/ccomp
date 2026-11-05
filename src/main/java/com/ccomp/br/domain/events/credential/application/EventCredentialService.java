@@ -20,7 +20,6 @@ import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +35,7 @@ public class EventCredentialService {
     private static final SecureRandom RANDOM = new SecureRandom();
     private final EventRepository eventRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final EventCredentialDslRepository credentialDslRepository;
     private final EventCredentialRepository credentialRepository;
     private final EventCredentialOperatorRepository operatorRepository;
     private final UserModelRepository userRepository;
@@ -44,6 +44,7 @@ public class EventCredentialService {
 
     public EventCredentialService(EventRepository eventRepository,
                                   EnrollmentRepository enrollmentRepository,
+                                  EventCredentialDslRepository credentialDslRepository,
                                   EventCredentialRepository credentialRepository,
                                   EventCredentialOperatorRepository operatorRepository,
                                   UserModelRepository userRepository,
@@ -51,6 +52,7 @@ public class EventCredentialService {
                                   AuditLogRepository auditRepository) {
         this.eventRepository = eventRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.credentialDslRepository = credentialDslRepository;
         this.credentialRepository = credentialRepository;
         this.operatorRepository = operatorRepository;
         this.userRepository = userRepository;
@@ -71,18 +73,12 @@ public class EventCredentialService {
     @Transactional
     public List<CredentialSearchItem> search(Long eventId, UUID actor, CredentialSearchRequest request) {
         assertCanCredential(eventId, actor);
+
         String term = request.searchTerm().trim();
+
         if (term.length() < 2) throw new DomainException("Informe pelo menos dois caracteres.");
-        return enrollmentRepository.searchForCredentialing(eventId, term, PageRequest.of(0, 20))
-                .stream().map(enrollment -> {
-                    UserModel user = userRepository.findById(enrollment.getUserId()).orElseThrow();
-                    boolean eligible = enrollment.getStatus() == EnumEnrollmentState.CONFIRMED
-                            || enrollment.getStatus() == EnumEnrollmentState.CHECKED_IN;
-                    boolean checked = credentialRepository.findByEventIdAndEnrollmentId(eventId, enrollment.getId())
-                            .map(c -> c.getCredentialedAt() != null).orElse(false);
-                    return new CredentialSearchItem(enrollment.getId(), user.getName(), maskEmail(user.getEmailAddress().getValue()),
-                            enrollment.getStatus().name(), eligible, checked);
-                }).toList();
+
+        return credentialDslRepository.searchForCredentialing(eventId, term, 20);
     }
 
     @Transactional

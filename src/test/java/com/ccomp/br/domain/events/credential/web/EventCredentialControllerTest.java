@@ -5,6 +5,10 @@ import com.ccomp.br.domain.events.credential.dto.CredentialResponse;
 import com.ccomp.br.domain.events.credential.dto.CredentialSearchItem;
 import com.ccomp.br.domain.events.credential.dto.CredentialSummaryResponse;
 import com.ccomp.br.domain.events.credential.dto.CredentialTokenResponse;
+import com.ccomp.br.domain.events.enrollments.dto.EnrollmentListItem;
+import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
+import com.ccomp.br.module.email.EmailAddress;
+import com.ccomp.br.shared.dto.UserSummaryDTO;
 import com.ccomp.br.shared.exceptions.GlobalExceptionHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -108,7 +112,10 @@ class EventCredentialControllerTest {
                 "CHECKED_IN", LocalDateTime.parse("2026-11-05T09:00:00"), true, "Ana Souza", "a***@example.org");
         CredentialTokenResponse token = new CredentialTokenResponse(EVENT_ID, 81L, "opaque-token");
         when(service.search(eq(EVENT_ID), eq(USER_ID), any()))
-                .thenReturn(List.of(new CredentialSearchItem(81L, "Ana Souza", "a***@example.org", "CONFIRMED", true, false)));
+                .thenReturn(List.of(new CredentialSearchItem(
+                        new EnrollmentListItem(new UserSummaryDTO(USER_ID, "Ana Souza",
+                                new EmailAddress("ana.souza@example.org")), 81L, EnumEnrollmentState.CONFIRMED,
+                                LocalDateTime.parse("2026-11-05T08:00:00")), true, false)));
         when(service.scan(eq(EVENT_ID), eq(USER_ID), any())).thenReturn(credential);
         when(service.reprint(EVENT_ID, 91L, USER_ID, "A")).thenReturn(credential);
         when(service.myToken(EVENT_ID, USER_ID)).thenReturn(token);
@@ -117,7 +124,8 @@ class EventCredentialControllerTest {
 
         mockMvc.perform(post("/api/events/{eventId}/credentials/manual/search", EVENT_ID)
                         .contentType(APPLICATION_JSON).content("{\"searchTerm\":\"Ana\"}"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$[0].emailMasked").value("a***@example.org"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].enrollment.user.name").value("Ana Souza"))
+                .andExpect(jsonPath("$[0].eligible").value(true));
         mockMvc.perform(post("/api/events/{eventId}/credentials/scan", EVENT_ID)
                         .contentType(APPLICATION_JSON).content("{\"token\":\"opaque\",\"station\":\"A\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.result").value("CREDENTIALED"));
