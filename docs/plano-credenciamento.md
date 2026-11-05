@@ -72,6 +72,8 @@ Auditar, no mínimo: credenciamento inicial, reconciliação, tentativa administ
 
 Prefixo implementado: `/api/events/{eventId}/credentials`. Todas as rotas exigem JWT e autorização no domínio.
 
+No OpenAPI, as rotas de QR (`/scan`, `/my-token` e rotas `/token/rotate`) e impressão (`/{credentialId}/reprint`) aparecem no grupo **DEV — NÃO INTEGRAR** e têm `[DEV]` no resumo. Elas estão disponíveis apenas para referência/futura evolução; o frontend atual deve integrar busca manual, credenciamento manual, resumo e gestão de operadores.
+
 | Método e rota | Uso | Permissão |
 |---|---|---|
 | `POST /scan` | Validar token e credenciar; corpo `{ "token": "...", "station": "A" }`. | `CREDENTIALING` ou gestão do evento. |
@@ -167,3 +169,16 @@ O resumo deve derivar contagens de `Enrollment` e `EventCredential`, e não de c
 - `AuditService`: consultas de auditoria existentes; definir os novos tipos de ação no mesmo padrão.
 - `TokenHasher`: hashing de tokens de alta entropia, se validado como adequado ao token de credenciamento.
 - `V22__add_user_text_search.sql`: infraestrutura de busca textual, não uma regra de relevância obrigatória para credenciamento.
+
+## Testes
+
+- `EventCredentialControllerTest`: binding das rotas HTTP, principal JWT, validação do corpo, resposta do resumo e delegação das rotas de QR/operador.
+- `EventCredentialServiceTest`: chegada inicial, idempotência, reconciliação/QR rotacionado, estados cancelado e bloqueado, busca mascarada, resumo e hash do token.
+- `CredentialEnrollmentQueryTest`: consulta real no PostgreSQL para busca por nome/e-mail e evento, lookup por hash de QR, FK/gravacão da credencial e contagem.
+
+Comandos direcionados:
+
+```bash
+mvn -q -Dtest=EventCredentialServiceTest,EventCredentialControllerTest test
+mvn -q -Dtest=CredentialEnrollmentQueryTest test
+```

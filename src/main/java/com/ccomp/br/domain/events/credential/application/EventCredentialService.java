@@ -148,6 +148,7 @@ public class EventCredentialService {
     @Transactional(readOnly = true)
     public CredentialSummaryResponse summary(Long eventId, UUID actor) {
         assertCanCredential(eventId, actor);
+
         long eligible = enrollmentRepository.countByEventIdAndStatusIn(eventId,
                 List.of(EnumEnrollmentState.CONFIRMED, EnumEnrollmentState.CHECKED_IN));
         long done = credentialRepository.countByEventIdAndCredentialedAtIsNotNull(eventId);
@@ -157,8 +158,10 @@ public class EventCredentialService {
     @Transactional
     public void addOperator(Long eventId, UUID userId, UUID actor) {
         assertCanManage(eventId, actor);
-        if (!userRepository.existsById(userId)) throw new ResourceNotFoundException("Usuário não encontrado.");
-        UserModel user = userRepository.findById(userId).orElseThrow();
+
+        UserModel user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+
         if (!user.isAccountValid()) throw new ConflictException("O usuário não possui conta ativa.");
         if (!operatorRepository.existsByEventIdAndUserId(eventId, userId)) {
             operatorRepository.save(EventCredentialOperator.builder().eventId(eventId).userId(userId)
