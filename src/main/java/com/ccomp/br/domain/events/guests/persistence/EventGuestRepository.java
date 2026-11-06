@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface EventGuestRepository extends JpaRepository<EventGuest, Long> {
+    List<EventGuest> findAllByEventId(Long eventId);
     boolean existsByUserIdAndEvent(UUID userId, Event event);
 
     Optional<EventGuest> findByIdAndEventId(Long id, Long eventId);
