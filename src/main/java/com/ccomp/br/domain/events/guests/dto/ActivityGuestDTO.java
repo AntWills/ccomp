@@ -16,6 +16,12 @@ public record ActivityGuestDTO(
         EnumActivityGuestRole role,
         EnumGuestStatus status,
         EnumGuestVisibility visibility,
+        boolean isGuest,
         LocalDateTime createdAt
 ) {
+    public ActivityGuestDTO(Long id, Long activityId, Long eventGuestId, String name,
+                            String description, String imageKey, EnumActivityGuestRole role,
+                            EnumGuestStatus status, EnumGuestVisibility visibility, LocalDateTime createdAt) {
+        this(id, activityId, eventGuestId, name, description, imageKey, role, status, visibility, true, createdAt);
+    }
 }

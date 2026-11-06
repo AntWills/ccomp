@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -45,9 +46,8 @@ public class GuestImageService {
 
     public void uploadImage(Long eventId, Long guestId, UUID userId, MultipartFile file) {
         Event event = findEventOrThrow(eventId);
-        eventAccessPolicy.assertCanEdit(event, userId);
-
         EventGuest guest = findGuestOrThrow(eventId, guestId);
+        assertCanEditGuest(event, guest, userId);
         validateImage(file);
 
         String previousKey = guest.getImageKey();
@@ -84,9 +84,8 @@ public class GuestImageService {
 
     public boolean removeImage(Long eventId, Long guestId, UUID userId) {
         Event event = findEventOrThrow(eventId);
-        eventAccessPolicy.assertCanEdit(event, userId);
-
         EventGuest guest = findGuestOrThrow(eventId, guestId);
+        assertCanEditGuest(event, guest, userId);
         if (guest.getImageKey() == null) {
             return false;
         }
@@ -106,6 +105,11 @@ public class GuestImageService {
     private EventGuest findGuestOrThrow(Long eventId, Long guestId) {
         return eventGuestRepository.findByIdAndEventId(guestId, eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado neste evento."));
+    }
+
+    private void assertCanEditGuest(Event event, EventGuest guest, UUID userId) {
+        if (userId == null || !Objects.equals(guest.getUserId(), userId))
+            eventAccessPolicy.assertCanEdit(event, userId);
     }
 
     private void validateImage(MultipartFile file) {

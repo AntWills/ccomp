@@ -4,6 +4,8 @@ import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
+import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
+import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
@@ -48,6 +50,7 @@ public class GuestService {
     private final EventActivityRepository activityRepository;
     private final ActivityGuestRepository activityGuestRepository;
     private final UserManagement userManagement;
+    private final ActivityMapper activityMapper;
 
     public GuestService(
             EventGuestRepository eventGuestRepository,
@@ -59,7 +62,8 @@ public class GuestService {
             EventRepository eventRepository,
             EventActivityRepository activityRepository,
             ActivityGuestRepository activityGuestRepository,
-            UserManagement userManagement
+            UserManagement userManagement,
+            ActivityMapper activityMapper
     ) {
         this.eventGuestRepository = eventGuestRepository;
         this.eventCache = eventCache;
@@ -71,6 +75,7 @@ public class GuestService {
         this.activityRepository = activityRepository;
         this.activityGuestRepository = activityGuestRepository;
         this.userManagement = userManagement;
+        this.activityMapper = activityMapper;
     }
 
     @Transactional
@@ -172,10 +177,19 @@ public class GuestService {
                         .event(event)
                         .name(request.name())
                         .description(request.description())
+                        .userId(resolveActiveAccount(request.accountEmail()))
                         .build()
         );
 
         return guest;
+    }
+
+    private UUID resolveActiveAccount(String email) {
+        if (email == null || email.isBlank()) return null;
+        return userManagement.findByEmailAddress(new EmailAddress(email))
+                .filter(user -> user.isActive())
+                .map(user -> user.id())
+                .orElseThrow(() -> new ResourceNotFoundException("Não há uma conta ativa com este e-mail."));
     }
 
     @Transactional(readOnly = true)
@@ -227,7 +241,7 @@ public class GuestService {
         EventDTO event = eventCache.findById(guest.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         boolean isManager = eventAccessPolicy.canEdit(event, requesterId);
-        boolean isTheGuestHimself = Objects.equals(guest.getUserId(), requesterId);
+        boolean isTheGuestHimself = requesterId != null && Objects.equals(guest.getUserId(), requesterId);
 
         if (!isManager && !isTheGuestHimself) {
             throw new AccessDeniedException("Você não tem permissão para alterar os dados deste convidado.");
@@ -256,12 +270,26 @@ public class GuestService {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if (!eventAccessPolicy.canEdit(event, requesterId)) {
+        boolean isTheGuestHimself = requesterId != null && Objects.equals(guest.getUserId(), requesterId);
+        if (!eventAccessPolicy.canEdit(event, requesterId) && !isTheGuestHimself) {
             throw new AccessDeniedException("Você não tem permissão para editar este convidado.");
         }
 
         guest.setName(request.name());
         guest.setDescription(request.description());
         eventGuestRepository.save(guest);
+    }
+
+    @Transactional
+    public ActivityDTO updateActivityAsGuest(UUID userId, Long activityId, UpdateActivityDTO request) {
+        EventActivity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        if (!activityGuestRepository.existsByActivityIdAndEventGuestUserId(activityId, userId)) {
+            throw new AccessDeniedException("Você não é um convidado vinculado a esta atividade.");
+        }
+        activityMapper.updateEventActivityFromRequest(request, activity);
+        EventActivity saved = activityRepository.save(activity);
+        activityCache.evict(saved);
+        return activityMapper.eventActivityToActivityDTO(saved);
     }
 }

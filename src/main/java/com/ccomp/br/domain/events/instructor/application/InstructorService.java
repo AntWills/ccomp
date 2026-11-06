@@ -11,9 +11,12 @@ import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.instructor.dto.InstructorCursor;
 import com.ccomp.br.domain.events.instructor.dto.EventInstructorDTO;
+import com.ccomp.br.domain.events.instructor.dto.ActivityParticipantDTO;
+import com.ccomp.br.domain.events.instructor.enums.EnumInstructorStatus;
 import com.ccomp.br.domain.events.instructor.persistence.EventInstructor;
 import com.ccomp.br.domain.events.instructor.persistence.EventInstructorRepository;
 import com.ccomp.br.domain.events.instructor.persistence.InstructorDslRepository;
+import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
@@ -35,6 +38,7 @@ public class InstructorService {
     private final EventAccessPolicy eventAccessPolicy;
     private final ActivityMapper activityMapper;
     private final ActivityCache activityCache;
+    private final ActivityGuestRepository activityGuestRepository;
 
     public InstructorService(
             EventActivityRepository activityRepository,
@@ -43,7 +47,8 @@ public class InstructorService {
             EventCache eventCache,
             EventAccessPolicy eventAccessPolicy,
             ActivityMapper activityMapper,
-            ActivityCache activityCache
+            ActivityCache activityCache,
+            ActivityGuestRepository activityGuestRepository
     ) {
         this.activityRepository = activityRepository;
         this.instructorRepository = instructorRepository;
@@ -52,6 +57,7 @@ public class InstructorService {
         this.eventAccessPolicy = eventAccessPolicy;
         this.activityMapper = activityMapper;
         this.activityCache = activityCache;
+        this.activityGuestRepository = activityGuestRepository;
     }
 
     @Transactional(readOnly = true)
@@ -86,11 +92,45 @@ public class InstructorService {
                         instructor.getUserId(),
                         instructor.getActivityId(),
                         instructor.getStatus(),
+                        instructor.getName(),
+                        instructor.getDescription(),
+                        instructor.getRole(),
+                        false,
                         instructor.getCreatedAt()
                 )).toList(),
                 page.nextCursor(),
                 page.previousCursor()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<ActivityParticipantDTO> searchByActivity(Long activityId, UUID requesterId) {
+        EventActivity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        EventDTO event = eventCache.findById(activity.getEventId())
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        if (!eventAccessPolicy.canView(event, requesterId))
+            throw new AccessDeniedException("Você não tem permissão para visualizar os ministrantes desta atividade.");
+
+        boolean manager = eventAccessPolicy.canEdit(event, requesterId);
+        java.util.ArrayList<ActivityParticipantDTO> result = new java.util.ArrayList<>();
+        instructorRepository.findAllByActivityIdAndStatusOrderByCreatedAtDescIdDesc(
+                        activityId, EnumInstructorStatus.CONFIRMED)
+                .forEach(instructor -> result.add(new ActivityParticipantDTO(
+                        instructor.getId(), instructor.getUserId(), activityId,
+                        instructor.getStatus(), instructor.getName(), instructor.getDescription(),
+                        instructor.getRole().name(), false, instructor.getCreatedAt())));
+        activityGuestRepository.findAllByActivity_IdOrderByCreatedAtDescIdDesc(activityId)
+                .stream()
+                .filter(link -> manager || (link.getEventGuest().isConfirmed() && link.getEventGuest().isPublic()))
+                .forEach(link -> result.add(new ActivityParticipantDTO(
+                        link.getId(), link.getEventGuest().getUserId(), activityId,
+                        link.getEventGuest().isConfirmed() ? EnumInstructorStatus.CONFIRMED : EnumInstructorStatus.CANCELED,
+                        link.getEventGuest().getName(), link.getEventGuest().getDescription(),
+                        link.getRole().name(), true, link.getCreatedAt())));
+        result.sort(java.util.Comparator.comparing(ActivityParticipantDTO::createdAt,
+                java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
+        return result;
     }
 
     @Transactional

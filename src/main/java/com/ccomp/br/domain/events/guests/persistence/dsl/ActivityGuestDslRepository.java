@@ -57,6 +57,7 @@ public class ActivityGuestDslRepository {
                         activityGuest.role,
                         activityGuest.eventGuest.status,
                         activityGuest.eventGuest.visibility,
+                        Expressions.asBoolean(true),
                         activityGuest.createdAt
                 ))
                 .from(activityGuest)

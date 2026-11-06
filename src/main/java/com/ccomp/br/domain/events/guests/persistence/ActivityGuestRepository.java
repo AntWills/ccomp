@@ -10,4 +10,5 @@ public interface ActivityGuestRepository extends JpaRepository<ActivityGuest, Lo
     boolean existsByActivityIdAndEventGuestId(Long activityId, Long eventGuestId);
 
     Optional<ActivityGuest> findByActivityIdAndEventGuestId(Long activityId, Long eventGuestId);
+    java.util.List<ActivityGuest> findAllByActivity_IdOrderByCreatedAtDescIdDesc(Long activityId);
 }

@@ -7,4 +7,6 @@ import java.util.Optional;
 public interface EventInstructorRepository extends JpaRepository<EventInstructor, Long> {
     boolean existsByActivityIdAndUserId(Long activityId, UUID userId);
     Optional<EventInstructor> findByActivityIdAndUserId(Long activityId, UUID userId);
+    java.util.List<EventInstructor> findAllByActivityIdAndStatusOrderByCreatedAtDescIdDesc(
+            Long activityId, com.ccomp.br.domain.events.instructor.enums.EnumInstructorStatus status);
 }

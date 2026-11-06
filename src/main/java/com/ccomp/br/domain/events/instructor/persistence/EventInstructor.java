@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.instructor.persistence;
 
 import com.ccomp.br.domain.events.instructor.enums.EnumInstructorStatus;
+import com.ccomp.br.domain.events.instructor.enums.EnumInstructorRole;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -16,14 +17,21 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
+@Setter
 @Builder
 public class EventInstructor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id")
     private UUID userId;
+
+    @Column(nullable = false, length = 255)
+    private String name;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
     @Column(name = "activity_id", nullable = false)
     private Long activityId;
@@ -32,6 +40,11 @@ public class EventInstructor {
     @Column(nullable = false, length = 20)
     @Builder.Default
     private EnumInstructorStatus status = EnumInstructorStatus.CONFIRMED;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private EnumInstructorRole role = EnumInstructorRole.INSTRUCTOR;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -9,6 +9,8 @@ import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.LinkGuestAccountDTO;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestProfileDTO;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -51,8 +53,7 @@ public class GuestController {
     @PostMapping("/{eventId}/guests")
     @Operation(
             summary = "Adiciona um convidado ao evento",
-            description = "Cria o perfil público de um convidado sem exigir conta ou e-mail. O corpo aceita `name` " +
-                    "e `description`. O convidado fica associado ao evento; atividades são vinculadas por uma rota própria. Requer JWT " +
+            description = "Cria o perfil de um convidado sem exigir conta. O corpo aceita `name`, `description` e, opcionalmente, `accountEmail` de uma conta ativa. O convidado fica associado ao evento; atividades são vinculadas por uma rota própria. Requer JWT " +
                     "de proprietário, editor ativo, MODERATOR ou ADMIN. Retorna `201` com `MessageResponse`."
     )
     @ApiResponses({
@@ -82,7 +83,7 @@ public class GuestController {
     @Operation(
             summary = "Associa um convidado existente a uma atividade",
             description = "Vincula um convidado já cadastrado no evento à atividade indicada, sem recriar seu perfil. " +
-                    "O corpo JSON é opcional e aceita `role`: `PRESENTER` (ministrante), `SPECIAL_GUEST` " +
+                    "O corpo JSON é opcional e aceita `role`: `PRESENTER` (palestrante), `ASSISTANT` (auxiliar), `SPECIAL_GUEST` " +
                     "(convidado especial), `MODERATOR` (mediador) ou `LISTENER` (ouvinte). Sem corpo ou sem `role`, " +
                     "o padrão é `PRESENTER`. Se o vínculo já existir e a função enviada for diferente, atualiza a função. " +
                     "A atividade precisa pertencer ao mesmo evento. Requer JWT de proprietário, editor ativo, MODERATOR " +
@@ -188,8 +189,8 @@ public class GuestController {
     @Operation(
             summary = "Lista os convidados associados a uma atividade",
             description = "Retorna `CursorPage<ActivityGuestDTO>` com `content`, `next_cursor` e `previous_cursor`. " +
-                    "Cada item contém `id`, `activity_id`, `event_guest_id`, `name`, `description`, `image_key`, " +
-                    "`role` (`PRESENTER`, `SPECIAL_GUEST`, `MODERATOR` ou `LISTENER`), `status`, `visibility` e `created_at`; " +
+                    "Cada item contém `id`, `activity_id`, `event_guest_id`, `name`, `description`, `image_key`, `is_guest` e " +
+                    "`role` (`PRESENTER`, `ASSISTANT`, `SPECIAL_GUEST`, `MODERATOR` ou `LISTENER`), `status`, `visibility` e `created_at`; " +
                     "A lista pública contém apenas convidados confirmados e públicos; proprietário, editor ativo, " +
                     "MODERATOR ou ADMIN também podem consultar perfis privados e cancelados. `pageSize` usa padrão 20 " +
                     "e máximo 50; `cursor` é opaco e deve ser reutilizado com a mesma atividade. O acesso segue a " +
@@ -251,8 +252,7 @@ public class GuestController {
     @Operation(
             summary = "Atualiza os dados do perfil do convidado",
             description = "O corpo aceita `name` e `description`. Substitui esses campos do perfil; `name` é obrigatório e não pode ficar em branco. " +
-                    "Imagem é gerenciada pelas rotas `/image`. Requer JWT de proprietário, editor ativo, MODERATOR ou " +
-                    "ADMIN. Retorna `MessageResponse` com confirmação."
+                    "O convidado com conta vinculada pode editar o próprio perfil; gestores do evento também podem. Imagem é gerenciada pelas rotas `/image`."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Dados do convidado atualizados"),
@@ -274,12 +274,25 @@ public class GuestController {
         return ResponseEntity.ok(new MessageResponse("Dados do convidado atualizados com sucesso."));
     }
 
+    @PatchMapping("/activities/{activityId}/guests/me")
+    @Operation(
+            summary = "Atualiza atividade como convidado vinculado",
+            description = "Permite ao convidado autenticado atualizar os dados somente de uma atividade à qual seu perfil de convidado esteja associado."
+    )
+    public ResponseEntity<ActivityDTO> updateActivityAsGuest(
+            @PathVariable Long activityId,
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody UpdateActivityDTO request
+    ) {
+        return ResponseEntity.ok(guestService.updateActivityAsGuest(extractUserId(jwt), activityId, request));
+    }
+
     @PostMapping(value = "/{eventId}/guests/{guestId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
             summary = "Envia ou substitui a imagem do convidado",
             description = "Recebe o campo multipart `file`; aceita PNG, JPEG e WebP. Os bytes são enviados ao object " +
                     "storage e a chave resultante é associada ao perfil. A imagem anterior é removida após a substituição. " +
-                    "Requer JWT de proprietário, editor ativo, MODERATOR ou ADMIN. Retorna `MessageResponse`."
+                    "Requer JWT do próprio convidado com conta vinculada ou de um gestor do evento. Retorna `MessageResponse`."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Imagem salva",

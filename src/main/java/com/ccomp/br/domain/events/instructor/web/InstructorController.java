@@ -5,7 +5,9 @@ import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
 import com.ccomp.br.domain.events.instructor.application.InstructorInvitationService;
 import com.ccomp.br.domain.events.instructor.application.InstructorService;
 import com.ccomp.br.domain.events.instructor.dto.EventInstructorDTO;
+import com.ccomp.br.domain.events.instructor.dto.ActivityParticipantDTO;
 import com.ccomp.br.domain.events.instructor.dto.InstructorInvitationDTO;
+import com.ccomp.br.domain.events.instructor.enums.EnumInstructorRole;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -66,6 +68,40 @@ public class InstructorController {
         return ResponseEntity.ok(
                 instructorService.searchByEvent(eventId, extractUserId(jwt), cursor, pageSize)
         );
+    }
+
+    @GetMapping("/activities/{activityId}/instructors")
+    @Operation(summary = "Lista ministrantes e convidados de destaque de uma atividade",
+            description = "Cada item informa `isGuest`: true para perfil de convidado e false para ministrante. `role` diferencia INSTRUCTOR, ASSISTANT e as funções do convidado.")
+    public ResponseEntity<List<ActivityParticipantDTO>> searchByActivity(
+            @PathVariable Long activityId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ResponseEntity.ok(instructorService.searchByActivity(activityId, extractUserId(jwt)));
+    }
+
+    @PostMapping("/activities/{activityId}/instructors")
+    @Operation(summary = "Cadastra ministrante com conta opcional",
+            description = "O perfil pode ser cadastrado sem conta. `accountEmail`, quando informado, deve identificar uma conta ativa.")
+    public ResponseEntity<MessageResponse> addInstructor(
+            @PathVariable Long activityId,
+            @Valid @org.springframework.web.bind.annotation.RequestBody AddInstructorRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ResponseEntity.ok(invitationService.addInstructor(extractUserId(jwt), activityId,
+                request.name(), request.description(), request.role(), request.accountEmail()));
+    }
+
+    @PatchMapping("/activities/{activityId}/instructors/{instructorId}/account")
+    @Operation(summary = "Vincula conta a um ministrante existente")
+    public ResponseEntity<MessageResponse> linkInstructorAccount(
+            @PathVariable Long activityId,
+            @PathVariable Long instructorId,
+            @Valid @org.springframework.web.bind.annotation.RequestBody LinkInstructorAccountRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ResponseEntity.ok(invitationService.linkInstructorAccount(
+                extractUserId(jwt), activityId, instructorId, request.email()));
     }
 
     @Operation(
@@ -213,4 +249,14 @@ public class InstructorController {
             @NotBlank @Email String email
     ) {
     }
+
+    @Schema(description = "Dados para cadastrar um ministrante")
+    public record AddInstructorRequest(
+            @NotBlank @jakarta.validation.constraints.Size(max = 255) String name,
+            @jakarta.validation.constraints.Size(max = 5000) String description,
+            @jakarta.validation.constraints.Email @jakarta.validation.constraints.Size(max = 255) String accountEmail,
+            EnumInstructorRole role
+    ) {}
+
+    public record LinkInstructorAccountRequest(@NotBlank @Email String email) {}
 }
