@@ -9,11 +9,6 @@ import com.ccomp.br.domain.news.utils.SlugUtils;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
-import com.ccomp.br.domain.events.activities.materials.persistence.ActivityMaterialRepository;
-import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
-import com.ccomp.br.domain.events.certificate.persistence.EventCoverTemplateRepository;
-import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
-import com.ccomp.br.domain.events.materials.persistence.EventMaterialRepository;
 import com.ccomp.br.domain.events.core.external.EventStorageCleanupRequested;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -30,8 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.ArrayList;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -45,11 +38,7 @@ public class EventsServices {
     private final EventMapper eventMapper;
     private final EventDslRepository eventDslRepository;
     private final EventAccessPolicy eventAccessPolicy;
-    private final EventActivityRepository activityRepository;
-    private final ActivityMaterialRepository activityMaterialRepository;
-    private final EventMaterialRepository eventMaterialRepository;
-    private final EventGuestRepository eventGuestRepository;
-    private final EventCoverTemplateRepository coverTemplateRepository;
+    private final EventStorageFileKeyCollector eventStorageFileKeyCollector;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     public EventsServices(
@@ -58,11 +47,7 @@ public class EventsServices {
             EventMapper eventMapper,
             EventDslRepository eventDslRepository,
             EventAccessPolicy eventAccessPolicy,
-            EventActivityRepository activityRepository,
-            ActivityMaterialRepository activityMaterialRepository,
-            EventMaterialRepository eventMaterialRepository,
-            EventGuestRepository eventGuestRepository,
-            EventCoverTemplateRepository coverTemplateRepository,
+            EventStorageFileKeyCollector eventStorageFileKeyCollector,
             ApplicationEventPublisher applicationEventPublisher) {
         this.eventRepository = eventRepository;
         this.eventCache = eventCache;
@@ -70,11 +55,7 @@ public class EventsServices {
         this.eventMapper = eventMapper;
         this.eventDslRepository = eventDslRepository;
         this.eventAccessPolicy = eventAccessPolicy;
-        this.activityRepository = activityRepository;
-        this.activityMaterialRepository = activityMaterialRepository;
-        this.eventMaterialRepository = eventMaterialRepository;
-        this.eventGuestRepository = eventGuestRepository;
-        this.coverTemplateRepository = coverTemplateRepository;
+        this.eventStorageFileKeyCollector = eventStorageFileKeyCollector;
         this.applicationEventPublisher = applicationEventPublisher;
     }
 
@@ -252,25 +233,9 @@ public class EventsServices {
 
         // Read file keys while their owning rows still exist. The listener only
         // sends the cleanup request to RabbitMQ after this transaction commits.
-        List<String> fileKeys = new ArrayList<>();
-
-        Optional.ofNullable(event.getCoverImageKey()).ifPresent(fileKeys::add);
-        eventMaterialRepository.findAllByEventId(eventId).stream()
-                .map(material -> material.getFileKey()).filter(Objects::nonNull).forEach(fileKeys::add);
-        List<Long> activityIds = activityRepository.findAllByEventId(eventId).stream()
-                .map(activity -> activity.getId()).toList();
-
-        if (!activityIds.isEmpty()) {
-            activityMaterialRepository.findAllByActivityIdIn(activityIds).stream()
-                    .map(material -> material.getFileKey()).filter(Objects::nonNull).forEach(fileKeys::add);
-        }
-        eventGuestRepository.findAllByEventId(eventId).stream()
-                .map(guest -> guest.getImageKey()).filter(Objects::nonNull).forEach(fileKeys::add);
-        coverTemplateRepository.findByEventId(eventId)
-                .map(template -> template.getCoverTemplateKey()).ifPresent(fileKeys::add);
-
+        List<String> fileKeys = eventStorageFileKeyCollector.collect(event);
         if (!fileKeys.isEmpty()) {
-            applicationEventPublisher.publishEvent(new EventStorageCleanupRequested(fileKeys.stream().distinct().toList()));
+            applicationEventPublisher.publishEvent(new EventStorageCleanupRequested(fileKeys));
         }
 
         eventCache.evict(event);

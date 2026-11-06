@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.application;
 
 import com.ccomp.br.domain.events.core.application.EventsServices;
+import com.ccomp.br.domain.events.core.application.EventStorageFileKeyCollector;
 import com.ccomp.br.domain.events.core.dto.CreateEventDTO;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.dto.EventCursor;
@@ -15,6 +16,7 @@ import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.core.persistence.EventDslRepository;
+import com.ccomp.br.domain.events.core.external.EventStorageCleanupRequested;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.domain.users.external.UserManagement;
@@ -29,6 +31,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.InOrder;
+import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
@@ -57,6 +62,8 @@ public class EventsServicesTest {
     @Mock private EventCache eventCache;
     @Mock private EventDslRepository eventDslRepository;
     @Mock private EventAccessPolicy eventAccessPolicy;
+    @Mock private EventStorageFileKeyCollector eventStorageFileKeyCollector;
+    @Mock private ApplicationEventPublisher applicationEventPublisher;
 
     @InjectMocks
     private EventsServices eventsServices;
@@ -396,10 +403,38 @@ public class EventsServicesTest {
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
             when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(expectedEventDTO);
             when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(true);
+            when(eventStorageFileKeyCollector.collect(existingEvent)).thenReturn(List.of());
 
             eventsServices.delete(eventId, userId);
 
             verify(eventRepository).delete(existingEvent);
+        }
+
+        @Test
+        @DisplayName("Coleta todas as chaves, publica a limpeza e só então remove o evento")
+        void delete_collectsEveryStorageKeyBeforeDeletingEvent() {
+            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
+            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(expectedEventDTO);
+            when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(true);
+            List<String> fileKeys = List.of(
+                    "events/1/cover.png",
+                    "events/1/material.pdf",
+                    "activities/22/material.pdf",
+                    "events/1/guests/speaker.png",
+                    "events/1/certificate/cover.png");
+            when(eventStorageFileKeyCollector.collect(existingEvent)).thenReturn(fileKeys);
+
+            eventsServices.delete(eventId, userId);
+
+            ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
+            InOrder order = inOrder(applicationEventPublisher, eventRepository);
+            order.verify(applicationEventPublisher).publishEvent(eventCaptor.capture());
+            order.verify(eventRepository).delete(existingEvent);
+            verify(eventStorageFileKeyCollector).collect(existingEvent);
+            assertThat(eventCaptor.getValue())
+                    .isInstanceOf(EventStorageCleanupRequested.class)
+                    .extracting(event -> ((EventStorageCleanupRequested) event).fileKeys())
+                    .isEqualTo(fileKeys);
         }
 
         @Test
