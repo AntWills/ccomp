@@ -29,7 +29,7 @@ public class EnrollmentActivityDslRepository {
     public Optional<EnrollmentActivity> findByUserIdAndActivityId(UUID userId, Long activityId) {
         var result = queryFactory
                 .selectFrom(enrollmentActivity)
-                .innerJoin(enrollmentActivity.enrollment, enrollment)
+                .innerJoin(enrollmentActivity.enrollment, enrollment).fetchJoin()
                 .where(
                         enrollment.userId.eq(userId),
                         enrollmentActivity.activity.id.eq(activityId)

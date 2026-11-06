@@ -62,6 +62,16 @@ Gerada a partir dos controllers e do `SecurityConfig`. Rotas não listadas por a
 | `DELETE` | `/api/events/{eventId}/editors/{email}` | `EditorsController#removeEditor` | Restrita por role | Roles: ADMIN, MODERATOR, STAFF. Políticas de propriedade também se aplicam. |
 | `POST` | `/api/events/{eventId}/editors/{email}` | `EditorsController#addEditor` | Restrita por role | Roles: ADMIN, MODERATOR, STAFF. Políticas de propriedade também se aplicam. |
 | `GET` | `/api/events/{eventId}/enrollments` | `EnrollmentsController#searchEnrollments` | Restrita por role | Roles: ADMIN, MODERATOR, STAFF. Políticas de propriedade também se aplicam. |
+| `POST` | `/api/events/{eventId}/credentials/scan` | `EventCredentialController#scan` | Protegida (JWT) | Proprietário/editor ativo/MODERATOR/ADMIN ou operador temporário concedido no evento. |
+| `POST` | `/api/events/{eventId}/credentials/manual/search` | `EventCredentialController#search` | Protegida (JWT) | Proprietário/editor ativo/MODERATOR/ADMIN ou operador temporário; QueryDSL limita a 20 resultados e retorna `EnrollmentListItem` com `UserSummaryDTO` (e-mail completo). |
+| `POST` | `/api/events/{eventId}/credentials/manual` | `EventCredentialController#manual` | Protegida (JWT) | Proprietário/editor ativo/MODERATOR/ADMIN ou operador temporário concedido no evento. |
+| `POST` | `/api/events/{eventId}/credentials/{credentialId}/reprint` | `EventCredentialController#reprint` | Protegida (JWT) | Proprietário/editor ativo/MODERATOR/ADMIN ou operador temporário concedido no evento. |
+| `GET` | `/api/events/{eventId}/credentials/summary` | `EventCredentialController#summary` | Protegida (JWT) | Proprietário/editor ativo/MODERATOR/ADMIN ou operador temporário concedido no evento. |
+| `POST` | `/api/events/{eventId}/credentials/my-token` | `EventCredentialController#myToken` | Protegida (JWT) | O participante autenticado só recebe token da própria inscrição elegível. |
+| `POST` | `/api/events/{eventId}/credentials/my-token/rotate` | `EventCredentialController#rotateMyToken` | Protegida (JWT) | O participante autenticado só rotaciona o token da própria inscrição elegível. |
+| `POST` | `/api/events/{eventId}/credentials/enrollments/{enrollmentId}/token/rotate` | `EventCredentialController#rotateParticipantToken` | Protegida (JWT) | Proprietário/editor ativo/MODERATOR/ADMIN ou operador temporário concedido no evento. |
+| `PUT` | `/api/events/{eventId}/credentials/operators/{userId}` | `EventCredentialController#addOperator` | Protegida (JWT) | Gestão do evento; usuário concedido precisa ter conta ativa. |
+| `DELETE` | `/api/events/{eventId}/credentials/operators/{operatorUserId}` | `EventCredentialController#removeOperator` | Protegida (JWT) | Gestão do evento. |
 | `GET` | `/api/events/{eventId}/guests` | `GuestController#searchEventGuests` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
 | `PATCH` | `/api/events/{eventId}/guests/{guestId}` | `GuestController#updateGuest` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
 | `GET` | `/api/events/{eventId}/invitations` | `GuestInvitationController#searchInvitations` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |

@@ -32,7 +32,7 @@ public class CheckInController {
     @GetMapping(value = "/activity/{activityId}/qrcode", produces = MediaType.IMAGE_PNG_VALUE)
     @Operation(
             summary = "Gera o QR Code de presença",
-            description = "Retorna a imagem PNG do QR Code para validação de presença na atividade."
+            description = "Retorna o QR Code que a equipe de gestão do evento deve exibir para registrar a presença dos inscritos nesta atividade. Gerar o código não registra presença nem credenciamento."
     )
     @ApiResponses({
             @ApiResponse(
@@ -60,15 +60,17 @@ public class CheckInController {
     @PostMapping("/activity/{activityId}/check-in")
     @Operation(
             summary = "Confirma a presença na atividade",
-            description = "Registra a presença do usuário autenticado na atividade, "
-                    + "validando o código lido no QR Code. O usuário precisa estar inscrito "
-                    + "na atividade e ela precisa estar em andamento."
+            description = "Registra a participação do usuário autenticado nesta atividade após validar o QR Code. "
+                    + "O usuário precisa estar inscrito e a atividade deve estar em andamento. "
+                    + "O registro de participação da atividade é separado do credenciamento. Após salvar a presença, "
+                    + "o sistema envia uma mensagem RabbitMQ para marcar também a inscrição do evento como "
+                    + "`CHECKED_IN`; essa atualização do evento é assíncrona."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Presença confirmada com sucesso", content = @Content),
+            @ApiResponse(responseCode = "200", description = "Presença confirmada com sucesso", content = @Content),
             @ApiResponse(
                     responseCode = "400",
-                    description = "Código inválido ou expirado, atividade fora do horário de check-in, ou corpo da requisição inválido",
+                    description = "Código inválido, atividade fora do horário de check-in, ou corpo da requisição inválido",
                     content = @Content
             ),
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado", content = @Content),

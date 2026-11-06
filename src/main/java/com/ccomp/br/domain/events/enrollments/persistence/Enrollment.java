@@ -130,11 +130,8 @@ public class Enrollment {
         return this.status == EnumEnrollmentState.CONFIRMED || this.status == EnumEnrollmentState.CHECKED_IN;
     }
 
-    /**
-     * Retorna se a presença do participante no evento foi confirmada (credenciamento).
-     * Requisito para a emissão do certificado do evento.
-     */
+    /** Retorna se a inscrição está no estado de presença confirmada no evento. */
     public boolean haveCheckIn() {
-        return this.checkInAt != null;
+        return this.status == EnumEnrollmentState.CHECKED_IN;
     }
 }

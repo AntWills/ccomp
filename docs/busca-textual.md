@@ -26,6 +26,12 @@ O endpoint `POST /api/events/search` também aceita `searchTerm`, aplicado somen
 
 Sem termo, o score não é projetado nem calculado; a ordenação continua por `startDate` e ID decrescentes. A migration `V23__add_event_title_text_search.sql` cria o índice GIN trigramático do título. Assim como na busca de usuários, o filtro por função `word_similarity(...) >= 0.4` não garante que o índice seja escolhido; avalie o plano com `EXPLAIN (ANALYZE, BUFFERS)` em dados representativos.
 
+### Busca de inscritos para credenciamento
+
+`EventCredentialDslRepository.searchForCredentialing` pesquisa nome e e-mail, limita os resultados ao evento e ordena por `greatest(word_similarity + similarity)` entre esses campos, com `createdAt` e ID decrescentes para desempate. O aceite final mantém o limiar `word_similarity >= 0.4`.
+
+Para o PostgreSQL poder usar os índices GIN de `tb_users.name` e `tb_users.email_address` criados na V22, a consulta usa a função genérica `text_search_match`, adicionada na V30. Ela encapsula o operador indexável `<%`; o limiar do operador é definido localmente na transação como `0.399999`, e a condição `word_similarity >= 0.4` preserva o limite documentado. A função genérica `text_search_score`, também adicionada na V30, calcula `word_similarity + similarity` para ordenar os candidatos. Essa pontuação é calculada por linha e não usa o GIN; o ganho potencial do índice vem do filtro `text_search_match`. A V30 não cria índices duplicados. O mesmo par de funções pode ser reutilizado em outras tabelas, desde que os campos tenham índices GIN compatíveis e o filtro local aplique o limiar apropriado.
+
 ## Índices e planos de consulta
 
 O PostgreSQL permite criar índices GIN trigramáticos usando `gin_trgm_ops` para os campos pesquisáveis. No exemplo de usuários, a migração `V22__add_user_text_search.sql` habilita `pg_trgm` e cria índices para `tb_users.name` e `tb_users.email_address`.
