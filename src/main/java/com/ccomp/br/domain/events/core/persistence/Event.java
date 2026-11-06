@@ -85,7 +85,7 @@ public class Event {
     @Column(name = "max_capacity")
     private Integer maxCapacity;
 
-    @OneToMany(mappedBy = "event")
+    @OneToMany(mappedBy = "event", cascade = CascadeType.REMOVE, orphanRemoval = true)
     @Builder.Default
     private Set<Enrollment> enrollments = new HashSet<>();
 
@@ -97,10 +97,10 @@ public class Event {
     @Builder.Default
     private Set<EventGuest> guests = new HashSet<>();
 
-    @OneToMany(mappedBy = "event")
+    @OneToMany(mappedBy = "event", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private Set<EventEditor> editors;
 
-    @OneToMany(mappedBy = "event")
+    @OneToMany(mappedBy = "event", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private List<EventActivity> activities;
 
     // --- Execução do Evento ---
