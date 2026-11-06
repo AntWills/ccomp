@@ -15,6 +15,8 @@ import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.domain.users.persistence.UserModelRepository;
 import com.ccomp.br.module.email.EmailAddress;
+import com.ccomp.br.shared.utils.TextSearchSession;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,13 +33,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import({QueryDslConfig.class, EventCredentialDslRepository.class})
+@Import({QueryDslConfig.class, EventCredentialDslRepository.class, TextSearchSession.class})
 class CredentialEnrollmentQueryTest {
     @Autowired private EnrollmentRepository enrollmentRepository;
     @Autowired private EventRepository eventRepository;
     @Autowired private UserModelRepository userRepository;
     @Autowired private EventCredentialRepository credentialRepository;
     @Autowired private EventCredentialDslRepository credentialDslRepository;
+    @Autowired private EntityManager entityManager;
 
     private Long eventId;
 
@@ -73,14 +76,43 @@ class CredentialEnrollmentQueryTest {
         var emailResults = credentialDslRepository.searchForCredentialing(eventId, "bruno@example", 20);
         var otherEventResults = credentialDslRepository.searchForCredentialing(eventId, "outroevento", 20);
 
-        assertThat(nameResults).hasSize(1);
-        assertThat(nameResults.getFirst().enrollment().user().name()).isEqualTo("Ana Participante");
-        assertThat(nameResults.getFirst().eligible()).isTrue();
-        assertThat(nameResults.getFirst().credentialed()).isFalse();
-        assertThat(emailResults).hasSize(1);
-        assertThat(emailResults.getFirst().enrollment().user().emailAddress().getValue())
-                .isEqualTo("bruno@example.org");
+        assertThat(nameResults).extracting(result -> result.enrollment().user().name())
+                .contains("Ana Participante");
+        assertThat(nameResults).anySatisfy(result -> {
+            assertThat(result.eligible()).isTrue();
+            assertThat(result.credentialed()).isFalse();
+        });
+        assertThat(emailResults).extracting(result -> result.enrollment().user().emailAddress().getValue())
+                .contains("bruno@example.org");
         assertThat(otherEventResults).isEmpty();
+        assertThat(entityManager.createNativeQuery(
+                "select current_setting('pg_trgm.word_similarity_threshold')").getSingleResult())
+                .isEqualTo("0.399999");
+        Number trigramIndexes = (Number) entityManager.createNativeQuery("""
+                select count(*) from pg_indexes
+                where schemaname = current_schema()
+                  and indexname in ('idx_users_name_trgm', 'idx_users_email_address_trgm')
+                """).getSingleResult();
+        assertThat(trigramIndexes.intValue()).isEqualTo(2);
+    }
+
+    @Test
+    void genericTextSearchMatchCanUseExistingGinIndex() {
+        entityManager.createNativeQuery(
+                "select set_config('pg_trgm.word_similarity_threshold', '0.399999', true)").getSingleResult();
+        entityManager.createNativeQuery("select set_config('enable_seqscan', 'off', true)").getSingleResult();
+
+        @SuppressWarnings("unchecked")
+        var plan = (java.util.List<String>) entityManager.createNativeQuery("""
+                explain select id from tb_users
+                where text_search_match('ana partic', name)
+                """).getResultList();
+
+        assertThat(String.join("\n", plan)).contains("idx_users_name_trgm");
+
+        Number score = (Number) entityManager.createNativeQuery(
+                "select text_search_score('ana partic', 'Ana Participante')").getSingleResult();
+        assertThat(score.doubleValue()).isGreaterThan(0.4);
     }
 
     @Test
