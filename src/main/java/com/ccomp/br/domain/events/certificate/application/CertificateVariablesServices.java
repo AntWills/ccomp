@@ -76,8 +76,8 @@ public class CertificateVariablesServices {
 
     /**
      * Carrega os valores reais das variáveis do certificado do evento. Exige que o
-     * participante esteja inscrito no evento com o credenciamento (check-in) realizado,
-     * e soma a carga horária das atividades em que ele realmente participou.
+     * participante esteja inscrito e com status CHECKED_IN no evento, e soma a carga
+     * horária das atividades em que ele realmente participou.
      */
     public Map<String, String> loadEventVariablesValues(List<String> variables, Long eventId, UUID userId) {
         if (userId == null)
@@ -90,7 +90,7 @@ public class CertificateVariablesServices {
                 .orElseThrow(() -> new ResourceNotFoundException("O usuário não é inscrito no evento."));
 
         if (!enrollment.haveCheckIn())
-            throw new DomainException("O credenciamento (check-in) no evento não foi realizado.");
+            throw new DomainException("O participante não fez check-in no evento.");
 
         boolean needsUser = variables == null || variables.contains("{participante.nome}");
         boolean needsWorkload = variables == null || variables.contains("{evento.carga_horaria}");
@@ -143,8 +143,12 @@ public class CertificateVariablesServices {
         var enrollmentActivity = enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("O usuário não é inscrito nesta atividade."));
 
+        if (!enrollmentActivity.getEnrollment().haveCheckIn()) {
+            throw new DomainException("O participante não fez check-in no evento.");
+        }
+
         if (!enrollmentActivity.haveCheckIn()) {
-            throw new DomainException("O inscrito não fez o check-in nesta atividade.");
+            throw new DomainException("O inscrito não participou desta atividade.");
         }
 
         // 2. Identifica quais dados realmente precisam ser buscados (Evita I/O desnecessário)

@@ -122,7 +122,7 @@ class CertificateVariablesServicesTest {
         assertThatThrownBy(() -> createService()
                 .loadEventVariablesValues(List.of(), 10L, USER_ID))
                 .isInstanceOf(DomainException.class)
-                .hasMessage("O credenciamento (check-in) no evento não foi realizado.");
+                .hasMessage("O participante não fez check-in no evento.");
     }
 
     @Test
@@ -204,6 +204,59 @@ class CertificateVariablesServicesTest {
                 .containsEntry("{atividade.carga_horaria}", "4 horas")
                 .containsEntry("{validacao.codigo}", "ABC12345")
                 .containsEntry("{validacao.url}", "https://exemplo.com/validar/ABC12345");
+    }
+
+    @Test
+    void loadActivityVariables_requiresEventCheckInEvenWhenActivityWasAttended() {
+        EventActivity activity = EventActivity.builder()
+                .title("Workshop de IA")
+                .type(EnumActivityType.WORKSHOP)
+                .displayOrder(1L)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .build();
+        activity.setId(77L);
+        activity.setEvent(event());
+        activity.setEventId(10L);
+
+        Enrollment enrollment = Enrollment.builder()
+                .userId(USER_ID)
+                .event(event())
+                .status(EnumEnrollmentState.CONFIRMED)
+                .build();
+        EnrollmentActivity enrollmentActivity = new EnrollmentActivity(enrollment, activity);
+        enrollmentActivity.makeAttendance();
+        when(enrollmentActivityDslRepository.findByUserIdAndActivityId(USER_ID, 77L))
+                .thenReturn(Optional.of(enrollmentActivity));
+
+        assertThatThrownBy(() -> createService().loadActivityVariablesValues(List.of(), 77L, USER_ID))
+                .isInstanceOf(DomainException.class)
+                .hasMessage("O participante não fez check-in no evento.");
+    }
+
+    @Test
+    void loadActivityVariablesRequiresParticipationInActivityAfterEventCheckIn() {
+        EventActivity activity = EventActivity.builder()
+                .title("Workshop de IA")
+                .type(EnumActivityType.WORKSHOP)
+                .displayOrder(1L)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .build();
+        activity.setId(77L);
+        activity.setEvent(event());
+        activity.setEventId(10L);
+
+        Enrollment enrollment = Enrollment.builder()
+                .userId(USER_ID)
+                .event(event())
+                .status(EnumEnrollmentState.CHECKED_IN)
+                .build();
+        EnrollmentActivity enrollmentActivity = new EnrollmentActivity(enrollment, activity);
+        when(enrollmentActivityDslRepository.findByUserIdAndActivityId(USER_ID, 77L))
+                .thenReturn(Optional.of(enrollmentActivity));
+
+        assertThatThrownBy(() -> createService().loadActivityVariablesValues(List.of(), 77L, USER_ID))
+                .isInstanceOf(DomainException.class)
+                .hasMessage("O inscrito não participou desta atividade.");
     }
 
     private Event stubEvent() {

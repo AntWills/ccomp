@@ -21,7 +21,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/events/{eventId}/credentials")
-@Tag(name = "events/credentials (Credenciais)", description = "Credenciamento de participantes, tokens QR e equipe de recepção de um evento.")
+@Tag(name = "events/credentials (Credenciais)", description = "Registro operacional de credenciamento de participantes, tokens QR e equipe de recepção. Credenciamento e check-in são registros distintos.")
 public class EventCredentialController {
     private final EventCredentialService service;
 
@@ -35,9 +35,11 @@ public class EventCredentialController {
                     **Status: DEV — não usar no frontend.** Rota mantida para uma possível futura recepção por QR Code;
                     o fluxo atual deve usar busca manual e credenciamento da inscrição.
 
-                    Valida o token QR opaco da inscrição e registra a chegada ao evento junto com a credencial operacional.
-                    Uma inscrição `CONFIRMED` passa para `CHECKED_IN`; uma inscrição já credenciada retorna resultado
-                    idempotente. O QR precisa pertencer ao evento da rota e não pode ter sido rotacionado. Informe um
+                    Valida o token QR opaco da inscrição e registra os dados operacionais do credenciamento (horário,
+                    operador e estação). Credenciamento é separado do check-in: se a inscrição ainda não estiver em
+                    `CHECKED_IN`, o fluxo também registra o check-in; se já estiver, preserva a presença existente e
+                    grava o credenciamento. Uma inscrição já credenciada retorna resultado idempotente. O QR precisa
+                    pertencer ao evento da rota e não pode ter sido rotacionado. Informe um
                     identificador curto da estação no corpo. Requer operador de credenciamento ou permissão de gestão do evento.
 
                     **Respostas:** `200` com resultado do credenciamento; `400` para corpo inválido; `401` sem JWT;
@@ -65,8 +67,9 @@ public class EventCredentialController {
             summary = "Busca inscrições para credenciamento manual",
             description = """
                     Pesquisa inscrições do evento por nome ou e-mail. Retorna no máximo 20 resultados usando
-                    `EnrollmentListItem` e `UserSummaryDTO`, com estado e indicadores de elegibilidade e credenciamento. CPF não é pesquisado
-                    nem retornado por esta rota. Requer operador de credenciamento ou permissão de gestão do evento.
+                    `EnrollmentListItem` e `UserSummaryDTO`, com estado, elegibilidade para credenciamento e indicador
+                    independente de credenciamento já registrado. São elegíveis inscrições `CONFIRMED` e `CHECKED_IN`;
+                    CPF não é pesquisado nem retornado por esta rota. Requer operador de credenciamento ou permissão de gestão do evento.
 
                     **Respostas:** `200` com os resultados; `400` se o termo for inválido; `401` sem JWT; `403` sem permissão.
                     """)
@@ -88,9 +91,11 @@ public class EventCredentialController {
     @Operation(
             summary = "Credencia uma inscrição manualmente",
             description = """
-                    Registra a chegada após a equipe localizar e confirmar a inscrição. O endpoint aplica as mesmas
-                    regras de estado do scan: somente `CONFIRMED` pode ser credenciada; `CHECKED_IN` existente é
-                    tratado de forma idempotente ou reconciliado. Inscrições `CANCELED` e `BANNED` são recusadas.
+                    Registra os dados operacionais do credenciamento após a equipe localizar e confirmar a inscrição.
+                    Credenciamento não é o check-in: para `CONFIRMED`, esta operação também muda o status da inscrição
+                    para `CHECKED_IN`; para uma inscrição que já está `CHECKED_IN`, preserva a presença e registra o
+                    credenciamento. Uma credencial já registrada é tratada idempotentemente. Inscrições `CANCELED` e
+                    `BANNED` são recusadas.
                     Requer operador de credenciamento ou permissão de gestão do evento.
                     """)
     @ApiResponses(value = {
@@ -148,7 +153,8 @@ public class EventCredentialController {
             description = """
                     **Status: DEV — não usar no frontend.** Só será necessária se o fluxo de recepção passar a usar QR Code.
 
-                    Cria um token aleatório opaco para o participante autenticado e o evento informado. O token bruto
+                    Cria um token aleatório opaco para o participante autenticado e o evento informado. Emitir token
+                    não registra presença nem credenciamento. O token bruto
                     é devolvido somente na emissão inicial; o banco persiste apenas seu hash. Se já houver token,
                     esta rota não o recupera: use a rota de rotação para invalidar o antigo e receber outro.
                     A inscrição deve estar elegível e pertencer ao usuário autenticado.
@@ -207,7 +213,7 @@ public class EventCredentialController {
 
     @Operation(
             summary = "Consulta o resumo do credenciamento",
-            description = "Retorna totais do evento: inscrições elegíveis, participantes credenciados e restantes. A resposta é agregada e não expõe dados pessoais.")
+            description = "Retorna inscrições elegíveis (`CONFIRMED` ou `CHECKED_IN`), credenciamentos efetivamente registrados e restantes. O status de check-in e o registro de credenciamento são contados separadamente; a resposta não expõe dados pessoais.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Resumo retornado",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = CredentialSummaryResponse.class))),

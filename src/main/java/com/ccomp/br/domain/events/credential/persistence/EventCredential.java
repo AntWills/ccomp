@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "tb_event_credentials")
@@ -32,7 +33,7 @@ public class EventCredential {
     private LocalDateTime credentialedAt;
 
     @Column(name = "credentialed_by")
-    private java.util.UUID credentialedBy;
+    private UUID credentialedBy;
 
     @Column(length = 50)
     private String station;

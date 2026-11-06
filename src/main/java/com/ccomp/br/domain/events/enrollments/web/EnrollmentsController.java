@@ -117,7 +117,7 @@ public class EnrollmentsController {
                 .body(enrollmentsServices.unsubscribe(userId, eventId));
     }
 
-    @Operation(summary = "Altera o status de uma inscrição", description = "Requer permissão de edição do evento: proprietário, editor ativo, moderador ou administrador.")
+    @Operation(summary = "Altera o status de uma inscrição", description = "Requer permissão de edição do evento: proprietário, editor ativo, moderador ou administrador. Definir `CHECKED_IN` registra presença no evento; isso não cria os dados operacionais do credenciamento. O credenciamento pode ser registrado antes ou depois e mantém seu próprio operador, estação e horário.")
     @PutMapping("/{eventId}/enrollments/{enrollmentId}/status")
     public ResponseEntity<MessageResponse> updateEnrollmentStatus(
             @PathVariable Long eventId,

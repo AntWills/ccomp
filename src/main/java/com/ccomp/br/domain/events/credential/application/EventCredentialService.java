@@ -177,25 +177,37 @@ public class EventCredentialService {
 
     private CredentialResponse process(Enrollment enrollment, UUID actor, String station, String expectedTokenHash) {
         Long eventId = enrollment.getEventId();
+
         EventCredential existing = credentialRepository.findByEventIdAndEnrollmentId(eventId, enrollment.getId()).orElse(null);
         if (expectedTokenHash != null && (existing == null || !expectedTokenHash.equals(existing.getTokenHash()))) {
             throw new ConflictException("QR inválido, expirado ou revogado.");
         }
+
         if (enrollment.getStatus() == EnumEnrollmentState.CANCELED || enrollment.getStatus() == EnumEnrollmentState.BANNED) {
             throw new ConflictException("Inscrição não elegível para credenciamento.");
         }
+
         LocalDateTime now = LocalDateTime.now();
         if (existing != null && existing.getCredentialedAt() != null) {
+            if (!enrollment.haveCheckIn()) {
+                enrollment.checkIn();
+                enrollmentRepository.save(enrollment);
+                audit(EnumActionType.CREDENTIAL_RECONCILED, actor, existing, now,
+                        "enrollment_status", EnumEnrollmentState.CHECKED_IN.name(), station);
+            }
             return response("ALREADY_CREDENTIALED", enrollment, existing, false);
         }
-        boolean reconciled = enrollment.getStatus() == EnumEnrollmentState.CHECKED_IN;
+
+        boolean reconciled = enrollment.haveCheckIn();
         if (!reconciled) enrollment.checkIn();
+
         EventCredential credential = existing == null ? newCredential(eventId, enrollment.getId()) : existing;
         credential.credential(station, actor, now);
         credentialRepository.save(credential);
         enrollmentRepository.save(enrollment);
         audit(reconciled ? EnumActionType.CREDENTIAL_RECONCILED : EnumActionType.CREDENTIAL_CREATED,
                 actor, credential, now, "credentialed_at", now, station);
+
         return response(reconciled ? "RECONCILED" : "CREDENTIALED", enrollment, credential, true);
     }
 

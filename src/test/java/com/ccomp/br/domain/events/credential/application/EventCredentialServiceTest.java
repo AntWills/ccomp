@@ -100,7 +100,7 @@ class EventCredentialServiceTest {
     }
 
     @Test
-    void manualCredentialingAlreadyCheckedInIsIdempotent() {
+    void manualCredentialingAlreadyRecordedIsIdempotent() {
         enrollment.checkIn();
         EventCredential existing = credential(LocalDateTime.now().minusMinutes(2));
         when(credentialRepository.findByEventIdAndEnrollmentId(eventId, enrollmentId)).thenReturn(Optional.of(existing));
@@ -111,6 +111,41 @@ class EventCredentialServiceTest {
         assertThat(response.result()).isEqualTo("ALREADY_CREDENTIALED");
         verify(credentialRepository, never()).save(any());
         verify(auditRepository, never()).save(any());
+    }
+
+    @Test
+    void existingCredentialStillEnsuresEnrollmentIsCheckedIn() {
+        EventCredential existing = credential(LocalDateTime.now().minusMinutes(2));
+        when(credentialRepository.findByEventIdAndEnrollmentId(eventId, enrollmentId)).thenReturn(Optional.of(existing));
+
+        CredentialResponse response = service.manual(eventId, actor,
+                new com.ccomp.br.domain.events.credential.dto.ManualCredentialRequest(enrollmentId, "B"));
+
+        assertThat(response.result()).isEqualTo("ALREADY_CREDENTIALED");
+        assertThat(enrollment.getStatus()).isEqualTo(EnumEnrollmentState.CHECKED_IN);
+        assertThat(enrollment.getCheckInAt()).isNotNull();
+        verify(enrollmentRepository).save(enrollment);
+        verify(auditRepository).save(argThat(audit -> audit.getAction()
+                == com.ccomp.br.domain.audit.external.enums.EnumActionType.CREDENTIAL_RECONCILED));
+    }
+
+    @Test
+    void manualCredentialingAfterCheckInRecordsCredentialWithoutChangingAttendance() {
+        enrollment.checkIn();
+        LocalDateTime attendedAt = enrollment.getCheckInAt();
+        when(credentialRepository.findByEventIdAndEnrollmentId(eventId, enrollmentId)).thenReturn(Optional.empty());
+
+        CredentialResponse response = service.manual(eventId, actor,
+                new com.ccomp.br.domain.events.credential.dto.ManualCredentialRequest(enrollmentId, "B"));
+
+        assertThat(response.result()).isEqualTo("RECONCILED");
+        assertThat(response.enrollmentStatus()).isEqualTo(EnumEnrollmentState.CHECKED_IN.name());
+        assertThat(enrollment.getCheckInAt()).isEqualTo(attendedAt);
+        verify(credentialRepository).save(argThat(credential -> credential.getCredentialedAt() != null
+                && actor.equals(credential.getCredentialedBy())
+                && "B".equals(credential.getStation())));
+        verify(auditRepository).save(argThat(audit -> audit.getAction()
+                == com.ccomp.br.domain.audit.external.enums.EnumActionType.CREDENTIAL_RECONCILED));
     }
 
     @Test

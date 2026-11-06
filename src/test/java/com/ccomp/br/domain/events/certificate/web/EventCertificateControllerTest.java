@@ -304,12 +304,12 @@ class EventCertificateControllerTest {
     @Test
     void buildCertificateFromActivity_checkInNotDone_returns400Json() throws Exception {
         when(certificateServices.buildCertificateFromActivity(eq(77L), any()))
-                .thenThrow(new DomainException("O inscrito não fez o check-in nesta atividade."));
+                .thenThrow(new DomainException("O inscrito não participou desta atividade."));
 
         mockMvc.perform(get(ACTIVITY_CERTIFICATE_URL))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.messages[0]").value("O inscrito não fez o check-in nesta atividade."));
+                .andExpect(jsonPath("$.messages[0]").value("O inscrito não participou desta atividade."));
     }
 
     @Test
