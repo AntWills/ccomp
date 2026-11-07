@@ -18,7 +18,6 @@ import com.ccomp.br.domain.events.instructor.persistence.EventInstructor;
 import com.ccomp.br.domain.events.instructor.persistence.EventInstructorRepository;
 import com.ccomp.br.domain.events.instructor.persistence.InstructorDslRepository;
 import com.ccomp.br.domain.events.guests.persistence.dsl.ActivityGuestDslRepository;
-import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.DomainException;
@@ -75,29 +74,15 @@ public class InstructorService {
 
         int limit = Math.min(pageSize, 50);
         InstructorCursor decodedCursor = CursorUtils.decode(cursor, InstructorCursor.class);
-        List<EventInstructor> instructors = instructorDslRepository
+        List<EventInstructorDTO> instructors = instructorDslRepository
                 .findByEvent(eventId, decodedCursor, limit + 1);
 
-        CursorPage<EventInstructor> page = CursorUtils.buildPage(
+        CursorPage<EventInstructorDTO> page = CursorUtils.buildPage(
                 instructors,
                 limit,
-                instructor -> new InstructorCursor(instructor.getId(), instructor.getCreatedAt())
+                instructor -> new InstructorCursor(instructor.id(), instructor.createdAt())
         );
-        return new CursorPage<>(
-                page.content().stream().map(instructor -> new EventInstructorDTO(
-                        instructor.getId(),
-                        instructor.getUserId(),
-                        instructor.getActivityId(),
-                        instructor.getStatus(),
-                        instructor.getName(),
-                        instructor.getDescription(),
-                        instructor.getRole(),
-                        false,
-                        instructor.getCreatedAt()
-                )).toList(),
-                page.nextCursor(),
-                page.previousCursor()
-        );
+        return page;
     }
 
     @Transactional(readOnly = true)
@@ -111,18 +96,8 @@ public class InstructorService {
 
         boolean manager = eventAccessPolicy.canEdit(event, requesterId);
         ArrayList<ActivityParticipantDTO> result = new ArrayList<>();
-        instructorDslRepository.findByActivity(activityId)
-                .forEach(instructor -> result.add(new ActivityParticipantDTO(
-                        instructor.getId(), instructor.getUserId(), activityId,
-                        instructor.getStatus(), instructor.getName(), instructor.getDescription(),
-                        instructor.getRole().name(), false, instructor.getCreatedAt())));
-        activityGuestDslRepository.findActivityGuestsForParticipants(activityId, manager)
-                .stream()
-                .forEach(guest -> result.add(new ActivityParticipantDTO(
-                        guest.id(), null, activityId,
-                        guest.status() == EnumGuestStatus.CONFIRMED
-                                ? EnumInstructorStatus.CONFIRMED : EnumInstructorStatus.CANCELED,
-                        guest.name(), guest.description(), guest.role().name(), true, guest.createdAt())));
+        result.addAll(instructorDslRepository.findByActivity(activityId));
+        result.addAll(activityGuestDslRepository.findActivityGuestsForParticipants(activityId, manager));
         result.sort(Comparator.comparing(ActivityParticipantDTO::createdAt,
                 Comparator.nullsLast(Comparator.reverseOrder())));
         return result;

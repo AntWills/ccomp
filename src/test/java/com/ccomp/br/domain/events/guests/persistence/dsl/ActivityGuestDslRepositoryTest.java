@@ -19,6 +19,8 @@ import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
+import com.ccomp.br.domain.events.instructor.dto.ActivityParticipantDTO;
+import com.ccomp.br.domain.events.instructor.enums.EnumInstructorStatus;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -222,20 +224,26 @@ class ActivityGuestDslRepositoryTest {
         EventGuest publicGuest = createEventGuest(event, EnumGuestVisibility.PUBLIC, EnumGuestStatus.CONFIRMED, now);
         publicGuest.setUserId(accountId);
         EventGuest privateGuest = createEventGuest(event, EnumGuestVisibility.PRIVATE, EnumGuestStatus.CONFIRMED, now);
+        EventGuest canceledGuest = createEventGuest(event, EnumGuestVisibility.PUBLIC, EnumGuestStatus.CANCELED, now);
         entityManager.persist(ActivityGuest.builder().activity(activity).eventGuest(publicGuest).build());
         entityManager.persist(ActivityGuest.builder().activity(activity).eventGuest(privateGuest).build());
+        entityManager.persist(ActivityGuest.builder().activity(activity).eventGuest(canceledGuest).build());
         entityManager.flush();
         entityManager.clear();
 
-        List<ActivityGuestDTO> publicParticipants = activityGuestDslRepository
+        List<ActivityParticipantDTO> publicParticipants = activityGuestDslRepository
                 .findActivityGuestsForParticipants(activity.getId(), false);
-        List<ActivityGuestDTO> managerParticipants = activityGuestDslRepository
+        List<ActivityParticipantDTO> managerParticipants = activityGuestDslRepository
                 .findActivityGuestsForParticipants(activity.getId(), true);
 
         assertThat(publicParticipants).hasSize(1);
-        assertThat(publicParticipants.getFirst().eventGuestId()).isEqualTo(publicGuest.getId());
+        assertThat(publicParticipants.getFirst().name()).isEqualTo(publicGuest.getName());
         assertThat(publicParticipants.getFirst().isGuest()).isTrue();
-        assertThat(managerParticipants).hasSize(2);
+        assertThat(publicParticipants.getFirst().role()).isEqualTo(EnumActivityGuestRole.PRESENTER.name());
+        assertThat(managerParticipants).hasSize(3)
+                .filteredOn(participant -> participant.name().equals(canceledGuest.getName()))
+                .singleElement()
+                .satisfies(participant -> assertThat(participant.status()).isEqualTo(EnumInstructorStatus.CANCELED));
     }
 
     @Test

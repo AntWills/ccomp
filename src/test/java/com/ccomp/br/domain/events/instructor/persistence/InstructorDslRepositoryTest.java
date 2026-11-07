@@ -11,6 +11,7 @@ import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.instructor.enums.EnumInstructorStatus;
+import com.ccomp.br.domain.events.instructor.dto.ActivityParticipantDTO;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,13 +75,17 @@ class InstructorDslRepositoryTest {
         var results = instructorDslRepository.findByActivity(activity.getId());
 
         assertThat(results).hasSize(2)
-                .allSatisfy(instructor -> assertThat(instructor.getStatus())
+                .allSatisfy(instructor -> assertThat(instructor.status())
                         .isEqualTo(EnumInstructorStatus.CONFIRMED));
-        assertThat(results).extracting(EventInstructor::getName)
+        assertThat(results).extracting(ActivityParticipantDTO::name)
                 .containsExactlyInAnyOrder("Professor", "Auxiliar sem conta");
-        assertThat(results).filteredOn(instructor -> instructor.getUserId() == null)
-                .extracting(EventInstructor::getName)
+        assertThat(results).filteredOn(instructor -> instructor.userId() == null)
+                .extracting(ActivityParticipantDTO::name)
                 .containsExactly("Auxiliar sem conta");
+        assertThat(results).allSatisfy(instructor -> assertThat(instructor.isGuest()).isFalse());
+        assertThat(instructorDslRepository.findByEvent(event.getId(), null, 10))
+                .hasSize(2)
+                .allSatisfy(instructor -> assertThat(instructor.isGuest()).isFalse());
     }
 
     @Test

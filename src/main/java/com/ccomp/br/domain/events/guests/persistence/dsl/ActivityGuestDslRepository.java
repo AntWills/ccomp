@@ -1,12 +1,16 @@
 package com.ccomp.br.domain.events.guests.persistence.dsl;
 
 import java.util.List;
+import java.util.UUID;
 
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
+import com.ccomp.br.domain.events.instructor.dto.ActivityParticipantDTO;
+import com.ccomp.br.domain.events.instructor.enums.EnumInstructorStatus;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -68,7 +72,7 @@ public class ActivityGuestDslRepository {
                 .fetch();
     }
 
-    public List<ActivityGuestDTO> findActivityGuestsForParticipants(Long activityId, boolean isManager) {
+    public List<ActivityParticipantDTO> findActivityGuestsForParticipants(Long activityId, boolean isManager) {
         BooleanBuilder where = new BooleanBuilder().and(activityGuest.activity.id.eq(activityId));
         if (!isManager) {
             where.and(activityGuest.eventGuest.visibility.eq(EnumGuestVisibility.PUBLIC))
@@ -77,16 +81,17 @@ public class ActivityGuestDslRepository {
 
         return queryFactory
                 .select(Projections.constructor(
-                        ActivityGuestDTO.class,
+                        ActivityParticipantDTO.class,
                         activityGuest.id,
+                        Expressions.nullExpression(UUID.class),
                         activityGuest.activity.id,
-                        activityGuest.eventGuest.id,
+                        new CaseBuilder()
+                                .when(activityGuest.eventGuest.status.eq(EnumGuestStatus.CONFIRMED))
+                                .then(EnumInstructorStatus.CONFIRMED.name())
+                                .otherwise(EnumInstructorStatus.CANCELED.name()),
                         activityGuest.eventGuest.name,
                         activityGuest.eventGuest.description,
-                        activityGuest.eventGuest.imageKey,
-                        activityGuest.role,
-                        activityGuest.eventGuest.status,
-                        activityGuest.eventGuest.visibility,
+                        activityGuest.role.stringValue(),
                         Expressions.asBoolean(true),
                         activityGuest.createdAt
                 ))

@@ -8,10 +8,6 @@ import java.util.List;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
-import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
-import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
-import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
-import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
 import com.ccomp.br.domain.events.instructor.dto.ActivityParticipantDTO;
 import com.ccomp.br.domain.events.instructor.enums.EnumInstructorRole;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
@@ -53,13 +49,12 @@ class InstructorServicePermissionTest {
         LocalDateTime now = LocalDateTime.now();
         EventActivity activity = mock(EventActivity.class);
         EventDTO event = mock(EventDTO.class);
-        EventInstructor instructor = EventInstructor.builder()
-                .id(7L).activityId(activityId).name("Auxiliar")
-                .role(EnumInstructorRole.ASSISTANT).createdAt(now).build();
-        ActivityGuestDTO guest = new ActivityGuestDTO(
-                9L, activityId, 3L, "Palestrante destaque", "Perfil", null,
-                EnumActivityGuestRole.SPECIAL_GUEST, EnumGuestStatus.CONFIRMED,
-                EnumGuestVisibility.PUBLIC, true, now.minusMinutes(1));
+        ActivityParticipantDTO instructor = new ActivityParticipantDTO(
+                7L, null, activityId, EnumInstructorStatus.CONFIRMED,
+                "Auxiliar", null, "ASSISTANT", false, now);
+        ActivityParticipantDTO guest = new ActivityParticipantDTO(
+                9L, null, activityId, EnumInstructorStatus.CONFIRMED,
+                "Palestrante destaque", "Perfil", "SPECIAL_GUEST", true, now.minusMinutes(1));
         when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
         when(activity.getEventId()).thenReturn(eventId);
         when(eventCache.findById(eventId)).thenReturn(Optional.of(event));

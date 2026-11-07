@@ -26,4 +26,18 @@ public record ActivityParticipantDTO(
         boolean isGuest,
         @Schema(description = "Data de criação do vínculo")
         LocalDateTime createdAt
-) {}
+) {
+    public ActivityParticipantDTO(
+            Long id,
+            UUID userId,
+            Long activityId,
+            String status,
+            String name,
+            String description,
+            String role,
+            boolean isGuest,
+            LocalDateTime createdAt
+    ) {
+        this(id, userId, activityId, EnumInstructorStatus.valueOf(status), name, description, role, isGuest, createdAt);
+    }
+}
