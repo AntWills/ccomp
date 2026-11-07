@@ -144,6 +144,9 @@ class CertificateVariablesServicesTest {
                 List.of("{evento.carga_horaria}"), 10L, USER_ID);
 
         assertThat(values.get("{evento.carga_horaria}")).isEqualTo("8.5");
+        assertThat(values.get("{evento.organizacao}")).isEqualTo("Organização de teste");
+        assertThat(values.get("{equipe.carga_horaria}")).isEqualTo("8.5");
+        assertThat(values.get("{equipe.nome}")).isEqualTo("Editor");
     }
 
     @Test
@@ -158,6 +161,8 @@ class CertificateVariablesServicesTest {
                 List.of("{evento.carga_horaria}"), 10L, 12L, USER_ID);
 
         assertThat(values.get("{evento.carga_horaria}")).isEqualTo("3.5");
+        assertThat(values.get("{ministrante.carga_horaria}")).isEqualTo("3.5");
+        assertThat(values.get("{ministrante.nome}")).isEqualTo("Ministrante");
     }
 
     private Event finishedEvent() {
@@ -171,6 +176,7 @@ class CertificateVariablesServicesTest {
                 .title("Evento")
                 .startDate(now.minusDays(2))
                 .endDate(now.minusDays(1))
+                .organization("Organização de teste")
                 .teamCertificateWorkloadHours(teamWorkloadHours)
                 .ownerId(UUID.randomUUID())
                 .build();

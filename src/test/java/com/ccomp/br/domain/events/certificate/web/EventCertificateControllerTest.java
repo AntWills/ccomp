@@ -217,6 +217,16 @@ class EventCertificateControllerTest {
     }
 
     @Test
+    void loadInstructorCertificateVariables_returnsRoleSpecificVariables() throws Exception {
+        mockMvc.perform(get("/api/events/certificate-variables").param("type", "INSTRUCTOR"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").value("{ministrante.nome}"))
+                .andExpect(jsonPath("$[1]").value("{ministrante.carga_horaria}"))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.hasItem("{atividade.nome}"))));
+    }
+
+    @Test
     void validateCertificate_validCode_returnsCertificateData() throws Exception {
         when(certificateValidatorService.validate("ABC12345"))
                 .thenReturn(new CertificateValidationResponse(

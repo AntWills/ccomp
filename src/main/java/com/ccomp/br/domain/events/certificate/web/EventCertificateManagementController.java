@@ -5,6 +5,7 @@ import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.dto.BoxTemplateResponse;
 import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
 import com.ccomp.br.domain.events.certificate.dto.SaveCertificateBoxesRequest;
+import com.ccomp.br.domain.events.certificate.enums.EnumCertificateVariableContext;
 import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.module.certificate.Certificate;
@@ -254,23 +255,21 @@ public class EventCertificateManagementController {
     }
 
     @Operation(
-            summary = "Consultar variaveis dos certificados",
-            description = "Retorna o template de caixas compartilhado por todas as atividades do evento. " +
-                    "Se ainda não houver configuração salva, retorna o template padrão. Requer acesso de visualização do evento."
+            summary = "Listar variáveis suportadas por tipo de certificado",
+            description = "Retorna somente as variáveis válidas para o contexto selecionado: PARTICIPANT, ACTIVITY, INSTRUCTOR ou EDITOR. Se omitido, usa PARTICIPANT."
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Lista de variaveis suportadas",
+            @ApiResponse(responseCode = "200", description = "Lista de variáveis para o contexto informado",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)),
-            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de visualização do evento",
-                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Evento não encontrado",
+            @ApiResponse(responseCode = "400", description = "Contexto de certificado inválido",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
     })
     @GetMapping(value = "/certificate-variables", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<String>> loadActivityBoxTemplate() {
-        return ResponseEntity.ok(CertificateVariablesServices.VARIABLES);
+    public ResponseEntity<List<String>> listCertificateVariables(
+            @RequestParam(defaultValue = "PARTICIPANT") EnumCertificateVariableContext type
+    ) {
+        return ResponseEntity.ok(CertificateVariablesServices.variablesFor(type));
     }
 
     @Operation(
@@ -356,9 +355,13 @@ public class EventCertificateManagementController {
     private Map<String, String> mockCertificateVariables() {
         return Map.ofEntries(
                 Map.entry("{participante.nome}", "Nome de Exemplo"),
+                Map.entry("{ministrante.nome}", "Nome de Exemplo"),
+                Map.entry("{equipe.nome}", "Nome de Exemplo"),
                 Map.entry("{evento.title}", "Evento de Exemplo"),
                 Map.entry("{evento.local}", "Auditório de Exemplo"),
                 Map.entry("{evento.carga_horaria}", "20 horas"),
+                Map.entry("{ministrante.carga_horaria}", "12 horas"),
+                Map.entry("{equipe.carga_horaria}", "8 horas"),
                 Map.entry("{atividade.nome}", "Atividade de Exemplo"),
                 Map.entry("{atividade.local}", "Sala de Exemplo"),
                 Map.entry("{atividade.carga_horaria}", "4 horas"),

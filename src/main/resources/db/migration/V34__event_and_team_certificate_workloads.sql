@@ -1,6 +1,7 @@
 ALTER TABLE tb_events
     ADD COLUMN workload_hours NUMERIC,
     ADD COLUMN team_certificate_workload_hours NUMERIC,
+    ADD COLUMN organization VARCHAR(255),
     ADD CONSTRAINT chk_events_workload_hours_non_negative
         CHECK (workload_hours IS NULL OR workload_hours >= 0),
     ADD CONSTRAINT chk_events_team_certificate_workload_hours_non_negative

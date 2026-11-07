@@ -108,7 +108,20 @@ class CertificateBoxServicesTest {
                 .hasMessage("A lista de caixas não pode estar vazia.");
         assertThatThrownBy(() -> createService().saveBoxTemplate(EVENT_ID, USER_ID, List.of(box("{variavel.invalida}"))))
                 .isInstanceOf(DomainException.class)
-                .hasMessage("Variável não suportada no template: {variavel.invalida}");
+                .hasMessage("Variável não suportada para certificado PARTICIPANT: {variavel.invalida}");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void saveInstructorTemplate_rejectsActivityOnlyVariables() {
+        EventDTO event = event();
+        when(eventCache.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(accessPolicy.canEdit(event, USER_ID)).thenReturn(true);
+
+        assertThatThrownBy(() -> createService().saveBoxTemplate(EVENT_ID, USER_ID,
+                List.of(box("{atividade.nome}")), EnumEventCertificateTemplateType.INSTRUCTOR))
+                .isInstanceOf(DomainException.class)
+                .hasMessage("Variável não suportada para certificado INSTRUCTOR: {atividade.nome}");
         verify(repository, never()).save(any());
     }
 

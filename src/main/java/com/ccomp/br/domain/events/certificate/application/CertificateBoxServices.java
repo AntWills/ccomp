@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.certificate.application;
 
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
+import com.ccomp.br.domain.events.certificate.enums.EnumCertificateVariableContext;
 import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplateRepository;
@@ -71,7 +72,7 @@ public class CertificateBoxServices {
         if (boxes.size() > MAX_BOXES)
             throw new DomainException("O template aceita no máximo 30 caixas de texto.");
 
-        List<String> variables = CertificateTemplateVariableExtractor.extract(boxes);
+        List<String> variables = CertificateTemplateVariableExtractor.extract(boxes, variableContext(templateType));
 
         EventBoxTemplate template = boxTemplateRepository.findByEventIdAndTemplateType(eventId, templateType)
                 .orElseGet(() -> certificateFetcher.fetchBoxTemplate(eventId, templateType));
@@ -80,5 +81,13 @@ public class CertificateBoxServices {
         template.setVariables(variables);
         template.setTemplateType(templateType);
         boxTemplateRepository.save(template);
+    }
+
+    private EnumCertificateVariableContext variableContext(EnumEventCertificateTemplateType templateType) {
+        return switch (templateType) {
+            case PARTICIPANT -> EnumCertificateVariableContext.PARTICIPANT;
+            case INSTRUCTOR -> EnumCertificateVariableContext.INSTRUCTOR;
+            case EDITOR -> EnumCertificateVariableContext.EDITOR;
+        };
     }
 }

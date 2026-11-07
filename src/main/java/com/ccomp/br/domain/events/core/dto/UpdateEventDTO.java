@@ -34,7 +34,10 @@ public record UpdateEventDTO(
         BigDecimal workloadHours,
         @DecimalMin(value = "0.0", inclusive = true)
         @Schema(description = "Carga horária concedida aos certificados do owner e dos editores ativos.", example = "8")
-        BigDecimal teamCertificateWorkloadHours
+        BigDecimal teamCertificateWorkloadHours,
+        @Size(max = 255, message = "A organização deve ter no máximo 255 caracteres.")
+        @Schema(description = "Organização responsável pelo evento. Opcional.", example = "Instituto Federal do Maranhão")
+        String organization
 ) {
     public Optional<String> titleOpt() { return Optional.ofNullable(title); }
 }

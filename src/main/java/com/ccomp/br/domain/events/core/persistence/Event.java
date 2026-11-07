@@ -117,6 +117,9 @@ public class Event {
     @Column(name = "team_certificate_workload_hours")
     private BigDecimal teamCertificateWorkloadHours;
 
+    @Column(name = "organization", length = 255)
+    private String organization;
+
     @Column(name = "address")
     private String address;
 

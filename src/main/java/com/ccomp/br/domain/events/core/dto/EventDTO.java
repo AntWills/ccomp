@@ -43,7 +43,9 @@ public record EventDTO(
         @Schema(description = "Carga horária base do evento, somada às atividades com presença no certificado do participante.")
         BigDecimal workloadHours,
         @Schema(description = "Carga horária configurada para certificados do owner e de editores ativos.")
-        BigDecimal teamCertificateWorkloadHours
+        BigDecimal teamCertificateWorkloadHours,
+        @Schema(description = "Organização responsável pelo evento.")
+        String organization
 ) {
     public EventDTO(Long id, String title, String slug, String summary, String content, String coverImageKey,
                     EnumEventCategory category, EnumEventFormat format,
@@ -54,7 +56,7 @@ public record EventDTO(
                     LocalDateTime createdAt, LocalDateTime updatedAt, String address) {
         this(id, title, slug, summary, content, coverImageKey, category, format, scheduleConflictPolicy,
                 status, startDate, endDate, executionStatus, enrollmentStartDate, enrollmentEndDate,
-                enrollmentPaused, enrollmentStatus, ownerId, createdAt, updatedAt, address, null, null);
+                enrollmentPaused, enrollmentStatus, ownerId, createdAt, updatedAt, address, null, null, null);
     }
 
     public boolean isPubliclyAccessible() {

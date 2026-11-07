@@ -53,6 +53,7 @@ class EventActivityDslRepositoryTest {
                 .category(EnumEventCategory.ACADEMIC_EDUCATIONAL)
                 .format(EnumEventFormat.IN_PERSON)
                 .ownerId(UUID.randomUUID())
+                .organization("Organização de teste")
                 .build();
         entityManager.persist(event);
 
@@ -75,6 +76,8 @@ class EventActivityDslRepositoryTest {
                 .isEqualByComparingTo("2.5");
         assertThat(eventActivityDslRepository.findConfirmedInstructorAccount(
                 confirmedInstructor.getId(), event.getId())).contains(instructorId);
+        assertThat(entityManager.find(Event.class, event.getId()).getOrganization())
+                .isEqualTo("Organização de teste");
     }
 
     private EventActivity activity(Event event, String title, BigDecimal workloadHours) {

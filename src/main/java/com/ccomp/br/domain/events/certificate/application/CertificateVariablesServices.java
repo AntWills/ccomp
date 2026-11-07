@@ -3,17 +3,18 @@ package com.ccomp.br.domain.events.certificate.application;
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
-import com.ccomp.br.domain.events.certificate.persistence.EventCertificateValidationCode;
+import com.ccomp.br.domain.events.core.enums.EnumEventExecutionStatus;
+import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
-import com.ccomp.br.domain.events.core.enums.EnumEventExecutionStatus;
-import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
 import com.ccomp.br.domain.events.certificate.enums.EnumCertificateType;
+import com.ccomp.br.domain.events.certificate.enums.EnumCertificateVariableContext;
+import com.ccomp.br.domain.events.certificate.persistence.EventCertificateValidationCode;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
@@ -32,6 +33,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
+import java.util.stream.Stream;
 
 @Service
 public class CertificateVariablesServices {
@@ -47,18 +49,67 @@ public class CertificateVariablesServices {
     private final EnrollmentRepository enrollmentRepository;
     private final EventRepository eventRepository;
 
-    public static final List<String> VARIABLES = List.of(
+    public static final List<String> PARTICIPANT_VARIABLES = List.of(
             "{participante.nome}",
+            "{evento.carga_horaria}",
             "{evento.title}",
             "{evento.local}",
-            "{evento.carga_horaria}",
-            "{atividade.nome}",
-            "{atividade.local}",
-            "{atividade.carga_horaria}",
             "{evento.organizacao}",
             "{validacao.codigo}",
             "{validacao.url}"
     );
+
+    public static final List<String> ACTIVITY_VARIABLES = List.of(
+            "{participante.nome}",
+            "{evento.title}",
+            "{evento.local}",
+            "{evento.organizacao}",
+            "{evento.carga_horaria}",
+            "{atividade.nome}",
+            "{atividade.local}",
+            "{atividade.carga_horaria}",
+            "{validacao.codigo}",
+            "{validacao.url}"
+    );
+
+    public static final List<String> INSTRUCTOR_VARIABLES = List.of(
+            "{ministrante.nome}",
+            "{ministrante.carga_horaria}",
+            "{evento.title}",
+            "{evento.local}",
+            "{evento.organizacao}",
+            "{validacao.codigo}",
+            "{validacao.url}"
+    );
+
+    public static final List<String> EDITOR_VARIABLES = List.of(
+            "{equipe.nome}",
+            "{equipe.carga_horaria}",
+            "{evento.title}",
+            "{evento.local}",
+            "{evento.organizacao}",
+            "{validacao.codigo}",
+            "{validacao.url}"
+    );
+
+    public static List<String> variablesFor(EnumCertificateVariableContext context) {
+        return switch (context) {
+            case PARTICIPANT -> PARTICIPANT_VARIABLES;
+            case ACTIVITY -> ACTIVITY_VARIABLES;
+            case INSTRUCTOR -> INSTRUCTOR_VARIABLES;
+            case EDITOR -> EDITOR_VARIABLES;
+        };
+    }
+
+    static List<String> acceptedVariablesFor(EnumCertificateVariableContext context) {
+        return switch (context) {
+            case INSTRUCTOR -> Stream.concat(INSTRUCTOR_VARIABLES.stream(),
+                    List.of("{participante.nome}", "{evento.carga_horaria}").stream()).toList();
+            case EDITOR -> Stream.concat(EDITOR_VARIABLES.stream(),
+                    List.of("{participante.nome}", "{evento.carga_horaria}").stream()).toList();
+            default -> variablesFor(context);
+        };
+    }
 
     public CertificateVariablesServices(EnrollmentActivityDslRepository enrollmentActivityDslRepository,
                                         EventActivityDslRepository activityDslRepository,
@@ -127,6 +178,8 @@ public class CertificateVariablesServices {
             values.put("{evento.local}", event.getAddress() != null
                     ? event.getAddress()
                     : "Não consta");
+            values.put("{evento.organizacao}", event.getOrganization() != null
+                    ? event.getOrganization() : "Não consta");
             if (workloadFuture.join() != null) {
                 values.put("{evento.carga_horaria}", workloadFuture.join().stripTrailingZeros().toPlainString());
             }
@@ -190,7 +243,17 @@ public class CertificateVariablesServices {
         values.put("{participante.nome}", user.name());
         values.put("{evento.title}", event.getTitle());
         values.put("{evento.local}", event.getAddress() == null ? "Não consta" : event.getAddress());
-        values.put("{evento.carga_horaria}", workload.stripTrailingZeros().toPlainString());
+        String formattedWorkload = workload.stripTrailingZeros().toPlainString();
+        values.put("{evento.carga_horaria}", formattedWorkload);
+        values.put("{evento.organizacao}", event.getOrganization() != null
+                ? event.getOrganization() : "Não consta");
+        if (type == EnumCertificateType.INSTRUCTOR) {
+            values.put("{ministrante.nome}", user.name());
+            values.put("{ministrante.carga_horaria}", formattedWorkload);
+        } else if (type == EnumCertificateType.EDITOR) {
+            values.put("{equipe.nome}", user.name());
+            values.put("{equipe.carga_horaria}", formattedWorkload);
+        }
         extractValuesFromValidator(values, code);
         return values;
     }
@@ -284,6 +347,8 @@ public class CertificateVariablesServices {
         if (event != null) {
             values.put("{evento.title}", event.title());
             values.put("{evento.local}", event.address() != null ? event.address() : "Não consta");
+            values.put("{evento.organizacao}", event.organization() != null
+                    ? event.organization() : "Não consta");
             values.put("{evento.carga_horaria}", addHours(event.workloadHours(),
                     activityDslRepository.sumWorkloadHoursByCheckIn(userId, event.id()))
                     .stripTrailingZeros().toPlainString());
