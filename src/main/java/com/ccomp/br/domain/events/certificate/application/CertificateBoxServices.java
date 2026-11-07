@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.certificate.application;
 
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
+import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplateRepository;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
@@ -35,17 +36,30 @@ public class CertificateBoxServices {
 
     @Transactional(readOnly = true)
     public EventBoxTemplate loadBoxTemplate(long eventId, UUID userId) {
+        return loadBoxTemplate(eventId, userId, EnumEventCertificateTemplateType.PARTICIPANT);
+    }
+
+    @Transactional(readOnly = true)
+    public EventBoxTemplate loadBoxTemplate(long eventId, UUID userId, EnumEventCertificateTemplateType templateType) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         if (!accessPolicy.canView(event, userId))
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
-        return certificateFetcher.fetchBoxTemplate(eventId);
+        return templateType == EnumEventCertificateTemplateType.PARTICIPANT
+                ? certificateFetcher.fetchBoxTemplate(eventId)
+                : certificateFetcher.fetchBoxTemplate(eventId, templateType);
     }
 
     @Transactional
     public void saveBoxTemplate(long eventId, UUID userId, List<BoxElementDTO> boxes) {
+        saveBoxTemplate(eventId, userId, boxes, EnumEventCertificateTemplateType.PARTICIPANT);
+    }
+
+    @Transactional
+    public void saveBoxTemplate(long eventId, UUID userId, List<BoxElementDTO> boxes,
+                                EnumEventCertificateTemplateType templateType) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -57,11 +71,14 @@ public class CertificateBoxServices {
         if (boxes.size() > MAX_BOXES)
             throw new DomainException("O template aceita no máximo 30 caixas de texto.");
 
-        EventBoxTemplate template = boxTemplateRepository.findByEventId(eventId)
-                .orElseGet(() -> EventBoxTemplate.builder().eventId(eventId).build());
+        List<String> variables = CertificateTemplateVariableExtractor.extract(boxes);
+
+        EventBoxTemplate template = boxTemplateRepository.findByEventIdAndTemplateType(eventId, templateType)
+                .orElseGet(() -> certificateFetcher.fetchBoxTemplate(eventId, templateType));
 
         template.setBoxes(List.copyOf(boxes));
-        template.setVariables(CertificateTemplateVariableExtractor.extract(boxes));
+        template.setVariables(variables);
+        template.setTemplateType(templateType);
         boxTemplateRepository.save(template);
     }
 }

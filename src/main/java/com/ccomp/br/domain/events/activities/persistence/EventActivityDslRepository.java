@@ -5,10 +5,11 @@ import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
 import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
+import com.ccomp.br.domain.events.instructor.enums.EnumInstructorStatus;
 import com.querydsl.core.BooleanBuilder;
-import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Repository;
@@ -22,6 +23,7 @@ import static com.ccomp.br.domain.events.activities.persistence.QEventActivity.e
 import static com.ccomp.br.domain.events.core.persistence.QEvent.event;
 import static com.ccomp.br.domain.events.enrollments.persistence.QEnrollment.enrollment;
 import static com.ccomp.br.domain.events.enrollments.persistence.QEnrollmentActivity.enrollmentActivity;
+import static com.ccomp.br.domain.events.instructor.persistence.QEventInstructor.eventInstructor;
 
 @Repository
 public class EventActivityDslRepository {
@@ -279,5 +281,29 @@ public class EventActivityDslRepository {
                 .fetchOne();
 
         return result != null ? result : BigDecimal.ZERO;
+    }
+
+    public BigDecimal sumWorkloadHoursByInstructor(UUID userId, Long eventId) {
+        BigDecimal result = queryFactory
+                .select(Expressions.numberTemplate(BigDecimal.class, "coalesce(sum({0}), 0)", eventActivity.workloadHours))
+                .from(eventActivity)
+                .join(eventInstructor).on(eventInstructor.activityId.eq(eventActivity.id))
+                .where(eventInstructor.userId.eq(userId),
+                        eventInstructor.status.eq(EnumInstructorStatus.CONFIRMED),
+                        eventActivity.eventId.eq(eventId))
+                .fetchOne();
+        return result == null ? BigDecimal.ZERO : result;
+    }
+
+    public Optional<UUID> findConfirmedInstructorAccount(Long instructorId, Long eventId) {
+        UUID userId = queryFactory.select(eventInstructor.userId)
+                .from(eventActivity)
+                .join(eventInstructor).on(eventInstructor.activityId.eq(eventActivity.id))
+                .where(eventInstructor.id.eq(instructorId),
+                        eventInstructor.status.eq(EnumInstructorStatus.CONFIRMED),
+                        eventInstructor.userId.isNotNull(),
+                        eventActivity.eventId.eq(eventId))
+                .fetchFirst();
+        return Optional.ofNullable(userId);
     }
 }

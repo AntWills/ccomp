@@ -12,6 +12,8 @@ import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivity;
+import com.ccomp.br.domain.events.instructor.enums.EnumInstructorStatus;
+import com.ccomp.br.domain.events.instructor.persistence.EventInstructor;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,6 +42,61 @@ class EventActivityDslRepositoryTest {
 
     @Autowired
     private EventActivityDslRepository eventActivityDslRepository;
+
+    @Test
+    @DisplayName("Soma somente a carga das atividades com vínculo confirmado do ministrante")
+    void sumsWorkloadForConfirmedInstructorActivities() {
+        UUID instructorId = UUID.randomUUID();
+        Event event = Event.builder()
+                .title("Evento com ministrantes")
+                .slug("evento-ministrantes-workload")
+                .category(EnumEventCategory.ACADEMIC_EDUCATIONAL)
+                .format(EnumEventFormat.IN_PERSON)
+                .ownerId(UUID.randomUUID())
+                .build();
+        entityManager.persist(event);
+
+        EventActivity withHours = activity(event, "Atividade com carga", BigDecimal.valueOf(2.5));
+        EventActivity withoutHours = activity(event, "Atividade sem carga", null);
+        EventActivity canceledActivity = activity(event, "Vínculo cancelado", BigDecimal.valueOf(4));
+        entityManager.persist(withHours);
+        entityManager.persist(withoutHours);
+        entityManager.persist(canceledActivity);
+        entityManager.flush();
+
+        EventInstructor confirmedInstructor = instructor(withHours, instructorId, EnumInstructorStatus.CONFIRMED);
+        entityManager.persist(confirmedInstructor);
+        entityManager.persist(instructor(withoutHours, instructorId, EnumInstructorStatus.CONFIRMED));
+        entityManager.persist(instructor(canceledActivity, instructorId, EnumInstructorStatus.CANCELED));
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(eventActivityDslRepository.sumWorkloadHoursByInstructor(instructorId, event.getId()))
+                .isEqualByComparingTo("2.5");
+        assertThat(eventActivityDslRepository.findConfirmedInstructorAccount(
+                confirmedInstructor.getId(), event.getId())).contains(instructorId);
+    }
+
+    private EventActivity activity(Event event, String title, BigDecimal workloadHours) {
+        return EventActivity.builder()
+                .title(title)
+                .type(EnumActivityType.LECTURE)
+                .displayOrder(0L)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .createdAt(LocalDateTime.now())
+                .workloadHours(workloadHours)
+                .event(event)
+                .build();
+    }
+
+    private EventInstructor instructor(EventActivity activity, UUID userId, EnumInstructorStatus status) {
+        return EventInstructor.builder()
+                .userId(userId)
+                .name("Ministrante")
+                .activityId(activity.getId())
+                .status(status)
+                .build();
+    }
 
     @Test
     @DisplayName("Deve realizar a paginação de atividades por evento baseada em cursor ordenada por createdAt decrescente")

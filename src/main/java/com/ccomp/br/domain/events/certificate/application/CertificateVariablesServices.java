@@ -13,6 +13,7 @@ import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
+import com.ccomp.br.domain.events.certificate.enums.EnumCertificateType;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
@@ -85,13 +86,7 @@ public class CertificateVariablesServices {
         if (userId == null)
             throw new AccessDeniedException("É necessário estar autenticado para gerar o certificado.");
 
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-
-        if (event.getExecutionStatus() != EnumEventExecutionStatus.FINISHED
-                || event.getStatus() == EnumEventStatus.CANCELED) {
-            throw new DomainException("O certificado do evento só pode ser emitido após seu encerramento.");
-        }
+        Event event = findCertificateEligibleEvent(eventId);
 
         Enrollment enrollment = enrollmentRepository.findByUserIdAndEvent(userId, event)
                 .orElseThrow(() -> new ResourceNotFoundException("O usuário não é inscrito no evento."));
@@ -113,7 +108,8 @@ public class CertificateVariablesServices {
             // Fork-2: Soma da carga horária das atividades em que o participante fez check-in
             CompletableFuture<BigDecimal> workloadFuture = needsWorkload
                     ? CompletableFuture.supplyAsync(
-                            () -> activityDslRepository.sumWorkloadHoursByCheckIn(userId, eventId), executor)
+                            () -> addHours(event.getWorkloadHours(),
+                                    activityDslRepository.sumWorkloadHoursByCheckIn(userId, eventId)), executor)
                     : CompletableFuture.completedFuture(null);
 
             // Fork-3: Código de validação (emitido uma única vez por participante/evento)
@@ -143,6 +139,64 @@ public class CertificateVariablesServices {
             }
             throw new IllegalStateException("Falha ao carregar variaveis do certificado.", e.getCause());
         }
+    }
+
+    public Map<String, String> loadInstructorVariablesValues(List<String> variables, Long eventId,
+                                                            Long instructorId, UUID userId) {
+        Event event = findCertificateEligibleEvent(eventId);
+        if (activityDslRepository.findConfirmedInstructorAccount(instructorId, eventId)
+                .filter(userId::equals).isEmpty()) {
+            throw new AccessDeniedException("O usuário não possui vínculo confirmado como ministrante neste evento.");
+        }
+        return loadRoleEventVariables(variables, event, userId,
+                activityDslRepository.sumWorkloadHoursByInstructor(userId, eventId), EnumCertificateType.INSTRUCTOR);
+    }
+
+    public UUID findInstructorCertificateRecipient(Long eventId, Long instructorId) {
+        return activityDslRepository.findConfirmedInstructorAccount(instructorId, eventId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Ministrante confirmado com conta vinculada não encontrado neste evento."));
+    }
+
+    public Map<String, String> loadEditorVariablesValues(List<String> variables, Long eventId, UUID userId) {
+        Event event = findCertificateEligibleEvent(eventId);
+        if (event.getTeamCertificateWorkloadHours() == null) {
+            throw new DomainException("A carga horária dos certificados da equipe não foi definida para este evento.");
+        }
+        return loadRoleEventVariables(variables, event, userId,
+                event.getTeamCertificateWorkloadHours(), EnumCertificateType.EDITOR);
+    }
+
+    private Event findCertificateEligibleEvent(Long eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        if (event.getExecutionStatus() != EnumEventExecutionStatus.FINISHED
+                || event.getStatus() == EnumEventStatus.CANCELED) {
+            throw new DomainException("O certificado do evento só pode ser emitido após seu encerramento.");
+        }
+        return event;
+    }
+
+    private Map<String, String> loadRoleEventVariables(List<String> variables, Event event, UUID userId,
+                                                        BigDecimal workload, EnumCertificateType type) {
+        UserDTO user = userManagement.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+        boolean needsCode = variables == null || variables.contains("{validacao.codigo}")
+                || variables.contains("{validacao.url}");
+        EventCertificateValidationCode code = needsCode
+                ? validatorService.issueForEvent(event.getId(), userId, type)
+                : null;
+        Map<String, String> values = new HashMap<>();
+        values.put("{participante.nome}", user.name());
+        values.put("{evento.title}", event.getTitle());
+        values.put("{evento.local}", event.getAddress() == null ? "Não consta" : event.getAddress());
+        values.put("{evento.carga_horaria}", workload.stripTrailingZeros().toPlainString());
+        extractValuesFromValidator(values, code);
+        return values;
+    }
+
+    private BigDecimal addHours(BigDecimal first, BigDecimal second) {
+        return (first == null ? BigDecimal.ZERO : first).add(second == null ? BigDecimal.ZERO : second);
     }
 
     public Map<String, String> loadActivityVariablesValues(@NonNull List<String> variables, Long activityId, UUID userId) {
@@ -230,8 +284,9 @@ public class CertificateVariablesServices {
         if (event != null) {
             values.put("{evento.title}", event.title());
             values.put("{evento.local}", event.address() != null ? event.address() : "Não consta");
-            values.put("{evento.carga_horaria}",
-                    activityDslRepository.sumWorkloadHoursByCheckIn(userId, event.id()).stripTrailingZeros().toPlainString());
+            values.put("{evento.carga_horaria}", addHours(event.workloadHours(),
+                    activityDslRepository.sumWorkloadHoursByCheckIn(userId, event.id()))
+                    .stripTrailingZeros().toPlainString());
         }
     }
 

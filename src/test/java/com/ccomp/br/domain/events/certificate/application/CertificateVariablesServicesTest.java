@@ -39,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 class CertificateVariablesServicesTest {
@@ -115,6 +116,69 @@ class CertificateVariablesServicesTest {
                 .loadEventVariablesValues(List.of(), 10L, USER_ID))
                 .isInstanceOf(DomainException.class)
                 .hasMessage("O certificado do evento só pode ser emitido após seu encerramento.");
+    }
+
+    @Test
+    void loadEventVariables_addsBaseWorkloadToAttendedActivityWorkload() {
+        Event event = finishedEvent(null);
+        event.setWorkloadHours(new BigDecimal("2.5"));
+        Enrollment enrollment = mock(Enrollment.class);
+        when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+        when(enrollmentRepository.findByUserIdAndEvent(USER_ID, event)).thenReturn(Optional.of(enrollment));
+        when(enrollment.haveCheckIn()).thenReturn(true);
+        when(activityDslRepository.sumWorkloadHoursByCheckIn(USER_ID, 10L)).thenReturn(new BigDecimal("3.5"));
+
+        Map<String, String> values = createService().loadEventVariablesValues(
+                List.of("{evento.carga_horaria}"), 10L, USER_ID);
+
+        assertThat(values.get("{evento.carga_horaria}")).isEqualTo("6");
+    }
+
+    @Test
+    void loadEditorVariables_usesPerEventTeamWorkloadAndDoesNotIssueCodeUnlessRequested() {
+        Event event = finishedEvent(new BigDecimal("8.5"));
+        when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+        when(userManagement.findById(USER_ID)).thenReturn(Optional.of(user("Editor")));
+
+        Map<String, String> values = createService().loadEditorVariablesValues(
+                List.of("{evento.carga_horaria}"), 10L, USER_ID);
+
+        assertThat(values.get("{evento.carga_horaria}")).isEqualTo("8.5");
+    }
+
+    @Test
+    void loadInstructorVariables_usesDslWorkloadFromConfirmedAssignments() {
+        Event event = finishedEvent();
+        when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+        when(activityDslRepository.findConfirmedInstructorAccount(12L, 10L)).thenReturn(Optional.of(USER_ID));
+        when(activityDslRepository.sumWorkloadHoursByInstructor(USER_ID, 10L)).thenReturn(new BigDecimal("3.5"));
+        when(userManagement.findById(USER_ID)).thenReturn(Optional.of(user("Ministrante")));
+
+        Map<String, String> values = createService().loadInstructorVariablesValues(
+                List.of("{evento.carga_horaria}"), 10L, 12L, USER_ID);
+
+        assertThat(values.get("{evento.carga_horaria}")).isEqualTo("3.5");
+    }
+
+    private Event finishedEvent() {
+        return finishedEvent(null);
+    }
+
+    private Event finishedEvent(BigDecimal teamWorkloadHours) {
+        LocalDateTime now = LocalDateTime.now();
+        return Event.builder()
+                .id(10L)
+                .title("Evento")
+                .startDate(now.minusDays(2))
+                .endDate(now.minusDays(1))
+                .teamCertificateWorkloadHours(teamWorkloadHours)
+                .ownerId(UUID.randomUUID())
+                .build();
+    }
+
+    private UserDTO user(String name) {
+        return new UserDTO(USER_ID, name, new EmailAddress("user@example.com"),
+                null, null, null, null, null);
     }
 
     @Test

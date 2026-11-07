@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.certificate.application;
 
 import com.ccomp.br.domain.events.certificate.persistence.*;
+import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -71,7 +72,8 @@ class CertificateFetcherTest {
 
     @Test
     void fetchBoxTemplate_withoutSavedTemplate_returnsDefaultTextAndVariables() {
-        when(boxRepository.findByEventId(EVENT_ID)).thenReturn(Optional.empty());
+        when(boxRepository.findByEventIdAndTemplateType(EVENT_ID, EnumEventCertificateTemplateType.PARTICIPANT))
+                .thenReturn(Optional.empty());
 
         EventBoxTemplate result = createFetcher().fetchBoxTemplate(EVENT_ID);
 

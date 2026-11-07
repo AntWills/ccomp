@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.certificate.application;
 
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
+import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplateRepository;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
@@ -68,7 +69,9 @@ class CertificateBoxServicesTest {
         List<BoxElementDTO> boxes = List.of(box("__{participante.nome}__ em {evento.title}"));
         when(eventCache.findById(EVENT_ID)).thenReturn(Optional.of(event));
         when(accessPolicy.canEdit(event, USER_ID)).thenReturn(true);
-        when(repository.findByEventId(EVENT_ID)).thenReturn(Optional.empty());
+        when(repository.findByEventIdAndTemplateType(EVENT_ID, EnumEventCertificateTemplateType.PARTICIPANT)).thenReturn(Optional.empty());
+        when(fetcher.fetchBoxTemplate(EVENT_ID, EnumEventCertificateTemplateType.PARTICIPANT))
+                .thenReturn(EventBoxTemplate.builder().eventId(EVENT_ID).build());
 
         createService().saveBoxTemplate(EVENT_ID, USER_ID, boxes);
 
@@ -86,7 +89,7 @@ class CertificateBoxServicesTest {
                 .variables(List.of()).boxes(List.of()).build();
         when(eventCache.findById(EVENT_ID)).thenReturn(Optional.of(event));
         when(accessPolicy.canEdit(event, USER_ID)).thenReturn(true);
-        when(repository.findByEventId(EVENT_ID)).thenReturn(Optional.of(existing));
+        when(repository.findByEventIdAndTemplateType(EVENT_ID, EnumEventCertificateTemplateType.PARTICIPANT)).thenReturn(Optional.of(existing));
 
         createService().saveBoxTemplate(EVENT_ID, USER_ID, List.of(box("{evento.title}")));
 

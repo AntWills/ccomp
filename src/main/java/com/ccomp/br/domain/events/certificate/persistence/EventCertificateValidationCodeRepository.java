@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.certificate.persistence;
 
+import com.ccomp.br.domain.events.certificate.enums.EnumCertificateType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
@@ -9,11 +10,13 @@ public interface EventCertificateValidationCodeRepository extends JpaRepository<
 
     Optional<EventCertificateValidationCode> findByCode(String code);
 
-    // Busca apenas o certificado GERAL do evento (onde activity_id é NULL)
-    Optional<EventCertificateValidationCode> findByEventIdAndActivityIdIsNullAndUserId(Long eventId, UUID userId);
+    // Distingue o certificado de participante, ministrante ou equipe do evento.
+    Optional<EventCertificateValidationCode> findByEventIdAndActivityIdIsNullAndUserIdAndCertificateType(
+            Long eventId, UUID userId, EnumCertificateType certificateType);
 
-    // Busca o certificado específico de uma ATIVIDADE
-    Optional<EventCertificateValidationCode> findByActivityIdAndUserId(Long activityId, UUID userId);
+    // Busca o certificado específico de uma atividade.
+    Optional<EventCertificateValidationCode> findByActivityIdAndUserIdAndCertificateType(
+            Long activityId, UUID userId, EnumCertificateType certificateType);
 
     boolean existsByCode(String code);
 }

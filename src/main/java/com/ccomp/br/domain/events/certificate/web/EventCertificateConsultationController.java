@@ -71,6 +71,39 @@ public class EventCertificateConsultationController {
                 .body(certificate.resource());
     }
 
+    @Operation(summary = "Gerar certificado de ministrante",
+            description = "Gera o certificado do ministrante vinculado e com conta associada. O próprio ministrante ou owner, editor ativo, moderator ou admin pode solicitá-lo. Exige evento encerrado; usa template de ministrante e o fundo compartilhado do evento.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
+            @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado ou cancelado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Solicitante sem permissão ou conta sem vínculo de ministrante confirmado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento, ministrante ou conta vinculada não encontrada", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @GetMapping(value = "/{eventId}/instructors/{instructorId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> buildCertificateFromInstructor(@PathVariable Long eventId,
+                                                                    @PathVariable Long instructorId,
+                                                                    @AuthenticationPrincipal @Nullable Jwt jwt) {
+        StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromInstructor(
+                eventId, instructorId, extractUserId(jwt));
+        return certificateResponse(certificate, "certificado-ministrante-%d.png".formatted(instructorId));
+    }
+
+    @Operation(summary = "Gerar certificado da equipe do evento",
+            description = "Gera o certificado do owner ou editor ativo autenticado após o encerramento do evento. Usa template próprio de equipe, fundo compartilhado e a carga horária da equipe configurada no evento.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
+            @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado ou carga horária da equipe não configurada", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Usuário não é owner nem editor ativo do evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @GetMapping(value = "/{eventId}/team-certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> buildCertificateForEditor(@PathVariable Long eventId,
+                                                               @AuthenticationPrincipal @Nullable Jwt jwt) {
+        StorageExternal.StoredFile certificate = certificateServices.buildCertificateForEditor(
+                eventId, extractUserId(jwt));
+        return certificateResponse(certificate, "certificado-equipe-%d.png".formatted(eventId));
+    }
+
     @Operation(summary = "Validar certificado pelo código",
             description = "Rota pública. Retorna os dados associados ao código impresso no certificado ou 404 se ele não existir.",
             security = {})
@@ -85,5 +118,12 @@ public class EventCertificateConsultationController {
 
     private @Nullable UUID extractUserId(@Nullable Jwt jwt) {
         return jwt == null ? null : UUID.fromString(jwt.getSubject());
+    }
+
+    private ResponseEntity<Resource> certificateResponse(StorageExternal.StoredFile certificate, String fileName) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(certificate.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(fileName))
+                .body(certificate.resource());
     }
 }

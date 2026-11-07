@@ -5,6 +5,7 @@ import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.dto.BoxTemplateResponse;
 import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
 import com.ccomp.br.domain.events.certificate.dto.SaveCertificateBoxesRequest;
+import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.module.certificate.Certificate;
 import com.ccomp.br.shared.dto.MessageResponse;
@@ -50,7 +51,7 @@ public class EventCertificateManagementController {
     @Operation(
             summary = "Consultar template do certificado do evento",
             description = "Retorna as caixas de texto e as variáveis em uso no certificado do evento. " +
-                    "Se ainda não houver template salvo, retorna o template padrão. " +
+                    "O parâmetro `type` seleciona PARTICIPANT, INSTRUCTOR ou EDITOR; se não houver template salvo, retorna o padrão daquele tipo. " +
                     "Requer acesso de visualização do evento."
     )
     @ApiResponses(value = {
@@ -67,9 +68,12 @@ public class EventCertificateManagementController {
     @GetMapping(value = "/{eventId}/certificate-box-template", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<BoxTemplateResponse> getBoxTemplate(
             @PathVariable Long eventId,
+            @RequestParam(defaultValue = "PARTICIPANT") EnumEventCertificateTemplateType type,
             @AuthenticationPrincipal @Nullable Jwt jwt
     ) {
-        var template = certificateBoxServices.loadBoxTemplate(eventId, extractUserId(jwt));
+        var template = type == EnumEventCertificateTemplateType.PARTICIPANT
+                ? certificateBoxServices.loadBoxTemplate(eventId, extractUserId(jwt))
+                : certificateBoxServices.loadBoxTemplate(eventId, extractUserId(jwt), type);
         return ResponseEntity.ok(new BoxTemplateResponse(template.getBoxes(), template.getVariables()));
     }
 
@@ -129,7 +133,7 @@ public class EventCertificateManagementController {
 
     @Operation(
             summary = "Gerar prévia do certificado do evento",
-            description = "Renderiza o cover e as caixas salvas para o evento, preenchendo as variáveis com dados de exemplo. " +
+            description = "Renderiza o fundo compartilhado e as caixas do tipo selecionado (PARTICIPANT, INSTRUCTOR ou EDITOR), preenchendo as variáveis com dados de exemplo. " +
                     "Requer acesso de visualização do evento."
     )
     @ApiResponses(value = {
@@ -146,11 +150,14 @@ public class EventCertificateManagementController {
             produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> previewEventCertificate(
             @PathVariable Long eventId,
+            @RequestParam(defaultValue = "PARTICIPANT") EnumEventCertificateTemplateType type,
             @AuthenticationPrincipal @Nullable Jwt jwt
     ) {
         UUID userId = extractUserId(jwt);
         var cover = certificateCoverService.loadCoverTemplate(eventId, userId);
-        var template = certificateBoxServices.loadBoxTemplate(eventId, userId);
+        var template = type == EnumEventCertificateTemplateType.PARTICIPANT
+                ? certificateBoxServices.loadBoxTemplate(eventId, userId)
+                : certificateBoxServices.loadBoxTemplate(eventId, userId, type);
         return renderPreview(cover, template.getBoxes(), mockCertificateVariables());
     }
 
@@ -268,7 +275,7 @@ public class EventCertificateManagementController {
 
     @Operation(
             summary = "Salvar template do evento",
-            description = "Cria ou substitui as caixas de texto persistidas para o evento. Aceita até 30 caixas. " +
+            description = "Cria ou substitui as caixas do tipo selecionado pelo parâmetro `type` (PARTICIPANT, INSTRUCTOR ou EDITOR). Aceita até 30 caixas. " +
                     "Requer permissão de edição do evento (dono, editor ativo ou moderador/admin)."
     )
     @ApiResponses(value = {
@@ -289,9 +296,14 @@ public class EventCertificateManagementController {
     public ResponseEntity<MessageResponse> saveBoxTemplate(
             @PathVariable Long eventId,
             @Valid @RequestBody SaveCertificateBoxesRequest request,
+            @RequestParam(defaultValue = "PARTICIPANT") EnumEventCertificateTemplateType type,
             @AuthenticationPrincipal @Nullable Jwt jwt
     ) {
-        certificateBoxServices.saveBoxTemplate(eventId, extractUserId(jwt), request.boxes());
+        if (type == EnumEventCertificateTemplateType.PARTICIPANT) {
+            certificateBoxServices.saveBoxTemplate(eventId, extractUserId(jwt), request.boxes());
+        } else {
+            certificateBoxServices.saveBoxTemplate(eventId, extractUserId(jwt), request.boxes(), type);
+        }
         return ResponseEntity.ok(new MessageResponse("Template de caixas salvo com sucesso."));
     }
 

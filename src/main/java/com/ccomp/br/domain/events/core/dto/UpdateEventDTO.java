@@ -3,8 +3,11 @@ package com.ccomp.br.domain.events.core.dto;
 import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
 import com.ccomp.br.domain.events.core.enums.EnumScheduleConflictPolicy;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Size;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -25,7 +28,13 @@ public record UpdateEventDTO(
         LocalDateTime endDate,
         LocalDateTime enrollmentStartDate,
         LocalDateTime enrollmentEndDate,
-        Boolean enrollmentPaused
+        Boolean enrollmentPaused,
+        @DecimalMin(value = "0.0", inclusive = true)
+        @Schema(description = "Carga horária base do evento, somada às atividades com presença ao emitir certificado de participante.", example = "2.5")
+        BigDecimal workloadHours,
+        @DecimalMin(value = "0.0", inclusive = true)
+        @Schema(description = "Carga horária concedida aos certificados do owner e dos editores ativos.", example = "8")
+        BigDecimal teamCertificateWorkloadHours
 ) {
     public Optional<String> titleOpt() { return Optional.ofNullable(title); }
 }

@@ -13,6 +13,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -109,6 +110,12 @@ public class Event {
 
     @Column(name = "end_date")
     private LocalDateTime endDate;
+
+    @Column(name = "workload_hours")
+    private BigDecimal workloadHours;
+
+    @Column(name = "team_certificate_workload_hours")
+    private BigDecimal teamCertificateWorkloadHours;
 
     @Column(name = "address")
     private String address;

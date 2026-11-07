@@ -5,6 +5,7 @@ import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplateRepository;
 import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplateRepository;
+import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.events.certificate.persistence.EventCoverTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventCoverTemplateRepository;
 import com.ccomp.br.domain.storage.external.StorageExternal;
@@ -57,12 +58,18 @@ public class CertificateFetcher {
 
     @Transactional(readOnly = true)
     public EventBoxTemplate fetchBoxTemplate(long eventId) {
-        return boxTemplateRepository.findByEventId(eventId)
-                .orElse(EventBoxTemplate.builder()
+        return fetchBoxTemplate(eventId, EnumEventCertificateTemplateType.PARTICIPANT);
+    }
+
+    @Transactional(readOnly = true)
+    public EventBoxTemplate fetchBoxTemplate(long eventId, EnumEventCertificateTemplateType templateType) {
+        return boxTemplateRepository.findByEventIdAndTemplateType(eventId, templateType)
+                .orElseGet(() -> EventBoxTemplate.builder()
                         .eventId(eventId)
+                        .templateType(templateType)
                         .boxes(List.of(
                                 new BoxElementDTO(
-                                        "Certificamos que *{participante.nome}* participou de *{evento.title}*, com carga horária de {evento.carga_horaria}.",
+                                        defaultEventCertificateText(templateType),
                                         0.25, 0.5, 0.5, 25f, null, null
                                 ))
                         )
@@ -73,6 +80,14 @@ public class CertificateFetcher {
                                 )
                         )
                         .build());
+    }
+
+    private String defaultEventCertificateText(EnumEventCertificateTemplateType templateType) {
+        return switch (templateType) {
+            case PARTICIPANT -> "Certificamos que *{participante.nome}* participou de *{evento.title}*, com carga horária de {evento.carga_horaria}.";
+            case INSTRUCTOR -> "Certificamos que *{participante.nome}* atuou como ministrante ou auxiliar em atividade(s) de *{evento.title}*, com carga horária de {evento.carga_horaria}.";
+            case EDITOR -> "Certificamos que *{participante.nome}* integrou a equipe de *{evento.title}*, com carga horária de {evento.carga_horaria}.";
+        };
     }
 
     @Transactional(readOnly = true)

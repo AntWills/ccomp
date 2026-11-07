@@ -5,6 +5,7 @@ import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
 import com.ccomp.br.domain.events.certificate.persistence.EventCertificateValidationCode;
 import com.ccomp.br.domain.events.certificate.persistence.EventCertificateValidationCodeRepository;
+import com.ccomp.br.domain.events.certificate.enums.EnumCertificateType;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.exceptions.DomainException;
@@ -51,7 +52,7 @@ public class CertificateValidatorService {
         var eventDto = eventCache.findById(validationCode.getEventId())
                 .orElseThrow(() -> new DomainException("O evento vinculado não existe."));
 
-        if (validationCode.getActivityId() != null) {
+        if (validationCode.getCertificateType() == EnumCertificateType.ACTIVITY || validationCode.getActivityId() != null) {
             var activity = activityCache.findById(validationCode.getActivityId())
                     .orElseThrow(() -> new DomainException("A atividade vinculada não existe."));
 
@@ -61,8 +62,17 @@ public class CertificateValidatorService {
                     eventDto.title(),
                     activity.title(),
                     formatWorkloadHours(activity.workloadHours()),
-                    validationCode.getCreatedAt());
+                    validationCode.getCreatedAt(), EnumCertificateType.ACTIVITY);
         }
+
+        BigDecimal workload = switch (validationCode.getCertificateType()) {
+            case EDITOR -> eventDto.teamCertificateWorkloadHours();
+            case INSTRUCTOR -> activityDslRepository.sumWorkloadHoursByInstructor(
+                    userDto.id(), eventDto.id());
+            case EVENT -> addHours(eventDto.workloadHours(),
+                    activityDslRepository.sumWorkloadHoursByCheckIn(userDto.id(), eventDto.id()));
+            case ACTIVITY -> BigDecimal.ZERO;
+        };
 
         return new CertificateValidationResponse(
                 validationCode.getCode(),
@@ -70,8 +80,9 @@ public class CertificateValidatorService {
                 userDto.name(),
                 eventDto.title(),
                 null,
-                formatWorkloadHours(activityDslRepository.sumWorkloadHoursByCheckIn(userDto.id(), eventDto.id())),
-                validationCode.getCreatedAt()
+                formatWorkloadHours(workload),
+                validationCode.getCreatedAt(),
+                validationCode.getCertificateType()
         );
     }
 
@@ -100,25 +111,37 @@ public class CertificateValidatorService {
      */
     @Transactional
     public EventCertificateValidationCode issueForEvent(Long eventId, UUID userId) {
-        return validationCodeRepository.findByEventIdAndActivityIdIsNullAndUserId(eventId, userId)
-                .orElseGet(() -> createAndSaveValidationCode(eventId, null, userId));
+        return issueForEvent(eventId, userId, EnumCertificateType.EVENT);
+    }
+
+    @Transactional
+    public EventCertificateValidationCode issueForEvent(Long eventId, UUID userId, EnumCertificateType type) {
+        return validationCodeRepository.findByEventIdAndActivityIdIsNullAndUserIdAndCertificateType(eventId, userId, type)
+                .orElseGet(() -> createAndSaveValidationCode(eventId, null, userId, type));
     }
 
     @Transactional
     public EventCertificateValidationCode issueForActivity(Long eventId, Long activityId, UUID userId) {
-        return validationCodeRepository.findByActivityIdAndUserId(activityId, userId)
-                .orElseGet(() -> createAndSaveValidationCode(eventId, activityId, userId));
+        return validationCodeRepository.findByActivityIdAndUserIdAndCertificateType(
+                        activityId, userId, EnumCertificateType.ACTIVITY)
+                .orElseGet(() -> createAndSaveValidationCode(eventId, activityId, userId, EnumCertificateType.ACTIVITY));
     }
 
-    private EventCertificateValidationCode createAndSaveValidationCode(Long eventId, Long activityId, UUID userId) {
+    private EventCertificateValidationCode createAndSaveValidationCode(Long eventId, Long activityId, UUID userId,
+                                                                       EnumCertificateType type) {
         EventCertificateValidationCode validationCode = EventCertificateValidationCode.builder()
                 .code(generateUniqueCode())
                 .eventId(eventId)
                 .activityId(activityId)
+                .certificateType(type)
                 .userId(userId)
                 .build();
 
         return validationCodeRepository.save(validationCode);
+    }
+
+    private BigDecimal addHours(BigDecimal first, BigDecimal second) {
+        return (first == null ? BigDecimal.ZERO : first).add(second == null ? BigDecimal.ZERO : second);
     }
 
     private String generateUniqueCode() {

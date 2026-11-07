@@ -2,6 +2,7 @@ package com.ccomp.br.domain.events.certificate.application;
 
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
+import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
@@ -14,6 +15,7 @@ import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -65,12 +67,7 @@ public class CertificateServices {
             var eventBox = eventBoxFuture.join();
             Map<String, String> variables = variablesFuture.join();
 
-            return Certificate.builder()
-                    .coverImage(template)
-                    .boxElements(eventBox.getBoxes().stream().map(BoxElementDTO::toDomain).toList())
-                    .toReplace(variables)
-                    .build()
-                    .generate();
+            return render(template, eventBox.getBoxes(), variables);
 
         } catch (CompletionException e) {
             // Captura o wrapper do CompletableFuture e relança a causa real da falha
@@ -105,12 +102,7 @@ public class CertificateServices {
             var activityBox = activityBoxFuture.join();
             Map<String, String> variables = variablesFuture.join();
 
-            return Certificate.builder()
-                    .coverImage(template)
-                    .boxElements(activityBox.getBoxes().stream().map(BoxElementDTO::toDomain).toList())
-                    .toReplace(variables)
-                    .build()
-                    .generate();
+            return render(template, activityBox.getBoxes(), variables);
 
         } catch (CompletionException e) {
             if (e.getCause() instanceof RuntimeException runtimeException) {
@@ -118,5 +110,42 @@ public class CertificateServices {
             }
             throw new IllegalStateException("Falha ao gerar certificado.", e.getCause());
         }
+    }
+
+    public StorageExternal.StoredFile buildCertificateFromInstructor(Long eventId, Long instructorId,
+                                                                       UUID requesterId) {
+        UUID recipientId = variablesServices.findInstructorCertificateRecipient(eventId, instructorId);
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        if (!recipientId.equals(requesterId) && !accessPolicy.canEdit(event, requesterId)) {
+            throw new AccessDeniedException("Somente o ministrante ou a equipe do evento pode gerar este certificado.");
+        }
+        var cover = certificateFetcher.fetchCoverTemplate(eventId);
+        var box = certificateFetcher.fetchBoxTemplate(eventId, EnumEventCertificateTemplateType.INSTRUCTOR);
+        var variables = variablesServices.loadInstructorVariablesValues(
+                box.getVariables(), eventId, instructorId, recipientId);
+        return render(cover, box.getBoxes(), variables);
+    }
+
+    public StorageExternal.StoredFile buildCertificateForEditor(Long eventId, UUID userId) {
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        if (userId == null || (!event.isOwner(userId) && !accessPolicy.isActiveEditor(eventId, userId))) {
+            throw new AccessDeniedException("O certificado está disponível somente para owner ou editor ativo do evento.");
+        }
+        var cover = certificateFetcher.fetchCoverTemplate(eventId);
+        var box = certificateFetcher.fetchBoxTemplate(eventId, EnumEventCertificateTemplateType.EDITOR);
+        var variables = variablesServices.loadEditorVariablesValues(box.getVariables(), eventId, userId);
+        return render(cover, box.getBoxes(), variables);
+    }
+
+    private StorageExternal.StoredFile render(StorageExternal.StoredFile cover, List<BoxElementDTO> boxes,
+                                              Map<String, String> variables) {
+        return Certificate.builder()
+                .coverImage(cover)
+                .boxElements(boxes.stream().map(BoxElementDTO::toDomain).toList())
+                .toReplace(variables)
+                .build()
+                .generate();
     }
 }

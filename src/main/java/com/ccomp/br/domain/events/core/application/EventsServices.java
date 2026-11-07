@@ -157,6 +157,8 @@ public class EventsServices {
 
         dto.optionalStartDate().ifPresent(eventModel::setStartDate);
         dto.optionalEndDate().ifPresent(eventModel::setEndDate);
+        eventModel.setWorkloadHours(dto.workloadHours());
+        eventModel.setTeamCertificateWorkloadHours(dto.teamCertificateWorkloadHours());
 
         var savedEvent = eventRepository.save(eventModel);
         eventCache.evict(savedEvent);
