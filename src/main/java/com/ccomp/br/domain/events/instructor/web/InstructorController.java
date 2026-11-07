@@ -5,13 +5,16 @@ import java.util.UUID;
 
 import com.ccomp.br.domain.events.instructor.application.InstructorInvitationService;
 import com.ccomp.br.domain.events.instructor.application.InstructorService;
-import com.ccomp.br.domain.events.instructor.dto.EventInstructorDTO;
 import com.ccomp.br.domain.events.instructor.dto.ActivityParticipantDTO;
+import com.ccomp.br.domain.events.instructor.dto.AddInstructorRequest;
+import com.ccomp.br.domain.events.instructor.dto.EventInstructorDTO;
 import com.ccomp.br.domain.events.instructor.dto.InstructorInvitationDTO;
-import com.ccomp.br.domain.events.instructor.enums.EnumInstructorRole;
+import com.ccomp.br.domain.events.instructor.dto.InviteInstructorRequest;
+import com.ccomp.br.domain.events.instructor.dto.LinkInstructorAccountRequest;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.utils.CursorPage;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -19,8 +22,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -83,7 +84,7 @@ public class InstructorController {
             description = "O perfil pode ser cadastrado sem conta. `accountEmail`, quando informado, deve identificar uma conta ativa.")
     public ResponseEntity<MessageResponse> addInstructor(
             @PathVariable Long activityId,
-            @Valid @org.springframework.web.bind.annotation.RequestBody AddInstructorRequest request,
+            @Valid @RequestBody AddInstructorRequest request,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
     ) {
         return ResponseEntity.ok(invitationService.addInstructor(extractUserId(jwt), activityId,
@@ -95,7 +96,7 @@ public class InstructorController {
     public ResponseEntity<MessageResponse> linkInstructorAccount(
             @PathVariable Long activityId,
             @PathVariable Long instructorId,
-            @Valid @org.springframework.web.bind.annotation.RequestBody LinkInstructorAccountRequest request,
+            @Valid @RequestBody LinkInstructorAccountRequest request,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
     ) {
         return ResponseEntity.ok(invitationService.linkInstructorAccount(
@@ -143,7 +144,7 @@ public class InstructorController {
                             schema = @Schema(implementation = InviteInstructorRequest.class)
                     )
             )
-            @Valid @org.springframework.web.bind.annotation.RequestBody InviteInstructorRequest request,
+            @Valid @RequestBody InviteInstructorRequest request,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
     ) {
         return ResponseEntity.ok(invitationService.invite(
@@ -217,21 +218,4 @@ public class InstructorController {
     private UUID extractUserId(Jwt jwt) {
         return UUID.fromString(jwt.getSubject());
     }
-
-    @Schema(description = "Dados necessários para convidar um ministrante")
-    public record InviteInstructorRequest(
-            @Schema(description = "E-mail da pessoa convidada", example = "ministrante@exemplo.com", requiredMode = Schema.RequiredMode.REQUIRED)
-            @NotBlank @Email String email
-    ) {
-    }
-
-    @Schema(description = "Dados para cadastrar um ministrante")
-    public record AddInstructorRequest(
-            @NotBlank @jakarta.validation.constraints.Size(max = 255) String name,
-            @jakarta.validation.constraints.Size(max = 5000) String description,
-            @jakarta.validation.constraints.Email @jakarta.validation.constraints.Size(max = 255) String accountEmail,
-            EnumInstructorRole role
-    ) {}
-
-    public record LinkInstructorAccountRequest(@NotBlank @Email String email) {}
 }
