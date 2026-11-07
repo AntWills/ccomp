@@ -1,5 +1,9 @@
 package com.ccomp.br.domain.events.activities.application;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
 import com.ccomp.br.domain.events.activities.dto.*;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
@@ -14,7 +18,8 @@ import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
-import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
+import com.ccomp.br.domain.events.guests.application.GuestService;
+import com.ccomp.br.domain.events.instructor.application.InstructorService;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -22,10 +27,6 @@ import com.ccomp.br.shared.utils.CursorUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
 
 @Service
 @Slf4j
@@ -38,7 +39,8 @@ public class ActivityServices {
     private final EventActivityDslRepository activityDslRepository;
     private final ActivityMapper activityMapper;
     private final ActivityCache activityCache;
-    private final ActivityGuestRepository activityGuestRepository;
+    private final GuestService guestService;
+    private final InstructorService instructorService;
 
     public ActivityServices(EventRepository eventRepository,
                             EventAccessPolicy eventAccessPolicy,
@@ -47,7 +49,8 @@ public class ActivityServices {
                             EventActivityDslRepository activityDslRepository,
                             ActivityMapper activityMapper,
                             ActivityCache activityCache,
-                            ActivityGuestRepository activityGuestRepository) {
+                            GuestService guestService,
+                            InstructorService instructorService) {
         this.eventRepository = eventRepository;
         this.eventAccessPolicy = eventAccessPolicy;
         this.eventCache = eventCache;
@@ -56,7 +59,8 @@ public class ActivityServices {
         this.activityDslRepository = activityDslRepository;
         this.activityMapper = activityMapper;
         this.activityCache = activityCache;
-        this.activityGuestRepository = activityGuestRepository;
+        this.guestService = guestService;
+        this.instructorService = instructorService;
     }
 
     @Transactional(readOnly = true)
@@ -109,7 +113,11 @@ public class ActivityServices {
         EventDTO event = eventCache.findById(activity.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não existe."));
 
-        if (!eventAccessPolicy.canEdit(event, userId))
+        boolean canEditAsManager = eventAccessPolicy.canEdit(event, userId);
+        boolean canEditAsInstructor = !canEditAsManager && instructorService.canEditActivity(activityId, userId);
+        boolean canEditAsGuest = !canEditAsManager && !canEditAsInstructor
+                && guestService.canEditActivity(activityId, userId);
+        if (!canEditAsManager && !canEditAsInstructor && !canEditAsGuest)
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         activityMapper.updateEventActivityFromRequest(request, activity);

@@ -1,5 +1,7 @@
 package com.ccomp.br.domain.events.guests.web;
 
+import java.util.UUID;
+
 import com.ccomp.br.domain.events.guests.application.GuestService;
 import com.ccomp.br.domain.events.guests.application.GuestImageService;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
@@ -9,8 +11,6 @@ import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.LinkGuestAccountDTO;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestProfileDTO;
-import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
-import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -31,8 +31,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/events")
@@ -272,19 +270,6 @@ public class GuestController {
     ) {
         guestService.updateGuestProfile(eventId, guestId, extractUserId(jwt), request);
         return ResponseEntity.ok(new MessageResponse("Dados do convidado atualizados com sucesso."));
-    }
-
-    @PatchMapping("/activities/{activityId}/guests/me")
-    @Operation(
-            summary = "Atualiza atividade como convidado vinculado",
-            description = "Permite ao convidado autenticado atualizar os dados somente de uma atividade à qual seu perfil de convidado esteja associado."
-    )
-    public ResponseEntity<ActivityDTO> updateActivityAsGuest(
-            @PathVariable Long activityId,
-            @AuthenticationPrincipal Jwt jwt,
-            @Valid @RequestBody UpdateActivityDTO request
-    ) {
-        return ResponseEntity.ok(guestService.updateActivityAsGuest(extractUserId(jwt), activityId, request));
     }
 
     @PostMapping(value = "/{eventId}/guests/{guestId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

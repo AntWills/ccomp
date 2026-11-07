@@ -1,7 +1,8 @@
 package com.ccomp.br.domain.events.instructor.web;
 
-import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
-import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
+import java.util.List;
+import java.util.UUID;
+
 import com.ccomp.br.domain.events.instructor.application.InstructorInvitationService;
 import com.ccomp.br.domain.events.instructor.application.InstructorService;
 import com.ccomp.br.domain.events.instructor.dto.EventInstructorDTO;
@@ -25,14 +26,11 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.UUID;
-
 @RestController
 @RequestMapping("/api/events")
 @Tag(
         name = "events/instructors (ministrantes)",
-        description = "Consulta e gestão de ministrantes vinculados às atividades: atualização da atividade pelo ministrante, convites por e-mail, respostas e cancelamento do próprio vínculo."
+        description = "Consulta e gestão de ministrantes vinculados às atividades: cadastro, convites por e-mail, respostas e cancelamento do próprio vínculo."
 )
 public class InstructorController {
     private final InstructorService instructorService;
@@ -102,29 +100,6 @@ public class InstructorController {
     ) {
         return ResponseEntity.ok(invitationService.linkInstructorAccount(
                 extractUserId(jwt), activityId, instructorId, request.email()));
-    }
-
-    @Operation(
-            summary = "Atualiza uma atividade como ministrante",
-            description = "Permite ao usuário autenticado atualizar os dados da atividade quando possui vínculo confirmado como ministrante."
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Atividade atualizada"),
-            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
-            @ApiResponse(responseCode = "403", description = "Usuário não é ministrante confirmado desta atividade"),
-            @ApiResponse(responseCode = "404", description = "Atividade não encontrada"),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos para atualização")
-    })
-    @PatchMapping("/activities/{activityId}/instructors/me")
-    public ResponseEntity<ActivityDTO> updateActivityAsInstructor(
-            @Parameter(description = "ID da atividade", example = "1")
-            @PathVariable Long activityId,
-            @Valid @RequestBody UpdateActivityDTO request,
-            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
-    ) {
-        return ResponseEntity.ok(
-                instructorService.updateActivity(extractUserId(jwt), activityId, request)
-        );
     }
 
     @Operation(

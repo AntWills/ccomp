@@ -1,5 +1,8 @@
 package com.ccomp.br.domain.events.activities.web;
 
+import java.util.Optional;
+import java.util.UUID;
+
 import com.ccomp.br.domain.events.activities.dto.*;
 import com.ccomp.br.domain.events.activities.application.ActivityServices;
 import com.ccomp.br.shared.dto.MessageResponse;
@@ -16,9 +19,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Optional;
-import java.util.UUID;
 
 @Tag(name = "events/activities (Atividades)")
 @RestController
@@ -84,7 +84,7 @@ public class ActivitiesController {
         return ResponseEntity.ok(new MessageResponse("Atividade removida com sucesso."));
     }
 
-    @Operation(summary = "Atualiza uma atividade", description = "Atualiza os dados de uma atividade existente usando o seu ID. Requer autenticação do usuário.")
+    @Operation(summary = "Atualiza uma atividade", description = "Atualiza os dados de uma atividade existente. Permitido ao gestor do evento, a ministrante com vínculo confirmado e conta ativa ou a convidado com conta ativa vinculado à atividade.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Atividade atualizada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),

@@ -1,11 +1,13 @@
 package com.ccomp.br.domain.events.guests.application;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
-import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
-import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
@@ -45,10 +47,6 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
@@ -66,7 +64,6 @@ class GuestServiceTest {
     @Mock private EventActivityRepository activityRepository;
     @Mock private ActivityGuestRepository activityGuestRepository;
     @Mock private UserManagement userManagement;
-    @Mock private ActivityMapper activityMapper;
 
     @InjectMocks private GuestService guestService;
 
@@ -384,38 +381,6 @@ class GuestServiceTest {
             verify(guest).setName("Ada atualizada");
             verify(guest).setDescription("Perfil próprio");
             verify(eventGuestRepository).save(guest);
-        }
-
-        @Test
-        @DisplayName("Permite ao convidado vinculado editar atividade associada")
-        void allowsLinkedGuestToUpdateAssociatedActivity() {
-            EventActivity activity = mock(EventActivity.class);
-            UpdateActivityDTO request = UpdateActivityDTO.builder().title("Novo título").build();
-            ActivityDTO expected = mock(ActivityDTO.class);
-            when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
-            when(activityGuestRepository.existsByActivityIdAndEventGuestUserId(activityId, requesterId))
-                    .thenReturn(true);
-            when(activityRepository.save(activity)).thenReturn(activity);
-            when(activityMapper.eventActivityToActivityDTO(activity)).thenReturn(expected);
-
-            assertThat(guestService.updateActivityAsGuest(requesterId, activityId, request)).isSameAs(expected);
-
-            verify(activityMapper).updateEventActivityFromRequest(request, activity);
-            verify(activityCache).evict(activity);
-        }
-
-        @Test
-        @DisplayName("Impede convidado de editar atividade sem vínculo")
-        void deniesLinkedGuestActivityUpdateWhenNotAssociated() {
-            when(activityRepository.findById(activityId)).thenReturn(Optional.of(mock(EventActivity.class)));
-            when(activityGuestRepository.existsByActivityIdAndEventGuestUserId(activityId, requesterId))
-                    .thenReturn(false);
-
-            assertThatThrownBy(() -> guestService.updateActivityAsGuest(requesterId, activityId,
-                    UpdateActivityDTO.builder().title("Novo título").build()))
-                    .isInstanceOf(AccessDeniedException.class);
-
-            verify(activityRepository, never()).save(any());
         }
 
         @Test

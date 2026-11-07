@@ -1,8 +1,8 @@
 package com.ccomp.br.domain.events.guests.persistence;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ActivityGuestRepository extends JpaRepository<ActivityGuest, Long> {
     boolean existsByActivityIdAndEventGuestUserId(Long activityId, java.util.UUID userId);
@@ -10,5 +10,4 @@ public interface ActivityGuestRepository extends JpaRepository<ActivityGuest, Lo
     boolean existsByActivityIdAndEventGuestId(Long activityId, Long eventGuestId);
 
     Optional<ActivityGuest> findByActivityIdAndEventGuestId(Long activityId, Long eventGuestId);
-    java.util.List<ActivityGuest> findAllByActivity_IdOrderByCreatedAtDescIdDesc(Long activityId);
 }

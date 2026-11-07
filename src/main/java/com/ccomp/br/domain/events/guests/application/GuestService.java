@@ -1,11 +1,13 @@
 package com.ccomp.br.domain.events.guests.application;
 
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
-import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
-import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
@@ -33,10 +35,6 @@ import com.ccomp.br.shared.utils.CursorUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
-
 @Service
 public class GuestService {
 
@@ -50,7 +48,6 @@ public class GuestService {
     private final EventActivityRepository activityRepository;
     private final ActivityGuestRepository activityGuestRepository;
     private final UserManagement userManagement;
-    private final ActivityMapper activityMapper;
 
     public GuestService(
             EventGuestRepository eventGuestRepository,
@@ -62,8 +59,7 @@ public class GuestService {
             EventRepository eventRepository,
             EventActivityRepository activityRepository,
             ActivityGuestRepository activityGuestRepository,
-            UserManagement userManagement,
-            ActivityMapper activityMapper
+            UserManagement userManagement
     ) {
         this.eventGuestRepository = eventGuestRepository;
         this.eventCache = eventCache;
@@ -75,7 +71,6 @@ public class GuestService {
         this.activityRepository = activityRepository;
         this.activityGuestRepository = activityGuestRepository;
         this.userManagement = userManagement;
-        this.activityMapper = activityMapper;
     }
 
     @Transactional
@@ -280,16 +275,10 @@ public class GuestService {
         eventGuestRepository.save(guest);
     }
 
-    @Transactional
-    public ActivityDTO updateActivityAsGuest(UUID userId, Long activityId, UpdateActivityDTO request) {
-        EventActivity activity = activityRepository.findById(activityId)
-                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
-        if (!activityGuestRepository.existsByActivityIdAndEventGuestUserId(activityId, userId)) {
-            throw new AccessDeniedException("Você não é um convidado vinculado a esta atividade.");
-        }
-        activityMapper.updateEventActivityFromRequest(request, activity);
-        EventActivity saved = activityRepository.save(activity);
-        activityCache.evict(saved);
-        return activityMapper.eventActivityToActivityDTO(saved);
+    @Transactional(readOnly = true)
+    public boolean canEditActivity(Long activityId, UUID requesterId) {
+        return requesterId != null
+                && userManagement.isAccountActive(requesterId)
+                && activityGuestRepository.existsByActivityIdAndEventGuestUserId(activityId, requesterId);
     }
 }

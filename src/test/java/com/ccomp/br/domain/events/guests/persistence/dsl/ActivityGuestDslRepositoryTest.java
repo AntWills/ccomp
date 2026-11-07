@@ -1,5 +1,9 @@
 package com.ccomp.br.domain.events.guests.persistence.dsl;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
 import com.ccomp.br.config.QueryDslConfig;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
@@ -23,10 +27,6 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -193,6 +193,49 @@ class ActivityGuestDslRepositoryTest {
 
         // Asserções Gerente (Deve retornar todos)
         assertThat(managerView).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("A consulta DSL de participantes retorna convidados com conta e aplica visibilidade")
+    void findActivityGuestsForParticipantsReturnsLinkedGuestAndFiltersPublicView() {
+        LocalDateTime now = LocalDateTime.now();
+        Event event = Event.builder()
+                .title("Evento DSL")
+                .slug("evento-dsl-participantes")
+                .category(EnumEventCategory.ACADEMIC_EDUCATIONAL)
+                .format(EnumEventFormat.IN_PERSON)
+                .ownerId(UUID.randomUUID())
+                .createdAt(now)
+                .build();
+        entityManager.persist(event);
+        EventActivity activity = EventActivity.builder()
+                .title("Atividade DSL")
+                .type(EnumActivityType.LECTURE)
+                .displayOrder(1L)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .createdAt(now)
+                .event(event)
+                .build();
+        entityManager.persist(activity);
+
+        UUID accountId = UUID.randomUUID();
+        EventGuest publicGuest = createEventGuest(event, EnumGuestVisibility.PUBLIC, EnumGuestStatus.CONFIRMED, now);
+        publicGuest.setUserId(accountId);
+        EventGuest privateGuest = createEventGuest(event, EnumGuestVisibility.PRIVATE, EnumGuestStatus.CONFIRMED, now);
+        entityManager.persist(ActivityGuest.builder().activity(activity).eventGuest(publicGuest).build());
+        entityManager.persist(ActivityGuest.builder().activity(activity).eventGuest(privateGuest).build());
+        entityManager.flush();
+        entityManager.clear();
+
+        List<ActivityGuestDTO> publicParticipants = activityGuestDslRepository
+                .findActivityGuestsForParticipants(activity.getId(), false);
+        List<ActivityGuestDTO> managerParticipants = activityGuestDslRepository
+                .findActivityGuestsForParticipants(activity.getId(), true);
+
+        assertThat(publicParticipants).hasSize(1);
+        assertThat(publicParticipants.getFirst().eventGuestId()).isEqualTo(publicGuest.getId());
+        assertThat(publicParticipants.getFirst().isGuest()).isTrue();
+        assertThat(managerParticipants).hasSize(2);
     }
 
     private EventGuest createEventGuest(Event event, EnumGuestVisibility visibility, EnumGuestStatus status, LocalDateTime createdAt) {
