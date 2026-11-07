@@ -165,7 +165,7 @@ public class Event {
         if (now.isBefore(startDate)) {
             return EnumEventExecutionStatus.NOT_STARTED;
         }
-        if (now.isAfter(endDate)) {
+        if (!now.isBefore(endDate)) {
             return EnumEventExecutionStatus.FINISHED;
         }
         return EnumEventExecutionStatus.IN_PROGRESS;

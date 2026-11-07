@@ -2,6 +2,7 @@ package com.ccomp.br.domain.events.enrollments.persistence;
 
 import com.ccomp.br.domain.events.enrollments.dto.UserActivitySummaryDTO;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentActivityCursor;
+import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.shared.dto.UserSummaryDTO;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
@@ -32,6 +33,7 @@ public class EnrollmentActivityDslRepository {
                 .innerJoin(enrollmentActivity.enrollment, enrollment).fetchJoin()
                 .where(
                         enrollment.userId.eq(userId),
+                        enrollment.status.in(EnumEnrollmentState.CONFIRMED, EnumEnrollmentState.CHECKED_IN),
                         enrollmentActivity.activity.id.eq(activityId)
                 )
                 .fetchOne();

@@ -102,6 +102,22 @@ class CertificateVariablesServicesTest {
     }
 
     @Test
+    void loadEventVariables_eventNotFinished_throwsBeforeCheckingEnrollment() {
+        Event event = Event.builder()
+                .title("Evento em andamento")
+                .slug("evento-em-andamento")
+                .startDate(LocalDateTime.now().minusHours(1))
+                .endDate(LocalDateTime.now().plusHours(1))
+                .build();
+        when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> createService()
+                .loadEventVariablesValues(List.of(), 10L, USER_ID))
+                .isInstanceOf(DomainException.class)
+                .hasMessage("O certificado do evento só pode ser emitido após seu encerramento.");
+    }
+
+    @Test
     void loadEventVariables_notEnrolled_throws() {
         Event event = stubEvent();
         when(enrollmentRepository.findByUserIdAndEvent(USER_ID, event))
@@ -270,6 +286,8 @@ class CertificateVariablesServicesTest {
                 .title("Semanas de Tecnologia")
                 .slug("semanas-tecnologia")
                 .address("Auditório Central")
+                .startDate(LocalDateTime.now().minusDays(2))
+                .endDate(LocalDateTime.now().minusDays(1))
                 .build();
     }
 

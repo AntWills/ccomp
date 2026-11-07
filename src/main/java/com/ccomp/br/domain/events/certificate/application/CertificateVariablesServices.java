@@ -8,6 +8,8 @@ import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.core.enums.EnumEventExecutionStatus;
+import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
@@ -85,6 +87,11 @@ public class CertificateVariablesServices {
 
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        if (event.getExecutionStatus() != EnumEventExecutionStatus.FINISHED
+                || event.getStatus() == EnumEventStatus.CANCELED) {
+            throw new DomainException("O certificado do evento só pode ser emitido após seu encerramento.");
+        }
 
         Enrollment enrollment = enrollmentRepository.findByUserIdAndEvent(userId, event)
                 .orElseThrow(() -> new ResourceNotFoundException("O usuário não é inscrito no evento."));

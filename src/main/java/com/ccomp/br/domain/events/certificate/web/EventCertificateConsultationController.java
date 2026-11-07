@@ -36,10 +36,10 @@ public class EventCertificateConsultationController {
     }
 
     @Operation(summary = "Consultar certificado do evento",
-            description = "Gera o certificado do evento para o usuário autenticado. Exige inscrição e status `CHECKED_IN` no evento. Credenciamento não é requisito separado: a pessoa pode fazer check-in e se credenciar depois. A carga horária do certificado considera as atividades em que a pessoa participou.")
+            description = "Gera o certificado do evento para o usuário autenticado somente após o encerramento do evento. Exige inscrição e status `CHECKED_IN` no evento. Eventos cancelados não emitem certificado. Credenciamento operacional não é requisito; a carga horária considera as atividades em que a pessoa participou.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
-            @ApiResponse(responseCode = "400", description = "Participante ainda não fez check-in no evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado, evento cancelado ou participante sem check-in no evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "Usuário sem acesso ao evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Evento não encontrado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
     })
@@ -54,7 +54,7 @@ public class EventCertificateConsultationController {
     }
 
     @Operation(summary = "Consultar certificado de atividade",
-            description = "Gera o certificado de atividade para o usuário autenticado. Exige inscrição, status `CHECKED_IN` no evento e presença registrada especificamente nesta atividade. Credenciamento operacional é independente e não substitui nenhum dos dois registros de presença.")
+            description = "Gera o certificado de atividade para o usuário autenticado. Exige inscrição ativa, status `CHECKED_IN` no evento e presença registrada especificamente nesta atividade. Após confirmar a presença pelo QR Code, a plataforma atualiza o check-in do evento e envia um e-mail avisando que o certificado está disponível. Credenciamento operacional é independente e não substitui os registros de presença.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
             @ApiResponse(responseCode = "400", description = "Check-in do evento ou participação na atividade não registrados", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
