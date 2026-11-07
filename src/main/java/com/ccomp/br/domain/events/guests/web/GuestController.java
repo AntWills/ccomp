@@ -51,7 +51,7 @@ public class GuestController {
     @PostMapping("/{eventId}/guests")
     @Operation(
             summary = "Adiciona um convidado ao evento",
-            description = "Cria o perfil de um convidado sem exigir conta. O corpo aceita `name`, `description` e, opcionalmente, `accountEmail` de uma conta ativa. O convidado fica associado ao evento; atividades são vinculadas por uma rota própria. Requer JWT " +
+            description = "Cria o perfil de um convidado sem exigir conta. O corpo aceita `name`, `description` e, opcionalmente, `account_email` de uma conta ativa. O convidado fica associado ao evento; atividades são vinculadas por uma rota própria. Requer JWT " +
                     "de proprietário, editor ativo, MODERATOR ou ADMIN. Retorna `201` com `MessageResponse`."
     )
     @ApiResponses({
@@ -159,7 +159,7 @@ public class GuestController {
                     "A lista pública contém apenas convidados confirmados e públicos; proprietário, editor ativo, " +
                     "MODERATOR ou ADMIN também podem consultar perfis privados e cancelados. `pageSize` usa padrão 20 " +
                     "e máximo 50; `cursor` é opaco e deve ser reutilizado com o mesmo evento. Acesso anônimo é permitido " +
-                    "para eventos PUBLISHED; outros status exigem proprietário, editor ativo, MODERATOR ou ADMIN."
+                    "para eventos PUBLISHED ou UNLISTED; outros status exigem proprietário, editor ativo, MODERATOR ou ADMIN."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Página de convidados retornada",
@@ -253,7 +253,8 @@ public class GuestController {
                     "O convidado com conta vinculada pode editar o próprio perfil; gestores do evento também podem. Imagem é gerenciada pelas rotas `/image`."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Dados do convidado atualizados"),
+            @ApiResponse(responseCode = "200", description = "Dados do convidado atualizados",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = MessageResponse.class))),
             @ApiResponse(responseCode = "400", description = "Nome ausente, campo acima do limite ou corpo inválido",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "JWT ausente ou inválido",
@@ -347,9 +348,9 @@ public class GuestController {
     @DeleteMapping("/{eventId}/guests/{guestId}/image")
     @Operation(
             summary = "Remove a imagem do convidado",
-            description = "Apaga o objeto do storage e limpa a chave associada ao convidado. Requer JWT de proprietário, " +
-                    "editor ativo, MODERATOR ou ADMIN. Retorna `204` quando removida; retorna `404` se o perfil não " +
-                    "tiver imagem associada."
+            description = "Apaga o objeto do storage e limpa a chave associada ao convidado. Permitido ao próprio convidado " +
+                    "com conta vinculada ou a proprietário, editor ativo, MODERATOR ou ADMIN. Retorna `204` quando removida; " +
+                    "retorna `404` se o perfil não tiver imagem associada."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Imagem removida", content = @Content),

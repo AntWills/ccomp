@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/events")
 @Tag(
         name = "events/instructors (ministrantes)",
-        description = "Consulta e gestão de ministrantes vinculados às atividades: cadastro, convites por e-mail, respostas e cancelamento do próprio vínculo."
+        description = "Consulta e gestão de ministrantes vinculados a atividades: cadastro com conta opcional, convites por e-mail, resposta, edição e remoção de vínculos."
 )
 public class InstructorController {
     private final InstructorService instructorService;
@@ -70,10 +70,16 @@ public class InstructorController {
     }
 
     @GetMapping("/activities/{activityId}/instructors")
-    @Operation(summary = "Lista ministrantes e convidados de destaque de uma atividade",
-            description = "Cada item informa `isGuest`: true para perfil de convidado e false para ministrante. `role` diferencia INSTRUCTOR, ASSISTANT e as funções do convidado.")
+    @Operation(summary = "Lista ministrantes e convidados de uma atividade",
+            description = "Combina os ministrantes confirmados e os convidados associados à atividade. Para convidados, aplica a visibilidade do perfil: solicitantes públicos veem apenas perfis públicos e confirmados; gestores veem todos. `isGuest` distingue os tipos de vínculo e `role` informa a função, incluindo ASSISTANT. Requer autenticação e segue a visibilidade do evento.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Participantes retornados"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para visualizar o evento"),
+            @ApiResponse(responseCode = "404", description = "Atividade ou evento não encontrado")
+    })
     public ResponseEntity<List<ActivityParticipantDTO>> searchByActivity(
-            @PathVariable Long activityId,
+            @Parameter(description = "ID da atividade", example = "1") @PathVariable Long activityId,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
     ) {
         return ResponseEntity.ok(instructorService.searchByActivity(activityId, extractUserId(jwt)));
@@ -81,9 +87,16 @@ public class InstructorController {
 
     @PostMapping("/activities/{activityId}/instructors")
     @Operation(summary = "Cadastra ministrante com conta opcional",
-            description = "O perfil pode ser cadastrado sem conta. `accountEmail`, quando informado, deve identificar uma conta ativa.")
+            description = "Cria um vínculo nesta atividade. O perfil pode existir sem conta; `account_email`, quando informado, deve identificar uma conta ativa. `role` aceita INSTRUCTOR ou ASSISTANT e, se omitido, assume INSTRUCTOR. Restrito a quem pode editar o evento associado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Ministrante cadastrado ou vínculo reativado"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para gerenciar ministrantes"),
+            @ApiResponse(responseCode = "404", description = "Atividade, evento ou conta ativa não encontrada")
+    })
     public ResponseEntity<MessageResponse> addInstructor(
-            @PathVariable Long activityId,
+            @Parameter(description = "ID da atividade", example = "1") @PathVariable Long activityId,
             @Valid @RequestBody AddInstructorRequest request,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
     ) {
@@ -92,10 +105,18 @@ public class InstructorController {
     }
 
     @PatchMapping("/activities/{activityId}/instructors/{instructorId}/account")
-    @Operation(summary = "Vincula conta a um ministrante existente")
+    @Operation(summary = "Vincula uma conta ativa a um ministrante existente",
+            description = "Vincula a conta identificada pelo e-mail ao registro da atividade. Restrito a quem pode editar o evento associado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Conta vinculada"),
+            @ApiResponse(responseCode = "400", description = "E-mail inválido ou conta já vinculada a outro registro da atividade"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para gerenciar ministrantes"),
+            @ApiResponse(responseCode = "404", description = "Atividade, ministrante ou conta ativa não encontrada")
+    })
     public ResponseEntity<MessageResponse> linkInstructorAccount(
-            @PathVariable Long activityId,
-            @PathVariable Long instructorId,
+            @Parameter(description = "ID da atividade", example = "1") @PathVariable Long activityId,
+            @Parameter(description = "ID do registro de ministrante", example = "5") @PathVariable Long instructorId,
             @Valid @RequestBody LinkInstructorAccountRequest request,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
     ) {
@@ -105,7 +126,7 @@ public class InstructorController {
 
     @Operation(
             summary = "Cancela o próprio vínculo de ministrante",
-            description = "Altera para cancelado o vínculo confirmado do usuário autenticado com a atividade. O vínculo continua registrado e pode ser reativado por um novo convite aceito."
+            description = "Altera para CANCELED o vínculo confirmado do usuário autenticado com esta atividade. O registro permanece e pode ser reativado pelo gestor ao cadastrar o vínculo novamente ou após aceitar um novo convite."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Vínculo cancelado"),
@@ -123,9 +144,10 @@ public class InstructorController {
     }
 
     @DeleteMapping("/activities/{activityId}/instructors/{instructorId}")
-    @Operation(summary = "Exclui um ministrante da atividade", description = "Remove o vínculo e os dados do ministrante. A atividade e o evento permanecem. Restrito a quem pode editar o evento.")
+    @Operation(summary = "Exclui um vínculo de ministrante da atividade", description = "Apaga somente o registro indicado nesta atividade. Outros registros da mesma pessoa em outras atividades, a atividade e o evento permanecem. Restrito a quem pode editar o evento associado.")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Ministrante excluído"),
+            @ApiResponse(responseCode = "204", description = "Vínculo de ministrante excluído", content = @io.swagger.v3.oas.annotations.media.Content),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
             @ApiResponse(responseCode = "403", description = "Sem permissão para gerenciar ministrantes do evento"),
             @ApiResponse(responseCode = "404", description = "Atividade ou ministrante não encontrado")
     })
