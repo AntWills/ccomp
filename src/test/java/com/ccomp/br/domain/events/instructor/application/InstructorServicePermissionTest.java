@@ -7,6 +7,7 @@ import java.util.List;
 
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
@@ -31,6 +32,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class InstructorServicePermissionTest {
@@ -115,5 +117,25 @@ class InstructorServicePermissionTest {
                 .thenReturn(Optional.of(instructor));
 
         assertThat(service.canEditActivity(activityId, userId)).isFalse();
+    }
+
+    @Test
+    void managerCanDeleteInstructorWithoutDeletingActivity() {
+        long activityId = 22L;
+        long instructorId = 7L;
+        long eventId = 6L;
+        UUID managerId = UUID.randomUUID();
+        EventInstructor instructor = EventInstructor.builder().id(instructorId).activityId(activityId).build();
+        EventActivity activity = mock(EventActivity.class);
+        EventDTO event = mock(EventDTO.class);
+        when(instructorRepository.findByIdAndActivityId(instructorId, activityId)).thenReturn(Optional.of(instructor));
+        when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
+        when(activity.getEventId()).thenReturn(eventId);
+        when(eventCache.findById(eventId)).thenReturn(Optional.of(event));
+        when(eventAccessPolicy.canEdit(event, managerId)).thenReturn(true);
+
+        service.deleteInstructor(activityId, instructorId, managerId);
+
+        verify(instructorRepository).delete(instructor);
     }
 }

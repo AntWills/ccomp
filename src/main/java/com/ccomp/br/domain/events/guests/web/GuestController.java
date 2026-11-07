@@ -371,6 +371,22 @@ public class GuestController {
         return removed ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 
+    @DeleteMapping("/{eventId}/guests/{guestId}")
+    @Operation(summary = "Exclui o perfil do convidado", description = "Remove o perfil, seus vínculos com atividades e a imagem associada. Requer permissão para editar o evento.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Convidado excluído", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para editar o evento"),
+            @ApiResponse(responseCode = "404", description = "Evento ou convidado não encontrado")
+    })
+    public ResponseEntity<Void> deleteGuest(
+            @PathVariable Long eventId,
+            @PathVariable Long guestId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
+    ) {
+        guestImageService.deleteGuest(eventId, guestId, extractUserId(jwt));
+        return ResponseEntity.noContent().build();
+    }
+
     private UUID extractUserId(@Nullable Jwt jwt) {
         return jwt == null ? null : UUID.fromString(jwt.getSubject());
     }

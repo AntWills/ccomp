@@ -152,4 +152,18 @@ public class InstructorService {
         instructorRepository.save(instructor);
         return new MessageResponse("Seu vínculo como ministrante foi cancelado.");
     }
+
+    @Transactional
+    public void deleteInstructor(Long activityId, Long instructorId, UUID requesterId) {
+        EventInstructor instructor = instructorRepository.findByIdAndActivityId(instructorId, activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ministrante não encontrado nesta atividade."));
+        EventActivity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        EventDTO event = eventCache.findById(activity.getEventId())
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        if (!eventAccessPolicy.canEdit(event, requesterId)) {
+            throw new AccessDeniedException("Você não tem permissão para gerenciar ministrantes deste evento.");
+        }
+        instructorRepository.delete(instructor);
+    }
 }

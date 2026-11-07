@@ -122,6 +122,22 @@ public class InstructorController {
         return ResponseEntity.ok(instructorService.cancelMyLink(extractUserId(jwt), activityId));
     }
 
+    @DeleteMapping("/activities/{activityId}/instructors/{instructorId}")
+    @Operation(summary = "Exclui um ministrante da atividade", description = "Remove o vínculo e os dados do ministrante. A atividade e o evento permanecem. Restrito a quem pode editar o evento.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Ministrante excluído"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para gerenciar ministrantes do evento"),
+            @ApiResponse(responseCode = "404", description = "Atividade ou ministrante não encontrado")
+    })
+    public ResponseEntity<Void> deleteInstructor(
+            @PathVariable Long activityId,
+            @PathVariable Long instructorId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
+    ) {
+        instructorService.deleteInstructor(activityId, instructorId, extractUserId(jwt));
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(
             summary = "Convida uma pessoa para ministrar atividade",
             description = "Envia um convite ao e-mail informado. Restrito a quem pode editar o evento associado à atividade. O convite expira em 24 horas; um convite anterior ainda enviado para o mesmo e-mail e atividade é cancelado."

@@ -97,6 +97,17 @@ public class GuestImageService {
         return true;
     }
 
+    public void deleteGuest(Long eventId, Long guestId, UUID userId) {
+        Event event = findEventOrThrow(eventId);
+        EventGuest guest = findGuestOrThrow(eventId, guestId);
+        assertCanEditGuest(event, guest, userId);
+
+        if (guest.getImageKey() != null) {
+            storageExternal.deleteObject(guest.getImageKey());
+        }
+        eventGuestRepository.delete(guest);
+    }
+
     private Event findEventOrThrow(Long eventId) {
         return eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));

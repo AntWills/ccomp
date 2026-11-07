@@ -82,4 +82,41 @@ class InstructorDslRepositoryTest {
                 .extracting(EventInstructor::getName)
                 .containsExactly("Auxiliar sem conta");
     }
+
+    @Test
+    void deletingInstructorPreservesActivityAndEvent() {
+        LocalDateTime now = LocalDateTime.now();
+        Event event = Event.builder()
+                .title("Evento exclusão ministrante")
+                .slug("evento-exclusao-ministrante")
+                .category(EnumEventCategory.ACADEMIC_EDUCATIONAL)
+                .format(EnumEventFormat.IN_PERSON)
+                .ownerId(UUID.randomUUID())
+                .createdAt(now)
+                .build();
+        entityManager.persist(event);
+        EventActivity activity = EventActivity.builder()
+                .title("Atividade preservada")
+                .type(EnumActivityType.LECTURE)
+                .displayOrder(1L)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .createdAt(now)
+                .event(event)
+                .build();
+        entityManager.persist(activity);
+        EventInstructor instructor = EventInstructor.builder()
+                .activityId(activity.getId())
+                .name("Ministrante removido")
+                .build();
+        entityManager.persist(instructor);
+        entityManager.flush();
+
+        entityManager.remove(instructor);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(entityManager.find(Event.class, event.getId())).isNotNull();
+        assertThat(entityManager.find(EventActivity.class, activity.getId())).isNotNull();
+        assertThat(entityManager.find(EventInstructor.class, instructor.getId())).isNull();
+    }
 }

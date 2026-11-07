@@ -238,6 +238,45 @@ class ActivityGuestDslRepositoryTest {
         assertThat(managerParticipants).hasSize(2);
     }
 
+    @Test
+    @DisplayName("Excluir perfil de convidado remove seus vínculos, mas preserva atividade e evento")
+    void deletingGuestProfileRemovesActivityLinksAndPreservesParentResources() {
+        LocalDateTime now = LocalDateTime.now();
+        Event event = Event.builder()
+                .title("Evento exclusão convidado")
+                .slug("evento-exclusao-convidado")
+                .category(EnumEventCategory.ACADEMIC_EDUCATIONAL)
+                .format(EnumEventFormat.IN_PERSON)
+                .ownerId(UUID.randomUUID())
+                .createdAt(now)
+                .build();
+        entityManager.persist(event);
+        EventActivity activity = EventActivity.builder()
+                .title("Atividade preservada")
+                .type(EnumActivityType.LECTURE)
+                .displayOrder(1L)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .createdAt(now)
+                .event(event)
+                .build();
+        entityManager.persist(activity);
+        EventGuest guest = createEventGuest(event, EnumGuestVisibility.PUBLIC, EnumGuestStatus.CONFIRMED, now);
+        entityManager.persist(ActivityGuest.builder().activity(activity).eventGuest(guest).build());
+        entityManager.flush();
+
+        entityManager.createNativeQuery("DELETE FROM tb_event_guests WHERE id = :id")
+                .setParameter("id", guest.getId())
+                .executeUpdate();
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(entityManager.find(Event.class, event.getId())).isNotNull();
+        assertThat(entityManager.find(EventActivity.class, activity.getId())).isNotNull();
+        assertThat(entityManager.find(EventGuest.class, guest.getId())).isNull();
+        assertThat(entityManager.createQuery("select count(ag) from ActivityGuest ag", Long.class)
+                .getSingleResult()).isZero();
+    }
+
     private EventGuest createEventGuest(Event event, EnumGuestVisibility visibility, EnumGuestStatus status, LocalDateTime createdAt) {
         EventGuest guest = EventGuest.builder()
                 .event(event)
