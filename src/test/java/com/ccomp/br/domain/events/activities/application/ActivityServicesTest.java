@@ -1,5 +1,8 @@
 package com.ccomp.br.domain.events.activities.application;
 
+import java.util.Optional;
+import java.util.UUID;
+
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.CreateActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
@@ -16,6 +19,8 @@ import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
 
 import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
+import com.ccomp.br.domain.events.guests.application.GuestService;
+import com.ccomp.br.domain.events.instructor.application.InstructorService;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,9 +31,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -57,6 +59,9 @@ public class ActivityServicesTest {
 
     @Mock
     private ActivityMapper activityMapper;
+
+    @Mock private GuestService guestService;
+    @Mock private InstructorService instructorService;
 
     @InjectMocks
     private ActivityServices activityServices;

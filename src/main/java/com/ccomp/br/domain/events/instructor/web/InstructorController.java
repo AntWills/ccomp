@@ -1,14 +1,20 @@
 package com.ccomp.br.domain.events.instructor.web;
 
-import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
-import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
+import java.util.List;
+import java.util.UUID;
+
 import com.ccomp.br.domain.events.instructor.application.InstructorInvitationService;
 import com.ccomp.br.domain.events.instructor.application.InstructorService;
+import com.ccomp.br.domain.events.instructor.dto.ActivityParticipantDTO;
+import com.ccomp.br.domain.events.instructor.dto.AddInstructorRequest;
 import com.ccomp.br.domain.events.instructor.dto.EventInstructorDTO;
 import com.ccomp.br.domain.events.instructor.dto.InstructorInvitationDTO;
+import com.ccomp.br.domain.events.instructor.dto.InviteInstructorRequest;
+import com.ccomp.br.domain.events.instructor.dto.LinkInstructorAccountRequest;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.utils.CursorPage;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -16,21 +22,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.UUID;
-
 @RestController
 @RequestMapping("/api/events")
 @Tag(
         name = "events/instructors (ministrantes)",
-        description = "Consulta e gestão de ministrantes vinculados às atividades: atualização da atividade pelo ministrante, convites por e-mail, respostas e cancelamento do próprio vínculo."
+        description = "Consulta e gestão de ministrantes vinculados a atividades: cadastro com conta opcional, convites por e-mail, resposta, edição e remoção de vínculos."
 )
 public class InstructorController {
     private final InstructorService instructorService;
@@ -68,32 +69,64 @@ public class InstructorController {
         );
     }
 
-    @Operation(
-            summary = "Atualiza uma atividade como ministrante",
-            description = "Permite ao usuário autenticado atualizar os dados da atividade quando possui vínculo confirmado como ministrante."
-    )
+    @GetMapping("/activities/{activityId}/instructors")
+    @Operation(summary = "Lista ministrantes e convidados de uma atividade",
+            description = "Combina os ministrantes confirmados e os convidados associados à atividade. Para convidados, aplica a visibilidade do perfil: solicitantes públicos veem apenas perfis públicos e confirmados; gestores veem todos. `isGuest` distingue os tipos de vínculo e `role` informa a função, incluindo ASSISTANT. Requer autenticação e segue a visibilidade do evento.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Atividade atualizada"),
+            @ApiResponse(responseCode = "200", description = "Participantes retornados"),
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
-            @ApiResponse(responseCode = "403", description = "Usuário não é ministrante confirmado desta atividade"),
-            @ApiResponse(responseCode = "404", description = "Atividade não encontrada"),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos para atualização")
+            @ApiResponse(responseCode = "403", description = "Sem permissão para visualizar o evento"),
+            @ApiResponse(responseCode = "404", description = "Atividade ou evento não encontrado")
     })
-    @PatchMapping("/activities/{activityId}/instructors/me")
-    public ResponseEntity<ActivityDTO> updateActivityAsInstructor(
-            @Parameter(description = "ID da atividade", example = "1")
-            @PathVariable Long activityId,
-            @Valid @RequestBody UpdateActivityDTO request,
+    public ResponseEntity<List<ActivityParticipantDTO>> searchByActivity(
+            @Parameter(description = "ID da atividade", example = "1") @PathVariable Long activityId,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
     ) {
-        return ResponseEntity.ok(
-                instructorService.updateActivity(extractUserId(jwt), activityId, request)
-        );
+        return ResponseEntity.ok(instructorService.searchByActivity(activityId, extractUserId(jwt)));
+    }
+
+    @PostMapping("/activities/{activityId}/instructors")
+    @Operation(summary = "Cadastra ministrante com conta opcional",
+            description = "Cria um vínculo nesta atividade. O perfil pode existir sem conta; `account_email`, quando informado, deve identificar uma conta ativa. `role` aceita INSTRUCTOR ou ASSISTANT e, se omitido, assume INSTRUCTOR. Restrito a quem pode editar o evento associado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Ministrante cadastrado ou vínculo reativado"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para gerenciar ministrantes"),
+            @ApiResponse(responseCode = "404", description = "Atividade, evento ou conta ativa não encontrada")
+    })
+    public ResponseEntity<MessageResponse> addInstructor(
+            @Parameter(description = "ID da atividade", example = "1") @PathVariable Long activityId,
+            @Valid @RequestBody AddInstructorRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ResponseEntity.ok(invitationService.addInstructor(extractUserId(jwt), activityId,
+                request.name(), request.description(), request.role(), request.accountEmail()));
+    }
+
+    @PatchMapping("/activities/{activityId}/instructors/{instructorId}/account")
+    @Operation(summary = "Vincula uma conta ativa a um ministrante existente",
+            description = "Vincula a conta identificada pelo e-mail ao registro da atividade. Restrito a quem pode editar o evento associado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Conta vinculada"),
+            @ApiResponse(responseCode = "400", description = "E-mail inválido ou conta já vinculada a outro registro da atividade"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para gerenciar ministrantes"),
+            @ApiResponse(responseCode = "404", description = "Atividade, ministrante ou conta ativa não encontrada")
+    })
+    public ResponseEntity<MessageResponse> linkInstructorAccount(
+            @Parameter(description = "ID da atividade", example = "1") @PathVariable Long activityId,
+            @Parameter(description = "ID do registro de ministrante", example = "5") @PathVariable Long instructorId,
+            @Valid @RequestBody LinkInstructorAccountRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ResponseEntity.ok(invitationService.linkInstructorAccount(
+                extractUserId(jwt), activityId, instructorId, request.email()));
     }
 
     @Operation(
             summary = "Cancela o próprio vínculo de ministrante",
-            description = "Altera para cancelado o vínculo confirmado do usuário autenticado com a atividade. O vínculo continua registrado e pode ser reativado por um novo convite aceito."
+            description = "Altera para CANCELED o vínculo confirmado do usuário autenticado com esta atividade. O registro permanece e pode ser reativado pelo gestor ao cadastrar o vínculo novamente ou após aceitar um novo convite."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Vínculo cancelado"),
@@ -108,6 +141,23 @@ public class InstructorController {
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
     ) {
         return ResponseEntity.ok(instructorService.cancelMyLink(extractUserId(jwt), activityId));
+    }
+
+    @DeleteMapping("/activities/{activityId}/instructors/{instructorId}")
+    @Operation(summary = "Exclui um vínculo de ministrante da atividade", description = "Apaga somente o registro indicado nesta atividade. Outros registros da mesma pessoa em outras atividades, a atividade e o evento permanecem. Restrito a quem pode editar o evento associado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Vínculo de ministrante excluído", content = @io.swagger.v3.oas.annotations.media.Content),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para gerenciar ministrantes do evento"),
+            @ApiResponse(responseCode = "404", description = "Atividade ou ministrante não encontrado")
+    })
+    public ResponseEntity<Void> deleteInstructor(
+            @PathVariable Long activityId,
+            @PathVariable Long instructorId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
+    ) {
+        instructorService.deleteInstructor(activityId, instructorId, extractUserId(jwt));
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(
@@ -132,7 +182,7 @@ public class InstructorController {
                             schema = @Schema(implementation = InviteInstructorRequest.class)
                     )
             )
-            @Valid @org.springframework.web.bind.annotation.RequestBody InviteInstructorRequest request,
+            @Valid @RequestBody InviteInstructorRequest request,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
     ) {
         return ResponseEntity.ok(invitationService.invite(
@@ -205,12 +255,5 @@ public class InstructorController {
 
     private UUID extractUserId(Jwt jwt) {
         return UUID.fromString(jwt.getSubject());
-    }
-
-    @Schema(description = "Dados necessários para convidar um ministrante")
-    public record InviteInstructorRequest(
-            @Schema(description = "E-mail da pessoa convidada", example = "ministrante@exemplo.com", requiredMode = Schema.RequiredMode.REQUIRED)
-            @NotBlank @Email String email
-    ) {
     }
 }

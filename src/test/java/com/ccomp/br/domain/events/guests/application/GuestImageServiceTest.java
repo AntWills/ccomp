@@ -124,6 +124,15 @@ class GuestImageServiceTest {
     }
 
     @Test
+    void deleteGuestRemovesImageAndGuestProfile() {
+        guestImageService.deleteGuest(EVENT_ID, GUEST_ID, USER_ID);
+
+        verify(eventAccessPolicy).assertCanEdit(event, USER_ID);
+        verify(storageExternal).deleteObject("events/12/guests/35/old.webp");
+        verify(eventGuestRepository).delete(guest);
+    }
+
+    @Test
     void imageLookupRejectsGuestFromDifferentEvent() {
         when(eventGuestRepository.findByIdAndEventId(GUEST_ID, EVENT_ID)).thenReturn(Optional.empty());
 

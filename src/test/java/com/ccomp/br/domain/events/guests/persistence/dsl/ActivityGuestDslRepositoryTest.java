@@ -1,5 +1,9 @@
 package com.ccomp.br.domain.events.guests.persistence.dsl;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
 import com.ccomp.br.config.QueryDslConfig;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
@@ -15,6 +19,8 @@ import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
+import com.ccomp.br.domain.events.instructor.dto.ActivityParticipantDTO;
+import com.ccomp.br.domain.events.instructor.enums.EnumInstructorStatus;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,10 +29,6 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -193,6 +195,94 @@ class ActivityGuestDslRepositoryTest {
 
         // Asserções Gerente (Deve retornar todos)
         assertThat(managerView).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("A consulta DSL de participantes retorna convidados com conta e aplica visibilidade")
+    void findActivityGuestsForParticipantsReturnsLinkedGuestAndFiltersPublicView() {
+        LocalDateTime now = LocalDateTime.now();
+        Event event = Event.builder()
+                .title("Evento DSL")
+                .slug("evento-dsl-participantes")
+                .category(EnumEventCategory.ACADEMIC_EDUCATIONAL)
+                .format(EnumEventFormat.IN_PERSON)
+                .ownerId(UUID.randomUUID())
+                .createdAt(now)
+                .build();
+        entityManager.persist(event);
+        EventActivity activity = EventActivity.builder()
+                .title("Atividade DSL")
+                .type(EnumActivityType.LECTURE)
+                .displayOrder(1L)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .createdAt(now)
+                .event(event)
+                .build();
+        entityManager.persist(activity);
+
+        UUID accountId = UUID.randomUUID();
+        EventGuest publicGuest = createEventGuest(event, EnumGuestVisibility.PUBLIC, EnumGuestStatus.CONFIRMED, now);
+        publicGuest.setUserId(accountId);
+        EventGuest privateGuest = createEventGuest(event, EnumGuestVisibility.PRIVATE, EnumGuestStatus.CONFIRMED, now);
+        EventGuest canceledGuest = createEventGuest(event, EnumGuestVisibility.PUBLIC, EnumGuestStatus.CANCELED, now);
+        entityManager.persist(ActivityGuest.builder().activity(activity).eventGuest(publicGuest).build());
+        entityManager.persist(ActivityGuest.builder().activity(activity).eventGuest(privateGuest).build());
+        entityManager.persist(ActivityGuest.builder().activity(activity).eventGuest(canceledGuest).build());
+        entityManager.flush();
+        entityManager.clear();
+
+        List<ActivityParticipantDTO> publicParticipants = activityGuestDslRepository
+                .findActivityGuestsForParticipants(activity.getId(), false);
+        List<ActivityParticipantDTO> managerParticipants = activityGuestDslRepository
+                .findActivityGuestsForParticipants(activity.getId(), true);
+
+        assertThat(publicParticipants).hasSize(1);
+        assertThat(publicParticipants.getFirst().name()).isEqualTo(publicGuest.getName());
+        assertThat(publicParticipants.getFirst().isGuest()).isTrue();
+        assertThat(publicParticipants.getFirst().role()).isEqualTo(EnumActivityGuestRole.PRESENTER.name());
+        assertThat(managerParticipants).hasSize(3)
+                .filteredOn(participant -> participant.name().equals(canceledGuest.getName()))
+                .singleElement()
+                .satisfies(participant -> assertThat(participant.status()).isEqualTo(EnumInstructorStatus.CANCELED));
+    }
+
+    @Test
+    @DisplayName("Excluir perfil de convidado remove seus vínculos, mas preserva atividade e evento")
+    void deletingGuestProfileRemovesActivityLinksAndPreservesParentResources() {
+        LocalDateTime now = LocalDateTime.now();
+        Event event = Event.builder()
+                .title("Evento exclusão convidado")
+                .slug("evento-exclusao-convidado")
+                .category(EnumEventCategory.ACADEMIC_EDUCATIONAL)
+                .format(EnumEventFormat.IN_PERSON)
+                .ownerId(UUID.randomUUID())
+                .createdAt(now)
+                .build();
+        entityManager.persist(event);
+        EventActivity activity = EventActivity.builder()
+                .title("Atividade preservada")
+                .type(EnumActivityType.LECTURE)
+                .displayOrder(1L)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .createdAt(now)
+                .event(event)
+                .build();
+        entityManager.persist(activity);
+        EventGuest guest = createEventGuest(event, EnumGuestVisibility.PUBLIC, EnumGuestStatus.CONFIRMED, now);
+        entityManager.persist(ActivityGuest.builder().activity(activity).eventGuest(guest).build());
+        entityManager.flush();
+
+        entityManager.createNativeQuery("DELETE FROM tb_event_guests WHERE id = :id")
+                .setParameter("id", guest.getId())
+                .executeUpdate();
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(entityManager.find(Event.class, event.getId())).isNotNull();
+        assertThat(entityManager.find(EventActivity.class, activity.getId())).isNotNull();
+        assertThat(entityManager.find(EventGuest.class, guest.getId())).isNull();
+        assertThat(entityManager.createQuery("select count(ag) from ActivityGuest ag", Long.class)
+                .getSingleResult()).isZero();
     }
 
     private EventGuest createEventGuest(Event event, EnumGuestVisibility visibility, EnumGuestStatus status, LocalDateTime createdAt) {

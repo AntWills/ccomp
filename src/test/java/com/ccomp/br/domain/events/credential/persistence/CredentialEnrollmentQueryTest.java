@@ -105,7 +105,7 @@ class CredentialEnrollmentQueryTest {
         @SuppressWarnings("unchecked")
         var plan = (java.util.List<String>) entityManager.createNativeQuery("""
                 explain select id from tb_users
-                where text_search_match('ana partic', name)
+                where text_search_match('ana partic', name, 0.4)
                 """).getResultList();
 
         assertThat(String.join("\n", plan)).contains("idx_users_name_trgm");

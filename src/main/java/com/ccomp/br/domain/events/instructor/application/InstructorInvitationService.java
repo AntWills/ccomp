@@ -15,6 +15,7 @@ import com.ccomp.br.domain.events.instructor.persistence.EventInstructor;
 import com.ccomp.br.domain.events.instructor.persistence.EventInstructorRepository;
 import com.ccomp.br.domain.events.instructor.persistence.InstructorInvitation;
 import com.ccomp.br.domain.events.instructor.persistence.InstructorInvitationRepository;
+import com.ccomp.br.domain.events.instructor.enums.EnumInstructorRole;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
@@ -118,6 +119,63 @@ public class InstructorInvitationService {
     }
 
     @Transactional
+    public MessageResponse addInstructor(UUID requesterId, Long activityId, String name,
+                                         String description, EnumInstructorRole role, String accountEmail) {
+        EventActivity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        assertCanManage(getEvent(activity), requesterId);
+
+        UUID accountId = null;
+        if (accountEmail != null && !accountEmail.isBlank()) {
+            UserDTO account = userManagement.findByEmailAddress(new EmailAddress(accountEmail))
+                    .filter(UserDTO::isActive)
+                    .orElseThrow(() -> new ResourceNotFoundException("Não há uma conta ativa com este e-mail."));
+            accountId = account.id();
+            Optional<EventInstructor> existing = instructorRepository.findByActivityIdAndUserId(activityId, accountId);
+            if (existing.filter(EventInstructor::isConfirmed).isPresent()) {
+                return new MessageResponse("Este usuário já ministra esta atividade.");
+            }
+            if (existing.isPresent()) {
+                EventInstructor instructor = existing.get();
+                if (instructor.isCanceled()) instructor.reactivate();
+                instructor.setName(name);
+                instructor.setDescription(description);
+                instructor.setRole(role == null ? EnumInstructorRole.INSTRUCTOR : role);
+                instructorRepository.save(instructor);
+                return new MessageResponse("Vínculo do ministrante reativado.");
+            }
+        }
+
+        instructorRepository.save(EventInstructor.builder()
+                .activityId(activityId)
+                .userId(accountId)
+                .name(name)
+                .description(description)
+                .role(role == null ? EnumInstructorRole.INSTRUCTOR : role)
+                .build());
+        return new MessageResponse("Ministrante adicionado à atividade.");
+    }
+
+    @Transactional
+    public MessageResponse linkInstructorAccount(UUID requesterId, Long activityId, Long instructorId, String email) {
+        EventActivity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        assertCanManage(getEvent(activity), requesterId);
+        EventInstructor instructor = instructorRepository.findById(instructorId)
+                .filter(item -> item.getActivityId().equals(activityId))
+                .orElseThrow(() -> new ResourceNotFoundException("Ministrante não encontrado nesta atividade."));
+        UserDTO account = userManagement.findByEmailAddress(new EmailAddress(email))
+                .filter(UserDTO::isActive)
+                .orElseThrow(() -> new ResourceNotFoundException("Não há uma conta ativa com este e-mail."));
+        instructorRepository.findByActivityIdAndUserId(activityId, account.id())
+                .filter(other -> !other.getId().equals(instructorId) && other.isConfirmed())
+                .ifPresent(other -> { throw new DomainException("Esta conta já está vinculada como ministrante da atividade."); });
+        instructor.setUserId(account.id());
+        instructorRepository.save(instructor);
+        return new MessageResponse("Conta vinculada ao ministrante.");
+    }
+
+    @Transactional
     public MessageResponse reply(UUID code, UUID userId, boolean accept) {
         InstructorInvitation invitation = invitationRepository.findByCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Código de convite não encontrado."));
@@ -145,7 +203,14 @@ public class InstructorInvitationService {
                 .orElseGet(() -> EventInstructor.builder()
                         .activityId(invitation.getActivity().getId())
                         .userId(userId)
+                        .name(user.name())
                         .build());
+
+        if (instructor.getName() == null || instructor.getName().isBlank()) {
+            // Registros antigos vinculados por convite podem não ter nome preenchido.
+            // O nome da conta passa a ser o nome público do ministrante.
+            instructor.setName(user.name());
+        }
 
         if (instructor.isCanceled()) {
             instructor.reactivate();

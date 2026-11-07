@@ -1,5 +1,9 @@
 package com.ccomp.br.domain.events.guests.application;
 
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
@@ -30,10 +34,6 @@ import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.CursorUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
 
 @Service
 public class GuestService {
@@ -172,10 +172,19 @@ public class GuestService {
                         .event(event)
                         .name(request.name())
                         .description(request.description())
+                        .userId(resolveActiveAccount(request.accountEmail()))
                         .build()
         );
 
         return guest;
+    }
+
+    private UUID resolveActiveAccount(String email) {
+        if (email == null || email.isBlank()) return null;
+        return userManagement.findByEmailAddress(new EmailAddress(email))
+                .filter(user -> user.isActive())
+                .map(user -> user.id())
+                .orElseThrow(() -> new ResourceNotFoundException("Não há uma conta ativa com este e-mail."));
     }
 
     @Transactional(readOnly = true)
@@ -227,7 +236,7 @@ public class GuestService {
         EventDTO event = eventCache.findById(guest.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         boolean isManager = eventAccessPolicy.canEdit(event, requesterId);
-        boolean isTheGuestHimself = Objects.equals(guest.getUserId(), requesterId);
+        boolean isTheGuestHimself = requesterId != null && Objects.equals(guest.getUserId(), requesterId);
 
         if (!isManager && !isTheGuestHimself) {
             throw new AccessDeniedException("Você não tem permissão para alterar os dados deste convidado.");
@@ -256,12 +265,20 @@ public class GuestService {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if (!eventAccessPolicy.canEdit(event, requesterId)) {
+        boolean isTheGuestHimself = requesterId != null && Objects.equals(guest.getUserId(), requesterId);
+        if (!eventAccessPolicy.canEdit(event, requesterId) && !isTheGuestHimself) {
             throw new AccessDeniedException("Você não tem permissão para editar este convidado.");
         }
 
         guest.setName(request.name());
         guest.setDescription(request.description());
         eventGuestRepository.save(guest);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean canEditActivity(Long activityId, UUID requesterId) {
+        return requesterId != null
+                && userManagement.isAccountActive(requesterId)
+                && activityGuestRepository.existsByActivityIdAndEventGuestUserId(activityId, requesterId);
     }
 }

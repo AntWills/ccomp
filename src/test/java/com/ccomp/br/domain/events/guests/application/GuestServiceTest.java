@@ -1,5 +1,9 @@
 package com.ccomp.br.domain.events.guests.application;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
@@ -42,10 +46,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -363,6 +363,23 @@ class GuestServiceTest {
 
             verify(guest).setName("Grace Hopper");
             verify(guest).setDescription("Convidada especial");
+            verify(eventGuestRepository).save(guest);
+        }
+
+        @Test
+        @DisplayName("Permite ao convidado vinculado editar o próprio perfil")
+        void allowsLinkedGuestToUpdateOwnProfile() {
+            EventGuest guest = mock(EventGuest.class);
+            when(eventGuestRepository.findByIdAndEventId(5L, eventId)).thenReturn(Optional.of(guest));
+            givenEventExists();
+            when(guest.getUserId()).thenReturn(requesterId);
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(false);
+
+            guestService.updateGuestProfile(eventId, 5L, requesterId,
+                    new UpdateGuestProfileDTO("Ada atualizada", "Perfil próprio"));
+
+            verify(guest).setName("Ada atualizada");
+            verify(guest).setDescription("Perfil próprio");
             verify(eventGuestRepository).save(guest);
         }
 

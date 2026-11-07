@@ -1,5 +1,7 @@
 package com.ccomp.br.domain.events.guests.web;
 
+import java.util.UUID;
+
 import com.ccomp.br.domain.events.guests.application.GuestService;
 import com.ccomp.br.domain.events.guests.application.GuestImageService;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
@@ -30,8 +32,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.UUID;
-
 @RestController
 @RequestMapping("/api/events")
 @Tag(
@@ -51,8 +51,7 @@ public class GuestController {
     @PostMapping("/{eventId}/guests")
     @Operation(
             summary = "Adiciona um convidado ao evento",
-            description = "Cria o perfil público de um convidado sem exigir conta ou e-mail. O corpo aceita `name` " +
-                    "e `description`. O convidado fica associado ao evento; atividades são vinculadas por uma rota própria. Requer JWT " +
+            description = "Cria o perfil de um convidado sem exigir conta. O corpo aceita `name`, `description` e, opcionalmente, `account_email` de uma conta ativa. O convidado fica associado ao evento; atividades são vinculadas por uma rota própria. Requer JWT " +
                     "de proprietário, editor ativo, MODERATOR ou ADMIN. Retorna `201` com `MessageResponse`."
     )
     @ApiResponses({
@@ -82,7 +81,7 @@ public class GuestController {
     @Operation(
             summary = "Associa um convidado existente a uma atividade",
             description = "Vincula um convidado já cadastrado no evento à atividade indicada, sem recriar seu perfil. " +
-                    "O corpo JSON é opcional e aceita `role`: `PRESENTER` (ministrante), `SPECIAL_GUEST` " +
+                    "O corpo JSON é opcional e aceita `role`: `PRESENTER` (palestrante), `ASSISTANT` (auxiliar), `SPECIAL_GUEST` " +
                     "(convidado especial), `MODERATOR` (mediador) ou `LISTENER` (ouvinte). Sem corpo ou sem `role`, " +
                     "o padrão é `PRESENTER`. Se o vínculo já existir e a função enviada for diferente, atualiza a função. " +
                     "A atividade precisa pertencer ao mesmo evento. Requer JWT de proprietário, editor ativo, MODERATOR " +
@@ -160,7 +159,7 @@ public class GuestController {
                     "A lista pública contém apenas convidados confirmados e públicos; proprietário, editor ativo, " +
                     "MODERATOR ou ADMIN também podem consultar perfis privados e cancelados. `pageSize` usa padrão 20 " +
                     "e máximo 50; `cursor` é opaco e deve ser reutilizado com o mesmo evento. Acesso anônimo é permitido " +
-                    "para eventos PUBLISHED; outros status exigem proprietário, editor ativo, MODERATOR ou ADMIN."
+                    "para eventos PUBLISHED ou UNLISTED; outros status exigem proprietário, editor ativo, MODERATOR ou ADMIN."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Página de convidados retornada",
@@ -188,8 +187,8 @@ public class GuestController {
     @Operation(
             summary = "Lista os convidados associados a uma atividade",
             description = "Retorna `CursorPage<ActivityGuestDTO>` com `content`, `next_cursor` e `previous_cursor`. " +
-                    "Cada item contém `id`, `activity_id`, `event_guest_id`, `name`, `description`, `image_key`, " +
-                    "`role` (`PRESENTER`, `SPECIAL_GUEST`, `MODERATOR` ou `LISTENER`), `status`, `visibility` e `created_at`; " +
+                    "Cada item contém `id`, `activity_id`, `event_guest_id`, `name`, `description`, `image_key`, `is_guest` e " +
+                    "`role` (`PRESENTER`, `ASSISTANT`, `SPECIAL_GUEST`, `MODERATOR` ou `LISTENER`), `status`, `visibility` e `created_at`; " +
                     "A lista pública contém apenas convidados confirmados e públicos; proprietário, editor ativo, " +
                     "MODERATOR ou ADMIN também podem consultar perfis privados e cancelados. `pageSize` usa padrão 20 " +
                     "e máximo 50; `cursor` é opaco e deve ser reutilizado com a mesma atividade. O acesso segue a " +
@@ -251,11 +250,11 @@ public class GuestController {
     @Operation(
             summary = "Atualiza os dados do perfil do convidado",
             description = "O corpo aceita `name` e `description`. Substitui esses campos do perfil; `name` é obrigatório e não pode ficar em branco. " +
-                    "Imagem é gerenciada pelas rotas `/image`. Requer JWT de proprietário, editor ativo, MODERATOR ou " +
-                    "ADMIN. Retorna `MessageResponse` com confirmação."
+                    "O convidado com conta vinculada pode editar o próprio perfil; gestores do evento também podem. Imagem é gerenciada pelas rotas `/image`."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Dados do convidado atualizados"),
+            @ApiResponse(responseCode = "200", description = "Dados do convidado atualizados",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = MessageResponse.class))),
             @ApiResponse(responseCode = "400", description = "Nome ausente, campo acima do limite ou corpo inválido",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "JWT ausente ou inválido",
@@ -279,7 +278,7 @@ public class GuestController {
             summary = "Envia ou substitui a imagem do convidado",
             description = "Recebe o campo multipart `file`; aceita PNG, JPEG e WebP. Os bytes são enviados ao object " +
                     "storage e a chave resultante é associada ao perfil. A imagem anterior é removida após a substituição. " +
-                    "Requer JWT de proprietário, editor ativo, MODERATOR ou ADMIN. Retorna `MessageResponse`."
+                    "Requer JWT do próprio convidado com conta vinculada ou de um gestor do evento. Retorna `MessageResponse`."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Imagem salva",
@@ -349,9 +348,9 @@ public class GuestController {
     @DeleteMapping("/{eventId}/guests/{guestId}/image")
     @Operation(
             summary = "Remove a imagem do convidado",
-            description = "Apaga o objeto do storage e limpa a chave associada ao convidado. Requer JWT de proprietário, " +
-                    "editor ativo, MODERATOR ou ADMIN. Retorna `204` quando removida; retorna `404` se o perfil não " +
-                    "tiver imagem associada."
+            description = "Apaga o objeto do storage e limpa a chave associada ao convidado. Permitido ao próprio convidado " +
+                    "com conta vinculada ou a proprietário, editor ativo, MODERATOR ou ADMIN. Retorna `204` quando removida; " +
+                    "retorna `404` se o perfil não tiver imagem associada."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Imagem removida", content = @Content),
@@ -371,6 +370,22 @@ public class GuestController {
     ) {
         boolean removed = guestImageService.removeImage(eventId, guestId, extractUserId(jwt));
         return removed ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    }
+
+    @DeleteMapping("/{eventId}/guests/{guestId}")
+    @Operation(summary = "Exclui o perfil do convidado", description = "Remove o perfil, seus vínculos com atividades e a imagem associada. Requer permissão para editar o evento.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Convidado excluído", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para editar o evento"),
+            @ApiResponse(responseCode = "404", description = "Evento ou convidado não encontrado")
+    })
+    public ResponseEntity<Void> deleteGuest(
+            @PathVariable Long eventId,
+            @PathVariable Long guestId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
+    ) {
+        guestImageService.deleteGuest(eventId, guestId, extractUserId(jwt));
+        return ResponseEntity.noContent().build();
     }
 
     private UUID extractUserId(@Nullable Jwt jwt) {
