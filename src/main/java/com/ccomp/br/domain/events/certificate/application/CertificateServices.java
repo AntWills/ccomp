@@ -114,29 +114,59 @@ public class CertificateServices {
 
     public StorageExternal.StoredFile buildCertificateFromInstructor(Long eventId, Long instructorId,
                                                                        UUID requesterId) {
-        UUID recipientId = variablesServices.findInstructorCertificateRecipient(eventId, instructorId);
-        EventDTO event = eventCache.findById(eventId)
-                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-        if (!recipientId.equals(requesterId) && !accessPolicy.canEdit(event, requesterId)) {
-            throw new AccessDeniedException("Somente o ministrante ou a equipe do evento pode gerar este certificado.");
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            CompletableFuture<UUID> recipientFuture = CompletableFuture.supplyAsync(
+                    () -> variablesServices.findInstructorCertificateRecipient(eventId, instructorId), executor);
+            CompletableFuture<EventDTO> eventFuture = CompletableFuture.supplyAsync(() -> eventCache.findById(eventId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado.")), executor);
+            CompletableFuture.allOf(recipientFuture, eventFuture).join();
+
+            UUID recipientId = recipientFuture.join();
+            EventDTO event = eventFuture.join();
+
+            if (!recipientId.equals(requesterId) && !accessPolicy.canEdit(event, requesterId))
+                throw new AccessDeniedException("Somente o ministrante ou a equipe do evento pode gerar este certificado.");
+
+            CompletableFuture<StorageExternal.StoredFile> coverFuture = CompletableFuture.supplyAsync(
+                    () -> certificateFetcher.fetchCoverTemplate(eventId), executor);
+            CompletableFuture<EventBoxTemplate> boxFuture = CompletableFuture.supplyAsync(
+                    () -> certificateFetcher.fetchBoxTemplate(eventId, EnumEventCertificateTemplateType.INSTRUCTOR), executor);
+            CompletableFuture<Map<String, String>> variablesFuture = boxFuture.thenApplyAsync(box ->
+                    variablesServices.loadInstructorVariablesValues(
+                            box.getVariables(), eventId, instructorId, recipientId), executor);
+
+            CompletableFuture.allOf(coverFuture, boxFuture, variablesFuture).join();
+            return render(coverFuture.join(), boxFuture.join().getBoxes(), variablesFuture.join());
+        } catch (CompletionException e) {
+            throw unwrapCompletionException(e);
         }
-        var cover = certificateFetcher.fetchCoverTemplate(eventId);
-        var box = certificateFetcher.fetchBoxTemplate(eventId, EnumEventCertificateTemplateType.INSTRUCTOR);
-        var variables = variablesServices.loadInstructorVariablesValues(
-                box.getVariables(), eventId, instructorId, recipientId);
-        return render(cover, box.getBoxes(), variables);
     }
 
     public StorageExternal.StoredFile buildCertificateForEditor(Long eventId, UUID userId) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-        if (!event.isOwner(userId) && !accessPolicy.isActiveEditor(eventId, userId)) {
+
+        if (!event.isOwner(userId) && !accessPolicy.isActiveEditor(eventId, userId))
             throw new AccessDeniedException("O certificado está disponível somente para owner ou editor ativo do evento.");
+
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            CompletableFuture<StorageExternal.StoredFile> coverFuture = CompletableFuture.supplyAsync(
+                    () -> certificateFetcher.fetchCoverTemplate(eventId), executor);
+            CompletableFuture<EventBoxTemplate> boxFuture = CompletableFuture.supplyAsync(
+                    () -> certificateFetcher.fetchBoxTemplate(eventId, EnumEventCertificateTemplateType.EDITOR), executor);
+            CompletableFuture<Map<String, String>> variablesFuture = boxFuture.thenApplyAsync(box ->
+                    variablesServices.loadEditorVariablesValues(box.getVariables(), eventId, userId), executor);
+
+            CompletableFuture.allOf(coverFuture, boxFuture, variablesFuture).join();
+            return render(coverFuture.join(), boxFuture.join().getBoxes(), variablesFuture.join());
+        } catch (CompletionException e) {
+            throw unwrapCompletionException(e);
         }
-        var cover = certificateFetcher.fetchCoverTemplate(eventId);
-        var box = certificateFetcher.fetchBoxTemplate(eventId, EnumEventCertificateTemplateType.EDITOR);
-        var variables = variablesServices.loadEditorVariablesValues(box.getVariables(), eventId, userId);
-        return render(cover, box.getBoxes(), variables);
+    }
+
+    private RuntimeException unwrapCompletionException(CompletionException exception) {
+        if (exception.getCause() instanceof RuntimeException runtimeException) return runtimeException;
+        return new IllegalStateException("Falha ao gerar certificado.", exception.getCause());
     }
 
     private StorageExternal.StoredFile render(StorageExternal.StoredFile cover, List<BoxElementDTO> boxes,

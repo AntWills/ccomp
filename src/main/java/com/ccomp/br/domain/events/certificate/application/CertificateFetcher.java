@@ -79,9 +79,9 @@ public class CertificateFetcher {
 
     private String defaultEventCertificateText(EnumEventCertificateTemplateType templateType) {
         return switch (templateType) {
-            case PARTICIPANT -> "Certificamos que *{participante.nome}* participou de *{evento.title}*, com carga horária de {evento.carga_horaria}.";
-            case INSTRUCTOR -> "Certificamos que *{ministrante.nome}* atuou como ministrante ou auxiliar em atividade(s) de *{evento.title}*, com carga horária de {ministrante.carga_horaria}.";
-            case EDITOR -> "Certificamos que *{equipe.nome}* integrou a equipe de *{evento.title}*, com carga horária de {equipe.carga_horaria}.";
+            case PARTICIPANT -> "Certificamos que *{participante.nome}* participou de *{evento.title}*, com carga horária de {evento.carga_horaria} horas.";
+            case INSTRUCTOR -> "Certificamos que *{ministrante.nome}* atuou como ministrante ou auxiliar em atividade(s) de *{evento.title}*, com carga horária de {ministrante.carga_horaria} horas.";
+            case EDITOR -> "Certificamos que *{equipe.nome}* integrou a equipe de *{evento.title}*, com carga horária de {equipe.carga_horaria} horas.";
         };
     }
 
@@ -101,7 +101,7 @@ public class CertificateFetcher {
                         .boxes(List.of(
                                 new BoxElementDTO(
                                         "Certificamos que *{participante.nome}* participou da atividade *{atividade.nome}*, " +
-                                                "com carga horária de {atividade.carga_horaria}.",
+                                                "com carga horária de {atividade.carga_horaria} horas.",
                                         0.25, 0.5, 0.5, 25f, null, null
                                 )
                         ))

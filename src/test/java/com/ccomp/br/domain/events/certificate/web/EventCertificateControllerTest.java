@@ -156,6 +156,19 @@ class EventCertificateControllerTest {
     }
 
     @Test
+    void generateInstructorAndEditorPreviews_returnsInlinePng() throws Exception {
+        when(certificateCoverService.loadCoverTemplate(eq(50L), any())).thenReturn(testCover());
+        when(certificateBoxServices.loadBoxTemplate(eq(50L), any(), any()))
+                .thenReturn(eventTemplate());
+
+        for (String type : List.of("INSTRUCTOR", "EDITOR")) {
+            mockMvc.perform(get(PREVIEW_URL).param("type", type).accept(MediaType.IMAGE_PNG))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG));
+        }
+    }
+
+    @Test
     void generateActivityPreview_validTemplate_returnsInlinePng() throws Exception {
         when(certificateCoverService.loadCoverTemplate(eq(50L), any())).thenReturn(testCover());
         when(activityCertificateBoxServices.loadBoxTemplate(eq(50L), any())).thenReturn(activityTemplate());
@@ -223,6 +236,20 @@ class EventCertificateControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0]").value("{ministrante.nome}"))
                 .andExpect(jsonPath("$[1]").value("{ministrante.carga_horaria}"))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.hasItem("{atividade.nome}"))));
+        mockMvc.perform(get("/api/events/certificate-variables").param("type", "INSTRUCTOR"))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{participante.nome}")))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{evento.carga_horaria}")));
+    }
+
+    @Test
+    void loadEditorCertificateVariables_returnsEverySupportedVariable() throws Exception {
+        mockMvc.perform(get("/api/events/certificate-variables").param("type", "EDITOR"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{equipe.nome}")))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{participante.nome}")))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{evento.carga_horaria}")))
                 .andExpect(jsonPath("$").value(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.hasItem("{atividade.nome}"))));
     }

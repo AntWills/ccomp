@@ -82,7 +82,8 @@ class CertificateFetcherTest {
         assertThat(result.getVariables()).containsExactly(
                 "{participante.nome}", "{evento.title}", "{evento.carga_horaria}");
         assertThat(result.getBoxes()).singleElement().satisfies(box ->
-                assertThat(box.textTemplate()).contains("{participante.nome}", "{evento.title}", "{evento.carga_horaria}"));
+                assertThat(box.textTemplate()).contains("{participante.nome}", "{evento.title}",
+                        "{evento.carga_horaria} horas"));
     }
 
     @Test
@@ -101,8 +102,10 @@ class CertificateFetcherTest {
                 .doesNotContain("{equipe.nome}", "{atividade.nome}");
         assertThat(editor.getVariables()).contains("{equipe.nome}", "{equipe.carga_horaria}")
                 .doesNotContain("{ministrante.nome}", "{atividade.nome}");
-        assertThat(instructor.getBoxes().getFirst().textTemplate()).contains("{ministrante.nome}");
-        assertThat(editor.getBoxes().getFirst().textTemplate()).contains("{equipe.nome}");
+        assertThat(instructor.getBoxes().getFirst().textTemplate())
+                .contains("{ministrante.nome}", "{ministrante.carga_horaria} horas");
+        assertThat(editor.getBoxes().getFirst().textTemplate())
+                .contains("{equipe.nome}", "{equipe.carga_horaria} horas");
     }
 
     @Test
@@ -115,6 +118,7 @@ class CertificateFetcherTest {
         assertThat(result.getVariables()).containsExactly(
                 "{participante.nome}", "{atividade.nome}", "{atividade.carga_horaria}");
         assertThat(result.getBoxes()).singleElement().satisfies(box ->
-                assertThat(box.textTemplate()).contains("{participante.nome}", "{atividade.nome}", "{atividade.carga_horaria}"));
+                assertThat(box.textTemplate()).contains("{participante.nome}", "{atividade.nome}",
+                        "{atividade.carga_horaria} horas"));
     }
 }
