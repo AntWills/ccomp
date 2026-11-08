@@ -103,7 +103,8 @@ public class EventDslRepository {
                                         event.startDate,
                                         event.endDate,
                                         event.address,
-                                        event.onlineUrl
+                                        event.onlineUrl,
+                                        event.timeZone
                                 ),
                                 searchTerm.isPresent() ? relevance : Expressions.nullExpression(Double.class)
                         )
@@ -176,7 +177,8 @@ public class EventDslRepository {
                                 event.startDate,
                                 event.endDate,
                                 event.address,
-                                event.onlineUrl
+                                event.onlineUrl,
+                                event.timeZone
                         )
                 )
                 .from(event)
@@ -234,7 +236,8 @@ public class EventDslRepository {
                                 event.startDate,
                                 event.endDate,
                                 event.address,
-                                event.onlineUrl
+                                event.onlineUrl,
+                                event.timeZone
                         )
                 )
                 .from(event)
@@ -288,7 +291,8 @@ public class EventDslRepository {
                                 event.startDate,
                                 event.endDate,
                                 event.address,
-                                event.onlineUrl
+                                event.onlineUrl,
+                                event.timeZone
                         )
                 )
                 .from(event)

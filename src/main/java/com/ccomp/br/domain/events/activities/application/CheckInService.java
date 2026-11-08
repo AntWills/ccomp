@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -110,7 +111,7 @@ public class CheckInService {
         EventActivity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não existe."));
 
-        if(!activity.isInProgress(LocalDateTime.now()))
+        if(!activity.isInProgress(activity.getEvent().now(Clock.systemUTC())))
             throw new DomainException("Não é possível fazer check-in.");
 
         var enrollment = enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, activityId)

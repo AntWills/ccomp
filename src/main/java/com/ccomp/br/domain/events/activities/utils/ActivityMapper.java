@@ -10,6 +10,7 @@ import org.mapstruct.*;
 )
 public interface ActivityMapper {
     @Mapping(source = "event.id", target = "eventId")
+    @Mapping(source = "event.timeZone", target = "timeZone")
     ActivityDTO eventActivityToActivityDTO(EventActivity eventActivity);
 
     @Mapping(target = "id", ignore = true)

@@ -43,6 +43,9 @@ public class EventsController {
         **Acesso:** eventos `PUBLISHED` podem ser consultados sem autenticação. Para `DRAFT`, `UNLISTED` ou
         `CANCELED`, envie um JWT pertencente ao proprietário, a um editor ativo, `MODERATOR` ou `ADMIN`.
 
+        `start_date`, `end_date` e datas de inscrição são horários locais do evento. Consulte `time_zone` na resposta
+        para interpretá-los. O backend não os converte para o fuso do servidor.
+
         **Respostas:** `200` com `EventDTO`; `403` quando o evento existe, mas o usuário não tem acesso;
         `404` sem corpo quando o evento não existe.
         """
@@ -86,6 +89,8 @@ public class EventsController {
         ### Regras de Visibilidade:
         - Esta consulta é **estritamente pública** e restrita a eventos com status **PUBLISHED**.
         - Eventos no estado `DRAFT`, `UNLISTED` ou `CANCELED` **não** serão retornados por esta rota (retornará `404 Not Found`).
+
+        Datas e horários retornados são locais ao evento; use o `time_zone` IANA incluído no `EventDTO`.
         """
     )
     @ApiResponses(value = {
@@ -125,6 +130,8 @@ public class EventsController {
         `teamCertificateWorkloadHours` nem `organization`; consulte `GET /api/events/{eventId}` ou
         `GET /api/events/slug/{slug}` para obter o `EventDTO` completo. Esses campos também não são filtros desta rota.
 
+        Cada item inclui `time_zone`. `start_date`, `end_date` e datas de inscrição são horários locais nesse fuso.
+
         `pageSize` é um parâmetro de consulta opcional, padrão `10` e limitado a `50`. `nextCursor` é um token
         opaco retornado pela página anterior; continue usando o mesmo termo e os mesmos filtros. A resposta tem
         `content` (itens `EventListItemDTO`), `next_cursor` e `previous_cursor`.
@@ -161,8 +168,12 @@ public class EventsController {
             description = """
         Cria um novo evento atribuindo o status inicial como `DRAFT` (Rascunho).
 
-        Envie `title`, `category` e `format`. `startDate`, `endDate`, `workloadHours`,
-        `teamCertificateWorkloadHours` e `organization` são opcionais. `workloadHours` configura a carga horária
+        Envie `title`, `category`, `format` e `time_zone` com um identificador IANA (por exemplo `America/Sao_Paulo`).
+        `start_date`, `end_date`, `workload_hours`, `team_certificate_workload_hours` e `organization` são opcionais.
+        Datas são horários locais no fuso informado em `time_zone` e devem ser enviadas sem offset. O default usado
+        por registros sem fuso é `America/Sao_Paulo`, mas este endpoint exige o campo explicitamente: informe a zona
+        IANA do local do evento; para eventos online, informe a zona usada como referência de agenda.
+        `workload_hours` configura a carga horária
         base do evento, que é somada às atividades com presença durante a emissão do certificado de participante;
         `teamCertificateWorkloadHours`
         define a carga horária dos certificados da equipe e precisa estar configurada para emitir esses certificados;
@@ -205,8 +216,10 @@ public class EventsController {
             summary = "Atualiza parcialmente um evento existente",
             description = """
         Atualiza somente os campos enviados em `UpdateEventDTO`: `title`, `summary`, `content`, `category`, `format`,
-        `scheduleConflictPolicy`, datas de realização e de inscrição, `enrollmentPaused`, `workloadHours`,
-        `teamCertificateWorkloadHours` e `organization`. Campos omitidos ou enviados como `null` ficam inalterados.
+        `schedule_conflict_policy`, datas de realização e de inscrição, `enrollment_paused`, `workload_hours`,
+        `team_certificate_workload_hours`, `organization` e `time_zone`. Campos omitidos ou enviados como `null` ficam inalterados.
+        As datas são horários locais interpretados no fuso do evento. Se `time_zone` mudar, as datas existentes serão
+        interpretadas na nova zona; o backend não ajusta seus valores automaticamente.
         As cargas horárias não podem ser negativas; `organization` aceita até 255 caracteres. Alterar título também
         regenera o slug. Capa e status têm endpoints próprios. A resposta `EventDTO` inclui os campos atualizados.
 
@@ -247,7 +260,8 @@ public class EventsController {
             summary = "Atualiza o status de publicação de um evento",
             description = """
         Transiciona o evento para o status informado no caminho: `DRAFT`, `PUBLISHED`, `UNLISTED` ou `CANCELED`.
-        As regras de domínio podem rejeitar a transição, por exemplo, publicar sem datas. Requer JWT do proprietário,
+        A validação de datas compara a hora atual no `time_zone` do evento com os horários locais cadastrados. As regras
+        de domínio podem rejeitar a transição, por exemplo, publicar sem datas ou um evento já encerrado. Requer JWT do proprietário,
         de um editor ativo, `MODERATOR` ou `ADMIN`.
         """
     )
