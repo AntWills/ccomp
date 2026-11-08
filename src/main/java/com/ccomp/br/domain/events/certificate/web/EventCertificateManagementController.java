@@ -17,7 +17,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -70,7 +69,7 @@ public class EventCertificateManagementController {
     public ResponseEntity<BoxTemplateResponse> getBoxTemplate(
             @PathVariable Long eventId,
             @RequestParam(defaultValue = "PARTICIPANT") EnumEventCertificateTemplateType type,
-            @AuthenticationPrincipal @Nullable Jwt jwt
+            @AuthenticationPrincipal Jwt jwt
     ) {
         var template = type == EnumEventCertificateTemplateType.PARTICIPANT
                 ? certificateBoxServices.loadBoxTemplate(eventId, extractUserId(jwt))
@@ -98,7 +97,7 @@ public class EventCertificateManagementController {
     @GetMapping(value = "/{eventId}/activity-certificate-box-template", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<BoxTemplateResponse> getActivityBoxTemplate(
             @PathVariable Long eventId,
-            @AuthenticationPrincipal @Nullable Jwt jwt
+            @AuthenticationPrincipal Jwt jwt
     ) {
         var template = activityCertificateBoxServices.loadBoxTemplate(eventId, extractUserId(jwt));
         return ResponseEntity.ok(new BoxTemplateResponse(template.getBoxes(), template.getVariables()));
@@ -124,7 +123,7 @@ public class EventCertificateManagementController {
             produces = {MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_JPEG_VALUE, "image/webp", MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> getCoverTemplate(
             @PathVariable Long eventId,
-            @AuthenticationPrincipal @Nullable Jwt jwt
+            @AuthenticationPrincipal Jwt jwt
     ) {
         StorageExternal.StoredFile cover = certificateCoverService.loadCoverTemplate(eventId, extractUserId(jwt));
         return ResponseEntity.ok()
@@ -152,7 +151,7 @@ public class EventCertificateManagementController {
     public ResponseEntity<Resource> previewEventCertificate(
             @PathVariable Long eventId,
             @RequestParam(defaultValue = "PARTICIPANT") EnumEventCertificateTemplateType type,
-            @AuthenticationPrincipal @Nullable Jwt jwt
+            @AuthenticationPrincipal Jwt jwt
     ) {
         UUID userId = extractUserId(jwt);
         var cover = certificateCoverService.loadCoverTemplate(eventId, userId);
@@ -181,7 +180,7 @@ public class EventCertificateManagementController {
             produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> previewActivityCertificate(
             @PathVariable Long eventId,
-            @AuthenticationPrincipal @Nullable Jwt jwt
+            @AuthenticationPrincipal Jwt jwt
     ) {
         UUID userId = extractUserId(jwt);
         var cover = certificateCoverService.loadCoverTemplate(eventId, userId);
@@ -217,7 +216,7 @@ public class EventCertificateManagementController {
     public ResponseEntity<MessageResponse> uploadCoverTemplate(
             @PathVariable Long eventId,
             @RequestParam("file") MultipartFile file,
-            @AuthenticationPrincipal @Nullable Jwt jwt
+            @AuthenticationPrincipal Jwt jwt
     ) {
         certificateCoverService.uploadCoverTemplate(eventId, extractUserId(jwt), file);
         return ResponseEntity.ok(new MessageResponse("Fundo do certificado atualizado com sucesso."));
@@ -242,7 +241,7 @@ public class EventCertificateManagementController {
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> deleteCoverTemplate(
             @PathVariable Long eventId,
-            @AuthenticationPrincipal @Nullable Jwt jwt
+            @AuthenticationPrincipal Jwt jwt
     ) {
         boolean removed = certificateCoverService.deleteCoverTemplate(eventId, extractUserId(jwt));
 
@@ -296,7 +295,7 @@ public class EventCertificateManagementController {
             @PathVariable Long eventId,
             @Valid @RequestBody SaveCertificateBoxesRequest request,
             @RequestParam(defaultValue = "PARTICIPANT") EnumEventCertificateTemplateType type,
-            @AuthenticationPrincipal @Nullable Jwt jwt
+            @AuthenticationPrincipal Jwt jwt
     ) {
         if (type == EnumEventCertificateTemplateType.PARTICIPANT) {
             certificateBoxServices.saveBoxTemplate(eventId, extractUserId(jwt), request.boxes());
@@ -330,7 +329,7 @@ public class EventCertificateManagementController {
     public ResponseEntity<MessageResponse> saveActivityBoxTemplate(
             @PathVariable Long eventId,
             @Valid @RequestBody SaveCertificateBoxesRequest request,
-            @AuthenticationPrincipal @Nullable Jwt jwt
+            @AuthenticationPrincipal Jwt jwt
     ) {
         activityCertificateBoxServices.saveBoxTemplate(eventId, extractUserId(jwt), request.boxes());
         return ResponseEntity.ok(new MessageResponse("Template de caixas do certificado de atividade salvo com sucesso."));
@@ -371,10 +370,7 @@ public class EventCertificateManagementController {
         );
     }
 
-    private @Nullable UUID extractUserId(@Nullable Jwt jwt) {
-        if (jwt == null)
-            return null;
-
+    private UUID extractUserId(Jwt jwt) {
         return UUID.fromString(jwt.getSubject());
     }
 }

@@ -7,6 +7,7 @@ import com.ccomp.br.domain.events.certificate.application.CertificateServices;
 import com.ccomp.br.domain.events.certificate.application.CertificateValidatorService;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
+import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
 import com.ccomp.br.domain.storage.external.StorageExternal;
@@ -338,6 +339,34 @@ class EventCertificateControllerTest {
                 .andExpect(jsonPath("$.boxes[0].textTemplate")
                         .value("Certificamos que {participante.nome}"))
                 .andExpect(jsonPath("$.variables[0]").value("{participante.nome}"));
+    }
+
+    @Test
+    void getInstructorBoxTemplate_returnsInstructorBoxesAndVariables() throws Exception {
+        when(certificateBoxServices.loadBoxTemplate(eq(50L), any(), eq(EnumEventCertificateTemplateType.INSTRUCTOR)))
+                .thenReturn(EventBoxTemplate.builder().eventId(50L)
+                        .boxes(List.of(new BoxElementDTO("Ministrante {ministrante.nome}", 0.1, 0.2, 0.7, 25f, null, null)))
+                        .variables(List.of("{ministrante.nome}")).build());
+
+        mockMvc.perform(get(BOX_TEMPLATE_URL).param("type", "INSTRUCTOR"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.boxes[0].textTemplate").value("Ministrante {ministrante.nome}"))
+                .andExpect(jsonPath("$.variables[0]").value("{ministrante.nome}"));
+        verify(certificateBoxServices).loadBoxTemplate(eq(50L), any(), eq(EnumEventCertificateTemplateType.INSTRUCTOR));
+    }
+
+    @Test
+    void getEditorBoxTemplate_returnsEditorBoxesAndVariables() throws Exception {
+        when(certificateBoxServices.loadBoxTemplate(eq(50L), any(), eq(EnumEventCertificateTemplateType.EDITOR)))
+                .thenReturn(EventBoxTemplate.builder().eventId(50L)
+                        .boxes(List.of(new BoxElementDTO("Equipe {equipe.nome}", 0.1, 0.2, 0.7, 25f, null, null)))
+                        .variables(List.of("{equipe.nome}")).build());
+
+        mockMvc.perform(get(BOX_TEMPLATE_URL).param("type", "EDITOR"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.boxes[0].textTemplate").value("Equipe {equipe.nome}"))
+                .andExpect(jsonPath("$.variables[0]").value("{equipe.nome}"));
+        verify(certificateBoxServices).loadBoxTemplate(eq(50L), any(), eq(EnumEventCertificateTemplateType.EDITOR));
     }
 
     @Test

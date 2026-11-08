@@ -134,9 +134,6 @@ public class CertificateVariablesServices {
      * horária das atividades em que ele realmente participou.
      */
     public Map<String, String> loadEventVariablesValues(List<String> variables, Long eventId, UUID userId) {
-        if (userId == null)
-            throw new AccessDeniedException("É necessário estar autenticado para gerar o certificado.");
-
         Event event = findCertificateEligibleEvent(eventId);
 
         Enrollment enrollment = enrollmentRepository.findByUserIdAndEvent(userId, event)

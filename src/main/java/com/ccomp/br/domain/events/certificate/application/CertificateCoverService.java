@@ -11,15 +11,22 @@ import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.*;
+import javax.imageio.ImageIO;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+
+import java.util.Locale;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class CertificateCoverService {
-    private static final List<String> ALLOWED_CONTENT_TYPES =
-            List.of("image/png", "image/jpeg", "image/webp");
+    private static final long MAX_IMAGE_PIXELS = 30_000_000L;
 
     private final EventCoverTemplateRepository coverTemplateRepository;
     private final CertificateFetcher certificateFetcher;
@@ -54,41 +61,90 @@ public class CertificateCoverService {
             throw new DomainException("Nenhum arquivo enviado.");
         }
 
-        if (!ALLOWED_CONTENT_TYPES.contains(file.getContentType())) {
-            throw new DomainException("Tipo de arquivo não suportado. Utilize PNG, JPEG ou Webp.");
-        }
-
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         if (!accessPolicy.canEdit(event, userId))
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
+        ValidatedImage image = validateImage(file);
+
         String newKey = storageKeyGenerator.generate(
                 "events/%d/certificate-cover-template".formatted(eventId),
                 file.getOriginalFilename()
         );
-        storageExternal.putObject(newKey, file);
-
         Optional<EventCoverTemplate> coverTemplateOpt = coverTemplateRepository.findByEventId(eventId);
+        String oldKey = coverTemplateOpt.map(EventCoverTemplate::getCoverTemplateKey).orElse(null);
 
-        if(coverTemplateOpt.isEmpty()) {
-            coverTemplateRepository.save(
-                    EventCoverTemplate.builder()
-                            .eventId(eventId)
-                            .coverTemplateKey(newKey)
-                            .build()
-            );
+        storageExternal.putObject(newKey, image.bytes(), image.contentType());
+        registerStorageCompensation(newKey, oldKey);
+
+        EventCoverTemplate coverTemplate = coverTemplateOpt.orElseGet(() ->
+                EventCoverTemplate.builder().eventId(eventId).build());
+        coverTemplate.setCoverTemplateKey(newKey);
+        coverTemplateRepository.save(coverTemplate);
+        if (!TransactionSynchronizationManager.isSynchronizationActive() && oldKey != null) {
+            storageExternal.deleteObject(oldKey);
+        }
+    }
+
+    private ValidatedImage validateImage(MultipartFile file) {
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+            String detectedType;
+            try (var input = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
+                if (input == null) throw unsupportedImage();
+                var readers = ImageIO.getImageReaders(input);
+                if (!readers.hasNext()) throw unsupportedImage();
+                var reader = readers.next();
+                try {
+                    reader.setInput(input, true, true);
+                    String format = reader.getFormatName().toLowerCase(Locale.ROOT);
+                    detectedType = switch (format) {
+                        case "png" -> "image/png";
+                        case "jpeg", "jpg" -> "image/jpeg";
+                        case "webp" -> "image/webp";
+                        default -> throw unsupportedImage();
+                    };
+                    int width = reader.getWidth(0);
+                    int height = reader.getHeight(0);
+                    if (width <= 0 || height <= 0 || (long) width * height > MAX_IMAGE_PIXELS
+                            || reader.read(0) == null) {
+                        throw new DomainException("A imagem é inválida ou excede o limite de resolução.");
+                    }
+                } finally {
+                    reader.dispose();
+                }
+            }
+            return new ValidatedImage(bytes, detectedType);
+        } catch (IOException e) {
+            throw new DomainException("Não foi possível ler a imagem enviada.");
+        }
+    }
+
+    private DomainException unsupportedImage() {
+        return new DomainException("Tipo de arquivo não suportado. Utilize PNG, JPEG ou Webp.");
+    }
+
+    private void registerStorageCompensation(String newKey, String oldKey) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             return;
         }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                if (oldKey != null) storageExternal.deleteObject(oldKey);
+            }
 
-        EventCoverTemplate coverTemplate = coverTemplateOpt.get();
-        String oldKey = coverTemplate.getCoverTemplateKey();
-        coverTemplate.setCoverTemplateKey(newKey);
-
-        coverTemplateRepository.save(coverTemplate);
-        storageExternal.deleteObject(oldKey);
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) storageExternal.deleteObject(newKey);
+            }
+        });
     }
+
+    private record ValidatedImage(byte[] bytes, String contentType) {}
 
     /**
      * Remove o fundo salvo do certificado do evento. Devolve {@code false} quando

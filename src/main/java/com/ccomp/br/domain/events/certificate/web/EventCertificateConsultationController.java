@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -45,7 +44,7 @@ public class EventCertificateConsultationController {
     })
     @GetMapping(value = "/{eventId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateFromEvent(@PathVariable Long eventId,
-                                                               @AuthenticationPrincipal @Nullable Jwt jwt) {
+                                                               @AuthenticationPrincipal Jwt jwt) {
         StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromEvent(eventId, extractUserId(jwt));
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(certificate.contentType()))
@@ -63,7 +62,7 @@ public class EventCertificateConsultationController {
     })
     @GetMapping(value = "/activities/{activityId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateFromActivity(@PathVariable Long activityId,
-                                                                  @AuthenticationPrincipal @Nullable Jwt jwt) {
+                                                                  @AuthenticationPrincipal Jwt jwt) {
         StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromActivity(activityId, extractUserId(jwt));
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(certificate.contentType()))
@@ -82,7 +81,7 @@ public class EventCertificateConsultationController {
     @GetMapping(value = "/{eventId}/instructors/{instructorId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateFromInstructor(@PathVariable Long eventId,
                                                                     @PathVariable Long instructorId,
-                                                                    @AuthenticationPrincipal @Nullable Jwt jwt) {
+                                                                    @AuthenticationPrincipal Jwt jwt) {
         StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromInstructor(
                 eventId, instructorId, extractUserId(jwt));
         return certificateResponse(certificate, "certificado-ministrante-%d.png".formatted(instructorId));
@@ -98,7 +97,7 @@ public class EventCertificateConsultationController {
     })
     @GetMapping(value = "/{eventId}/team-certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateForEditor(@PathVariable Long eventId,
-                                                               @AuthenticationPrincipal @Nullable Jwt jwt) {
+                                                               @AuthenticationPrincipal Jwt jwt) {
         StorageExternal.StoredFile certificate = certificateServices.buildCertificateForEditor(
                 eventId, extractUserId(jwt));
         return certificateResponse(certificate, "certificado-equipe-%d.png".formatted(eventId));
@@ -116,8 +115,8 @@ public class EventCertificateConsultationController {
         return ResponseEntity.ok(certificateValidatorService.validate(code));
     }
 
-    private @Nullable UUID extractUserId(@Nullable Jwt jwt) {
-        return jwt == null ? null : UUID.fromString(jwt.getSubject());
+    private UUID extractUserId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
     }
 
     private ResponseEntity<Resource> certificateResponse(StorageExternal.StoredFile certificate, String fileName) {

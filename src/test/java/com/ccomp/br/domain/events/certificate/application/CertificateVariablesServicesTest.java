@@ -19,7 +19,6 @@ import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
-import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.junit.jupiter.api.Test;
@@ -82,14 +81,6 @@ class CertificateVariablesServicesTest {
                 eventRepository);
         ReflectionTestUtils.setField(service, "validationBaseUrl", VALIDATION_BASE_URL);
         return service;
-    }
-
-    @Test
-    void loadEventVariables_nullUser_throwsAccessDenied() {
-        assertThatThrownBy(() -> createService()
-                .loadEventVariablesValues(List.of("{participante.nome}"), 10L, null))
-                .isInstanceOf(AccessDeniedException.class)
-                .hasMessage("É necessário estar autenticado para gerar o certificado.");
     }
 
     @Test

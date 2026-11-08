@@ -130,7 +130,7 @@ public class CertificateServices {
     public StorageExternal.StoredFile buildCertificateForEditor(Long eventId, UUID userId) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-        if (userId == null || (!event.isOwner(userId) && !accessPolicy.isActiveEditor(eventId, userId))) {
+        if (!event.isOwner(userId) && !accessPolicy.isActiveEditor(eventId, userId)) {
             throw new AccessDeniedException("O certificado está disponível somente para owner ou editor ativo do evento.");
         }
         var cover = certificateFetcher.fetchCoverTemplate(eventId);

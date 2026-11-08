@@ -44,6 +44,13 @@ public class StorageExternal {
         }
     }
 
+    public void putObject(String fileKey, byte[] bytes, String contentType) {
+        s3Client.putObject(
+                PutObjectRequest.builder().bucket(bucketName).key(fileKey).contentType(contentType).build(),
+                RequestBody.fromBytes(bytes)
+        );
+    }
+
     /**
      * Busca o objeto e devolve como Resource pronto para stream na resposta HTTP,
      * junto do content-type original salvo no upload.
