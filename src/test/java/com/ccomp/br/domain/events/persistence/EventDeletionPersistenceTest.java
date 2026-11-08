@@ -19,6 +19,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,9 +57,11 @@ class EventDeletionPersistenceTest {
         entityManager.persist(activity);
         entityManager.flush();
 
+        LocalDateTime createdAt = LocalDateTime.parse("2026-11-08T09:00:00");
         EventMaterial eventMaterial = EventMaterial.builder()
                 .eventId(event.getId())
                 .createdBy(event.getOwnerId())
+                .createdAt(createdAt)
                 .title("Material do evento")
                 .type(EnumMaterialType.FILE)
                 .fileKey("events/material.pdf")
@@ -69,6 +72,7 @@ class EventDeletionPersistenceTest {
         ActivityMaterial activityMaterial = ActivityMaterial.builder()
                 .activityId(activity.getId())
                 .createdBy(event.getOwnerId())
+                .createdAt(createdAt)
                 .title("Material da atividade")
                 .type(EnumMaterialType.FILE)
                 .fileKey("activities/material.pdf")

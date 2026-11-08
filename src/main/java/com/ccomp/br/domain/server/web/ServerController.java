@@ -24,7 +24,7 @@ public class ServerController {
 
     @Operation(
             summary = "Consultar status do servidor",
-            description = "Retorna o horário atual do servidor e o uso de memória heap e CPU. Requer perfil ADMIN ou MODERATOR."
+            description = "Retorna o instante atual em UTC e o horário local gerado pelo mesmo Clock usado pelas regras de eventos, junto à zona efetiva configurada, ao uso e limite de heap, ao percentual de heap usado e ao uso de CPU. Requer perfil ADMIN ou MODERATOR."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Status do servidor retornado com sucesso",

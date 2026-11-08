@@ -10,29 +10,33 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.time.Clock;
+import java.time.LocalDateTime;
 
 @Component
 public class EventCache {
     private final EventRepository eventRepository;
     private final EventMapper eventMapper;
+    private final Clock clock;
 
-    public EventCache(EventRepository eventRepository, EventMapper eventMapper) {
+    public EventCache(EventRepository eventRepository, EventMapper eventMapper, Clock clock) {
         this.eventRepository = eventRepository;
         this.eventMapper = eventMapper;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = CacheNames.EVENTS_BY_ID, key = "#eventId")
     public Optional<EventDTO> findById(Long eventId) {
         return eventRepository
-                .findById(eventId).map(eventMapper::eventToEventDTO);
+                .findById(eventId).map(event -> eventMapper.eventToEventDTO(event, LocalDateTime.now(clock)));
     }
 
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = CacheNames.EVENTS_BY_SLUG, key = "#slug")
     public Optional<EventDTO> findBySlug(String slug) {
         return eventRepository
-                .findBySlug(slug).map(eventMapper::eventToEventDTO);
+                .findBySlug(slug).map(event -> eventMapper.eventToEventDTO(event, LocalDateTime.now(clock)));
     }
 
     @Caching(evict = {

@@ -5,6 +5,8 @@ import com.ccomp.br.domain.events.core.dto.UpdateEventDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import org.mapstruct.*;
 
+import java.time.LocalDateTime;
+
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING,
         nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE,
         collectionMappingStrategy = CollectionMappingStrategy.SETTER_PREFERRED
@@ -20,5 +22,7 @@ public interface EventMapper {
     @Mapping(target = "title", ignore = true)
     void updateEntityFromDto(UpdateEventDTO dto, @MappingTarget Event entity);
 
-    EventDTO eventToEventDTO(Event event);
+    @Mapping(target = "executionStatus", expression = "java(event.getExecutionStatus(now))")
+    @Mapping(target = "enrollmentStatus", expression = "java(event.getEnrollmentStatus(now))")
+    EventDTO eventToEventDTO(Event event, LocalDateTime now);
 }

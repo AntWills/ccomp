@@ -68,23 +68,23 @@ public class EventInvitation {
         return status != EnumInvitationStatus.ACCEPTED;
     }
 
-    public boolean isValid() {
+    public boolean isValid(LocalDateTime now) {
         if(status != EnumInvitationStatus.PENDING)
             return false;
-        return !isExpired();
+        return !isExpired(now);
     }
 
     public boolean isSameEmail(EmailAddress other) {
         return other.equals(emailAddress);
     }
 
-    public boolean isExpired() {
-        return LocalDateTime.now().isAfter(expiresAt);
+    public boolean isExpired(LocalDateTime now) {
+        return now.isAfter(expiresAt);
     }
 
-    public void accept() {
+    public void accept(LocalDateTime now) {
         this.status = EnumInvitationStatus.ACCEPTED;
-        this.acceptedAt = LocalDateTime.now();
+        this.acceptedAt = now;
     }
 
     public void cancel() {

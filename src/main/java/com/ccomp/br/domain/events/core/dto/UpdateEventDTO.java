@@ -24,13 +24,13 @@ public record UpdateEventDTO(
         EnumEventCategory category,
         EnumEventFormat format,
         EnumScheduleConflictPolicy scheduleConflictPolicy,
-        @Schema(name = "start_date", description = "Horário local de início no fuso time_zone do evento.", example = "2026-11-08T09:05:00")
+        @Schema(name = "start_date", description = "Horário de Brasília (America/Sao_Paulo), sem offset.", example = "2026-11-08T09:05:00")
         LocalDateTime startDate,
-        @Schema(name = "end_date", description = "Horário local de término no fuso time_zone do evento.", example = "2026-11-08T12:00:00")
+        @Schema(name = "end_date", description = "Horário de Brasília (America/Sao_Paulo), sem offset.", example = "2026-11-08T12:00:00")
         LocalDateTime endDate,
-        @Schema(name = "enrollment_start_date", description = "Início local das inscrições no fuso time_zone do evento.", example = "2026-10-01T09:00:00")
+        @Schema(name = "enrollment_start_date", description = "Início das inscrições em horário de Brasília (America/Sao_Paulo).", example = "2026-10-01T09:00:00")
         LocalDateTime enrollmentStartDate,
-        @Schema(name = "enrollment_end_date", description = "Fim local das inscrições no fuso time_zone do evento.", example = "2026-11-08T12:00:00")
+        @Schema(name = "enrollment_end_date", description = "Fim das inscrições em horário de Brasília (America/Sao_Paulo).", example = "2026-11-08T12:00:00")
         LocalDateTime enrollmentEndDate,
         Boolean enrollmentPaused,
         @DecimalMin(value = "0.0", inclusive = true)
@@ -42,7 +42,7 @@ public record UpdateEventDTO(
         @Size(max = 255, message = "A organização deve ter no máximo 255 caracteres.")
         @Schema(description = "Organização responsável pelo evento. Opcional.", example = "Instituto Federal do Maranhão")
         String organization,
-        @Schema(name = "time_zone", description = "Opcional. Novo identificador IANA para interpretar os horários locais do evento. Se omitido ou null, mantém o fuso atual.", example = "America/Manaus")
+        @Schema(name = "time_zone", description = "DEPRECATED. Ainda aceito por compatibilidade e armazenado, mas não altera a interpretação dos horários, sempre em Brasília (America/Sao_Paulo).", example = "America/Sao_Paulo", deprecated = true)
         String timeZone
 ) {
     public Optional<String> titleOpt() { return Optional.ofNullable(title); }

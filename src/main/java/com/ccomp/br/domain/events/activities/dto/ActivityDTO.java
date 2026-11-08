@@ -14,14 +14,14 @@ public record ActivityDTO(
         String description,
         Long displayOrder,
         String location,
-        @Schema(name = "start_date", description = "Horário local no fuso IANA retornado em time_zone.", example = "2026-11-08T09:05:00")
+        @Schema(name = "start_date", description = "Horário de Brasília (America/Sao_Paulo), sem offset.", example = "2026-11-08T09:05:00")
         LocalDateTime startDate,
-        @Schema(name = "end_date", description = "Horário local no fuso IANA retornado em time_zone.", example = "2026-11-08T12:00:00")
+        @Schema(name = "end_date", description = "Horário de Brasília (America/Sao_Paulo), sem offset.", example = "2026-11-08T12:00:00")
         LocalDateTime endDate,
         BigDecimal workloadHours,
         EnumActivityRegistrationPolicy registrationPolicy,
         EnumActivityType type,
-        @Schema(name = "time_zone", description = "Fuso IANA herdado do evento; os horários locais de início e término seguem essa zona.", example = "America/Manaus")
+        @Schema(name = "time_zone", description = "DEPRECATED. Retornado por compatibilidade; horários de atividades usam Brasília (America/Sao_Paulo).", example = "America/Sao_Paulo", deprecated = true)
         String timeZone
 ) {
     public ActivityDTO(Long id, Long eventId, String title, String description, Long displayOrder,

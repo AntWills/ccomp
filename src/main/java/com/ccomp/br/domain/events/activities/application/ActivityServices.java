@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.activities.application;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.time.Clock;
 
 import com.ccomp.br.domain.events.activities.dto.*;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
@@ -41,6 +42,7 @@ public class ActivityServices {
     private final ActivityCache activityCache;
     private final GuestService guestService;
     private final InstructorService instructorService;
+    private final Clock clock;
 
     public ActivityServices(EventRepository eventRepository,
                             EventAccessPolicy eventAccessPolicy,
@@ -50,7 +52,7 @@ public class ActivityServices {
                             ActivityMapper activityMapper,
                             ActivityCache activityCache,
                             GuestService guestService,
-                            InstructorService instructorService) {
+                            InstructorService instructorService, Clock clock) {
         this.eventRepository = eventRepository;
         this.eventAccessPolicy = eventAccessPolicy;
         this.eventCache = eventCache;
@@ -61,6 +63,7 @@ public class ActivityServices {
         this.activityCache = activityCache;
         this.guestService = guestService;
         this.instructorService = instructorService;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -87,7 +90,7 @@ public class ActivityServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId))
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event, LocalDateTime.now(clock)), userId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         EventActivity activity = EventActivity.builder()
@@ -96,7 +99,7 @@ public class ActivityServices {
                 .description(request.description())
                 .registrationPolicy(EnumActivityRegistrationPolicy.EVENT_REGISTRANTS_ONLY)
                 .type(EnumActivityType.OTHER)
-                .createdAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now(clock))
                 .build();
 
         EventActivity activitySaved = activityRepository.save(activity);
