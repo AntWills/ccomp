@@ -23,7 +23,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/events")
 @Tag(name = "events/certificate/consultation (Consulta de certificados)",
-        description = "Emissão de certificados para participantes e validação pública de certificados")
+        description = "Emissão de certificados para participantes, ministrantes e equipe, além da validação pública")
 public class EventCertificateConsultationController {
     private final CertificateServices certificateServices;
     private final CertificateValidatorService certificateValidatorService;
@@ -71,7 +71,7 @@ public class EventCertificateConsultationController {
     }
 
     @Operation(summary = "Gerar certificado de ministrante",
-            description = "Gera o certificado do ministrante vinculado e com conta associada. O próprio ministrante ou owner, editor ativo, moderator ou admin pode solicitá-lo. Exige evento encerrado; usa template de ministrante e o fundo compartilhado do evento.")
+            description = "Gera o certificado do ministrante vinculado e com conta associada. O próprio ministrante ou owner, editor ativo, moderator ou admin pode solicitá-lo. Exige evento encerrado e não cancelado; usa template de ministrante e o fundo compartilhado do evento.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
             @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado ou cancelado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
@@ -88,10 +88,10 @@ public class EventCertificateConsultationController {
     }
 
     @Operation(summary = "Gerar certificado da equipe do evento",
-            description = "Gera o certificado do owner ou editor ativo autenticado após o encerramento do evento. Usa template próprio de equipe, fundo compartilhado e a carga horária da equipe configurada no evento.")
+            description = "Gera o certificado do owner ou editor ativo autenticado após o encerramento do evento. Eventos cancelados não emitem certificado. Usa template próprio de equipe, fundo compartilhado e a carga horária da equipe configurada no evento.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
-            @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado ou carga horária da equipe não configurada", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado, cancelado ou carga horária da equipe não configurada", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "Usuário não é owner nem editor ativo do evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Evento não encontrado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
     })

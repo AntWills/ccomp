@@ -191,18 +191,19 @@ public class EventCertificateManagementController {
     @Operation(
             summary = "Enviar/substituir o fundo (cover template) do certificado",
             description = "Envia o arquivo diretamente (multipart/form-data). Se já existir um fundo, " +
-                    "ele é substituído e o anterior é removido do storage. Aceita PNG, JPEG ou WebP. " +
+                    "ele é substituído e o anterior é removido do storage após salvar a alteração. Valida o conteúdo " +
+                    "da imagem e aceita PNG, JPEG ou WebP com até 30 milhões de pixels. " +
                     "Requer permissão de edição do evento (dono, editor ativo ou moderador/admin)."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Fundo do certificado atualizado com sucesso",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = MessageResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Arquivo ausente ou tipo não suportado",
+            @ApiResponse(responseCode = "400", description = "Arquivo ausente, conteúdo inválido, formato não suportado ou resolução acima do limite",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Não autenticado", content = @Content),
-            @ApiResponse(responseCode = "403", description = "Usuário não é dono nem editor do evento",
+            @ApiResponse(responseCode = "403", description = "Usuário não é owner, editor ativo, moderador ou admin",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Evento não encontrado",
@@ -230,7 +231,7 @@ public class EventCertificateManagementController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Fundo removido com sucesso", content = @Content),
             @ApiResponse(responseCode = "401", description = "Não autenticado", content = @Content),
-            @ApiResponse(responseCode = "403", description = "Usuário não é dono nem editor do evento",
+            @ApiResponse(responseCode = "403", description = "Usuário não é owner, editor ativo, moderador ou admin",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Evento não encontrado ou sem fundo definido",

@@ -40,7 +40,7 @@ public record EventDTO(
 
         // Endereço / local do evento (usado nos certificados em {evento.local})
         String address,
-        @Schema(description = "Carga horária base do evento, somada às atividades com presença no certificado do participante.")
+        @Schema(description = "Carga horária base configurada no evento. Na emissão do certificado do participante, soma-se às cargas das atividades em que ele teve presença.")
         BigDecimal workloadHours,
         @Schema(description = "Carga horária configurada para certificados do owner e de editores ativos.")
         BigDecimal teamCertificateWorkloadHours,

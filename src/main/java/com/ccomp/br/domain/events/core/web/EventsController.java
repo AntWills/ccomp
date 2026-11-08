@@ -121,6 +121,10 @@ public class EventsController {
         O corpo JSON segue `EventsFilterRequest`; a resposta é `CursorPage<EventListItemDTO>` com `content`,
         `next_cursor` e `previous_cursor`.
 
+        A busca retorna itens resumidos (`EventListItemDTO`). Ela não inclui `workloadHours`,
+        `teamCertificateWorkloadHours` nem `organization`; consulte `GET /api/events/{eventId}` ou
+        `GET /api/events/slug/{slug}` para obter o `EventDTO` completo. Esses campos também não são filtros desta rota.
+
         `pageSize` é um parâmetro de consulta opcional, padrão `10` e limitado a `50`. `nextCursor` é um token
         opaco retornado pela página anterior; continue usando o mesmo termo e os mesmos filtros. A resposta tem
         `content` (itens `EventListItemDTO`), `next_cursor` e `previous_cursor`.
@@ -157,8 +161,14 @@ public class EventsController {
             description = """
         Cria um novo evento atribuindo o status inicial como `DRAFT` (Rascunho).
 
-        Envie `title`, `category` e `format`; `startDate` e `endDate` são opcionais. O evento é criado como
-        `DRAFT`. Requer JWT de usuário com papel `ADMIN`, `MODERATOR` ou `STAFF`.
+        Envie `title`, `category` e `format`. `startDate`, `endDate`, `workloadHours`,
+        `teamCertificateWorkloadHours` e `organization` são opcionais. `workloadHours` configura a carga horária
+        base do evento, que é somada às atividades com presença durante a emissão do certificado de participante;
+        `teamCertificateWorkloadHours`
+        define a carga horária dos certificados da equipe e precisa estar configurada para emitir esses certificados;
+        `organization` identifica a organização responsável. As cargas horárias não podem ser negativas e
+        `organization` aceita até 255 caracteres. O evento é criado como `DRAFT` e a resposta `EventDTO` inclui
+        os campos persistidos. Requer JWT de usuário com papel `ADMIN`, `MODERATOR` ou `STAFF`.
         """
     )
     @ApiResponses(value = {
@@ -195,8 +205,10 @@ public class EventsController {
             summary = "Atualiza parcialmente um evento existente",
             description = """
         Atualiza somente os campos enviados em `UpdateEventDTO`: `title`, `summary`, `content`, `category`, `format`,
-        `scheduleConflictPolicy`, datas de realização e de inscrição, e `enrollmentPaused`. Campos omitidos ficam
-        inalterados. Alterar título também regenera o slug. Capa e status têm endpoints próprios.
+        `scheduleConflictPolicy`, datas de realização e de inscrição, `enrollmentPaused`, `workloadHours`,
+        `teamCertificateWorkloadHours` e `organization`. Campos omitidos ou enviados como `null` ficam inalterados.
+        As cargas horárias não podem ser negativas; `organization` aceita até 255 caracteres. Alterar título também
+        regenera o slug. Capa e status têm endpoints próprios. A resposta `EventDTO` inclui os campos atualizados.
 
         Requer JWT do proprietário, de um editor ativo, `MODERATOR` ou `ADMIN`.
         """
@@ -275,7 +287,7 @@ public class EventsController {
     }
 
     @DeleteMapping("/{eventId}")
-    @Operation(summary = "Exclui um evento por ID", description = "Exclui o evento e seus dados dependentes. Requer JWT do proprietário, de um editor ativo, MODERATOR ou ADMIN. A resposta de sucesso não tem corpo.")
+    @Operation(summary = "Exclui um evento por ID", description = "Exclui o evento e seus dados dependentes, incluindo templates e códigos de validação de certificados. A remoção dos arquivos associados no storage é solicitada após o commit. Requer JWT do proprietário, de um editor ativo, MODERATOR ou ADMIN. A resposta de sucesso não tem corpo.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Evento excluído com sucesso"),
             @ApiResponse(responseCode = "401", description = "Autenticação ausente ou inválida", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),

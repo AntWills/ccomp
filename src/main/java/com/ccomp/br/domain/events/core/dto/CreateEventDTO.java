@@ -23,10 +23,10 @@ public record CreateEventDTO(
         LocalDateTime startDate,
         LocalDateTime endDate,
         @DecimalMin(value = "0.0", inclusive = true)
-        @Schema(description = "Carga horária base do evento, somada às atividades com presença ao emitir certificado de participante.", example = "2.5")
+        @Schema(description = "Carga horária base configurada no evento. Na emissão do certificado do participante, soma-se às cargas das atividades em que ele teve presença.", example = "2.5")
         BigDecimal workloadHours,
         @DecimalMin(value = "0.0", inclusive = true)
-        @Schema(description = "Carga horária concedida aos certificados do owner e dos editores ativos. Deve ser definida pela equipe do evento.", example = "8")
+        @Schema(description = "Opcional na criação; precisa estar configurada para emitir certificados do owner e dos editores ativos.", example = "8")
         BigDecimal teamCertificateWorkloadHours,
         @Size(max = 255, message = "A organização deve ter no máximo 255 caracteres.")
         @Schema(description = "Organização responsável pelo evento. Opcional.", example = "Instituto Federal do Maranhão")
