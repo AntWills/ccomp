@@ -24,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Clock;
+import java.time.LocalDateTime;
 
 @Service
 public class EnrollmentsServices {
@@ -32,16 +34,18 @@ public class EnrollmentsServices {
     private final EnrollmentRepository enrollmentRepository;
     private final EnrollmentDslRepository enrollmentDslRepository;
     private final EventAccessPolicy eventAccessPolicy;
+    private final Clock clock;
 
     public EnrollmentsServices(EventRepository eventRepository, EventCache eventCache,
                                EnrollmentRepository enrollmentRepository,
                                EnrollmentDslRepository enrollmentDslRepository,
-                               EventAccessPolicy eventAccessPolicy) {
+                               EventAccessPolicy eventAccessPolicy, Clock clock) {
         this.eventRepository = eventRepository;
         this.eventCache = eventCache;
         this.enrollmentRepository = enrollmentRepository;
         this.enrollmentDslRepository = enrollmentDslRepository;
         this.eventAccessPolicy = eventAccessPolicy;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -71,7 +75,7 @@ public class EnrollmentsServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        EnumEnrollmentStatus enrollmentStatus = event.getEnrollmentStatus();
+        EnumEnrollmentStatus enrollmentStatus = event.getEnrollmentStatus(LocalDateTime.now(clock));
         if (enrollmentStatus != EnumEnrollmentStatus.OPEN) {
             switch (enrollmentStatus) {
                 case UPCOMING -> throw new DomainException("As inscrições para este evento ainda não foram abertas.");
@@ -140,7 +144,7 @@ public class EnrollmentsServices {
 
         switch (newStatus) {
             case CONFIRMED -> enrollment.confirm();
-            case CHECKED_IN -> enrollment.checkIn();
+            case CHECKED_IN -> enrollment.checkIn(LocalDateTime.now(clock));
             case CANCELED -> enrollment.cancel();
             case BANNED -> enrollment.ban();
         }

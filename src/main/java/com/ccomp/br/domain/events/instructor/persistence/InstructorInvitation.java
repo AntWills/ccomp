@@ -48,8 +48,8 @@ public class InstructorInvitation {
     @Column(name = "responded_at")
     private LocalDateTime respondedAt;
 
-    public boolean isExpired() {
-        return LocalDateTime.now().isAfter(expiresAt);
+    public boolean isExpired(LocalDateTime now) {
+        return now.isAfter(expiresAt);
     }
 
     public boolean isSent() {
@@ -68,20 +68,20 @@ public class InstructorInvitation {
         return status == EnumInstructorInvitationStatus.CANCELED;
     }
 
-    public boolean isValid() {
-        return isSent() && !isExpired();
+    public boolean isValid(LocalDateTime now) {
+        return isSent() && !isExpired(now);
     }
 
-    public void accept() {
+    public void accept(LocalDateTime now) {
         requireSent();
         status = EnumInstructorInvitationStatus.ACCEPTED;
-        respondedAt = LocalDateTime.now();
+        respondedAt = now;
     }
 
-    public void reject() {
+    public void reject(LocalDateTime now) {
         requireSent();
         status = EnumInstructorInvitationStatus.REJECTED;
-        respondedAt = LocalDateTime.now();
+        respondedAt = now;
     }
 
     public void cancel() {

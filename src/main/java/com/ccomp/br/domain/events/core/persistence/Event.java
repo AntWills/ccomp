@@ -15,7 +15,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.Clock;
 import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.HashSet;
@@ -172,17 +171,12 @@ public class Event {
     // --- Métodos Calculados do Ciclo de Vida ---
 
     /**
-     * Retorna a fase de execução atual usando o fuso cadastrado no evento.
+     * Retorna a fase de execução atual usando o horário fornecido pelo Clock central em Brasília.
      */
-    public EnumEventExecutionStatus getExecutionStatus() {
-        return getExecutionStatus(Clock.systemUTC());
-    }
-
-    public EnumEventExecutionStatus getExecutionStatus(Clock clock) {
+    public EnumEventExecutionStatus getExecutionStatus(LocalDateTime now) {
         if (startDate == null || endDate == null) {
             return EnumEventExecutionStatus.NOT_STARTED;
         }
-        LocalDateTime now = LocalDateTime.now(clock.withZone(getZoneId()));
         if (now.isBefore(startDate)) {
             return EnumEventExecutionStatus.NOT_STARTED;
         }
@@ -195,11 +189,7 @@ public class Event {
     /**
      * Calcula dinamicamente o estado atual do período de inscrições.
      */
-    public EnumEnrollmentStatus getEnrollmentStatus() {
-        return getEnrollmentStatus(Clock.systemUTC());
-    }
-
-    public EnumEnrollmentStatus getEnrollmentStatus(Clock clock) {
+    public EnumEnrollmentStatus getEnrollmentStatus(LocalDateTime now) {
         if (this.status == EnumEventStatus.DRAFT || this.status == EnumEventStatus.CANCELED) {
             return EnumEnrollmentStatus.CLOSED;
         }
@@ -213,7 +203,6 @@ public class Event {
             return EnumEnrollmentStatus.CLOSED;
         }
 
-        LocalDateTime now = LocalDateTime.now(clock.withZone(getZoneId()));
         if (now.isBefore(this.enrollmentStartDate)) {
             return EnumEnrollmentStatus.UPCOMING;
         }
@@ -227,8 +216,8 @@ public class Event {
     /**
      * Informa se o evento está aceitando inscrições no momento exato da verificação.
      */
-    public boolean isEnrollmentOpen() {
-        return getEnrollmentStatus() == EnumEnrollmentStatus.OPEN;
+    public boolean isEnrollmentOpen(LocalDateTime now) {
+        return getEnrollmentStatus(now) == EnumEnrollmentStatus.OPEN;
     }
 
     public ZoneId getZoneId() {
@@ -254,10 +243,6 @@ public class Event {
     @PreUpdate
     private void validateTimeZone() {
         getZoneId();
-    }
-
-    public LocalDateTime now(Clock clock) {
-        return LocalDateTime.now(clock.withZone(getZoneId()));
     }
 
     /**
@@ -299,32 +284,28 @@ public class Event {
         verifyEnrollmentDates();
     }
 
-    public void publish() {
-        publish(Clock.systemUTC());
-    }
-
-    public void publish(Clock clock) {
+    public void publish(LocalDateTime now) {
         if (this.startDate == null || this.endDate == null) {
             throw new DomainException("Não é possível publicar um evento sem definir as datas de início e término.");
         }
-        if (this.getExecutionStatus(clock) == EnumEventExecutionStatus.FINISHED) {
+        if (this.getExecutionStatus(now) == EnumEventExecutionStatus.FINISHED) {
             throw new DomainException("Não é possível publicar um evento que já foi finalizado.");
         }
         this.status = EnumEventStatus.PUBLISHED;
     }
 
-    public void unlist() {
+    public void unlist(LocalDateTime now) {
         if (this.startDate == null || this.endDate == null) {
             throw new DomainException("Não é possível tornar um evento não listado sem definir as datas de início e término.");
         }
-        if (this.getExecutionStatus() == EnumEventExecutionStatus.FINISHED) {
+        if (this.getExecutionStatus(now) == EnumEventExecutionStatus.FINISHED) {
             throw new DomainException("Não é possível alterar para não listado um evento que já foi finalizado.");
         }
         this.status = EnumEventStatus.UNLISTED;
     }
 
-    public void cancel() {
-        if (this.getExecutionStatus() == EnumEventExecutionStatus.FINISHED) {
+    public void cancel(LocalDateTime now) {
+        if (this.getExecutionStatus(now) == EnumEventExecutionStatus.FINISHED) {
             throw new DomainException("Não é possível cancelar um evento que já foi finalizado.");
         }
         this.status = EnumEventStatus.CANCELED;

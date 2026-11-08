@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.Clock;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +42,7 @@ public class EventCredentialService {
     private final UserModelRepository userRepository;
     private final EventAccessPolicy accessPolicy;
     private final AuditLogRepository auditRepository;
+    private final Clock clock;
 
     public EventCredentialService(EventRepository eventRepository,
                                   EnrollmentRepository enrollmentRepository,
@@ -49,7 +51,7 @@ public class EventCredentialService {
                                   EventCredentialOperatorRepository operatorRepository,
                                   UserModelRepository userRepository,
                                   EventAccessPolicy accessPolicy,
-                                  AuditLogRepository auditRepository) {
+                                  AuditLogRepository auditRepository, Clock clock) {
         this.eventRepository = eventRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.credentialDslRepository = credentialDslRepository;
@@ -58,6 +60,7 @@ public class EventCredentialService {
         this.userRepository = userRepository;
         this.accessPolicy = accessPolicy;
         this.auditRepository = auditRepository;
+        this.clock = clock;
     }
 
     @Transactional
@@ -102,7 +105,7 @@ public class EventCredentialService {
         String raw = null;
         if (credential.getTokenHash() == null) {
             raw = newToken();
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime now = LocalDateTime.now(clock);
             credential.rotateToken(TokenHasher.hash(raw), now);
             credential = credentialRepository.save(credential);
             audit(EnumActionType.CREDENTIAL_TOKEN_ISSUED, actor, credential, now, "token_hash", "issued", null);
@@ -133,7 +136,7 @@ public class EventCredentialService {
                 .filter(c -> c.getEventId().equals(eventId))
                 .orElseThrow(() -> new ResourceNotFoundException("Credencial não encontrada."));
         if (credential.getCredentialedAt() == null) throw new ConflictException("Participante ainda não foi credenciado.");
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         credential.reprint(now);
         audit(EnumActionType.BADGE_REPRINTED, actor, credential, now, "badge_print_count",
                 credential.getBadgePrintCount(), station);
@@ -161,7 +164,7 @@ public class EventCredentialService {
         if (!user.isAccountValid()) throw new ConflictException("O usuário não possui conta ativa.");
         if (!operatorRepository.existsByEventIdAndUserId(eventId, userId)) {
             operatorRepository.save(EventCredentialOperator.builder().eventId(eventId).userId(userId)
-                    .grantedBy(actor).createdAt(LocalDateTime.now()).build());
+                    .grantedBy(actor).createdAt(LocalDateTime.now(clock)).build());
             auditOperator(EnumActionType.CREDENTIAL_OPERATOR_GRANTED, actor, eventId, userId);
         }
     }
@@ -187,10 +190,10 @@ public class EventCredentialService {
             throw new ConflictException("Inscrição não elegível para credenciamento.");
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         if (existing != null && existing.getCredentialedAt() != null) {
             if (!enrollment.haveCheckIn()) {
-                enrollment.checkIn();
+                enrollment.checkIn(now);
                 enrollmentRepository.save(enrollment);
                 audit(EnumActionType.CREDENTIAL_RECONCILED, actor, existing, now,
                         "enrollment_status", EnumEnrollmentState.CHECKED_IN.name(), station);
@@ -199,7 +202,7 @@ public class EventCredentialService {
         }
 
         boolean reconciled = enrollment.haveCheckIn();
-        if (!reconciled) enrollment.checkIn();
+        if (!reconciled) enrollment.checkIn(now);
 
         EventCredential credential = existing == null ? newCredential(eventId, enrollment.getId()) : existing;
         credential.credential(station, actor, now);
@@ -218,7 +221,7 @@ public class EventCredentialService {
     }
 
     private EventCredential newCredential(Long eventId, Long enrollmentId) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         return EventCredential.builder().eventId(eventId).enrollmentId(enrollmentId)
                 .createdAt(now).updatedAt(now).build();
     }
@@ -229,7 +232,7 @@ public class EventCredentialService {
         EventCredential credential = credentialRepository.findByEventIdAndEnrollmentId(eventId, enrollment.getId())
                 .orElseGet(() -> newCredential(eventId, enrollment.getId()));
         String raw = newToken();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         credential.rotateToken(TokenHasher.hash(raw), now);
         credentialRepository.save(credential);
         audit(EnumActionType.CREDENTIAL_TOKEN_ROTATED, actor, credential, now, "token_hash", "rotated", null);
@@ -251,7 +254,7 @@ public class EventCredentialService {
     private void auditOperator(EnumActionType action, UUID actor, Long eventId, UUID operatorId) {
         auditRepository.save(AuditLog.builder().action(action).actorType(EnumActorType.USER).actorId(actor)
                 .targetId(operatorId.toString()).targetType(EnumTargetType.CREDENTIAL)
-                .timestamp(LocalDateTime.now()).reason("Gestão de operador de credenciamento")
+                .timestamp(LocalDateTime.now(clock)).reason("Gestão de operador de credenciamento")
                 .changes(Map.of("event_id", new com.ccomp.br.domain.audit.external.dto.ChangeLog(null, eventId)))
                 .build());
     }

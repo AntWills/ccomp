@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,6 +45,7 @@ public class InstructorInvitationService {
     private final EventAccessPolicy eventAccessPolicy;
     private final UserManagement userManagement;
     private final RabbitTemplate rabbitTemplate;
+    private final Clock clock;
 
     public InstructorInvitationService(
             ActivityCache activityCache,
@@ -53,7 +55,8 @@ public class InstructorInvitationService {
             EventCache eventCache,
             EventAccessPolicy eventAccessPolicy,
             UserManagement userManagement,
-            RabbitTemplate rabbitTemplate
+            RabbitTemplate rabbitTemplate,
+            Clock clock
     ) {
         this.activityCache = activityCache;
         this.activityRepository = activityRepository;
@@ -63,6 +66,7 @@ public class InstructorInvitationService {
         this.eventAccessPolicy = eventAccessPolicy;
         this.userManagement = userManagement;
         this.rabbitTemplate = rabbitTemplate;
+        this.clock = clock;
     }
 
     @Transactional
@@ -97,8 +101,8 @@ public class InstructorInvitationService {
                 .code(code)
                 .activity(activity)
                 .emailAddress(emailAddress)
-                .invitedAt(LocalDateTime.now())
-                .expiresAt(LocalDateTime.now().plusHours(24))
+                .invitedAt(LocalDateTime.now(clock))
+                .expiresAt(LocalDateTime.now(clock).plusHours(24))
                 .build();
         invitationRepository.save(invitation);
 
@@ -179,7 +183,8 @@ public class InstructorInvitationService {
     public MessageResponse reply(UUID code, UUID userId, boolean accept) {
         InstructorInvitation invitation = invitationRepository.findByCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Código de convite não encontrado."));
-        if (!invitation.isValid()) {
+        LocalDateTime now = LocalDateTime.now(clock);
+        if (!invitation.isValid(now)) {
             throw new DomainException("Convite inválido ou expirado.");
         }
 
@@ -193,7 +198,7 @@ public class InstructorInvitationService {
 
 
         if (!accept) {
-            invitation.reject();
+            invitation.reject(now);
             invitationRepository.save(invitation);
             return new MessageResponse("Convite recusado.");
         }
@@ -217,7 +222,7 @@ public class InstructorInvitationService {
         }
 
         instructorRepository.save(instructor);
-        invitation.accept();
+        invitation.accept(now);
         invitationRepository.save(invitation);
         return new MessageResponse("Convite aceito. Você agora ministra esta atividade.");
     }

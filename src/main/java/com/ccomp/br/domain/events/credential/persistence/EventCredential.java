@@ -65,21 +65,19 @@ public class EventCredential {
             credentialedAt = at;
             credentialedBy = actor;
             this.station = station;
+            updatedAt = at;
         }
     }
 
     public void rotateToken(String hash, LocalDateTime at) {
         tokenHash = hash;
         tokenUpdatedAt = at;
+        updatedAt = at;
     }
 
     public void reprint(LocalDateTime at) {
         badgePrintCount++;
         lastBadgePrintedAt = at;
-    }
-
-    @PreUpdate
-    public void touch() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = at;
     }
 }

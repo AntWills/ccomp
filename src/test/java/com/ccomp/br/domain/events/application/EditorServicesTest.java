@@ -26,11 +26,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -52,6 +56,7 @@ public class EditorServicesTest {
     private EventEditorInvitationsRepository invitationsRepository;
     @Mock
     private RabbitTemplate rabbitTemplate;
+    @Spy private Clock clock = Clock.fixed(Instant.parse("2026-11-08T12:10:00Z"), ZoneId.of("America/Sao_Paulo"));
 
     @InjectMocks
     EditorServices editorServices;
@@ -152,7 +157,7 @@ public class EditorServicesTest {
             EventEditorInvitations invitations = mock(EventEditorInvitations.class);
 
             when(invitations.getEmailAddress()).thenReturn(emailAddress);
-            when(invitations.isExpired()).thenReturn(false); // O código é valido
+            when(invitations.isExpired(any(java.time.LocalDateTime.class))).thenReturn(false); // O código é valido
             when(invitations.getEventId()).thenReturn(eventId);
             when(existingUserDTO.isActive()).thenReturn(true);
             when(existingUserDTO.id()).thenReturn(userId);
@@ -184,7 +189,7 @@ public class EditorServicesTest {
             EventEditorInvitations invitations = mock(EventEditorInvitations.class);
 
             when(invitations.getEmailAddress()).thenReturn(emailAddress);
-            when(invitations.isExpired()).thenReturn(false); // O código é valido
+            when(invitations.isExpired(any(java.time.LocalDateTime.class))).thenReturn(false); // O código é valido
             when(invitations.getEventId()).thenReturn(eventId);
             when(existingUserDTO.isActive()).thenReturn(true);
             when(existingUserDTO.id()).thenReturn(userId);

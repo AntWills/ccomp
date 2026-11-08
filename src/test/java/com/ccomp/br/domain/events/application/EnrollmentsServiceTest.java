@@ -16,10 +16,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -33,6 +38,8 @@ public class EnrollmentsServiceTest {
 
     @Mock
     private EnrollmentRepository enrollmentRepository;
+
+    @Spy private Clock clock = Clock.fixed(Instant.parse("2026-11-08T12:10:00Z"), ZoneId.of("America/Sao_Paulo"));
 
     @InjectMocks
     private EnrollmentsServices enrollmentsServices;
@@ -64,7 +71,7 @@ public class EnrollmentsServiceTest {
 
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.getEnrollmentStatus()).thenReturn(EnumEnrollmentStatus.OPEN);
+            when(existingEvent.getEnrollmentStatus(any(LocalDateTime.class))).thenReturn(EnumEnrollmentStatus.OPEN);
             when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.empty());
             when(enrollmentRepository.save(any(Enrollment.class))).thenReturn(existingEnrollment);
 
@@ -81,7 +88,7 @@ public class EnrollmentsServiceTest {
             UUID userId = UUID.randomUUID();
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.getEnrollmentStatus()).thenReturn(EnumEnrollmentStatus.OPEN);
+            when(existingEvent.getEnrollmentStatus(any(LocalDateTime.class))).thenReturn(EnumEnrollmentStatus.OPEN);
             when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(existingEnrollment));
             when(existingEnrollment.isActive()).thenReturn(false);
 
@@ -98,7 +105,7 @@ public class EnrollmentsServiceTest {
             UUID userId = UUID.randomUUID();
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.getEnrollmentStatus()).thenReturn(EnumEnrollmentStatus.OPEN);
+            when(existingEvent.getEnrollmentStatus(any(LocalDateTime.class))).thenReturn(EnumEnrollmentStatus.OPEN);
             when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(existingEnrollment));
             when(existingEnrollment.isActive()).thenReturn(true); // Indica que u usuário tem inscrição ativa.
 

@@ -1,6 +1,14 @@
 package com.ccomp.br.domain.events.web;
 
 import com.ccomp.br.domain.events.core.application.EventsServices;
+import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
+import com.ccomp.br.domain.events.core.application.EventStorageFileKeyCollector;
+import com.ccomp.br.domain.events.core.persistence.Event;
+import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
+import com.ccomp.br.domain.events.core.persistence.EventDslRepository;
+import com.ccomp.br.domain.events.core.utils.EventMapper;
+import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.dto.CreateEventDTO;
 import com.ccomp.br.domain.events.core.dto.EventsFilterRequest;
@@ -30,8 +38,12 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -207,6 +219,47 @@ class EventsControllerTest {
 
         verify(eventsServices).updateEventStatus(9L, EnumEventStatus.CANCELED, USER_ID);
         verify(eventsServices).delete(9L, USER_ID);
+    }
+
+    @Test
+    void mvcPublishUsesBrasiliaClockWhenJvmTimezoneIsUtc() throws Exception {
+        var eventRepository = mock(EventRepository.class);
+        var eventCache = mock(EventCache.class);
+        var userManagement = mock(UserManagement.class);
+        var eventMapper = mock(EventMapper.class);
+        var eventDslRepository = mock(EventDslRepository.class);
+        var eventAccessPolicy = mock(EventAccessPolicy.class);
+        var fileKeyCollector = mock(EventStorageFileKeyCollector.class);
+        var publisher = mock(ApplicationEventPublisher.class);
+        var dto = mock(EventDTO.class);
+        Clock fixedBrasiliaClock = Clock.fixed(
+                Instant.parse("2026-11-08T12:10:00Z"), ZoneId.of("America/Sao_Paulo"));
+        Event event = Event.builder()
+                .id(9L)
+                .title("Evento no mesmo dia")
+                .ownerId(USER_ID)
+                .status(EnumEventStatus.DRAFT)
+                .startDate(LocalDateTime.parse("2026-11-08T09:05:00"))
+                .endDate(LocalDateTime.parse("2026-11-08T12:00:00"))
+                .build();
+        when(eventRepository.findById(9L)).thenReturn(Optional.of(event));
+        when(eventMapper.eventToEventDTO(any(Event.class), any(LocalDateTime.class))).thenReturn(dto);
+        when(eventAccessPolicy.canEdit(dto, USER_ID)).thenReturn(true);
+        when(eventRepository.save(event)).thenReturn(event);
+
+        EventsServices realService = new EventsServices(eventRepository, eventCache, userManagement,
+                eventMapper, eventDslRepository, eventAccessPolicy, fileKeyCollector, publisher, fixedBrasiliaClock);
+        MockMvc routeMvc = MockMvcBuilders.standaloneSetup(new EventsController(realService))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
+                .build();
+
+        routeMvc.perform(patch("/api/events/9/status/PUBLISHED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response").value("Status do evento alterado para: PUBLISHED"));
+
+        assertThat(event.getStatus()).isEqualTo(EnumEventStatus.PUBLISHED);
+        verify(eventMapper).eventToEventDTO(event, LocalDateTime.parse("2026-11-08T09:10:00"));
     }
 
     @Test

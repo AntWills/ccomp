@@ -212,7 +212,7 @@ class CertificateVariablesServicesTest {
         Event event = stubEvent();
 
         Enrollment enrollment = Enrollment.builder().userId(USER_ID).event(event).build();
-        enrollment.checkIn();
+        enrollment.checkIn(LocalDateTime.now());
         when(enrollmentRepository.findByUserIdAndEventId(USER_ID, 10L))
                 .thenReturn(Optional.of(enrollment));
 
@@ -261,7 +261,7 @@ class CertificateVariablesServicesTest {
                 .build();
 
         EnrollmentActivity enrollmentActivity = new EnrollmentActivity(enrollment, activity);
-        enrollmentActivity.makeAttendance();
+        enrollmentActivity.makeAttendance(LocalDateTime.now());
 
         when(enrollmentActivityDslRepository.findByUserIdAndActivityId(USER_ID, 77L))
                 .thenReturn(Optional.of(enrollmentActivity));
@@ -306,7 +306,7 @@ class CertificateVariablesServicesTest {
                 .status(EnumEnrollmentState.CONFIRMED)
                 .build();
         EnrollmentActivity enrollmentActivity = new EnrollmentActivity(enrollment, activity);
-        enrollmentActivity.makeAttendance();
+        enrollmentActivity.makeAttendance(LocalDateTime.now());
         when(enrollmentActivityDslRepository.findByUserIdAndActivityId(USER_ID, 77L))
                 .thenReturn(Optional.of(enrollmentActivity));
 
@@ -350,7 +350,7 @@ class CertificateVariablesServicesTest {
     private static EventDTO toDto(Event event) {
         return new EventDTO(10L, event.getTitle(), event.getSlug(), null, null, null,
                 null, null, null, event.getStatus(), event.getStartDate(), event.getEndDate(),
-                event.getExecutionStatus(), null, null, null, null, USER_ID, null, null,
+                event.getExecutionStatus(LocalDateTime.of(2026, 11, 8, 12, 0)), null, null, null, null, USER_ID, null, null,
                 event.getAddress(), event.getWorkloadHours(), event.getTeamCertificateWorkloadHours(),
                 event.getOrganization());
     }
@@ -360,8 +360,8 @@ class CertificateVariablesServicesTest {
                 .title("Semanas de Tecnologia")
                 .slug("semanas-tecnologia")
                 .address("Auditório Central")
-                .startDate(LocalDateTime.now().minusDays(2))
-                .endDate(LocalDateTime.now().minusDays(1))
+                .startDate(LocalDateTime.of(2026, 11, 6, 9, 0))
+                .endDate(LocalDateTime.of(2026, 11, 7, 9, 0))
                 .build();
     }
 
