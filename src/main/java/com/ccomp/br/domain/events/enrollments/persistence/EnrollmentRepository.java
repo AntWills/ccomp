@@ -1,12 +1,14 @@
 package com.ccomp.br.domain.events.enrollments.persistence;
 
 import com.ccomp.br.domain.events.core.persistence.Event;
+import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.jpa.repository.Lock;
-import jakarta.persistence.LockModeType;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,7 +31,7 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
             @Param("userId") UUID userId, @Param("eventId") Long eventId);
 
     long countByEventIdAndStatusIn(Long eventId,
-            java.util.Collection<com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState> statuses);
+            Collection<EnumEnrollmentState> statuses);
 
     boolean existsByUserIdAndEvent(UUID userId, Event event);
     void deleteByUserIdAndEvent(UUID userId, Event event);

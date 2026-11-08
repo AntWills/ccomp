@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.credential.application;
 
 import com.ccomp.br.domain.auth.passwordreset.application.TokenHasher;
+import com.ccomp.br.domain.audit.external.dto.ChangeLog;
 import com.ccomp.br.domain.audit.external.enums.EnumActionType;
 import com.ccomp.br.domain.audit.external.enums.EnumActorType;
 import com.ccomp.br.domain.audit.external.enums.EnumTargetType;
@@ -24,9 +25,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
-import java.time.LocalDateTime;
 import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -241,10 +243,10 @@ public class EventCredentialService {
 
     private void audit(EnumActionType action, UUID actor, EventCredential credential, LocalDateTime at,
                        String field, Object value, String station) {
-        Map<String, com.ccomp.br.domain.audit.external.dto.ChangeLog> changes = new java.util.HashMap<>();
-        changes.put(field, new com.ccomp.br.domain.audit.external.dto.ChangeLog(null, value));
-        changes.put("event_id", new com.ccomp.br.domain.audit.external.dto.ChangeLog(null, credential.getEventId()));
-        if (station != null) changes.put("station", new com.ccomp.br.domain.audit.external.dto.ChangeLog(null, station));
+        Map<String, ChangeLog> changes = new HashMap<>();
+        changes.put(field, new ChangeLog(null, value));
+        changes.put("event_id", new ChangeLog(null, credential.getEventId()));
+        if (station != null) changes.put("station", new ChangeLog(null, station));
         auditRepository.save(AuditLog.builder().action(action).actorType(EnumActorType.USER).actorId(actor)
                 .targetId(credential.getId().toString()).targetType(EnumTargetType.CREDENTIAL)
                 .timestamp(at).reason("Credenciamento de evento")
@@ -255,7 +257,7 @@ public class EventCredentialService {
         auditRepository.save(AuditLog.builder().action(action).actorType(EnumActorType.USER).actorId(actor)
                 .targetId(operatorId.toString()).targetType(EnumTargetType.CREDENTIAL)
                 .timestamp(LocalDateTime.now(clock)).reason("Gestão de operador de credenciamento")
-                .changes(Map.of("event_id", new com.ccomp.br.domain.audit.external.dto.ChangeLog(null, eventId)))
+                .changes(Map.of("event_id", new ChangeLog(null, eventId)))
                 .build());
     }
 

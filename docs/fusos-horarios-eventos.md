@@ -6,6 +6,8 @@ Os campos de agenda sem offset — `start_date`, `end_date`, `enrollment_start_d
 
 As regras temporais do domínio de eventos recebem o `Clock` da aplicação. O bean usa `app.clock.zone`, configurado em `application.properties` com padrão `America/Sao_Paulo` e opção de override por `APP_CLOCK_ZONE`. Para manter o contrato dos horários de agenda, produção deve usar `America/Sao_Paulo`; o resultado dessas regras não depende do fuso padrão da JVM quando essa propriedade está configurada corretamente.
 
+Para diagnóstico, `GET /api/server/status` retorna `timestamp` como instante UTC e também `server_local_time` e `time_zone`, gerados pelo mesmo `Clock` central. Em produção, o esperado é `time_zone: "America/Sao_Paulo"`; `server_local_time` deve ser interpretado nessa zona. A resposta também inclui o percentual do limite máximo de heap usado pela JVM. Isso permite comparar o horário efetivamente usado pelas regras com o relógio apresentado pelo frontend sem alterar o campo UTC já existente.
+
 Essa referência é usada para calcular estados de execução e inscrição, publicar eventos, validar convites, registrar check-in/credenciamento e preencher datas de criação de materiais de evento. Aplica-se a eventos presenciais em qualquer estado e a eventos online.
 
 ## Metadados de auditoria

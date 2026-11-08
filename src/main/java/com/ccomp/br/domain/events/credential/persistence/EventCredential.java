@@ -60,7 +60,7 @@ public class EventCredential {
     @Version
     private Long version;
 
-    public void credential(String station, java.util.UUID actor, LocalDateTime at) {
+    public void credential(String station, UUID actor, LocalDateTime at) {
         if (credentialedAt == null) {
             credentialedAt = at;
             credentialedBy = actor;
