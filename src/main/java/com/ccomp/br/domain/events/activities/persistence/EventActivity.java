@@ -53,6 +53,9 @@ public class EventActivity {
     @Column(name = "workload_hours")
     private BigDecimal workloadHours;
 
+    @Column(name = "max_capacity")
+    private Integer maxCapacity;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "registration_policy", nullable = false)
     private EnumActivityRegistrationPolicy registrationPolicy;
@@ -96,10 +99,13 @@ public class EventActivity {
         if (workloadHours != null && workloadHours.signum() < 0) {
             throw new IllegalArgumentException("A carga horária não pode ser negativa.");
         }
+        if (maxCapacity != null && maxCapacity < 0) {
+            throw new IllegalArgumentException("A capacidade máxima não pode ser negativa.");
+        }
     }
 
     public boolean isPublic() {
-        return registrationPolicy == EnumActivityRegistrationPolicy.PUBLIC;
+        return registrationPolicy == EnumActivityRegistrationPolicy.PUBLIC && maxCapacity == null;
     }
 
     public boolean isInProgress(LocalDateTime now) {

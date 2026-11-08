@@ -2,7 +2,7 @@ package com.ccomp.br.domain.events.activities.persistence;
 
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
-import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.shared.cache.CacheNames;
 import org.springframework.cache.annotation.CacheEvict;
@@ -37,7 +37,7 @@ public class ActivityCache {
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = CacheNames.EVENT_ACTIVITIES,
             key = "#eventId + ':' + (#cursor == null ? 'first' : #cursor.displayOrder() + '-' + #cursor.id()) + ':' + #limit")
-    public List<EventActivityDTO> findAllByEventIdWithCursor(Long eventId, EventActivityCursor cursor, int limit) {
+    public List<ActivityDTO> findAllByEventIdWithCursor(Long eventId, EventActivityCursor cursor, int limit) {
         return activityDslRepository.findAllByEventIdWithCursor(eventId, cursor, limit);
     }
 

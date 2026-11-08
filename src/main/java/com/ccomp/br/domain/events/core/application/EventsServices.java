@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.core.application;
 
 import com.ccomp.br.domain.events.core.dto.*;
+import com.ccomp.br.domain.events.shared.dto.CapacityUpdateRequest;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.persistence.EventDslRepository;
@@ -162,6 +163,7 @@ public class EventsServices {
         eventModel.setWorkloadHours(dto.workloadHours());
         eventModel.setTeamCertificateWorkloadHours(dto.teamCertificateWorkloadHours());
         eventModel.setOrganization(dto.organization());
+        eventModel.setMaxCapacity(dto.maxCapacity());
 
         var savedEvent = eventRepository.save(eventModel);
         eventCache.evict(savedEvent);
@@ -185,7 +187,7 @@ public class EventsServices {
     @Transactional
     @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public EventDTO update(UpdateEventDTO request, Long eventId, UUID userId) {
-        Event event = eventRepository.findById(eventId)
+        Event event = eventRepository.findByIdForUpdate(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId))
@@ -201,6 +203,19 @@ public class EventsServices {
         var eventUpdated = eventRepository.save(event);
         eventCache.evict(eventUpdated);
         return eventMapper.eventToEventDTO(event);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
+    public EventDTO updateCapacity(Long eventId, CapacityUpdateRequest request, UUID userId) {
+        Event event = eventRepository.findByIdForUpdate(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId))
+            throw new AccessDeniedException("Você não tem permissão para alterar a capacidade deste evento.");
+        event.setMaxCapacity(request.maxCapacity());
+        Event saved = eventRepository.save(event);
+        eventCache.evict(saved);
+        return eventMapper.eventToEventDTO(saved);
     }
 
     @Transactional

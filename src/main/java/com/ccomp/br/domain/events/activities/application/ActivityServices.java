@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.ccomp.br.domain.events.activities.dto.*;
+import com.ccomp.br.domain.events.shared.dto.CapacityUpdateRequest;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
@@ -64,7 +65,7 @@ public class ActivityServices {
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<EventActivityDTO> searchByCursor(Long eventId, String cursor, UUID userId) {
+    public CursorPage<ActivityDTO> searchByCursor(Long eventId, String cursor, UUID userId) {
         int pageSize = 50;
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
@@ -73,7 +74,7 @@ public class ActivityServices {
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         EventActivityCursor cursorDecoded = CursorUtils.decode(cursor, EventActivityCursor.class);
-        List<EventActivityDTO> results = activityCache
+        List<ActivityDTO> results = activityCache
                 .findAllByEventIdWithCursor(eventId, cursorDecoded, pageSize + 1);
 
         return CursorUtils.buildPage(
@@ -96,6 +97,7 @@ public class ActivityServices {
                 .description(request.description())
                 .registrationPolicy(EnumActivityRegistrationPolicy.EVENT_REGISTRANTS_ONLY)
                 .type(EnumActivityType.OTHER)
+                .maxCapacity(request.maxCapacity())
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -107,7 +109,7 @@ public class ActivityServices {
 
     @Transactional
     public ActivityDTO updateActivity(UUID userId, Long activityId, UpdateActivityDTO request) {
-        EventActivity activity = activityRepository.findById(activityId)
+        EventActivity activity = activityRepository.findByIdForUpdate(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não existe."));
 
         EventDTO event = eventCache.findById(activity.getEventId())
@@ -119,6 +121,8 @@ public class ActivityServices {
                 && guestService.canEditActivity(activityId, userId);
         if (!canEditAsManager && !canEditAsInstructor && !canEditAsGuest)
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
+        if (!canEditAsManager && request.maxCapacity() != null)
+            throw new AccessDeniedException("Somente a equipe do evento pode alterar a capacidade da atividade.");
 
         activityMapper.updateEventActivityFromRequest(request, activity);
         
@@ -126,6 +130,20 @@ public class ActivityServices {
         activityCache.evict(activitySaved);
         
         return activityMapper.eventActivityToActivityDTO(activitySaved);
+    }
+
+    @Transactional
+    public ActivityDTO updateCapacity(UUID userId, Long activityId, CapacityUpdateRequest request) {
+        EventActivity activity = activityRepository.findByIdForUpdate(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não existe."));
+        EventDTO event = eventCache.findById(activity.getEventId())
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não existe."));
+        if (!eventAccessPolicy.canEdit(event, userId))
+            throw new AccessDeniedException("Somente a equipe do evento pode alterar a capacidade da atividade.");
+        activity.setMaxCapacity(request.maxCapacity());
+        EventActivity saved = activityRepository.save(activity);
+        activityCache.evict(saved);
+        return activityMapper.eventActivityToActivityDTO(saved);
     }
 
     @Transactional

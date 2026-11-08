@@ -16,7 +16,7 @@ import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
-import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 
 import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.domain.events.guests.application.GuestService;
@@ -151,7 +151,7 @@ public class ActivityServicesTest {
 
             ActivityDTO expectedDTO = mock(ActivityDTO.class);
 
-            when(activityRepository.findById(activityId)).thenReturn(Optional.of(existingActivity));
+            when(activityRepository.findByIdForUpdate(activityId)).thenReturn(Optional.of(existingActivity));
             when(existingActivity.getEventId()).thenReturn(eventId);
             when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
             when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
@@ -174,7 +174,7 @@ public class ActivityServicesTest {
                     .description("nova descrição")
                     .build();
 
-            when(activityRepository.findById(activityId)).thenReturn(Optional.empty());
+            when(activityRepository.findByIdForUpdate(activityId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> activityServices.updateActivity(userId, activityId, request))
                     .isInstanceOf(ResourceNotFoundException.class)
@@ -186,7 +186,7 @@ public class ActivityServicesTest {
         @Test
         void updateActivity_throwsAccessDenied_whenUserCannotEditEvent() {
             UpdateActivityDTO request = UpdateActivityDTO.builder().title("Novo título").build();
-            when(activityRepository.findById(activityId)).thenReturn(Optional.of(existingActivity));
+            when(activityRepository.findByIdForUpdate(activityId)).thenReturn(Optional.of(existingActivity));
             when(existingActivity.getEventId()).thenReturn(eventId);
             when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
             when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(false);
@@ -246,8 +246,8 @@ public class ActivityServicesTest {
     class SearchActivities {
         @Test
         void searchByCursor_returnsPage_whenUserCanViewEvent() {
-            EventActivityDTO activity = new EventActivityDTO(activityId, eventId, "Palestra", null, 1L,
-                    null, null, null, null, null, null, null);
+            ActivityDTO activity = new ActivityDTO(activityId, eventId, "Palestra", null, 1L,
+                    null, null, null, null, null, null, (java.time.LocalDateTime) null);
             when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
             when(eventAccessPolicy.canView(eventDTO, userId)).thenReturn(true);
             when(activityCache.findAllByEventIdWithCursor(eventId, null, 51)).thenReturn(java.util.List.of(activity));

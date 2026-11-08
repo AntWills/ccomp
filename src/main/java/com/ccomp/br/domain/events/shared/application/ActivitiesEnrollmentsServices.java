@@ -2,7 +2,7 @@ package com.ccomp.br.domain.events.shared.application;
 
 import com.ccomp.br.domain.events.activities.dto.EventActivityConflictCursor;
 import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
-import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentsCursor;
@@ -57,7 +57,7 @@ public class ActivitiesEnrollmentsServices {
 
     @Transactional
     public MessageResponse inscribe(UUID userId, Long activityId) {
-        EventActivity activity = activityRepository.findById(activityId)
+        EventActivity activity = activityRepository.findByIdForUpdate(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
 
         if(activity.isPublic())
@@ -78,6 +78,10 @@ public class ActivitiesEnrollmentsServices {
                 && eventActivityDslRepository.existsSchedulingConflict(userId, activity))
             throw new ConflictException("Você já está inscrito em outras atividades");
 
+        if (activity.getMaxCapacity() != null
+                && enrollmentActivityDslRepository.countActiveByActivityId(activityId) >= activity.getMaxCapacity())
+            throw new ConflictException("As vagas para esta atividade estão esgotadas.");
+
         enrollmentActivityRepository.save(EnrollmentActivity.builder()
                         .activity(activity)
                         .enrollment(enrollment)
@@ -88,14 +92,14 @@ public class ActivitiesEnrollmentsServices {
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<EventActivityDTO> listSubscriptionsByCursor(
+    public CursorPage<ActivityDTO> listSubscriptionsByCursor(
             UUID userId, Long eventId, String cursor, int pageLimit
     ) {
         int finalPageLimit = Math.min(pageLimit, 50);
 
         EventActivityCursor cursorDecoded = CursorUtils.decode(cursor, EventActivityCursor.class);
 
-        List<EventActivityDTO> results = eventActivityDslRepository
+        List<ActivityDTO> results = eventActivityDslRepository
                 .findSubscriptionsWithCursor(userId, eventId, cursorDecoded, finalPageLimit + 1);
 
         return CursorUtils.buildPage(
@@ -106,7 +110,7 @@ public class ActivitiesEnrollmentsServices {
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<EventActivityDTO> listConflictingActivities(
+    public CursorPage<ActivityDTO> listConflictingActivities(
             UUID userId, Long activityId, String cursor, int pageLimit
     ) {
         EventActivity activity = activityRepository.findById(activityId)
@@ -115,7 +119,7 @@ public class ActivitiesEnrollmentsServices {
         int finalPageLimit = Math.min(pageLimit, 50);
 
         EventActivityConflictCursor cursorDecoded = CursorUtils.decode(cursor, EventActivityConflictCursor.class);
-        List<EventActivityDTO> results = eventActivityDslRepository
+        List<ActivityDTO> results = eventActivityDslRepository
                 .findConflictingActivities(userId, activity, cursorDecoded, finalPageLimit + 1);
 
         return CursorUtils.buildPage(

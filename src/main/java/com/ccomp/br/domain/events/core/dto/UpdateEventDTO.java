@@ -5,6 +5,7 @@ import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
 import com.ccomp.br.domain.events.core.enums.EnumScheduleConflictPolicy;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.PositiveOrZero;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
@@ -42,6 +43,9 @@ public record UpdateEventDTO(
         @Size(max = 255, message = "A organização deve ter no máximo 255 caracteres.")
         @Schema(description = "Organização responsável pelo evento. Opcional.", example = "Instituto Federal do Maranhão")
         String organization,
+        @PositiveOrZero(message = "A capacidade máxima não pode ser negativa.")
+        @Schema(description = "Número máximo de inscrições ativas. Null mantém o valor atual neste PATCH; use PUT /api/events/{eventId}/capacity com null para remover o limite.", example = "150")
+        Integer maxCapacity,
         @Schema(name = "time_zone", description = "Opcional. Novo identificador IANA para interpretar os horários locais do evento. Se omitido ou null, mantém o fuso atual.", example = "America/Manaus")
         String timeZone
 ) {

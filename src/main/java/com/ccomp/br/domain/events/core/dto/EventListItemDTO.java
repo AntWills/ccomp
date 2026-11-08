@@ -9,7 +9,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-@Schema(description = "Projeção resumida usada nas listagens de eventos. Não contém workloadHours, teamCertificateWorkloadHours ou organization; consulte EventDTO nos endpoints de detalhe para esses campos.")
+@Schema(description = "Projeção resumida usada nas listagens de eventos. Não contém maxCapacity, workloadHours, teamCertificateWorkloadHours ou organization; consulte EventDTO nos endpoints de detalhe para esses campos.")
 public record EventListItemDTO(
         Long id,
         String title,

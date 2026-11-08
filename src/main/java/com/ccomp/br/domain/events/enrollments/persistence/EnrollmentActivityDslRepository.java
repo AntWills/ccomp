@@ -42,6 +42,18 @@ public class EnrollmentActivityDslRepository {
     }
 
     @Transactional(readOnly = true)
+    public long countActiveByActivityId(Long activityId) {
+        Long count = queryFactory
+                .select(enrollmentActivity.id.count())
+                .from(enrollmentActivity)
+                .innerJoin(enrollmentActivity.enrollment, enrollment)
+                .where(enrollmentActivity.activity.id.eq(activityId),
+                        enrollment.status.in(EnumEnrollmentState.CONFIRMED, EnumEnrollmentState.CHECKED_IN))
+                .fetchOne();
+        return count == null ? 0 : count;
+    }
+
+    @Transactional(readOnly = true)
     public List<UserActivitySummaryDTO> findAllUsersByActivityId(Long activityId,
                                                                  EnrollmentActivityCursor cursor,
                                                                  int limit) {

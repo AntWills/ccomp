@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.events.activities.web;
 
-import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.enrollments.dto.UserActivitySummaryDTO;
 import com.ccomp.br.domain.events.shared.application.ActivitiesEnrollmentsServices;
 import com.ccomp.br.shared.dto.MessageResponse;
@@ -114,7 +114,7 @@ public class ActivitiesEnrollmentsController {
             )
     })
     @GetMapping("/{eventId}/activities/my-subscriptions")
-    public ResponseEntity<CursorPage<EventActivityDTO>> getMySubscribedActivities(
+    public ResponseEntity<CursorPage<ActivityDTO>> getMySubscribedActivities(
             @Parameter(description = "ID do evento", example = "1")
             @PathVariable Long eventId,
 
@@ -146,7 +146,7 @@ public class ActivitiesEnrollmentsController {
             @ApiResponse(responseCode = "404", description = "Atividade não encontrada")
     })
     @GetMapping("/activities/{activityId}/conflicts")
-    public ResponseEntity<CursorPage<EventActivityDTO>> getConflictingActivities(
+    public ResponseEntity<CursorPage<ActivityDTO>> getConflictingActivities(
             @PathVariable Long activityId,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "10") int pageSize,

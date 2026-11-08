@@ -3,7 +3,7 @@ package com.ccomp.br.domain.events.activities.web;
 import com.ccomp.br.domain.events.activities.application.ActivityServices;
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.CreateActivityDTO;
-import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
@@ -35,7 +35,7 @@ class ActivitiesControllerTest {
     void getActivitiesDelegatesEventCursorAndOptionalUser() {
         Long eventId = 12L;
         String cursor = "encoded-cursor";
-        CursorPage<EventActivityDTO> expected = new CursorPage<>(List.of(), null, null);
+        CursorPage<ActivityDTO> expected = new CursorPage<>(List.of(), null, null);
         when(activityServices.searchByCursor(eventId, cursor, null)).thenReturn(expected);
 
         var response = controller.getActivities(eventId, cursor, null);

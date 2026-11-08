@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.events.shared.application;
 
-import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
@@ -48,8 +48,9 @@ class ActivitiesEnrollmentsServicesTest {
         EventActivity activity = mock(EventActivity.class);
         Event event = mock(Event.class);
         Enrollment enrollment = mock(Enrollment.class);
-        when(activityRepository.findById(9L)).thenReturn(Optional.of(activity));
+        when(activityRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(activity));
         when(activity.isPublic()).thenReturn(false);
+        when(activity.getMaxCapacity()).thenReturn(null);
         when(enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, 9L)).thenReturn(Optional.empty());
         when(activity.getEvent()).thenReturn(event);
         when(event.isSchedulerPrevent()).thenReturn(false);
@@ -63,7 +64,7 @@ class ActivitiesEnrollmentsServicesTest {
 
     @Test
     void inscribeRejectsMissingActivity() {
-        when(activityRepository.findById(9L)).thenReturn(Optional.empty());
+        when(activityRepository.findByIdForUpdate(9L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.inscribe(userId, 9L))
                 .isInstanceOf(ResourceNotFoundException.class);

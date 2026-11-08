@@ -2,7 +2,7 @@ package com.ccomp.br.domain.events.activities.persistence;
 
 import com.ccomp.br.domain.events.activities.dto.EventActivityConflictCursor;
 import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
-import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.events.instructor.enums.EnumInstructorStatus;
@@ -44,7 +44,7 @@ public class EventActivityDslRepository {
         return Optional.ofNullable(result);
     }
 
-    public List<EventActivityDTO> findAllByEventIdWithCursor(
+    public List<ActivityDTO> findAllByEventIdWithCursor(
             Long eventId, @Nullable EventActivityCursor cursor, int limit) {
         BooleanBuilder whereClause = new BooleanBuilder();
 
@@ -60,7 +60,7 @@ public class EventActivityDslRepository {
 
         return queryFactory.select(
                 Projections.constructor(
-                        EventActivityDTO.class,
+                        ActivityDTO.class,
                         eventActivity.id,
                         eventActivity.event.id,
                         eventActivity.title,
@@ -73,7 +73,8 @@ public class EventActivityDslRepository {
                         eventActivity.registrationPolicy,
                         eventActivity.type,
                         eventActivity.createdAt,
-                        eventActivity.event.timeZone
+                        eventActivity.event.timeZone,
+                        eventActivity.maxCapacity
                     )
                 )
                 .from(eventActivity)
@@ -86,7 +87,7 @@ public class EventActivityDslRepository {
                 .fetch();
     }
 
-    public List<EventActivityDTO> findSubscriptionsWithCursor(
+    public List<ActivityDTO> findSubscriptionsWithCursor(
             UUID userId, Long eventId, @Nullable EventActivityCursor cursor, int limit) {
         BooleanBuilder whereClause = new BooleanBuilder();
 
@@ -109,7 +110,7 @@ public class EventActivityDslRepository {
 
         return queryFactory.select(
                         Projections.constructor(
-                                EventActivityDTO.class,
+                                ActivityDTO.class,
                                 eventActivity.id,
                                 eventActivity.event.id,
                                 eventActivity.title,
@@ -122,7 +123,8 @@ public class EventActivityDslRepository {
                                 eventActivity.registrationPolicy,
                                 eventActivity.type,
                                 eventActivity.createdAt,
-                                eventActivity.event.timeZone
+                                eventActivity.event.timeZone,
+                                eventActivity.maxCapacity
                         )
                 )
                 .from(eventActivity)
@@ -167,7 +169,7 @@ public class EventActivityDslRepository {
         return result != null;
     }
 
-    public List<EventActivityDTO> findConflictingActivities(
+    public List<ActivityDTO> findConflictingActivities(
             UUID userId, EventActivity activity, @Nullable EventActivityConflictCursor cursor, int limit) {
         if (activity.getStartDate() == null || activity.getEndDate() == null) {
             return List.of();
@@ -200,7 +202,7 @@ public class EventActivityDslRepository {
         return queryFactory
                 .select(
                         Projections.constructor(
-                                EventActivityDTO.class,
+                                ActivityDTO.class,
                                 eventActivity.id,
                                 eventActivity.event.id,
                                 eventActivity.title,
@@ -213,7 +215,8 @@ public class EventActivityDslRepository {
                                 eventActivity.registrationPolicy,
                                 eventActivity.type,
                                 eventActivity.createdAt,
-                                eventActivity.event.timeZone
+                                eventActivity.event.timeZone,
+                                eventActivity.maxCapacity
                         )
                 )
                 .from(enrollmentActivity)
@@ -231,7 +234,7 @@ public class EventActivityDslRepository {
      * Carrega todas as atividades do evento em que o usuário realmente participou
      * (inscrição com check-in feito), ordenadas por ordem de exibição e id.
      */
-    public List<EventActivityDTO> findAllCheckedInByUserAndEvent(UUID userId, Long eventId) {
+    public List<ActivityDTO> findAllCheckedInByUserAndEvent(UUID userId, Long eventId) {
         BooleanBuilder whereClause = new BooleanBuilder();
 
         whereClause.and(eventActivity.event.id.eq(eventId));
@@ -241,7 +244,7 @@ public class EventActivityDslRepository {
         return queryFactory
                 .select(
                         Projections.constructor(
-                                EventActivityDTO.class,
+                                ActivityDTO.class,
                                 eventActivity.id,
                                 eventActivity.event.id,
                                 eventActivity.title,
@@ -254,7 +257,8 @@ public class EventActivityDslRepository {
                                 eventActivity.registrationPolicy,
                                 eventActivity.type,
                                 eventActivity.createdAt,
-                                eventActivity.event.timeZone
+                                eventActivity.event.timeZone,
+                                eventActivity.maxCapacity
                         )
                 )
                 .from(eventActivity)

@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.ccomp.br.domain.events.activities.dto.*;
 import com.ccomp.br.domain.events.activities.application.ActivityServices;
+import com.ccomp.br.domain.events.shared.dto.CapacityUpdateRequest;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -38,7 +39,7 @@ public class ActivitiesController {
     })
     @GetMapping("/{eventId}/activities")
     @SecurityRequirements
-    public ResponseEntity<CursorPage<EventActivityDTO>> getActivities(
+    public ResponseEntity<CursorPage<ActivityDTO>> getActivities(
             @PathVariable Long eventId,
             @RequestParam(required = false) String cursor,
             @AuthenticationPrincipal Jwt jwt) {
@@ -46,7 +47,7 @@ public class ActivitiesController {
         return ResponseEntity.ok(activityServices.searchByCursor(eventId, cursor, userId));
     }
 
-    @Operation(summary = "Cria uma nova atividade", description = "Cria uma nova atividade para um evento específico. O cronograma é informado ao atualizar a atividade; start_date e end_date são horários locais no time_zone do evento pai e não devem conter offset. As respostas incluem time_zone. Requer autenticação do usuário e dados da atividade.")
+    @Operation(summary = "Cria uma nova atividade", description = "Cria uma nova atividade para um evento específico. `maxCapacity` é opcional, deve ser maior ou igual a zero e null significa sem limite. Uma atividade pública com capacidade definida exige inscrição para reservar vaga. O cronograma é informado ao atualizar a atividade; start_date e end_date são horários locais no time_zone do evento pai e não devem conter offset. As respostas incluem time_zone e maxCapacity. Requer autenticação e permissão de edição.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Atividade criada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
@@ -84,7 +85,7 @@ public class ActivitiesController {
         return ResponseEntity.ok(new MessageResponse("Atividade removida com sucesso."));
     }
 
-    @Operation(summary = "Atualiza uma atividade", description = "Atualiza os dados de uma atividade existente. start_date e end_date são horários locais no time_zone do evento pai; não envie offset. Permitido ao gestor do evento, a ministrante com vínculo confirmado e conta ativa ou a convidado com conta ativa vinculado à atividade.")
+    @Operation(summary = "Atualiza uma atividade", description = "Atualiza os dados de uma atividade existente, incluindo `maxCapacity` (inteiro maior ou igual a zero). Null ou omissão no PATCH preserva o valor; use PUT /api/events/activities/{id}/capacity com null para remover o limite. Uma atividade pública com capacidade definida exige inscrição para reservar vaga. start_date e end_date são horários locais no time_zone do evento pai; não envie offset. Campos de capacidade só podem ser alterados pela equipe do evento.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Atividade atualizada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
@@ -103,5 +104,22 @@ public class ActivitiesController {
                 .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
 
         return ResponseEntity.ok(activityServices.updateActivity(userId, id, request));
+    }
+
+    @PutMapping("/activities/{id}/capacity")
+    @Operation(summary = "Define ou remove a capacidade máxima da atividade",
+            description = "Envia um inteiro maior ou igual a zero para limitar inscrições ativas ou null para remover o limite. O valor também aparece nas respostas de consulta das atividades. Requer owner, editor ativo, moderator ou admin do evento.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Capacidade atualizada"),
+            @ApiResponse(responseCode = "400", description = "Capacidade deve ser maior ou igual a zero ou null"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para editar o evento"),
+            @ApiResponse(responseCode = "404", description = "Atividade ou evento não encontrado")
+    })
+    public ResponseEntity<ActivityDTO> updateActivityCapacity(@PathVariable Long id,
+            @Valid @RequestBody CapacityUpdateRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID userId = Optional.ofNullable(jwt).map(Jwt::getSubject).map(UUID::fromString)
+                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
+        return ResponseEntity.ok(activityServices.updateCapacity(userId, id, request));
     }
 }

@@ -93,6 +93,10 @@ public class Event {
     @Column(name = "max_capacity")
     private Integer maxCapacity;
 
+    @Column(name = "active_enrollment_count", nullable = false)
+    @Builder.Default
+    private Integer activeEnrollmentCount = 0;
+
     @OneToMany(mappedBy = "event", cascade = CascadeType.REMOVE, orphanRemoval = true)
     @Builder.Default
     private Set<Enrollment> enrollments = new HashSet<>();
@@ -206,8 +210,10 @@ public class Event {
         if (this.enrollmentPaused) {
             return EnumEnrollmentStatus.PAUSED;
         }
-        if (this.maxCapacity != null && this.enrollments != null && this.enrollments.size() >= this.maxCapacity) {
-            return EnumEnrollmentStatus.SOLD_OUT;
+        if (this.maxCapacity != null) {
+            if (this.activeEnrollmentCount >= this.maxCapacity) {
+                return EnumEnrollmentStatus.SOLD_OUT;
+            }
         }
         if (this.enrollmentStartDate == null || this.enrollmentEndDate == null) {
             return EnumEnrollmentStatus.CLOSED;
@@ -229,6 +235,16 @@ public class Event {
      */
     public boolean isEnrollmentOpen() {
         return getEnrollmentStatus() == EnumEnrollmentStatus.OPEN;
+    }
+
+    public void registerActiveEnrollment() {
+        this.activeEnrollmentCount++;
+    }
+
+    public void releaseActiveEnrollment() {
+        if (this.activeEnrollmentCount > 0) {
+            this.activeEnrollmentCount--;
+        }
     }
 
     public ZoneId getZoneId() {
@@ -254,6 +270,12 @@ public class Event {
     @PreUpdate
     private void validateTimeZone() {
         getZoneId();
+        if (maxCapacity != null && maxCapacity < 0) {
+            throw new DomainException("A capacidade máxima do evento não pode ser negativa.");
+        }
+        if (activeEnrollmentCount == null || activeEnrollmentCount < 0) {
+            throw new DomainException("A quantidade de inscrições ativas do evento está inválida.");
+        }
     }
 
     public LocalDateTime now(Clock clock) {

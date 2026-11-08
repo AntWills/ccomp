@@ -6,6 +6,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.PositiveOrZero;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
@@ -34,13 +35,16 @@ public record CreateEventDTO(
         @Size(max = 255, message = "A organização deve ter no máximo 255 caracteres.")
         @Schema(description = "Organização responsável pelo evento. Opcional.", example = "Instituto Federal do Maranhão")
         String organization,
+        @PositiveOrZero(message = "A capacidade máxima não pode ser negativa.")
+        @Schema(description = "Número máximo de inscrições ativas. Null significa sem limite; se omitido, inicia sem limite.", example = "150")
+        Integer maxCapacity,
         @NotBlank(message = "O fuso horário do evento é obrigatório.")
         @Schema(name = "time_zone", description = "Obrigatório. Identificador IANA usado para interpretar os horários locais do evento. Eventos online também devem informar o fuso de referência.", example = "America/Sao_Paulo", requiredMode = Schema.RequiredMode.REQUIRED)
         String timeZone
 ) {
     public CreateEventDTO(String title, EnumEventCategory category, EnumEventFormat format,
                           LocalDateTime startDate, LocalDateTime endDate) {
-        this(title, category, format, startDate, endDate, null, null, null, "America/Sao_Paulo");
+        this(title, category, format, startDate, endDate, null, null, null, null, "America/Sao_Paulo");
     }
 
     public Optional<LocalDateTime> optionalStartDate() {
