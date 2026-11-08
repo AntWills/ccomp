@@ -25,13 +25,13 @@ public record EventListItemDTO(
         LocalDateTime enrollmentEndDate,
         boolean enrollmentPaused,
 
-        @Schema(name = "start_date", description = "Horário local interpretado no fuso time_zone retornado no item.", example = "2026-11-08T09:05:00")
+        @Schema(name = "start_date", description = "Horário de Brasília (America/Sao_Paulo), sem offset.", example = "2026-11-08T09:05:00")
         LocalDateTime startDate,
-        @Schema(name = "end_date", description = "Horário local interpretado no fuso time_zone retornado no item.", example = "2026-11-08T12:00:00")
+        @Schema(name = "end_date", description = "Horário de Brasília (America/Sao_Paulo), sem offset.", example = "2026-11-08T12:00:00")
         LocalDateTime endDate,
         String address,
         String onlineUrl,
-        @Schema(name = "time_zone", description = "Identificador IANA do fuso usado pelos horários locais do evento.", example = "America/Sao_Paulo")
+        @Schema(name = "time_zone", description = "DEPRECATED. Retornado por compatibilidade; horários usam Brasília (America/Sao_Paulo).", example = "America/Sao_Paulo", deprecated = true)
         String timeZone
 ) implements Serializable {
     public EventListItemDTO(Long id, String title, String slug, String summary, String content,

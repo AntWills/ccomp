@@ -30,12 +30,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 
 @ExtendWith(MockitoExtension.class)
 public class ActivityServicesTest {
@@ -62,6 +66,8 @@ public class ActivityServicesTest {
 
     @Mock private GuestService guestService;
     @Mock private InstructorService instructorService;
+
+    @Spy private Clock clock = Clock.fixed(Instant.parse("2026-11-08T12:10:00Z"), ZoneId.of("America/Sao_Paulo"));
 
     @InjectMocks
     private ActivityServices activityServices;
@@ -96,7 +102,7 @@ public class ActivityServicesTest {
             EventActivity savedActivity = mock(EventActivity.class);
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(eventDTO);
+            when(eventMapper.eventToEventDTO(any(), any())).thenReturn(eventDTO);
             when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
             when(activityRepository.save(any(EventActivity.class))).thenReturn(savedActivity);
             when(activityMapper.eventActivityToActivityDTO(savedActivity)).thenReturn(expectedDTO);
@@ -115,7 +121,7 @@ public class ActivityServicesTest {
             CreateActivityDTO request = new CreateActivityDTO("Palestra Spring Boot", "Descrição da palestra");
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(eventDTO);
+            when(eventMapper.eventToEventDTO(any(), any())).thenReturn(eventDTO);
             when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(false);
 
             assertThatThrownBy(() -> activityServices.createActivity(userId, eventId, request))

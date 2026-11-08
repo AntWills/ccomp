@@ -22,9 +22,9 @@ public record CreateEventDTO(
         EnumEventCategory category,
         @NotNull(message = "O formato do evento é obrigatório.")
         EnumEventFormat format,
-        @Schema(name = "start_date", description = "Horário local de início, interpretado no fuso time_zone; envie sem offset.", example = "2026-11-08T09:05:00")
+        @Schema(name = "start_date", description = "Horário de Brasília (America/Sao_Paulo), sem offset.", example = "2026-11-08T09:05:00")
         LocalDateTime startDate,
-        @Schema(name = "end_date", description = "Horário local de término, interpretado no fuso time_zone; envie sem offset.", example = "2026-11-08T12:00:00")
+        @Schema(name = "end_date", description = "Horário de Brasília (America/Sao_Paulo), sem offset.", example = "2026-11-08T12:00:00")
         LocalDateTime endDate,
         @DecimalMin(value = "0.0", inclusive = true)
         @Schema(description = "Carga horária base configurada no evento. Na emissão do certificado do participante, soma-se às cargas das atividades em que ele teve presença.", example = "2.5")
@@ -39,7 +39,7 @@ public record CreateEventDTO(
         @Schema(description = "Número máximo de inscrições ativas. Null significa sem limite; se omitido, inicia sem limite.", example = "150")
         Integer maxCapacity,
         @NotBlank(message = "O fuso horário do evento é obrigatório.")
-        @Schema(name = "time_zone", description = "Obrigatório. Identificador IANA usado para interpretar os horários locais do evento. Eventos online também devem informar o fuso de referência.", example = "America/Sao_Paulo", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(name = "time_zone", description = "DEPRECATED. Ainda obrigatório e persistido por compatibilidade, mas não define o fuso dos horários. Use Brasília (America/Sao_Paulo).", example = "America/Sao_Paulo", requiredMode = Schema.RequiredMode.REQUIRED, deprecated = true)
         String timeZone
 ) {
     public CreateEventDTO(String title, EnumEventCategory category, EnumEventFormat format,

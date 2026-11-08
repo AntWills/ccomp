@@ -28,6 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Clock;
+import java.time.LocalDateTime;
 
 @Service
 public class ActivitiesEnrollmentsServices {
@@ -38,6 +40,7 @@ public class ActivitiesEnrollmentsServices {
     private final EventActivityDslRepository eventActivityDslRepository;
     private final EventAccessPolicy eventAccessPolicy;
     private final EventMapper eventMapper;
+    private final Clock clock;
 
     public ActivitiesEnrollmentsServices(
             EventActivityRepository activityRepository,
@@ -45,7 +48,7 @@ public class ActivitiesEnrollmentsServices {
             EnrollmentActivityRepository enrollmentActivityRepository,
             EnrollmentActivityDslRepository enrollmentActivityDslRepository,
             EventActivityDslRepository eventActivityDslRepository,
-            EventAccessPolicy eventAccessPolicy, EventMapper eventMapper) {
+            EventAccessPolicy eventAccessPolicy, EventMapper eventMapper, Clock clock) {
         this.activityRepository = activityRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.enrollmentActivityRepository = enrollmentActivityRepository;
@@ -53,6 +56,7 @@ public class ActivitiesEnrollmentsServices {
         this.eventActivityDslRepository = eventActivityDslRepository;
         this.eventAccessPolicy = eventAccessPolicy;
         this.eventMapper = eventMapper;
+        this.clock = clock;
     }
 
     @Transactional
@@ -145,7 +149,7 @@ public class ActivitiesEnrollmentsServices {
         Event event = eventActivityDslRepository.findEventByActivityId(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if(!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId))
+        if(!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event, LocalDateTime.now(clock)), userId))
             throw new AccessDeniedException("Você não possui permissão para visualizar os incritos.");
 
         EnrollmentActivityCursor cursorDecoded = CursorUtils.decode(cursor, EnrollmentActivityCursor.class);

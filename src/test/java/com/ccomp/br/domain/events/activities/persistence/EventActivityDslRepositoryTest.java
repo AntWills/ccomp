@@ -513,11 +513,11 @@ class EventActivityDslRepositoryTest {
 
         // Check-in do usuário nas duas primeiras atividades
         EnrollmentActivity attended1 = new EnrollmentActivity(enrollment, activity1);
-        attended1.makeAttendance();
+        attended1.makeAttendance(LocalDateTime.now());
         entityManager.persist(attended1);
 
         EnrollmentActivity attended2 = new EnrollmentActivity(enrollment, activity2);
-        attended2.makeAttendance();
+        attended2.makeAttendance(LocalDateTime.now());
         entityManager.persist(attended2);
 
         // Sem check-in
@@ -525,7 +525,7 @@ class EventActivityDslRepositoryTest {
 
         // Check-in do outro usuário na atividade sem check-in do primeiro
         EnrollmentActivity otherAttendance = new EnrollmentActivity(otherEnrollment, activity3);
-        otherAttendance.makeAttendance();
+        otherAttendance.makeAttendance(LocalDateTime.now());
         entityManager.persist(otherAttendance);
 
         entityManager.flush();
@@ -602,11 +602,11 @@ class EventActivityDslRepositoryTest {
         entityManager.persist(notAttended);
 
         EnrollmentActivity attended1 = new EnrollmentActivity(enrollment, activity1);
-        attended1.makeAttendance();
+        attended1.makeAttendance(LocalDateTime.now());
         entityManager.persist(attended1);
 
         EnrollmentActivity attended2 = new EnrollmentActivity(enrollment, activity2);
-        attended2.makeAttendance();
+        attended2.makeAttendance(LocalDateTime.now());
         entityManager.persist(attended2);
 
         entityManager.persist(new EnrollmentActivity(enrollment, notAttended));

@@ -140,6 +140,10 @@ const tokens = await response.json();
 O token Google deve ser enviado inteiro para validação no backend; não envie
 claims de usuário montadas pelo frontend.
 
+## Fuso horário da API
+
+Os horários de agenda de eventos e atividades sem offset representam horário de Brasília (`America/Sao_Paulo`), independentemente da localização do servidor ou do cliente. Consulte [a documentação de fusos horários](docs/fusos-horarios-eventos.md) para o escopo, metadados e exemplos.
+
 ## Documentação da API
 
 Com a aplicação em execução, a documentação interativa (Swagger UI)

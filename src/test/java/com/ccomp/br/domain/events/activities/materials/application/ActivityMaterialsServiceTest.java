@@ -61,7 +61,9 @@ class ActivityMaterialsServiceTest {
     @BeforeEach
     void setUp() {
         service = new ActivityMaterialsService(
-                activities, events, materials, access, materialDsl, storage, keyGenerator, new MaterialMapper());
+                activities, events, materials, access, materialDsl, storage, keyGenerator, new MaterialMapper(),
+                java.time.Clock.fixed(java.time.Instant.parse("2026-11-08T12:10:00Z"),
+                        java.time.ZoneId.of("America/Sao_Paulo")));
         activity = mock(EventActivity.class);
         event = Event.builder().id(EVENT_ID).build();
         when(activities.findById(ACTIVITY_ID)).thenReturn(Optional.of(activity));

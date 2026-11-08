@@ -47,7 +47,7 @@ class CheckInConsumerTest {
                 java.util.Map.of("participantName", "Pessoa", "activityTitle", "Atividade de teste", "eventTitle", "Evento de teste")))
                 .thenReturn("html");
 
-        new CheckInConsumer(enrollmentRepository, activityRepository, userManagement, emailService, emailTemplateService)
+        new CheckInConsumer(enrollmentRepository, activityRepository, userManagement, emailService, emailTemplateService, java.time.Clock.systemUTC())
                 .handler(new CheckInMessageDTO(enrollmentId, activityId));
 
         verify(emailService).send(org.mockito.ArgumentMatchers.argThat(mail ->

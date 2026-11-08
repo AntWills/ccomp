@@ -297,7 +297,7 @@ public class EventsServicesTest {
             UpdateEventDTO request = mock(UpdateEventDTO.class);
             when(request.titleOpt()).thenReturn(Optional.empty());
 
-            when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
+            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
             when(eventRepository.save(existingEvent)).thenReturn(existingEvent);
             when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(expectedEventDTO);
             when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(true);
@@ -314,7 +314,7 @@ public class EventsServicesTest {
         void updateRegeneratesSlugWhenTitleChanges() {
             UpdateEventDTO request = mock(UpdateEventDTO.class);
             when(request.titleOpt()).thenReturn(Optional.of("Novo título"));
-            when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
+            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
             when(eventRepository.existsBySlug(anyString())).thenReturn(false);
             when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(expectedEventDTO);
             when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(true);
@@ -331,7 +331,7 @@ public class EventsServicesTest {
         @Test
         @DisplayName("Lança ResourceNotFoundException ao atualizar evento inexistente")
         void updateThrowsWhenEventDoesNotExist() {
-            when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.empty());
+            when(eventRepository.findById(eventId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> eventsServices.update(mock(UpdateEventDTO.class), eventId, userId))
                     .isInstanceOf(com.ccomp.br.shared.exceptions.ResourceNotFoundException.class)
@@ -345,7 +345,7 @@ public class EventsServicesTest {
         void update_throwsAccessDeniedException_whenUserHasNoPermission() {
             UpdateEventDTO request = mock(UpdateEventDTO.class);
 
-            when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
+            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
             when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(expectedEventDTO);
             when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(false);
 

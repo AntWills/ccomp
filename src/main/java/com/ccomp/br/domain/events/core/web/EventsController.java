@@ -2,7 +2,6 @@ package com.ccomp.br.domain.events.core.web;
 
 import com.ccomp.br.domain.events.core.application.EventsServices;
 import com.ccomp.br.domain.events.core.dto.*;
-import com.ccomp.br.domain.events.shared.dto.CapacityUpdateRequest;
 import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
@@ -170,7 +169,7 @@ public class EventsController {
         Cria um novo evento atribuindo o status inicial como `DRAFT` (Rascunho).
 
         Envie `title`, `category`, `format` e `time_zone` com um identificador IANA (por exemplo `America/Sao_Paulo`).
-        `start_date`, `end_date`, `workload_hours`, `team_certificate_workload_hours`, `organization` e `maxCapacity` são opcionais.
+        `start_date`, `end_date`, `workload_hours`, `team_certificate_workload_hours` e `organization` são opcionais.
         Datas são horários locais no fuso informado em `time_zone` e devem ser enviadas sem offset. O default usado
         por registros sem fuso é `America/Sao_Paulo`, mas este endpoint exige o campo explicitamente: informe a zona
         IANA do local do evento; para eventos online, informe a zona usada como referência de agenda.
@@ -178,7 +177,7 @@ public class EventsController {
         base do evento, que é somada às atividades com presença durante a emissão do certificado de participante;
         `teamCertificateWorkloadHours`
         define a carga horária dos certificados da equipe e precisa estar configurada para emitir esses certificados;
-        `organization` identifica a organização responsável. `maxCapacity` limita inscrições ativas, deve ser maior ou igual a zero e fica sem limite quando omitido. As cargas horárias não podem ser negativas e
+        `organization` identifica a organização responsável. As cargas horárias não podem ser negativas e
         `organization` aceita até 255 caracteres. O evento é criado como `DRAFT` e a resposta `EventDTO` inclui
         os campos persistidos. Requer JWT de usuário com papel `ADMIN`, `MODERATOR` ou `STAFF`.
         """
@@ -217,11 +216,11 @@ public class EventsController {
             summary = "Atualiza parcialmente um evento existente",
             description = """
         Atualiza somente os campos enviados em `UpdateEventDTO`: `title`, `summary`, `content`, `category`, `format`,
-        `schedule_conflict_policy`, datas de realização e de inscrição, `enrollment_paused`, `maxCapacity`, `workload_hours`,
+        `schedule_conflict_policy`, datas de realização e de inscrição, `enrollment_paused`, `workload_hours`,
         `team_certificate_workload_hours`, `organization` e `time_zone`. Campos omitidos ou enviados como `null` ficam inalterados.
         As datas são horários locais interpretados no fuso do evento. Se `time_zone` mudar, as datas existentes serão
         interpretadas na nova zona; o backend não ajusta seus valores automaticamente.
-        `maxCapacity`, quando informado, deve ser maior ou igual a zero; use `PUT /api/events/{eventId}/capacity` com `null` para remover o limite. As cargas horárias não podem ser negativas; `organization` aceita até 255 caracteres. Alterar título também
+        As cargas horárias não podem ser negativas; `organization` aceita até 255 caracteres. Alterar título também
         regenera o slug. Capa e status têm endpoints próprios. A resposta `EventDTO` inclui os campos atualizados.
 
         Requer JWT do proprietário, de um editor ativo, `MODERATOR` ou `ADMIN`.
@@ -254,21 +253,6 @@ public class EventsController {
             @AuthenticationPrincipal Jwt jwt
     ) {
         return ResponseEntity.ok(eventsServices.update(request, eventId, extractUserId(jwt)));
-    }
-
-    @PutMapping("{eventId}/capacity")
-    @Operation(summary = "Define ou remove a capacidade máxima do evento",
-            description = "Atualiza somente a capacidade máxima. Envie um inteiro maior ou igual a zero para limitar inscrições ativas ou null para remover o limite. A capacidade é retornada em EventDTO. Requer permissão de edição do evento.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Capacidade atualizada", content = @Content(mediaType = "application/json", schema = @Schema(implementation = EventDTO.class))),
-            @ApiResponse(responseCode = "400", description = "Capacidade deve ser maior ou igual a zero ou null", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Sem permissão para editar o evento", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Evento não encontrado", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
-    })
-    public ResponseEntity<EventDTO> updateEventCapacity(@PathVariable Long eventId,
-            @Valid @RequestBody CapacityUpdateRequest request,
-            @AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.ok(eventsServices.updateCapacity(eventId, request, extractUserId(jwt)));
     }
 
     @PatchMapping("{eventId}/status/{status}")

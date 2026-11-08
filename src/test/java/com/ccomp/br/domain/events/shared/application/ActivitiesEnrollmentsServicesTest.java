@@ -19,11 +19,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -39,6 +43,7 @@ class ActivitiesEnrollmentsServicesTest {
     @Mock private EventActivityDslRepository eventActivityDslRepository;
     @Mock private EventAccessPolicy eventAccessPolicy;
     @Mock private EventMapper eventMapper;
+    @Spy private Clock clock = Clock.fixed(Instant.parse("2026-11-08T12:10:00Z"), ZoneId.of("America/Sao_Paulo"));
     @InjectMocks private ActivitiesEnrollmentsServices service;
 
     private final UUID userId = UUID.randomUUID();
@@ -112,7 +117,7 @@ class ActivitiesEnrollmentsServicesTest {
         Event event = mock(Event.class);
         EventDTO eventDTO = mock(EventDTO.class);
         when(eventActivityDslRepository.findEventByActivityId(9L)).thenReturn(Optional.of(event));
-        when(eventMapper.eventToEventDTO(event)).thenReturn(eventDTO);
+        when(eventMapper.eventToEventDTO(any(), any())).thenReturn(eventDTO);
         when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
         when(enrollmentActivityDslRepository.findAllUsersByActivityId(9L, null, 11)).thenReturn(List.of());
 
@@ -127,7 +132,7 @@ class ActivitiesEnrollmentsServicesTest {
         Event event = mock(Event.class);
         EventDTO eventDTO = mock(EventDTO.class);
         when(eventActivityDslRepository.findEventByActivityId(9L)).thenReturn(Optional.of(event));
-        when(eventMapper.eventToEventDTO(event)).thenReturn(eventDTO);
+        when(eventMapper.eventToEventDTO(any(), any())).thenReturn(eventDTO);
         when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.findAllUsersFromActivity(userId, 9L, null, 10))

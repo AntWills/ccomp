@@ -50,7 +50,7 @@ class InstructorInvitationServiceTest {
 
         var response = new InstructorInvitationService(
                 activityCache, activityRepository, instructorRepository, invitationRepository,
-                eventCache, eventAccessPolicy, userManagement, rabbitTemplate
+                eventCache, eventAccessPolicy, userManagement, rabbitTemplate, java.time.Clock.systemUTC()
         ).addInstructor(managerId, activityId, "Auxiliar", "Apoio de sala",
                 EnumInstructorRole.ASSISTANT, null);
 

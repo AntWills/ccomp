@@ -97,7 +97,7 @@ public class Enrollment {
     /**
      * Realiza a confirmação de presença do participante no evento.
      */
-    public void checkIn() {
+    public void checkIn(LocalDateTime now) {
         if(this.status == EnumEnrollmentState.CHECKED_IN)
             return;
         if (this.status == EnumEnrollmentState.BANNED) {
@@ -107,7 +107,7 @@ public class Enrollment {
             throw new DomainException("Não é possível realizar credenciamento em uma inscrição cancelada.");
         }
         this.status = EnumEnrollmentState.CHECKED_IN;
-        this.checkInAt = LocalDateTime.now();
+        this.checkInAt = now;
     }
 
     /**

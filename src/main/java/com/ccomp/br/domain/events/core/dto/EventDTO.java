@@ -50,10 +50,6 @@ public record EventDTO(
         BigDecimal teamCertificateWorkloadHours,
         @Schema(description = "Organização responsável pelo evento.")
         String organization,
-        @Schema(description = "Número máximo de inscrições ativas; null indica capacidade ilimitada.", example = "150")
-        Integer maxCapacity,
-        @Schema(description = "Quantidade atual de inscrições ativas (CONFIRMED ou CHECKED_IN).", example = "42")
-        Integer activeEnrollmentCount,
         @Schema(name = "time_zone", description = "Identificador IANA que define o fuso dos horários locais deste evento e de suas atividades.", example = "America/Sao_Paulo")
         String timeZone
 ) {
@@ -68,21 +64,7 @@ public record EventDTO(
         this(id, title, slug, summary, content, coverImageKey, category, format, scheduleConflictPolicy, status,
                 startDate, endDate, executionStatus, enrollmentStartDate, enrollmentEndDate, enrollmentPaused,
                 enrollmentStatus, ownerId, createdAt, updatedAt, address, workloadHours,
-                teamCertificateWorkloadHours, organization, null, null, "America/Sao_Paulo");
-    }
-    public EventDTO(Long id, String title, String slug, String summary, String content, String coverImageKey,
-                    EnumEventCategory category, EnumEventFormat format,
-                    EnumScheduleConflictPolicy scheduleConflictPolicy, EnumEventStatus status,
-                    LocalDateTime startDate, LocalDateTime endDate, EnumEventExecutionStatus executionStatus,
-                    LocalDateTime enrollmentStartDate, LocalDateTime enrollmentEndDate,
-                    Boolean enrollmentPaused, EnumEnrollmentStatus enrollmentStatus, UUID ownerId,
-                    LocalDateTime createdAt, LocalDateTime updatedAt, String address,
-                    BigDecimal workloadHours, BigDecimal teamCertificateWorkloadHours, String organization,
-                    String timeZone) {
-        this(id, title, slug, summary, content, coverImageKey, category, format, scheduleConflictPolicy, status,
-                startDate, endDate, executionStatus, enrollmentStartDate, enrollmentEndDate, enrollmentPaused,
-                enrollmentStatus, ownerId, createdAt, updatedAt, address, workloadHours,
-                teamCertificateWorkloadHours, organization, null, null, timeZone);
+                teamCertificateWorkloadHours, organization, "America/Sao_Paulo");
     }
     public EventDTO(Long id, String title, String slug, String summary, String content, String coverImageKey,
                     EnumEventCategory category, EnumEventFormat format,
@@ -93,7 +75,7 @@ public record EventDTO(
                     LocalDateTime createdAt, LocalDateTime updatedAt, String address) {
         this(id, title, slug, summary, content, coverImageKey, category, format, scheduleConflictPolicy,
                 status, startDate, endDate, executionStatus, enrollmentStartDate, enrollmentEndDate,
-                enrollmentPaused, enrollmentStatus, ownerId, createdAt, updatedAt, address, null, null, null, null, null,
+                enrollmentPaused, enrollmentStatus, ownerId, createdAt, updatedAt, address, null, null, null,
                 "America/Sao_Paulo");
     }
 

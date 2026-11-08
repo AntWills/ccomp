@@ -21,38 +21,14 @@ public record ActivityDTO(
         BigDecimal workloadHours,
         EnumActivityRegistrationPolicy registrationPolicy,
         EnumActivityType type,
-        LocalDateTime createdAt,
         @Schema(name = "time_zone", description = "Fuso IANA herdado do evento; os horários locais de início e término seguem essa zona.", example = "America/Manaus")
-        String timeZone,
-        @Schema(description = "Número máximo de inscrições ativas nesta atividade; null indica capacidade ilimitada.", example = "40")
-        Integer maxCapacity
+        String timeZone
 ) {
     public ActivityDTO(Long id, Long eventId, String title, String description, Long displayOrder,
                        String location, LocalDateTime startDate, LocalDateTime endDate,
                        BigDecimal workloadHours, EnumActivityRegistrationPolicy registrationPolicy,
                        EnumActivityType type) {
         this(id, eventId, title, description, displayOrder, location, startDate, endDate, workloadHours,
-                registrationPolicy, type, null, "America/Sao_Paulo", null);
-    }
-    public ActivityDTO(Long id, Long eventId, String title, String description, Long displayOrder,
-                       String location, LocalDateTime startDate, LocalDateTime endDate,
-                       BigDecimal workloadHours, EnumActivityRegistrationPolicy registrationPolicy,
-                       EnumActivityType type, String timeZone) {
-        this(id, eventId, title, description, displayOrder, location, startDate, endDate, workloadHours,
-                registrationPolicy, type, null, timeZone, null);
-    }
-    public ActivityDTO(Long id, Long eventId, String title, String description, Long displayOrder,
-                       String location, LocalDateTime startDate, LocalDateTime endDate,
-                       BigDecimal workloadHours, EnumActivityRegistrationPolicy registrationPolicy,
-                       EnumActivityType type, LocalDateTime createdAt) {
-        this(id, eventId, title, description, displayOrder, location, startDate, endDate, workloadHours,
-                registrationPolicy, type, createdAt, "America/Sao_Paulo", null);
-    }
-    public ActivityDTO(Long id, Long eventId, String title, String description, Long displayOrder,
-                       String location, LocalDateTime startDate, LocalDateTime endDate,
-                       BigDecimal workloadHours, EnumActivityRegistrationPolicy registrationPolicy,
-                       EnumActivityType type, LocalDateTime createdAt, String timeZone) {
-        this(id, eventId, title, description, displayOrder, location, startDate, endDate, workloadHours,
-                registrationPolicy, type, createdAt, timeZone, null);
+                registrationPolicy, type, "America/Sao_Paulo");
     }
 }

@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -38,6 +39,9 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -69,6 +73,8 @@ class GuestInvitationServicesTest {
 
     @Mock
     private UserManagement userManagement;
+
+    @Spy private Clock clock = Clock.fixed(Instant.parse("2026-11-08T12:10:00Z"), ZoneId.of("America/Sao_Paulo"));
 
     @InjectMocks
     private GuestInvitationServices guestInvitationServices;
@@ -142,7 +148,7 @@ class GuestInvitationServicesTest {
             UUID guestUserId = UUID.randomUUID();
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-            when(eventMapper.eventToEventDTO(event)).thenReturn(eventDTO);
+            when(eventMapper.eventToEventDTO(any(), any())).thenReturn(eventDTO);
             givenEventIsEditable();
             when(userManagement.findByEmailAddress(emailAddress)).thenReturn(Optional.of(userDTO));
             when(userDTO.isActive()).thenReturn(true);
@@ -171,7 +177,7 @@ class GuestInvitationServicesTest {
             UserDTO userDTO = mock(UserDTO.class);
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-            when(eventMapper.eventToEventDTO(event)).thenReturn(eventDTO);
+            when(eventMapper.eventToEventDTO(any(), any())).thenReturn(eventDTO);
             givenEventIsEditable();
             when(userManagement.findByEmailAddress(emailAddress)).thenReturn(Optional.of(userDTO));
             when(userDTO.isActive()).thenReturn(false);
@@ -196,7 +202,7 @@ class GuestInvitationServicesTest {
             UserDTO userDTO = mock(UserDTO.class);
 
             when(eventInvitationRepository.findByCode(code)).thenReturn(Optional.of(invitation));
-            when(invitation.isValid()).thenReturn(true);
+            when(invitation.isValid(any(java.time.LocalDateTime.class))).thenReturn(true);
             when(userManagement.findById(userId)).thenReturn(Optional.of(userDTO));
             when(userDTO.emailAddress()).thenReturn(emailAddress);
             when(userDTO.isActive()).thenReturn(true);
@@ -207,7 +213,7 @@ class GuestInvitationServicesTest {
 
             assertThat(response).isNotNull();
             assertThat(response.response()).isEqualTo("Convite aceito com sucesso.");
-            verify(invitation).accept();
+            verify(invitation).accept(any(java.time.LocalDateTime.class));
             verify(eventInvitationRepository).save(invitation);
             verify(eventGuestRepository).save(any());
         }
@@ -220,7 +226,7 @@ class GuestInvitationServicesTest {
             UserDTO userDTO = mock(UserDTO.class);
 
             when(eventInvitationRepository.findByCode(code)).thenReturn(Optional.of(invitation));
-            when(invitation.isValid()).thenReturn(true);
+            when(invitation.isValid(any(java.time.LocalDateTime.class))).thenReturn(true);
             when(userManagement.findById(userId)).thenReturn(Optional.of(userDTO));
             when(userDTO.emailAddress()).thenReturn(emailAddress);
             when(userDTO.isActive()).thenReturn(true);
@@ -230,7 +236,7 @@ class GuestInvitationServicesTest {
                     .isInstanceOf(AccessDeniedException.class)
                     .hasMessage("Usuário não autorizado.");
 
-            verify(invitation, never()).accept();
+            verify(invitation, never()).accept(any(java.time.LocalDateTime.class));
             verify(eventGuestRepository, never()).save(any());
         }
     }
