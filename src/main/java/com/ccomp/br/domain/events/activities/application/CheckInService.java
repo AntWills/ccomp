@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -98,6 +99,7 @@ public class CheckInService {
         }
     }
 
+    @Transactional
     public void checkIn(long activityId, UUID userId, UUID presenceCode) {
         CheckInDTO checkIn = checkInCache.findByActivityId(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Código inválido."));
@@ -122,6 +124,6 @@ public class CheckInService {
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE_NAME,
                 CheckInChannel.ROUTING,
-                new CheckInMessageDTO(enrollment.getEnrollmentId()));
+                new CheckInMessageDTO(enrollment.getEnrollmentId(), activityId));
     }
 }

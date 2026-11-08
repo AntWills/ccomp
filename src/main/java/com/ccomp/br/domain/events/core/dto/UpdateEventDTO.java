@@ -3,8 +3,11 @@ package com.ccomp.br.domain.events.core.dto;
 import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
 import com.ccomp.br.domain.events.core.enums.EnumScheduleConflictPolicy;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Size;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -25,7 +28,16 @@ public record UpdateEventDTO(
         LocalDateTime endDate,
         LocalDateTime enrollmentStartDate,
         LocalDateTime enrollmentEndDate,
-        Boolean enrollmentPaused
+        Boolean enrollmentPaused,
+        @DecimalMin(value = "0.0", inclusive = true)
+        @Schema(description = "Carga horária base configurada no evento. Na emissão do certificado do participante, soma-se às cargas das atividades em que ele teve presença.", example = "2.5")
+        BigDecimal workloadHours,
+        @DecimalMin(value = "0.0", inclusive = true)
+        @Schema(description = "Carga horária concedida aos certificados do owner e dos editores ativos; precisa estar configurada para emitir esses certificados.", example = "8")
+        BigDecimal teamCertificateWorkloadHours,
+        @Size(max = 255, message = "A organização deve ter no máximo 255 caracteres.")
+        @Schema(description = "Organização responsável pelo evento. Opcional.", example = "Instituto Federal do Maranhão")
+        String organization
 ) {
     public Optional<String> titleOpt() { return Optional.ofNullable(title); }
 }

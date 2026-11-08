@@ -17,6 +17,9 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 
     Optional<Enrollment> findByUserIdAndEvent(UUID userId, Event event);
 
+    @Query("select e from Enrollment e where e.userId = :userId and e.event.id = :eventId")
+    Optional<Enrollment> findByUserIdAndEventId(@Param("userId") UUID userId, @Param("eventId") Long eventId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Enrollment> findByIdAndEventId(Long id, Long eventId);
 

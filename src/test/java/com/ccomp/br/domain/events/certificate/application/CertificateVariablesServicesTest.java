@@ -10,7 +10,9 @@ import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolic
 import com.ccomp.br.domain.events.certificate.persistence.EventCertificateValidationCode;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
-import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.enums.EnumEventExecutionStatus;
+import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivity;
@@ -19,7 +21,6 @@ import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
-import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 class CertificateVariablesServicesTest {
@@ -66,9 +68,6 @@ class CertificateVariablesServicesTest {
     @Mock
     private EnrollmentRepository enrollmentRepository;
 
-    @Mock
-    private EventRepository eventRepository;
-
     private CertificateVariablesServices createService() {
         CertificateVariablesServices service = new CertificateVariablesServices(
                 enrollmentActivityDslRepository,
@@ -77,23 +76,14 @@ class CertificateVariablesServicesTest {
                 eventCache,
                 validatorService,
                 activityCache,
-                enrollmentRepository,
-                eventRepository);
+                enrollmentRepository);
         ReflectionTestUtils.setField(service, "validationBaseUrl", VALIDATION_BASE_URL);
         return service;
     }
 
     @Test
-    void loadEventVariables_nullUser_throwsAccessDenied() {
-        assertThatThrownBy(() -> createService()
-                .loadEventVariablesValues(List.of("{participante.nome}"), 10L, null))
-                .isInstanceOf(AccessDeniedException.class)
-                .hasMessage("É necessário estar autenticado para gerar o certificado.");
-    }
-
-    @Test
     void loadEventVariables_eventNotFound_throws() {
-        when(eventRepository.findById(10L)).thenReturn(Optional.empty());
+        when(eventCache.findById(10L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> createService()
                 .loadEventVariablesValues(List.of(), 10L, USER_ID))
@@ -102,9 +92,101 @@ class CertificateVariablesServicesTest {
     }
 
     @Test
+    void loadEventVariables_eventNotFinished_throwsBeforeCheckingEnrollment() {
+        Event event = Event.builder()
+                .title("Evento em andamento")
+                .slug("evento-em-andamento")
+                .startDate(LocalDateTime.now().minusHours(1))
+                .endDate(LocalDateTime.now().plusHours(1))
+                .build();
+        when(eventCache.findById(10L)).thenReturn(Optional.of(toDto(event)));
+
+        assertThatThrownBy(() -> createService()
+                .loadEventVariablesValues(List.of(), 10L, USER_ID))
+                .isInstanceOf(DomainException.class)
+                .hasMessage("O certificado do evento só pode ser emitido após seu encerramento.");
+    }
+
+    @Test
+    void loadEventVariables_addsBaseWorkloadToAttendedActivityWorkload() {
+        Event event = finishedEvent(null);
+        event.setWorkloadHours(new BigDecimal("2.5"));
+        Enrollment enrollment = mock(Enrollment.class);
+        when(eventCache.findById(10L)).thenReturn(Optional.of(toDto(event)));
+        when(enrollmentRepository.findByUserIdAndEventId(USER_ID, 10L)).thenReturn(Optional.of(enrollment));
+        when(enrollment.haveCheckIn()).thenReturn(true);
+        when(activityDslRepository.sumWorkloadHoursByCheckIn(USER_ID, 10L)).thenReturn(new BigDecimal("3.5"));
+
+        Map<String, String> values = createService().loadEventVariablesValues(
+                List.of("{evento.carga_horaria}"), 10L, USER_ID);
+
+        assertThat(values.get("{evento.carga_horaria}")).isEqualTo("6");
+    }
+
+    @Test
+    void loadEditorVariables_usesPerEventTeamWorkloadAndDoesNotIssueCodeUnlessRequested() {
+        when(eventCache.findById(10L)).thenReturn(Optional.of(finishedEventDto(new BigDecimal("8.5"))));
+        when(userManagement.findById(USER_ID)).thenReturn(Optional.of(user("Editor")));
+
+        Map<String, String> values = createService().loadEditorVariablesValues(
+                List.of("{evento.carga_horaria}"), 10L, USER_ID);
+
+        assertThat(values.get("{evento.carga_horaria}")).isEqualTo("8.5");
+        assertThat(values.get("{evento.organizacao}")).isEqualTo("Organização de teste");
+        assertThat(values.get("{equipe.carga_horaria}")).isEqualTo("8.5");
+        assertThat(values.get("{equipe.nome}")).isEqualTo("Editor");
+    }
+
+    @Test
+    void loadInstructorVariables_usesDslWorkloadFromConfirmedAssignments() {
+        Event event = finishedEvent();
+        when(eventCache.findById(10L)).thenReturn(Optional.of(toDto(event)));
+        when(activityDslRepository.findConfirmedInstructorAccount(12L, 10L)).thenReturn(Optional.of(USER_ID));
+        when(activityDslRepository.sumWorkloadHoursByInstructor(USER_ID, 10L)).thenReturn(new BigDecimal("3.5"));
+        when(userManagement.findById(USER_ID)).thenReturn(Optional.of(user("Ministrante")));
+
+        Map<String, String> values = createService().loadInstructorVariablesValues(
+                List.of("{evento.carga_horaria}"), 10L, 12L, USER_ID);
+
+        assertThat(values.get("{evento.carga_horaria}")).isEqualTo("3.5");
+        assertThat(values.get("{ministrante.carga_horaria}")).isEqualTo("3.5");
+        assertThat(values.get("{ministrante.nome}")).isEqualTo("Ministrante");
+    }
+
+    private Event finishedEvent() {
+        return finishedEvent(null);
+    }
+
+    private Event finishedEvent(BigDecimal teamWorkloadHours) {
+        LocalDateTime now = LocalDateTime.now();
+        return Event.builder()
+                .id(10L)
+                .title("Evento")
+                .startDate(now.minusDays(2))
+                .endDate(now.minusDays(1))
+                .organization("Organização de teste")
+                .teamCertificateWorkloadHours(teamWorkloadHours)
+                .ownerId(UUID.randomUUID())
+                .build();
+    }
+
+    private EventDTO finishedEventDto(BigDecimal teamWorkloadHours) {
+        return new EventDTO(10L, "Evento", "evento", null, null, null,
+                null, null, null, EnumEventStatus.PUBLISHED,
+                null, null, EnumEventExecutionStatus.FINISHED,
+                null, null, null, null, USER_ID, null, null, "Auditório",
+                null, teamWorkloadHours, "Organização de teste");
+    }
+
+    private UserDTO user(String name) {
+        return new UserDTO(USER_ID, name, new EmailAddress("user@example.com"),
+                null, null, null, null, null);
+    }
+
+    @Test
     void loadEventVariables_notEnrolled_throws() {
         Event event = stubEvent();
-        when(enrollmentRepository.findByUserIdAndEvent(USER_ID, event))
+        when(enrollmentRepository.findByUserIdAndEventId(USER_ID, 10L))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> createService()
@@ -116,7 +198,7 @@ class CertificateVariablesServicesTest {
     @Test
     void loadEventVariables_checkInNotDone_throwsDomain() {
         Event event = stubEvent();
-        when(enrollmentRepository.findByUserIdAndEvent(USER_ID, event))
+        when(enrollmentRepository.findByUserIdAndEventId(USER_ID, 10L))
                 .thenReturn(Optional.of(Enrollment.builder().userId(USER_ID).event(event).build()));
 
         assertThatThrownBy(() -> createService()
@@ -131,7 +213,7 @@ class CertificateVariablesServicesTest {
 
         Enrollment enrollment = Enrollment.builder().userId(USER_ID).event(event).build();
         enrollment.checkIn();
-        when(enrollmentRepository.findByUserIdAndEvent(USER_ID, event))
+        when(enrollmentRepository.findByUserIdAndEventId(USER_ID, 10L))
                 .thenReturn(Optional.of(enrollment));
 
         when(userManagement.findById(USER_ID)).thenReturn(Optional.of(userDto("Ana Souza")));
@@ -201,7 +283,7 @@ class CertificateVariablesServicesTest {
         assertThat(values)
                 .containsEntry("{participante.nome}", "Ana Souza")
                 .containsEntry("{atividade.nome}", "Workshop de IA")
-                .containsEntry("{atividade.carga_horaria}", "4 horas")
+                .containsEntry("{atividade.carga_horaria}", "4")
                 .containsEntry("{validacao.codigo}", "ABC12345")
                 .containsEntry("{validacao.url}", "https://exemplo.com/validar/ABC12345");
     }
@@ -261,8 +343,16 @@ class CertificateVariablesServicesTest {
 
     private Event stubEvent() {
         Event event = event();
-        when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+        when(eventCache.findById(10L)).thenReturn(Optional.of(toDto(event)));
         return event;
+    }
+
+    private static EventDTO toDto(Event event) {
+        return new EventDTO(10L, event.getTitle(), event.getSlug(), null, null, null,
+                null, null, null, event.getStatus(), event.getStartDate(), event.getEndDate(),
+                event.getExecutionStatus(), null, null, null, null, USER_ID, null, null,
+                event.getAddress(), event.getWorkloadHours(), event.getTeamCertificateWorkloadHours(),
+                event.getOrganization());
     }
 
     private static Event event() {
@@ -270,6 +360,8 @@ class CertificateVariablesServicesTest {
                 .title("Semanas de Tecnologia")
                 .slug("semanas-tecnologia")
                 .address("Auditório Central")
+                .startDate(LocalDateTime.now().minusDays(2))
+                .endDate(LocalDateTime.now().minusDays(1))
                 .build();
     }
 

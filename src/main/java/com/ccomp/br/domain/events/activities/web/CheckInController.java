@@ -32,7 +32,7 @@ public class CheckInController {
     @GetMapping(value = "/activity/{activityId}/qrcode", produces = MediaType.IMAGE_PNG_VALUE)
     @Operation(
             summary = "Gera o QR Code de presença",
-            description = "Retorna o QR Code que a equipe de gestão do evento deve exibir para registrar a presença dos inscritos nesta atividade. Gerar o código não registra presença nem credenciamento."
+            description = "Retorna o QR Code que a equipe autorizada deve exibir para registrar a presença dos participantes inscritos nesta atividade. O código pode ser gerado antes do início; sua leitura só é aceita durante o período da atividade. Gerar o código não registra presença nem credenciamento."
     )
     @ApiResponses({
             @ApiResponse(
@@ -44,7 +44,8 @@ public class CheckInController {
                     )
             ),
             @ApiResponse(responseCode = "403", description = "Usuário sem permissão", content = @Content),
-            @ApiResponse(responseCode = "404", description = "Atividade não encontrada", content = @Content)
+            @ApiResponse(responseCode = "404", description = "Atividade não encontrada", content = @Content),
+            @ApiResponse(responseCode = "500", description = "Falha ao gerar a imagem do QR Code", content = @Content)
     })
     public ResponseEntity<byte[]> getQRCode(
             @PathVariable long activityId,
@@ -61,24 +62,26 @@ public class CheckInController {
     @Operation(
             summary = "Confirma a presença na atividade",
             description = "Registra a participação do usuário autenticado nesta atividade após validar o QR Code. "
-                    + "O usuário precisa estar inscrito e a atividade deve estar em andamento. "
-                    + "O registro de participação da atividade é separado do credenciamento. Após salvar a presença, "
-                    + "o sistema envia uma mensagem RabbitMQ para marcar também a inscrição do evento como "
-                    + "`CHECKED_IN`; essa atualização do evento é assíncrona."
+                    + "A inscrição no evento deve estar ativa (`CONFIRMED` ou `CHECKED_IN`) e vinculada à atividade. "
+                    + "A atividade precisa ter início e término configurados, e o horário deve estar estritamente entre esses limites. "
+                    + "A presença na atividade é salva uma única vez; em seguida, o sistema atualiza o check-in do evento "
+                    + "e envia por e-mail um aviso de que o certificado da atividade está disponível. A atualização do check-in do evento e o envio do e-mail são assíncronos. "
+                    + "Credenciamento operacional não é alterado por esta rota."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Presença confirmada com sucesso", content = @Content),
             @ApiResponse(
                     responseCode = "400",
-                    description = "Código inválido, atividade fora do horário de check-in, ou corpo da requisição inválido",
+                    description = "Código inválido, atividade sem período configurado ou fora do horário, ou inscrição inativa",
                     content = @Content
             ),
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado", content = @Content),
             @ApiResponse(
                     responseCode = "404",
-                    description = "Atividade não encontrada ou usuário não inscrito na atividade",
+                    description = "Atividade ou inscrição ativa na atividade não encontrada",
                     content = @Content
-            )
+            ),
+            @ApiResponse(responseCode = "500", description = "Falha ao persistir a presença ou publicar a atualização assíncrona", content = @Content)
     })
     public ResponseEntity<MessageResponse> checkIn(
             @PathVariable long activityId,

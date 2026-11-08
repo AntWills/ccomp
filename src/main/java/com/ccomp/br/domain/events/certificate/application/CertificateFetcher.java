@@ -1,10 +1,11 @@
 package com.ccomp.br.domain.events.certificate.application;
 
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
-import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
-import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplateRepository;
+import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplateRepository;
+import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
+import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplateRepository;
 import com.ccomp.br.domain.events.certificate.persistence.EventCoverTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventCoverTemplateRepository;
 import com.ccomp.br.domain.storage.external.StorageExternal;
@@ -57,22 +58,39 @@ public class CertificateFetcher {
 
     @Transactional(readOnly = true)
     public EventBoxTemplate fetchBoxTemplate(long eventId) {
-        return boxTemplateRepository.findByEventId(eventId)
-                .orElse(EventBoxTemplate.builder()
+        return fetchBoxTemplate(eventId, EnumEventCertificateTemplateType.PARTICIPANT);
+    }
+
+    @Transactional(readOnly = true)
+    public EventBoxTemplate fetchBoxTemplate(long eventId, EnumEventCertificateTemplateType templateType) {
+        return boxTemplateRepository.findByEventIdAndTemplateType(eventId, templateType)
+                .orElseGet(() -> EventBoxTemplate.builder()
                         .eventId(eventId)
+                        .templateType(templateType)
                         .boxes(List.of(
                                 new BoxElementDTO(
-                                        "Certificamos que *{participante.nome}* participou de *{evento.title}*, com carga horária de {evento.carga_horaria}.",
+                                        defaultEventCertificateText(templateType),
                                         0.25, 0.5, 0.5, 25f, null, null
                                 ))
                         )
-                        .variables(List.of(
-                                        "{participante.nome}",
-                                        "{evento.title}",
-                                        "{evento.carga_horaria}"
-                                )
-                        )
+                        .variables(defaultEventCertificateVariables(templateType))
                         .build());
+    }
+
+    private String defaultEventCertificateText(EnumEventCertificateTemplateType templateType) {
+        return switch (templateType) {
+            case PARTICIPANT -> "Certificamos que *{participante.nome}* participou de *{evento.title}*, com carga horária de {evento.carga_horaria} horas.";
+            case INSTRUCTOR -> "Certificamos que *{ministrante.nome}* atuou como ministrante ou auxiliar em atividade(s) de *{evento.title}*, com carga horária de {ministrante.carga_horaria} horas.";
+            case EDITOR -> "Certificamos que *{equipe.nome}* integrou a equipe de *{evento.title}*, com carga horária de {equipe.carga_horaria} horas.";
+        };
+    }
+
+    private List<String> defaultEventCertificateVariables(EnumEventCertificateTemplateType templateType) {
+        return switch (templateType) {
+            case PARTICIPANT -> List.of("{participante.nome}", "{evento.title}", "{evento.carga_horaria}");
+            case INSTRUCTOR -> List.of("{ministrante.nome}", "{evento.title}", "{ministrante.carga_horaria}");
+            case EDITOR -> List.of("{equipe.nome}", "{evento.title}", "{equipe.carga_horaria}");
+        };
     }
 
     @Transactional(readOnly = true)
@@ -83,7 +101,7 @@ public class CertificateFetcher {
                         .boxes(List.of(
                                 new BoxElementDTO(
                                         "Certificamos que *{participante.nome}* participou da atividade *{atividade.nome}*, " +
-                                                "com carga horária de {atividade.carga_horaria}.",
+                                                "com carga horária de {atividade.carga_horaria} horas.",
                                         0.25, 0.5, 0.5, 25f, null, null
                                 )
                         ))

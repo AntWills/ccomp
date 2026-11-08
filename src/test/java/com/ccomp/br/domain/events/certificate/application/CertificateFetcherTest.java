@@ -1,6 +1,8 @@
 package com.ccomp.br.domain.events.certificate.application;
 
 import com.ccomp.br.domain.events.certificate.persistence.*;
+import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
+import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -71,7 +73,8 @@ class CertificateFetcherTest {
 
     @Test
     void fetchBoxTemplate_withoutSavedTemplate_returnsDefaultTextAndVariables() {
-        when(boxRepository.findByEventId(EVENT_ID)).thenReturn(Optional.empty());
+        when(boxRepository.findByEventIdAndTemplateType(EVENT_ID, EnumEventCertificateTemplateType.PARTICIPANT))
+                .thenReturn(Optional.empty());
 
         EventBoxTemplate result = createFetcher().fetchBoxTemplate(EVENT_ID);
 
@@ -79,7 +82,30 @@ class CertificateFetcherTest {
         assertThat(result.getVariables()).containsExactly(
                 "{participante.nome}", "{evento.title}", "{evento.carga_horaria}");
         assertThat(result.getBoxes()).singleElement().satisfies(box ->
-                assertThat(box.textTemplate()).contains("{participante.nome}", "{evento.title}", "{evento.carga_horaria}"));
+                assertThat(box.textTemplate()).contains("{participante.nome}", "{evento.title}",
+                        "{evento.carga_horaria} horas"));
+    }
+
+    @Test
+    void fetchBoxTemplate_forInstructorAndEditorUsesSeparateDomainVariables() {
+        when(boxRepository.findByEventIdAndTemplateType(EVENT_ID, EnumEventCertificateTemplateType.INSTRUCTOR))
+                .thenReturn(Optional.empty());
+        when(boxRepository.findByEventIdAndTemplateType(EVENT_ID, EnumEventCertificateTemplateType.EDITOR))
+                .thenReturn(Optional.empty());
+
+        EventBoxTemplate instructor = createFetcher().fetchBoxTemplate(
+                EVENT_ID, EnumEventCertificateTemplateType.INSTRUCTOR);
+        EventBoxTemplate editor = createFetcher().fetchBoxTemplate(
+                EVENT_ID, EnumEventCertificateTemplateType.EDITOR);
+
+        assertThat(instructor.getVariables()).contains("{ministrante.nome}", "{ministrante.carga_horaria}")
+                .doesNotContain("{equipe.nome}", "{atividade.nome}");
+        assertThat(editor.getVariables()).contains("{equipe.nome}", "{equipe.carga_horaria}")
+                .doesNotContain("{ministrante.nome}", "{atividade.nome}");
+        assertThat(instructor.getBoxes().getFirst().textTemplate())
+                .contains("{ministrante.nome}", "{ministrante.carga_horaria} horas");
+        assertThat(editor.getBoxes().getFirst().textTemplate())
+                .contains("{equipe.nome}", "{equipe.carga_horaria} horas");
     }
 
     @Test
@@ -92,6 +118,7 @@ class CertificateFetcherTest {
         assertThat(result.getVariables()).containsExactly(
                 "{participante.nome}", "{atividade.nome}", "{atividade.carga_horaria}");
         assertThat(result.getBoxes()).singleElement().satisfies(box ->
-                assertThat(box.textTemplate()).contains("{participante.nome}", "{atividade.nome}", "{atividade.carga_horaria}"));
+                assertThat(box.textTemplate()).contains("{participante.nome}", "{atividade.nome}",
+                        "{atividade.carga_horaria} horas"));
     }
 }

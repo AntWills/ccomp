@@ -13,6 +13,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -110,6 +111,15 @@ public class Event {
     @Column(name = "end_date")
     private LocalDateTime endDate;
 
+    @Column(name = "workload_hours")
+    private BigDecimal workloadHours;
+
+    @Column(name = "team_certificate_workload_hours")
+    private BigDecimal teamCertificateWorkloadHours;
+
+    @Column(name = "organization", length = 255)
+    private String organization;
+
     @Column(name = "address")
     private String address;
 
@@ -165,7 +175,7 @@ public class Event {
         if (now.isBefore(startDate)) {
             return EnumEventExecutionStatus.NOT_STARTED;
         }
-        if (now.isAfter(endDate)) {
+        if (!now.isBefore(endDate)) {
             return EnumEventExecutionStatus.FINISHED;
         }
         return EnumEventExecutionStatus.IN_PROGRESS;

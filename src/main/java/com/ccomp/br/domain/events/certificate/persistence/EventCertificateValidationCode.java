@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.certificate.persistence;
 
+import com.ccomp.br.domain.events.certificate.enums.EnumCertificateType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -9,16 +10,6 @@ import java.util.UUID;
 
 @Table(
         name = "tb_event_certificate_validation_code",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_cert_validation_code",
-                        columnNames = {"code"}
-                ),
-                @UniqueConstraint(
-                        name = "uk_cert_validation_event_activity_user",
-                        columnNames = {"event_id", "activity_id", "user_id"}
-                )
-        },
         indexes = {
                 @Index(
                         name = "idx_cert_validation_event_user",
@@ -50,6 +41,11 @@ public class EventCertificateValidationCode {
 
     @Column(name = "activity_id")
     private Long activityId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "certificate_type", nullable = false, length = 20)
+    @Builder.Default
+    private EnumCertificateType certificateType = EnumCertificateType.EVENT;
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;

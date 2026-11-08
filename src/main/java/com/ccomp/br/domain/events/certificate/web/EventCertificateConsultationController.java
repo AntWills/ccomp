@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -24,7 +23,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/events")
 @Tag(name = "events/certificate/consultation (Consulta de certificados)",
-        description = "Emissão de certificados para participantes e validação pública de certificados")
+        description = "Emissão de certificados para participantes, ministrantes e equipe, além da validação pública")
 public class EventCertificateConsultationController {
     private final CertificateServices certificateServices;
     private final CertificateValidatorService certificateValidatorService;
@@ -36,16 +35,16 @@ public class EventCertificateConsultationController {
     }
 
     @Operation(summary = "Consultar certificado do evento",
-            description = "Gera o certificado do evento para o usuário autenticado. Exige inscrição e status `CHECKED_IN` no evento. Credenciamento não é requisito separado: a pessoa pode fazer check-in e se credenciar depois. A carga horária do certificado considera as atividades em que a pessoa participou.")
+            description = "Gera o certificado do evento para o usuário autenticado somente após o encerramento do evento. Exige inscrição e status `CHECKED_IN` no evento. Eventos cancelados não emitem certificado. Credenciamento operacional não é requisito; a carga horária considera as atividades em que a pessoa participou.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
-            @ApiResponse(responseCode = "400", description = "Participante ainda não fez check-in no evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado, evento cancelado ou participante sem check-in no evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "Usuário sem acesso ao evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Evento não encontrado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
     })
     @GetMapping(value = "/{eventId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateFromEvent(@PathVariable Long eventId,
-                                                               @AuthenticationPrincipal @Nullable Jwt jwt) {
+                                                               @AuthenticationPrincipal Jwt jwt) {
         StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromEvent(eventId, extractUserId(jwt));
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(certificate.contentType()))
@@ -54,7 +53,7 @@ public class EventCertificateConsultationController {
     }
 
     @Operation(summary = "Consultar certificado de atividade",
-            description = "Gera o certificado de atividade para o usuário autenticado. Exige inscrição, status `CHECKED_IN` no evento e presença registrada especificamente nesta atividade. Credenciamento operacional é independente e não substitui nenhum dos dois registros de presença.")
+            description = "Gera o certificado de atividade para o usuário autenticado. Exige inscrição ativa, status `CHECKED_IN` no evento e presença registrada especificamente nesta atividade. Após confirmar a presença pelo QR Code, a plataforma atualiza o check-in do evento e envia um e-mail avisando que o certificado está disponível. Credenciamento operacional é independente e não substitui os registros de presença.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
             @ApiResponse(responseCode = "400", description = "Check-in do evento ou participação na atividade não registrados", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
@@ -63,12 +62,45 @@ public class EventCertificateConsultationController {
     })
     @GetMapping(value = "/activities/{activityId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateFromActivity(@PathVariable Long activityId,
-                                                                  @AuthenticationPrincipal @Nullable Jwt jwt) {
+                                                                  @AuthenticationPrincipal Jwt jwt) {
         StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromActivity(activityId, extractUserId(jwt));
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(certificate.contentType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"certificado-atividade-%d.png\"".formatted(activityId))
                 .body(certificate.resource());
+    }
+
+    @Operation(summary = "Gerar certificado de ministrante",
+            description = "Gera o certificado do ministrante vinculado e com conta associada. O próprio ministrante ou owner, editor ativo, moderator ou admin pode solicitá-lo. Exige evento encerrado e não cancelado; usa template de ministrante e o fundo compartilhado do evento.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
+            @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado ou cancelado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Solicitante sem permissão ou conta sem vínculo de ministrante confirmado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento, ministrante ou conta vinculada não encontrada", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @GetMapping(value = "/{eventId}/instructors/{instructorId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> buildCertificateFromInstructor(@PathVariable Long eventId,
+                                                                    @PathVariable Long instructorId,
+                                                                    @AuthenticationPrincipal Jwt jwt) {
+        StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromInstructor(
+                eventId, instructorId, extractUserId(jwt));
+        return certificateResponse(certificate, "certificado-ministrante-%d.png".formatted(instructorId));
+    }
+
+    @Operation(summary = "Gerar certificado da equipe do evento",
+            description = "Gera o certificado do owner ou editor ativo autenticado após o encerramento do evento. Eventos cancelados não emitem certificado. Usa template próprio de equipe, fundo compartilhado e a carga horária da equipe configurada no evento.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
+            @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado, cancelado ou carga horária da equipe não configurada", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Usuário não é owner nem editor ativo do evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @GetMapping(value = "/{eventId}/team-certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> buildCertificateForEditor(@PathVariable Long eventId,
+                                                               @AuthenticationPrincipal Jwt jwt) {
+        StorageExternal.StoredFile certificate = certificateServices.buildCertificateForEditor(
+                eventId, extractUserId(jwt));
+        return certificateResponse(certificate, "certificado-equipe-%d.png".formatted(eventId));
     }
 
     @Operation(summary = "Validar certificado pelo código",
@@ -83,7 +115,14 @@ public class EventCertificateConsultationController {
         return ResponseEntity.ok(certificateValidatorService.validate(code));
     }
 
-    private @Nullable UUID extractUserId(@Nullable Jwt jwt) {
-        return jwt == null ? null : UUID.fromString(jwt.getSubject());
+    private UUID extractUserId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+
+    private ResponseEntity<Resource> certificateResponse(StorageExternal.StoredFile certificate, String fileName) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(certificate.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(fileName))
+                .body(certificate.resource());
     }
 }

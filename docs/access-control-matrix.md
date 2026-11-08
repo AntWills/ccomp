@@ -20,11 +20,20 @@ Gerada a partir dos controllers e do `SecurityConfig`. Rotas não listadas por a
 | `POST` | `/api/auth/sign-in` | `AuthController#login` | Pública | Pública; login e recuperação usam respostas genéricas. |
 | `POST` | `/api/auth/sign-up` | `AuthController#signUp` | Pública | Pública; login e recuperação usam respostas genéricas. |
 | `GET` | `/api/events/certificates/validate/{code}` | `EventCertificateConsultationController#validateCertificate` | Pública | Pública; o validador só retorna dados se existir um certificado com o código informado. |
+| `GET` | `/api/events/{eventId}/certificate` | `EventCertificateConsultationController#buildCertificateFromEvent` | Protegida (JWT) | Evento encerrado e não cancelado; exige inscrição e check-in no evento. |
 | `GET` | `/api/events/activities/{activityId}/certificate` | `EventCertificateConsultationController#buildCertificateFromActivity` | Protegida (JWT) | Requer autenticação; a autorização é a inscrição na atividade com check-in, validada no serviço (não exige permissão no evento). |
+| `GET` | `/api/events/{eventId}/instructors/{instructorId}/certificate` | `EventCertificateConsultationController#buildCertificateFromInstructor` | Protegida (JWT) | O ministrante vinculado ou owner/editor ativo/MODERATOR/ADMIN; exige vínculo confirmado e evento encerrado. |
+| `GET` | `/api/events/{eventId}/team-certificate` | `EventCertificateConsultationController#buildCertificateForEditor` | Protegida (JWT) | Owner ou editor ativo; exige evento encerrado e carga horária da equipe configurada. |
 | `GET` | `/api/events/{eventId}/certificate-box-template` | `EventCertificateManagementController#getBoxTemplate` | Protegida (JWT) | Consulta as caixas/variáveis do certificado do evento (retorna o padrão se não salvo); exige canView no evento. |
 | `GET` | `/api/events/{eventId}/activity-certificate-box-template` | `EventCertificateManagementController#getActivityBoxTemplate` | Protegida (JWT) | Consulta as caixas/variáveis do template único das atividades (retorna o padrão se não salvo); exige canView no evento. |
 | `GET` | `/api/events/{eventId}/certificate-cover-template` | `EventCertificateManagementController#getCoverTemplate` | Protegida (JWT) | Consulta os bytes do fundo em uso (retorna o padrão se não salvo); exige canView no evento. |
+| `GET` | `/api/events/{eventId}/certificate-preview` | `EventCertificateManagementController#previewEventCertificate` | Protegida (JWT) | Prévia PARTICIPANT/INSTRUCTOR/EDITOR com valores de exemplo; exige canView no evento. |
+| `GET` | `/api/events/{eventId}/activity-certificate-preview` | `EventCertificateManagementController#previewActivityCertificate` | Protegida (JWT) | Prévia do template compartilhado de atividades com valores de exemplo; exige canView no evento. |
+| `GET` | `/api/events/certificate-variables` | `EventCertificateManagementController#listCertificateVariables` | Protegida (JWT) | Lista as variáveis suportadas pelo contexto; não consulta dados de um evento. |
+| `POST` | `/api/events/{eventId}/certificate-cover-template` | `EventCertificateManagementController#uploadCoverTemplate` | Protegida (JWT) | Upload de imagem válido (PNG/JPEG/WebP); exige canEdit no evento. |
 | `DELETE` | `/api/events/{eventId}/certificate-cover-template` | `EventCertificateManagementController#deleteCoverTemplate` | Protegida (JWT) | 204 ao remover; 404 se não havia fundo salvo; exige canEdit no evento. |
+| `POST` | `/api/events/{eventId}/certificate-box-template` | `EventCertificateManagementController#saveBoxTemplate` | Protegida (JWT) | Salva template PARTICIPANT/INSTRUCTOR/EDITOR; exige canEdit no evento. |
+| `POST` | `/api/events/{eventId}/activity-certificate-box-template` | `EventCertificateManagementController#saveActivityBoxTemplate` | Protegida (JWT) | Salva o template único de atividades; exige canEdit no evento. |
 | `POST` | `/api/clubs` | `ClubController#create` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
 | `POST` | `/api/clubs/me` | `ClubController#findMyClubs` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
 | `POST` | `/api/clubs/search` | `ClubController#search` | Pública | Pública; o serviço filtra conteúdo não publicado quando aplicável. |
@@ -52,9 +61,9 @@ Gerada a partir dos controllers e do `SecurityConfig`. Rotas não listadas por a
 | `GET` | `/api/events/me/subscriptions` | `EventsMeController#getSubscriptions` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
 | `POST` | `/api/events/search` | `EventsController#searchEvents` | Pública | Pública; o serviço filtra conteúdo não publicado quando aplicável. |
 | `GET` | `/api/events/slug/{slug}` | `EventsController#getBySlug` | Pública | Pública; o serviço filtra conteúdo não publicado quando aplicável. |
-| `DELETE` | `/api/events/{eventId}` | `EventsController#deleteEvent` | Restrita por role | Roles: ADMIN, MODERATOR, STAFF. Políticas de propriedade também se aplicam. |
-| `GET` | `/api/events/{eventId}` | `EventsController#getById` | Pública | Pública; o serviço filtra conteúdo não publicado quando aplicável. |
-| `PATCH` | `/api/events/{eventId}` | `EventsController#updateEvent` | Restrita por role | Roles: ADMIN, MODERATOR, STAFF. Políticas de propriedade também se aplicam. |
+| `DELETE` | `/api/events/{eventId}` | `EventsController#deleteEvent` | Protegida (JWT) | Owner, editor ativo, MODERATOR ou ADMIN; dados dependentes são removidos e a limpeza dos arquivos é solicitada após o commit. |
+| `GET` | `/api/events/{eventId}` | `EventsController#getById` | Pública com acesso autenticado opcional | Eventos publicados são públicos; outros estados exigem JWT do owner/editor ativo/MODERATOR/ADMIN. Retorna `EventDTO`, incluindo `workloadHours`, `teamCertificateWorkloadHours` e `organization`. |
+| `PATCH` | `/api/events/{eventId}` | `EventsController#updateEvent` | Protegida (JWT) | Owner, editor ativo, MODERATOR ou ADMIN; campos enviados incluem cargas horárias e organização. Campos omitidos ou `null` permanecem inalterados. |
 | `GET` | `/api/events/{eventId}/activities` | `ActivitiesController#getActivities` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
 | `POST` | `/api/events/{eventId}/activities` | `ActivitiesController#createActivity` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
 | `GET` | `/api/events/{eventId}/activities/my-subscriptions` | `ActivitiesController#getMySubscribedActivities` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
@@ -76,7 +85,7 @@ Gerada a partir dos controllers e do `SecurityConfig`. Rotas não listadas por a
 | `PATCH` | `/api/events/{eventId}/guests/{guestId}` | `GuestController#updateGuest` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
 | `GET` | `/api/events/{eventId}/invitations` | `GuestInvitationController#searchInvitations` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
 | `POST` | `/api/events/{eventId}/invitations` | `GuestInvitationController#inviteUser` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
-| `PATCH` | `/api/events/{eventId}/status/{status}` | `EventsController#updateEventStatus` | Restrita por role | Roles: ADMIN, MODERATOR, STAFF. Políticas de propriedade também se aplicam. |
+| `PATCH` | `/api/events/{eventId}/status/{status}` | `EventsController#updateEventStatus` | Protegida (JWT) | Owner, editor ativo, MODERATOR ou ADMIN; as regras de transição de estado continuam aplicáveis. |
 | `DELETE` | `/api/events/{eventId}/subscribe` | `EnrollmentsController#unsubscribe` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
 | `POST` | `/api/events/{eventId}/subscribe` | `EnrollmentsController#subscribe` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
 | `GET` | `/api/highlights` | `HighlightsController#highlights` | Pública | Pública; o serviço filtra conteúdo não publicado quando aplicável. |

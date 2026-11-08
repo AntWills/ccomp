@@ -149,6 +149,28 @@ public class EnrollmentActivityDslRepositoryTest {
     }
 
     @Test
+    @DisplayName("Não considera inscrições canceladas ou banidas como ativas para check-in")
+    void shouldNotFindCanceledOrBannedEnrollmentActivityForCheckIn() {
+        for (EnumEnrollmentState inactiveState : List.of(
+                EnumEnrollmentState.CANCELED,
+                EnumEnrollmentState.BANNED
+        )) {
+            UUID inactiveUserId = UUID.randomUUID();
+            Enrollment enrollment = enrollmentRepository.saveAndFlush(Enrollment.builder()
+                    .event(event)
+                    .userId(inactiveUserId)
+                    .status(inactiveState)
+                    .build());
+            enrollmentActivityRepository.saveAndFlush(EnrollmentActivity.builder()
+                    .enrollment(enrollment)
+                    .activity(activity)
+                    .build());
+
+            assertThat(dslRepository.findByUserIdAndActivityId(inactiveUserId, activity.getId())).isEmpty();
+        }
+    }
+
+    @Test
     @DisplayName("Deve retornar Optional.empty() quando o activityId informado for inexistente")
     void shouldReturnEmptyWhenActivityIdDoesNotExist() {
         // Setup: Inscrição criada para a atividade atual

@@ -1,9 +1,10 @@
 package com.ccomp.br.domain.events.certificate.persistence;
 
+import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
 public interface EventBoxTemplateRepository extends JpaRepository<EventBoxTemplate, Long> {
-    Optional<EventBoxTemplate> findByEventId(Long eventId);
+    Optional<EventBoxTemplate> findByEventIdAndTemplateType(Long eventId, EnumEventCertificateTemplateType templateType);
 }

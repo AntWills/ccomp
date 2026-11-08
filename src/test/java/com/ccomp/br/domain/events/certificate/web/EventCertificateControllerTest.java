@@ -7,6 +7,7 @@ import com.ccomp.br.domain.events.certificate.application.CertificateServices;
 import com.ccomp.br.domain.events.certificate.application.CertificateValidatorService;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
+import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
 import com.ccomp.br.domain.storage.external.StorageExternal;
@@ -155,6 +156,19 @@ class EventCertificateControllerTest {
     }
 
     @Test
+    void generateInstructorAndEditorPreviews_returnsInlinePng() throws Exception {
+        when(certificateCoverService.loadCoverTemplate(eq(50L), any())).thenReturn(testCover());
+        when(certificateBoxServices.loadBoxTemplate(eq(50L), any(), any()))
+                .thenReturn(eventTemplate());
+
+        for (String type : List.of("INSTRUCTOR", "EDITOR")) {
+            mockMvc.perform(get(PREVIEW_URL).param("type", type).accept(MediaType.IMAGE_PNG))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG));
+        }
+    }
+
+    @Test
     void generateActivityPreview_validTemplate_returnsInlinePng() throws Exception {
         when(certificateCoverService.loadCoverTemplate(eq(50L), any())).thenReturn(testCover());
         when(activityCertificateBoxServices.loadBoxTemplate(eq(50L), any())).thenReturn(activityTemplate());
@@ -214,6 +228,30 @@ class EventCertificateControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0]").value("{participante.nome}"))
                 .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    void loadInstructorCertificateVariables_returnsRoleSpecificVariables() throws Exception {
+        mockMvc.perform(get("/api/events/certificate-variables").param("type", "INSTRUCTOR"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").value("{ministrante.nome}"))
+                .andExpect(jsonPath("$[1]").value("{ministrante.carga_horaria}"))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.hasItem("{atividade.nome}"))));
+        mockMvc.perform(get("/api/events/certificate-variables").param("type", "INSTRUCTOR"))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{participante.nome}")))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{evento.carga_horaria}")));
+    }
+
+    @Test
+    void loadEditorCertificateVariables_returnsEverySupportedVariable() throws Exception {
+        mockMvc.perform(get("/api/events/certificate-variables").param("type", "EDITOR"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{equipe.nome}")))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{participante.nome}")))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{evento.carga_horaria}")))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.hasItem("{atividade.nome}"))));
     }
 
     @Test
@@ -328,6 +366,34 @@ class EventCertificateControllerTest {
                 .andExpect(jsonPath("$.boxes[0].textTemplate")
                         .value("Certificamos que {participante.nome}"))
                 .andExpect(jsonPath("$.variables[0]").value("{participante.nome}"));
+    }
+
+    @Test
+    void getInstructorBoxTemplate_returnsInstructorBoxesAndVariables() throws Exception {
+        when(certificateBoxServices.loadBoxTemplate(eq(50L), any(), eq(EnumEventCertificateTemplateType.INSTRUCTOR)))
+                .thenReturn(EventBoxTemplate.builder().eventId(50L)
+                        .boxes(List.of(new BoxElementDTO("Ministrante {ministrante.nome}", 0.1, 0.2, 0.7, 25f, null, null)))
+                        .variables(List.of("{ministrante.nome}")).build());
+
+        mockMvc.perform(get(BOX_TEMPLATE_URL).param("type", "INSTRUCTOR"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.boxes[0].textTemplate").value("Ministrante {ministrante.nome}"))
+                .andExpect(jsonPath("$.variables[0]").value("{ministrante.nome}"));
+        verify(certificateBoxServices).loadBoxTemplate(eq(50L), any(), eq(EnumEventCertificateTemplateType.INSTRUCTOR));
+    }
+
+    @Test
+    void getEditorBoxTemplate_returnsEditorBoxesAndVariables() throws Exception {
+        when(certificateBoxServices.loadBoxTemplate(eq(50L), any(), eq(EnumEventCertificateTemplateType.EDITOR)))
+                .thenReturn(EventBoxTemplate.builder().eventId(50L)
+                        .boxes(List.of(new BoxElementDTO("Equipe {equipe.nome}", 0.1, 0.2, 0.7, 25f, null, null)))
+                        .variables(List.of("{equipe.nome}")).build());
+
+        mockMvc.perform(get(BOX_TEMPLATE_URL).param("type", "EDITOR"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.boxes[0].textTemplate").value("Equipe {equipe.nome}"))
+                .andExpect(jsonPath("$.variables[0]").value("{equipe.nome}"));
+        verify(certificateBoxServices).loadBoxTemplate(eq(50L), any(), eq(EnumEventCertificateTemplateType.EDITOR));
     }
 
     @Test

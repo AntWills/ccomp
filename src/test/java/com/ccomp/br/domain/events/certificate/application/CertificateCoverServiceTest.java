@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -108,10 +109,11 @@ class CertificateCoverServiceTest {
     // --- Upload ---
 
     @Test
-    void uploadCoverTemplate_unsupportedType_throwsBeforeStorage() {
+    void uploadCoverTemplate_unsupportedType_throwsBeforeStorage() throws Exception {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
-        when(file.getContentType()).thenReturn("application/pdf");
+        doReturn("not an image".getBytes()).when(file).getBytes();
+        stubEventWithEditPermission(true);
 
         assertThatThrownBy(() -> createService().uploadCoverTemplate(10L, USER_ID, file))
                 .isInstanceOf(DomainException.class)
@@ -124,7 +126,6 @@ class CertificateCoverServiceTest {
     void uploadCoverTemplate_accessDenied_throws() {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
-        when(file.getContentType()).thenReturn("image/png");
         stubEventWithEditPermission(false);
 
         assertThatThrownBy(() -> createService().uploadCoverTemplate(10L, USER_ID, file))
@@ -135,7 +136,7 @@ class CertificateCoverServiceTest {
     }
 
     @Test
-    void uploadCoverTemplate_firstCover_persistsKeyAndUploadsObject() {
+    void uploadCoverTemplate_firstCover_persistsKeyAndUploadsObject() throws Exception {
         MultipartFile file = pngFile();
         stubEventWithEditPermission(true);
         when(storageKeyGenerator.generate(anyString(), any())).thenReturn(STORAGE_KEY);
@@ -145,7 +146,7 @@ class CertificateCoverServiceTest {
 
         createService().uploadCoverTemplate(10L, USER_ID, file);
 
-        verify(storageExternal).putObject(STORAGE_KEY, file);
+        verify(storageExternal).putObject(eq(STORAGE_KEY), any(byte[].class), eq("image/png"));
 
         ArgumentCaptor<EventCoverTemplate> captor =
                 ArgumentCaptor.forClass(EventCoverTemplate.class);
@@ -155,10 +156,11 @@ class CertificateCoverServiceTest {
     }
 
     @Test
-    void uploadCoverTemplate_replacingCover_deletesPreviousObject() {
+    void uploadCoverTemplate_replacingCover_deletesPreviousObject() throws Exception {
         MultipartFile file = pngFile();
+        String replacementKey = "events/10/certificate-cover-template/novo.png";
         stubEventWithEditPermission(true);
-        when(storageKeyGenerator.generate(anyString(), any())).thenReturn(STORAGE_KEY);
+        when(storageKeyGenerator.generate(anyString(), any())).thenReturn(replacementKey);
         when(coverTemplateRepository.findByEventId(10L)).thenReturn(Optional.of(savedCover()));
         when(coverTemplateRepository.save(any(EventCoverTemplate.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -166,7 +168,7 @@ class CertificateCoverServiceTest {
         createService().uploadCoverTemplate(10L, USER_ID, file);
 
         verify(storageExternal).deleteObject(STORAGE_KEY);
-        verify(storageExternal).putObject(STORAGE_KEY, file);
+        verify(storageExternal).putObject(eq(replacementKey), any(byte[].class), eq("image/png"));
     }
 
     private void stubEventWithEditPermission(boolean canEdit) {
@@ -182,12 +184,23 @@ class CertificateCoverServiceTest {
                 .build();
     }
 
-    private static MultipartFile pngFile() {
+    private static MultipartFile pngFile() throws Exception {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
-        when(file.getContentType()).thenReturn("image/png");
         when(file.getOriginalFilename()).thenReturn("fundo.png");
+        doReturn(pngBytes()).when(file).getBytes();
         return file;
+    }
+
+    private static byte[] pngBytes() {
+        try {
+            var image = new java.awt.image.BufferedImage(2, 2, java.awt.image.BufferedImage.TYPE_INT_RGB);
+            var output = new java.io.ByteArrayOutputStream();
+            javax.imageio.ImageIO.write(image, "png", output);
+            return output.toByteArray();
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private static EventDTO eventDto() {

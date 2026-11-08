@@ -28,6 +28,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -188,11 +189,9 @@ class CheckInServiceTest {
 
             verify(enrollmentMock).makeAttendance();
             verify(enrollmentActivityRepository).save(enrollmentMock);
-            verify(rabbitTemplate).convertAndSend(
-                    anyString(),
-                    anyString(),
-                    any(CheckInMessageDTO.class)
-            );
+            ArgumentCaptor<CheckInMessageDTO> messageCaptor = ArgumentCaptor.forClass(CheckInMessageDTO.class);
+            verify(rabbitTemplate).convertAndSend(anyString(), anyString(), messageCaptor.capture());
+            assertThat(messageCaptor.getValue().activityId()).isEqualTo(activityId);
         }
 
         @Test

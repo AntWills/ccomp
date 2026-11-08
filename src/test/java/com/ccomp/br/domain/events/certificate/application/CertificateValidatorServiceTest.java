@@ -5,6 +5,7 @@ import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
+import com.ccomp.br.domain.events.certificate.enums.EnumCertificateType;
 import com.ccomp.br.domain.events.certificate.persistence.EventCertificateValidationCode;
 import com.ccomp.br.domain.events.certificate.persistence.EventCertificateValidationCodeRepository;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
@@ -129,7 +130,8 @@ class CertificateValidatorServiceTest {
     @Test
     void issueForEvent_existingCode_isReusedWithoutSaving() {
         EventCertificateValidationCode existing = codeForEvent();
-        when(validationCodeRepository.findByEventIdAndActivityIdIsNullAndUserId(10L, USER_ID))
+        when(validationCodeRepository.findByEventIdAndActivityIdIsNullAndUserIdAndCertificateType(
+                10L, USER_ID, EnumCertificateType.EVENT))
                 .thenReturn(Optional.of(existing));
 
         assertThat(createService().issueForEvent(10L, USER_ID)).isSameAs(existing);
@@ -139,7 +141,8 @@ class CertificateValidatorServiceTest {
     @Test
     void issueForActivity_existingCode_isReusedWithoutSaving() {
         EventCertificateValidationCode existing = codeForActivity();
-        when(validationCodeRepository.findByActivityIdAndUserId(77L, USER_ID))
+        when(validationCodeRepository.findByActivityIdAndUserIdAndCertificateType(
+                77L, USER_ID, EnumCertificateType.ACTIVITY))
                 .thenReturn(Optional.of(existing));
 
         assertThat(createService().issueForActivity(10L, 77L, USER_ID)).isSameAs(existing);
@@ -148,7 +151,8 @@ class CertificateValidatorServiceTest {
 
     @Test
     void issueForActivity_noExistingCode_persistsNewCode() {
-        when(validationCodeRepository.findByActivityIdAndUserId(77L, USER_ID))
+        when(validationCodeRepository.findByActivityIdAndUserIdAndCertificateType(
+                77L, USER_ID, EnumCertificateType.ACTIVITY))
                 .thenReturn(Optional.empty());
         when(validationCodeRepository.existsByCode(anyString())).thenReturn(false);
         when(validationCodeRepository.save(any(EventCertificateValidationCode.class)))
@@ -186,6 +190,7 @@ class CertificateValidatorServiceTest {
                 .code("ABC12345")
                 .eventId(10L)
                 .activityId(77L)
+                .certificateType(EnumCertificateType.ACTIVITY)
                 .userId(USER_ID)
                 .createdAt(LocalDateTime.of(2026, 10, 12, 10, 0))
                 .build();

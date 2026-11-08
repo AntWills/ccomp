@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.certificate.application;
 
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
+import com.ccomp.br.domain.events.certificate.enums.EnumCertificateVariableContext;
 import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplateRepository;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
@@ -59,7 +60,7 @@ public class ActivityCertificateBoxServices {
         EventActivityBoxTemplate template = templateRepository.findByEventId(eventId)
                 .orElseGet(() -> EventActivityBoxTemplate.builder().eventId(eventId).build());
         template.setBoxes(List.copyOf(boxes));
-        template.setVariables(CertificateTemplateVariableExtractor.extract(boxes));
+        template.setVariables(CertificateTemplateVariableExtractor.extract(boxes, EnumCertificateVariableContext.ACTIVITY));
         templateRepository.save(template);
     }
 
