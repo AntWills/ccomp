@@ -6,6 +6,7 @@ import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.events.instructor.enums.EnumInstructorStatus;
+import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -24,6 +25,7 @@ import static com.ccomp.br.domain.events.core.persistence.QEvent.event;
 import static com.ccomp.br.domain.events.enrollments.persistence.QEnrollment.enrollment;
 import static com.ccomp.br.domain.events.enrollments.persistence.QEnrollmentActivity.enrollmentActivity;
 import static com.ccomp.br.domain.events.instructor.persistence.QEventInstructor.eventInstructor;
+import static com.ccomp.br.domain.events.guests.persistence.QActivityGuest.activityGuest;
 
 @Repository
 public class EventActivityDslRepository {
@@ -288,7 +290,7 @@ public class EventActivityDslRepository {
     }
 
     public BigDecimal sumWorkloadHoursByInstructor(UUID userId, Long eventId) {
-        BigDecimal result = queryFactory
+        BigDecimal instructorResult = queryFactory
                 .select(Expressions.numberTemplate(BigDecimal.class, "coalesce(sum({0}), 0)", eventActivity.workloadHours))
                 .from(eventActivity)
                 .join(eventInstructor).on(eventInstructor.activityId.eq(eventActivity.id))
@@ -296,7 +298,18 @@ public class EventActivityDslRepository {
                         eventInstructor.status.eq(EnumInstructorStatus.CONFIRMED),
                         eventActivity.eventId.eq(eventId))
                 .fetchOne();
-        return result == null ? BigDecimal.ZERO : result;
+        BigDecimal guestResult = queryFactory
+                .select(Expressions.numberTemplate(BigDecimal.class, "coalesce(sum({0}), 0)", eventActivity.workloadHours))
+                .from(eventActivity)
+                .join(activityGuest).on(activityGuest.activity.id.eq(eventActivity.id))
+                .join(activityGuest.eventGuest)
+                .where(activityGuest.eventGuest.userId.eq(userId),
+                        activityGuest.eventGuest.status.eq(com.ccomp.br.domain.events.guests.enums.EnumGuestStatus.CONFIRMED),
+                        activityGuest.role.eq(EnumActivityGuestRole.PRESENTER),
+                        eventActivity.eventId.eq(eventId))
+                .fetchOne();
+        return (instructorResult == null ? BigDecimal.ZERO : instructorResult)
+                .add(guestResult == null ? BigDecimal.ZERO : guestResult);
     }
 
     public Optional<UUID> findConfirmedInstructorAccount(Long instructorId, Long eventId) {

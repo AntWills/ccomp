@@ -203,10 +203,39 @@ public class CertificateVariablesServices {
         }
     }
 
+    public Map<String, String> loadGuestInstructorVariablesValues(Long eventId, UUID userId) {
+        EventDTO event = findCertificateEligibleEventDto(eventId);
+        return loadRoleEventVariables(INSTRUCTOR_VARIABLES, eventId, event.title(), event.address(),
+                event.organization(), userId, activityDslRepository.sumWorkloadHoursByInstructor(userId, eventId),
+                EnumCertificateType.INSTRUCTOR);
+    }
+
     public UUID findInstructorCertificateRecipient(Long eventId, Long instructorId) {
         return activityDslRepository.findConfirmedInstructorAccount(instructorId, eventId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Ministrante confirmado com conta vinculada não encontrado neste evento."));
+    }
+
+    public BigDecimal sumInstructorWorkload(UUID userId, Long eventId) {
+        return activityDslRepository.sumWorkloadHoursByInstructor(userId, eventId);
+    }
+
+    public Map<String, String> loadManualInstructorVariablesValues(Long eventId, String instructorName,
+                                                                  BigDecimal workloadHours) {
+        EventDTO event = findCertificateEligibleEventDto(eventId);
+        String formattedWorkload = workloadHours == null
+                ? "0" : workloadHours.stripTrailingZeros().toPlainString();
+        Map<String, String> values = new HashMap<>();
+        values.put("{ministrante.nome}", instructorName);
+        values.put("{ministrante.carga_horaria}", formattedWorkload);
+        values.put("{participante.nome}", instructorName);
+        values.put("{evento.title}", event.title());
+        values.put("{evento.local}", event.address() == null ? "Não consta" : event.address());
+        values.put("{evento.organizacao}", event.organization() == null ? "Não consta" : event.organization());
+        values.put("{evento.carga_horaria}", formattedWorkload);
+        values.put("{validacao.codigo}", "Emissão manual");
+        values.put("{validacao.url}", "");
+        return values;
     }
 
     public Map<String, String> loadEditorVariablesValues(List<String> variables, Long eventId, UUID userId) {
