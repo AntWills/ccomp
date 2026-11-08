@@ -72,7 +72,8 @@ public class EventActivityDslRepository {
                         eventActivity.workloadHours,
                         eventActivity.registrationPolicy,
                         eventActivity.type,
-                        eventActivity.createdAt
+                        eventActivity.createdAt,
+                        eventActivity.event.timeZone
                     )
                 )
                 .from(eventActivity)
@@ -120,7 +121,8 @@ public class EventActivityDslRepository {
                                 eventActivity.workloadHours,
                                 eventActivity.registrationPolicy,
                                 eventActivity.type,
-                                eventActivity.createdAt
+                                eventActivity.createdAt,
+                                eventActivity.event.timeZone
                         )
                 )
                 .from(eventActivity)
@@ -210,7 +212,8 @@ public class EventActivityDslRepository {
                                 eventActivity.workloadHours,
                                 eventActivity.registrationPolicy,
                                 eventActivity.type,
-                                eventActivity.createdAt
+                                eventActivity.createdAt,
+                                eventActivity.event.timeZone
                         )
                 )
                 .from(enrollmentActivity)
@@ -250,7 +253,8 @@ public class EventActivityDslRepository {
                                 eventActivity.workloadHours,
                                 eventActivity.registrationPolicy,
                                 eventActivity.type,
-                                eventActivity.createdAt
+                                eventActivity.createdAt,
+                                eventActivity.event.timeZone
                         )
                 )
                 .from(eventActivity)

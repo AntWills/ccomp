@@ -169,7 +169,7 @@ class EventsControllerTest {
         mockMvc.perform(post("/api/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"title":"Evento de teste","category":"ACADEMIC_EDUCATIONAL","format":"IN_PERSON"}
+                                {"title":"Evento de teste","category":"ACADEMIC_EDUCATIONAL","format":"IN_PERSON","time_zone":"America/Sao_Paulo"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(9));

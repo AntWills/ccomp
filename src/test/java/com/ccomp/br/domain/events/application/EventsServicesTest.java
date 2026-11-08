@@ -241,6 +241,7 @@ public class EventsServicesTest {
             UserDTO userDTO = mock(UserDTO.class);
 
             when(dto.title()).thenReturn("I Encontro de Computação");
+            when(dto.timeZone()).thenReturn("America/Sao_Paulo");
             when(dto.optionalStartDate()).thenReturn(Optional.empty());
             when(dto.optionalEndDate()).thenReturn(Optional.empty());
 

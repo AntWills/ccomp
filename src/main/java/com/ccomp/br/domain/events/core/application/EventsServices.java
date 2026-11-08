@@ -154,6 +154,8 @@ public class EventsServices {
                 .ownerId(ownerId)
                 .build();
 
+        eventModel.setTimeZone(dto.timeZone());
+
 
         dto.optionalStartDate().ifPresent(eventModel::setStartDate);
         dto.optionalEndDate().ifPresent(eventModel::setEndDate);

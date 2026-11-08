@@ -15,6 +15,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.DateTimeException;
+import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -58,6 +61,10 @@ public class Event {
     @Enumerated(EnumType.STRING)
     @Column(name = "format", columnDefinition = "varchar(20)", nullable = false)
     private EnumEventFormat format;
+
+    @Column(name = "time_zone", nullable = false, length = 64)
+    @Builder.Default
+    private String timeZone = "America/Sao_Paulo";
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", columnDefinition = "varchar(20)", nullable = false)
@@ -165,13 +172,17 @@ public class Event {
     // --- Métodos Calculados do Ciclo de Vida ---
 
     /**
-     * Retorna a fase de execução atual do evento com base no horário do sistema.
+     * Retorna a fase de execução atual usando o fuso cadastrado no evento.
      */
     public EnumEventExecutionStatus getExecutionStatus() {
+        return getExecutionStatus(Clock.systemUTC());
+    }
+
+    public EnumEventExecutionStatus getExecutionStatus(Clock clock) {
         if (startDate == null || endDate == null) {
             return EnumEventExecutionStatus.NOT_STARTED;
         }
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock.withZone(getZoneId()));
         if (now.isBefore(startDate)) {
             return EnumEventExecutionStatus.NOT_STARTED;
         }
@@ -185,6 +196,10 @@ public class Event {
      * Calcula dinamicamente o estado atual do período de inscrições.
      */
     public EnumEnrollmentStatus getEnrollmentStatus() {
+        return getEnrollmentStatus(Clock.systemUTC());
+    }
+
+    public EnumEnrollmentStatus getEnrollmentStatus(Clock clock) {
         if (this.status == EnumEventStatus.DRAFT || this.status == EnumEventStatus.CANCELED) {
             return EnumEnrollmentStatus.CLOSED;
         }
@@ -198,11 +213,11 @@ public class Event {
             return EnumEnrollmentStatus.CLOSED;
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock.withZone(getZoneId()));
         if (now.isBefore(this.enrollmentStartDate)) {
             return EnumEnrollmentStatus.UPCOMING;
         }
-        if (now.isAfter(this.enrollmentEndDate)) {
+        if (!now.isBefore(this.enrollmentEndDate)) {
             return EnumEnrollmentStatus.CLOSED;
         }
 
@@ -214,6 +229,35 @@ public class Event {
      */
     public boolean isEnrollmentOpen() {
         return getEnrollmentStatus() == EnumEnrollmentStatus.OPEN;
+    }
+
+    public ZoneId getZoneId() {
+        try {
+            return ZoneId.of(timeZone == null ? "America/Sao_Paulo" : timeZone);
+        } catch (DateTimeException exception) {
+            throw new DomainException("O fuso horário deve ser um identificador IANA válido, como America/Sao_Paulo.");
+        }
+    }
+
+    public void setTimeZone(String timeZone) {
+        if (timeZone == null || timeZone.isBlank()) {
+            throw new DomainException("O fuso horário do evento é obrigatório.");
+        }
+        try {
+            this.timeZone = ZoneId.of(timeZone).getId();
+        } catch (DateTimeException exception) {
+            throw new DomainException("O fuso horário deve ser um identificador IANA válido, como America/Sao_Paulo.");
+        }
+    }
+
+    @PrePersist
+    @PreUpdate
+    private void validateTimeZone() {
+        getZoneId();
+    }
+
+    public LocalDateTime now(Clock clock) {
+        return LocalDateTime.now(clock.withZone(getZoneId()));
     }
 
     /**
@@ -256,10 +300,14 @@ public class Event {
     }
 
     public void publish() {
+        publish(Clock.systemUTC());
+    }
+
+    public void publish(Clock clock) {
         if (this.startDate == null || this.endDate == null) {
             throw new DomainException("Não é possível publicar um evento sem definir as datas de início e término.");
         }
-        if (this.getExecutionStatus() == EnumEventExecutionStatus.FINISHED) {
+        if (this.getExecutionStatus(clock) == EnumEventExecutionStatus.FINISHED) {
             throw new DomainException("Não é possível publicar um evento que já foi finalizado.");
         }
         this.status = EnumEventStatus.PUBLISHED;

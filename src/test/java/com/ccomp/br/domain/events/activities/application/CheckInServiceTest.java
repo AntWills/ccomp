@@ -12,6 +12,7 @@ import com.ccomp.br.domain.events.activities.persistence.checkin.CheckInReposito
 import com.ccomp.br.domain.events.activities.utils.CheckInMapper;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivity; // Assumindo o nome da entidade
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityDslRepository;
@@ -76,6 +77,7 @@ class CheckInServiceTest {
         presenceCode = UUID.randomUUID();
 
         activityMock = mock(EventActivity.class);
+        lenient().when(activityMock.getEvent()).thenReturn(Event.builder().timeZone("America/Sao_Paulo").build());
         eventDTOMock = mock(EventDTO.class);
         checkInDTOMock = mock(CheckInDTO.class);
 
