@@ -66,9 +66,11 @@ class EventAndActivityMaterialsPersistenceTest {
         entityManager.persist(activity);
 
         UUID creator = UUID.randomUUID();
+        LocalDateTime createdAt = LocalDateTime.parse("2026-11-08T09:00:00");
         EventMaterial link = eventMaterials.saveAndFlush(EventMaterial.builder()
                 .eventId(event.getId())
                 .createdBy(creator)
+                .createdAt(createdAt)
                 .title("Site")
                 .type(EnumMaterialType.LINK)
                 .url("https://example.org")
@@ -76,6 +78,7 @@ class EventAndActivityMaterialsPersistenceTest {
         ActivityMaterial file = activityMaterials.saveAndFlush(ActivityMaterial.builder()
                 .activityId(activity.getId())
                 .createdBy(creator)
+                .createdAt(createdAt)
                 .title("Imagem")
                 .type(EnumMaterialType.IMAGE)
                 .fileKey("activities/materials/a.png")
