@@ -9,8 +9,8 @@ import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
+import com.ccomp.br.domain.events.guests.persistence.EventGuestCache;
 import com.ccomp.br.domain.events.guests.persistence.dsl.ActivityGuestDslRepository;
-import com.ccomp.br.domain.events.guests.persistence.dsl.EventGuestDslRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +27,7 @@ class GuestSelfPermissionsTest {
     @Mock private EventCache eventCache;
     @Mock private ActivityCache activityCache;
     @Mock private EventAccessPolicy eventAccessPolicy;
-    @Mock private EventGuestDslRepository eventGuestDslRepository;
+    @Mock private EventGuestCache eventGuestCache;
     @Mock private ActivityGuestDslRepository activityGuestDslRepository;
     @Mock private EventRepository eventRepository;
     @Mock private EventActivityRepository activityRepository;

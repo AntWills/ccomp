@@ -13,6 +13,7 @@ import com.ccomp.br.domain.events.guests.dto.EventInvitationDTO;
 import com.ccomp.br.domain.events.guests.external.GuestInvitationMessageDTO;
 import com.ccomp.br.domain.events.guests.external.message.GuestInvitationChannel;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
+import com.ccomp.br.domain.events.guests.persistence.EventGuestCache;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitation;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitationDslRepository;
@@ -41,6 +42,7 @@ import java.util.UUID;
 @Service
 public class GuestInvitationServices {
     private final EventGuestRepository eventGuestRepository;
+    private final EventGuestCache eventGuestCache;
     private final EventInvitationRepository eventInvitationRepository;
     private final EventInvitationDslRepository eventInvitationDspRepository;
     private final EventRepository eventRepository;
@@ -53,12 +55,14 @@ public class GuestInvitationServices {
 
     public GuestInvitationServices(
             EventGuestRepository eventGuestRepository,
+            EventGuestCache eventGuestCache,
             EventInvitationRepository eventInvitationRepository,
             EventInvitationDslRepository eventInvitationDspRepository,
             EventRepository eventRepository, EventCache eventCache,
             EventAccessPolicy eventAccessPolicy, EventMapper eventMapper,
             UserManagement userManagement, RabbitTemplate rabbitTemplate, Clock clock) {
         this.eventGuestRepository = eventGuestRepository;
+        this.eventGuestCache = eventGuestCache;
         this.eventInvitationRepository = eventInvitationRepository;
         this.eventInvitationDspRepository = eventInvitationDspRepository;
         this.eventRepository = eventRepository;
@@ -169,13 +173,13 @@ public class GuestInvitationServices {
             return new MessageResponse("Convite recusado.");
         }
         invitation.accept(now);
-        EventGuest guest = EventGuest.builder()
+        EventGuest guest = eventGuestRepository.save(EventGuest.builder()
                 .userId(userId)
                 .event(invitation.getEvent())
-                .build();
+                .build());
 
         eventInvitationRepository.save(invitation);
-        eventGuestRepository.save(guest);
+        eventGuestCache.evict(guest);
 
         return new MessageResponse("Convite aceito com sucesso.");
     }
