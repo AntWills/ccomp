@@ -73,7 +73,8 @@ class ActivityGuestDslRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        List<ActivityDTO> activities = activityGuestDslRepository.findActivitiesByEventGuestId(guest.getId());
+        List<ActivityDTO> activities = activityGuestDslRepository
+                .findActivitiesByEventGuestIdAndEventId(guest.getId(), event.getId());
 
         assertThat(activities)
                 .extracting(ActivityDTO::id)
@@ -81,7 +82,8 @@ class ActivityGuestDslRepositoryTest {
         assertThat(activities)
                 .extracting(ActivityDTO::title)
                 .containsExactly("Primeira atividade", "Segunda atividade");
-        assertThat(activityGuestDslRepository.findActivitiesByEventGuestId(Long.MAX_VALUE)).isEmpty();
+        assertThat(activityGuestDslRepository
+                .findActivitiesByEventGuestIdAndEventId(Long.MAX_VALUE, event.getId())).isEmpty();
     }
 
     @Test

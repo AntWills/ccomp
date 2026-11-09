@@ -30,7 +30,7 @@ public class ActivityGuestDslRepository {
         this.queryFactory = queryFactory;
     }
 
-    public List<ActivityDTO> findActivitiesByEventGuestId(Long eventGuestId) {
+    public List<ActivityDTO> findActivitiesByEventGuestIdAndEventId(Long eventGuestId, Long eventId) {
         return queryFactory
                 .select(Projections.constructor(
                         ActivityDTO.class,
@@ -51,7 +51,7 @@ public class ActivityGuestDslRepository {
                 ))
                 .from(activityGuest)
                 .innerJoin(activityGuest.activity, eventActivity)
-                .where(activityGuest.eventGuest.id.eq(eventGuestId))
+                .where(activityGuest.eventGuest.id.eq(eventGuestId), eventActivity.event.id.eq(eventId))
                 .orderBy(eventActivity.displayOrder.asc(), eventActivity.id.desc())
                 .fetch();
     }

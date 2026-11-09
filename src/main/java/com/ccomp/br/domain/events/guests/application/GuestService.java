@@ -208,6 +208,23 @@ public class GuestService {
     }
 
     @Transactional(readOnly = true)
+    public List<ActivityDTO> findActivitiesByGuest(Long eventId, Long guestId, UUID requesterId) {
+        EventGuest guest = eventGuestRepository.findByIdAndEventId(guestId, eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado neste evento."));
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
+        boolean isManager = eventAccessPolicy.canEdit(event, requesterId);
+        if (!eventAccessPolicy.canView(event, requesterId))
+            throw new AccessDeniedException("Você não tem permissão para visualizar as atividades deste convidado.");
+
+        if (!isManager && (!guest.isPublic() || !guest.isConfirmed()))
+            return List.of();
+
+        return activityGuestDslRepository.findActivitiesByEventGuestIdAndEventId(guestId, eventId);
+    }
+
+    @Transactional(readOnly = true)
     public CursorPage<ActivityGuestDTO> searchActivityGuests(Long activityId, UUID requesterId, String cursorRaw, int pageSize) {
         int limit = Math.min(pageSize, 50);
         ActivityDTO activity = activityCache.findById(activityId)

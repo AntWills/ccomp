@@ -5,6 +5,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
+import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
+import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
@@ -194,6 +196,87 @@ class GuestServiceTest {
                     .isInstanceOf(AccessDeniedException.class);
 
             verifyNoInteractions(activityGuestDslRepository);
+        }
+    }
+
+    @Nested
+    class FindActivitiesByGuest {
+        @Test
+        @DisplayName("Retorna as atividades do convidado quando o evento e o perfil podem ser visualizados")
+        void returnsGuestActivitiesForPublicConfirmedGuest() {
+            Long guestId = 35L;
+            EventGuest guest = mock(EventGuest.class);
+            ActivityDTO activity = new ActivityDTO(78L, eventId, "Palestra", null, 1L,
+                    null, null, null, null, EnumActivityRegistrationPolicy.PUBLIC, EnumActivityType.LECTURE);
+            when(eventGuestRepository.findByIdAndEventId(guestId, eventId)).thenReturn(Optional.of(guest));
+            givenEventExists();
+            when(guest.isPublic()).thenReturn(true);
+            when(guest.isConfirmed()).thenReturn(true);
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(false);
+            when(eventAccessPolicy.canView(event, requesterId)).thenReturn(true);
+            when(activityGuestDslRepository.findActivitiesByEventGuestIdAndEventId(guestId, eventId))
+                    .thenReturn(List.of(activity));
+
+            assertThat(guestService.findActivitiesByGuest(eventId, guestId, requesterId))
+                    .containsExactly(activity);
+            verify(activityGuestDslRepository).findActivitiesByEventGuestIdAndEventId(guestId, eventId);
+        }
+
+        @Test
+        @DisplayName("Gerente pode consultar atividades de convidado privado")
+        void allowsManagerToQueryPrivateGuestActivities() {
+            Long guestId = 35L;
+            EventGuest guest = mock(EventGuest.class);
+            when(eventGuestRepository.findByIdAndEventId(guestId, eventId)).thenReturn(Optional.of(guest));
+            givenEventExists();
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
+            when(eventAccessPolicy.canView(event, requesterId)).thenReturn(true);
+            when(activityGuestDslRepository.findActivitiesByEventGuestIdAndEventId(guestId, eventId))
+                    .thenReturn(List.of());
+
+            assertThat(guestService.findActivitiesByGuest(eventId, guestId, requesterId)).isEmpty();
+            verify(activityGuestDslRepository).findActivitiesByEventGuestIdAndEventId(guestId, eventId);
+        }
+
+        @Test
+        @DisplayName("Não revela atividades de convidado privado a quem não gerencia o evento")
+        void hidesPrivateGuestActivitiesFromNonManager() {
+            Long guestId = 35L;
+            EventGuest guest = mock(EventGuest.class);
+            when(eventGuestRepository.findByIdAndEventId(guestId, eventId)).thenReturn(Optional.of(guest));
+            givenEventExists();
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(false);
+            when(eventAccessPolicy.canView(event, requesterId)).thenReturn(true);
+            when(guest.isPublic()).thenReturn(false);
+
+            assertThat(guestService.findActivitiesByGuest(eventId, guestId, requesterId)).isEmpty();
+            verifyNoInteractions(activityGuestDslRepository);
+        }
+
+        @Test
+        @DisplayName("Nega consulta quando o evento não é visível")
+        void deniesWhenEventIsNotViewable() {
+            Long guestId = 35L;
+            EventGuest guest = mock(EventGuest.class);
+            when(eventGuestRepository.findByIdAndEventId(guestId, eventId)).thenReturn(Optional.of(guest));
+            givenEventExists();
+            when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(false);
+            when(eventAccessPolicy.canView(event, requesterId)).thenReturn(false);
+
+            assertThatThrownBy(() -> guestService.findActivitiesByGuest(eventId, guestId, requesterId))
+                    .isInstanceOf(AccessDeniedException.class);
+            verifyNoInteractions(activityGuestDslRepository);
+        }
+
+        @Test
+        @DisplayName("Retorna não encontrado para convidado que não pertence ao evento")
+        void throwsWhenGuestDoesNotBelongToEvent() {
+            when(eventGuestRepository.findByIdAndEventId(35L, eventId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> guestService.findActivitiesByGuest(eventId, 35L, requesterId))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessage("Convidado não encontrado neste evento.");
+            verifyNoInteractions(eventCache, activityGuestDslRepository);
         }
     }
 
