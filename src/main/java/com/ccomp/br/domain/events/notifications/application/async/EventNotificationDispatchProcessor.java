@@ -42,8 +42,12 @@ public class EventNotificationDispatchProcessor {
 
         List<NotificationRecipientCandidate> fetched = notification.getAudience() == NotificationAudience.EVENT
                 ? dslRepository.findEventRecipients(notification.getEventId(), cursor, BATCH_SIZE + 1)
-                : dslRepository.findActivityRecipients(notification.getEventId(), notification.getActivityId(), cursor,
-                        BATCH_SIZE + 1);
+                : dslRepository.findActivityRecipients(
+                        notification.getEventId(),
+                        notification.getActivityId(),
+                        cursor,
+                        BATCH_SIZE + 1
+                );
         boolean hasNext = fetched.size() > BATCH_SIZE;
         List<NotificationRecipientCandidate> page = hasNext ? fetched.subList(0, BATCH_SIZE) : fetched;
         List<UUID> userIds = page.stream().map(NotificationRecipientCandidate::userId).toList();
@@ -88,16 +92,25 @@ public class EventNotificationDispatchProcessor {
     }
 
     private void refreshStatus(EventNotification notification) {
-        if (notification.getDispatchCompletedAt() == null) return;
+        if (notification.getDispatchCompletedAt() == null) {
+            return;
+        }
+
         long pending = recipientRepository.countByNotificationIdAndEmailStatus(notification.getId(),
                 NotificationEmailStatus.PENDING)
                 + recipientRepository.countByNotificationIdAndEmailStatus(notification.getId(),
                 NotificationEmailStatus.PROCESSING);
         long failed = recipientRepository.countByNotificationIdAndEmailStatus(notification.getId(),
                 NotificationEmailStatus.FAILED);
-        if (pending > 0) notification.setStatus(NotificationStatus.PROCESSING);
-        else notification.setStatus(failed > 0 ? NotificationStatus.COMPLETED_WITH_ERRORS : NotificationStatus.COMPLETED);
+        if (pending > 0) {
+            notification.setStatus(NotificationStatus.PROCESSING);
+        } else {
+            notification.setStatus(
+                    failed > 0 ? NotificationStatus.COMPLETED_WITH_ERRORS : NotificationStatus.COMPLETED
+            );
+        }
     }
 
-    public record PageResult(NotificationRecipientCursor nextCursor, boolean hasNext) {}
+    public record PageResult(NotificationRecipientCursor nextCursor, boolean hasNext) {
+    }
 }

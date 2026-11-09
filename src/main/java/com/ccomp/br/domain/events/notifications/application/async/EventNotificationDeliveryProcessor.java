@@ -32,21 +32,32 @@ public class EventNotificationDeliveryProcessor {
     @Transactional
     public void deliver(Long notificationId, Long recipientId) {
         LocalDateTime now = LocalDateTime.now(clock);
-        if (recipientDslRepository.claimPending(recipientId, now) == 0) return;
+        if (recipientDslRepository.claimPending(recipientId, now) == 0) {
+            return;
+        }
+
 
         EventNotificationRecipient recipient = recipientRepository.findById(recipientId).orElseThrow();
         EventNotification notification = notificationRepository.findById(notificationId).orElseThrow();
         try {
-            notificationEmailService.send(recipient.getEmailAddress(), recipient.getUserName(),
-                    notification.getEventTitle(), notification.getTitle(), notification.getMessage());
+            notificationEmailService.send(
+                    recipient.getEmailAddress(),
+                    recipient.getUserName(),
+                    notification.getEventTitle(),
+                    notification.getTitle(),
+                    notification.getMessage()
+            );
             recipient.setEmailStatus(NotificationEmailStatus.SENT);
             recipient.setEmailSentAt(LocalDateTime.now(clock));
             recipient.setEmailError(null);
         } catch (RuntimeException exception) {
             recipient.setEmailStatus(NotificationEmailStatus.FAILED);
             String error = exception.getMessage();
-            recipient.setEmailError(error == null ? exception.getClass().getSimpleName()
-                    : error.substring(0, Math.min(error.length(), 4000)));
+            recipient.setEmailError(
+                    error == null
+                            ? exception.getClass().getSimpleName()
+                            : error.substring(0, Math.min(error.length(), 4000))
+            );
         }
         recipientRepository.save(recipient);
     }

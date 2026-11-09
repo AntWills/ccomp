@@ -93,12 +93,15 @@ public class EventNotificationQueryService {
     }
 
     @Transactional(readOnly = true)
-    public long unreadCount(UUID userId) { return recipientRepository.countByUserIdAndReadAtIsNull(userId); }
+    public long unreadCount(UUID userId) {
+        return recipientRepository.countByUserIdAndReadAtIsNull(userId);
+    }
 
     private void assertCanEdit(Long eventId, UUID userId) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-        if (!accessPolicy.canEdit(event, userId))
+        if (!accessPolicy.canEdit(event, userId)) {
             throw new AccessDeniedException("Você não tem permissão para consultar os envios deste evento.");
+        }
     }
 }

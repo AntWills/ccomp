@@ -69,15 +69,21 @@ public class EventNotificationService {
     @Transactional
     public EventNotification sendToSelectedSubscribers(Long eventId, SendSelectedNotificationRequest request,
             UUID senderId) {
-        if (request.recipientUserIds().size() > SELECTED_LIMIT)
+        if (request.recipientUserIds().size() > SELECTED_LIMIT) {
             throw new DomainException("A seleção pode conter no máximo 500 inscritos.");
+        }
+
         EventDTO event = assertCanEdit(eventId, senderId);
-        if (request.activityId() != null) assertActivityBelongsToEvent(eventId, request.activityId());
+        if (request.activityId() != null) {
+            assertActivityBelongsToEvent(eventId, request.activityId());
+        }
+
         List<UUID> uniqueIds = request.recipientUserIds().stream().distinct().toList();
         List<NotificationRecipientCandidate> candidates = notificationDslRepository.findSelectedRecipients(
                 eventId, request.activityId(), uniqueIds);
-        if (candidates.size() != uniqueIds.size())
+        if (candidates.size() != uniqueIds.size()) {
             throw new DomainException("Um ou mais usuários selecionados não estão inscritos no escopo informado.");
+        }
 
         EventNotification notification = saveNotification(eventId, event.title(), request.activityId(), senderId,
                 NotificationAudience.SELECTED, request.notification());
@@ -103,7 +109,10 @@ public class EventNotificationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Notificação não encontrada neste evento."));
         List<EventNotificationRecipient> failed = recipientRepository.findAllByNotificationIdAndEmailStatus(
                 notificationId, NotificationEmailStatus.FAILED);
-        if (failed.isEmpty()) return;
+        if (failed.isEmpty()) {
+            return;
+        }
+
         failed.forEach(recipient -> {
             recipient.setEmailStatus(NotificationEmailStatus.PENDING);
             recipient.setEmailError(null);
@@ -123,7 +132,10 @@ public class EventNotificationService {
         assertCanEdit(eventId, senderId);
         EventNotification notification = notificationRepository.findByIdAndEventId(notificationId, eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Notificação não encontrada neste evento."));
-        if (notification.getDispatchCompletedAt() != null) return;
+        if (notification.getDispatchCompletedAt() != null) {
+            return;
+        }
+
         notification.setStatus(NotificationStatus.QUEUED);
         notificationRepository.save(notification);
         publisher.dispatch(notificationId);
@@ -146,15 +158,18 @@ public class EventNotificationService {
     private EventDTO assertCanEdit(Long eventId, UUID userId) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-        if (!eventAccessPolicy.canEdit(event, userId))
+        if (!eventAccessPolicy.canEdit(event, userId)) {
             throw new AccessDeniedException("Você não tem permissão para enviar notificações neste evento.");
+        }
+
         return event;
     }
 
     private void assertActivityBelongsToEvent(Long eventId, Long activityId) {
         var activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
-        if (!Objects.equals(activity.getEventId(), eventId))
+        if (!Objects.equals(activity.getEventId(), eventId)) {
             throw new ResourceNotFoundException("Atividade não encontrada neste evento.");
+        }
     }
 }

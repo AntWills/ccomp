@@ -22,7 +22,10 @@ public class EventNotificationRecipientDslRepository {
     public int markAllRead(UUID userId, LocalDateTime readAt) {
         return Math.toIntExact(queryFactory.update(eventNotificationRecipient)
                 .set(eventNotificationRecipient.readAt, readAt)
-                .where(eventNotificationRecipient.userId.eq(userId), eventNotificationRecipient.readAt.isNull())
+                .where(
+                        eventNotificationRecipient.userId.eq(userId),
+                        eventNotificationRecipient.readAt.isNull()
+                )
                 .execute());
     }
 
@@ -30,10 +33,15 @@ public class EventNotificationRecipientDslRepository {
     public int claimPending(Long recipientId, LocalDateTime attemptAt) {
         return Math.toIntExact(queryFactory.update(eventNotificationRecipient)
                 .set(eventNotificationRecipient.emailStatus, NotificationEmailStatus.PROCESSING)
-                .set(eventNotificationRecipient.emailAttempts, eventNotificationRecipient.emailAttempts.add(1))
+                .set(
+                        eventNotificationRecipient.emailAttempts,
+                        eventNotificationRecipient.emailAttempts.add(1)
+                )
                 .set(eventNotificationRecipient.lastEmailAttemptAt, attemptAt)
-                .where(eventNotificationRecipient.id.eq(recipientId)
-                        .and(eventNotificationRecipient.emailStatus.eq(NotificationEmailStatus.PENDING)))
+                .where(
+                        eventNotificationRecipient.id.eq(recipientId)
+                                .and(eventNotificationRecipient.emailStatus.eq(NotificationEmailStatus.PENDING))
+                )
                 .execute());
     }
 }

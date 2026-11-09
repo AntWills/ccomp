@@ -53,8 +53,11 @@ public class EventNotificationOutboxRelay {
             } catch (RuntimeException exception) {
                 message.setAttempts(message.getAttempts() + 1);
                 String error = exception.getMessage();
-                message.setLastError(error == null ? exception.getClass().getSimpleName()
-                        : error.substring(0, Math.min(error.length(), 4000)));
+                message.setLastError(
+                        error == null
+                                ? exception.getClass().getSimpleName()
+                                : error.substring(0, Math.min(error.length(), 4000))
+                );
                 log.error("Falha ao publicar mensagem outbox {} (notificação {})", message.getId(),
                         message.getNotificationId(), exception);
                 break;
@@ -67,9 +70,13 @@ public class EventNotificationOutboxRelay {
         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, routingKey, payload, correlation);
         try {
             var confirm = correlation.getFuture().get(10, TimeUnit.SECONDS);
-            if (!confirm.isAck()) throw new IllegalStateException("RabbitMQ não confirmou a mensagem: " + confirm.getReason());
-            if (correlation.getReturned() != null)
+            if (!confirm.ack()) {
+                throw new IllegalStateException("RabbitMQ não confirmou a mensagem: " + confirm.reason());
+            }
+
+            if (correlation.getReturned() != null) {
                 throw new IllegalStateException("RabbitMQ não encontrou fila para a routing key " + routingKey);
+            }
         } catch (Exception exception) {
             if (exception instanceof RuntimeException runtimeException) throw runtimeException;
             throw new IllegalStateException("Não foi possível confirmar a publicação no RabbitMQ.", exception);
