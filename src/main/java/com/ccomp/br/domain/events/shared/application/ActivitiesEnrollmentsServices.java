@@ -20,6 +20,7 @@ import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
+import com.ccomp.br.shared.exceptions.SchedulingConflictException;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.CursorUtils;
 import org.springframework.stereotype.Service;
@@ -78,9 +79,11 @@ public class ActivitiesEnrollmentsServices {
         var enrollment = enrollmentRepository.findByUserIdAndEvent(userId, event)
                 .orElseThrow(() -> new ConflictException("Você precisa estar inscrito no evento."));
 
-        if(event.isSchedulerPrevent()
-                && eventActivityDslRepository.existsSchedulingConflict(userId, activity))
-            throw new ConflictException("Você já está inscrito em outras atividades");
+        if (event.isSchedulerPrevent()) {
+            List<ActivityDTO> conflicts = eventActivityDslRepository.findAllConflictingActivities(userId, activity);
+            if (!conflicts.isEmpty())
+                throw new SchedulingConflictException(conflicts);
+        }
 
         if (activity.getMaxCapacity() != null
                 && enrollmentActivityDslRepository.countActiveByActivityId(activityId) >= activity.getMaxCapacity())
