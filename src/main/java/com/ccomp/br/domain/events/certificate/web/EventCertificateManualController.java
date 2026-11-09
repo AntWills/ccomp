@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.events.certificate.web;
 
-import com.ccomp.br.domain.events.certificate.application.CertificateServices;
+import com.ccomp.br.domain.events.certificate.application.issuance.ManualCertificateServices;
 import com.ccomp.br.domain.events.certificate.dto.ManualInstructorCertificateRequest;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,10 +29,10 @@ import java.util.UUID;
 @Tag(name = "events/certificate/manual (Emissão manual de certificados)",
         description = "Emissão manual de certificados individuais para ministrantes e integrantes da equipe")
 public class EventCertificateManualController {
-    private final CertificateServices certificateServices;
+    private final ManualCertificateServices manualCertificateServices;
 
-    public EventCertificateManualController(CertificateServices certificateServices) {
-        this.certificateServices = certificateServices;
+    public EventCertificateManualController(ManualCertificateServices manualCertificateServices) {
+        this.manualCertificateServices = manualCertificateServices;
     }
 
     @Operation(summary = "Emitir manualmente certificado de ministrante",
@@ -56,7 +56,7 @@ public class EventCertificateManualController {
             @PathVariable Long eventId,
             @Valid @RequestBody ManualInstructorCertificateRequest request,
             @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = certificateServices.buildManualInstructorCertificate(
+        StorageExternal.StoredFile certificate = manualCertificateServices.buildInstructorCertificate(
                 eventId, request, extractUserId(jwt));
         return certificateResponse(certificate, "certificado-ministrante-manual.png");
     }
@@ -82,7 +82,7 @@ public class EventCertificateManualController {
             @PathVariable Long eventId,
             @PathVariable UUID recipientId,
             @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = certificateServices.buildCertificateForEditor(
+        StorageExternal.StoredFile certificate = manualCertificateServices.buildTeamCertificate(
                 eventId, recipientId, extractUserId(jwt));
         return certificateResponse(certificate, "certificado-equipe-%s.png".formatted(recipientId));
     }

@@ -1,8 +1,9 @@
-package com.ccomp.br.domain.events.certificate.application;
+package com.ccomp.br.domain.events.certificate.application.variables;
 
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
+import com.ccomp.br.domain.events.certificate.application.CertificateValidatorService;
 import com.ccomp.br.domain.events.core.enums.EnumEventExecutionStatus;
 import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.dto.EventDTO;

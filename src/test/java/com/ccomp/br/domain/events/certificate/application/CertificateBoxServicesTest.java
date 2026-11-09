@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.events.certificate.application;
 
+import com.ccomp.br.domain.events.certificate.application.boxes.CertificateBoxServices;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;

@@ -1,9 +1,11 @@
 package com.ccomp.br.domain.events.certificate.web;
 
 import com.ccomp.br.domain.events.certificate.application.*;
+import com.ccomp.br.domain.events.certificate.application.boxes.ActivityCertificateBoxServices;
+import com.ccomp.br.domain.events.certificate.application.boxes.CertificateBoxServices;
+import com.ccomp.br.domain.events.certificate.application.variables.CertificateVariablesServices;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.dto.BoxTemplateResponse;
-import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
 import com.ccomp.br.domain.events.certificate.dto.SaveCertificateBoxesRequest;
 import com.ccomp.br.domain.events.certificate.enums.EnumCertificateVariableContext;
 import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;

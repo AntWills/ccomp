@@ -1,5 +1,7 @@
 package com.ccomp.br.domain.events.certificate.application;
 
+import com.ccomp.br.domain.events.certificate.application.variables.CertificateVariablesServices;
+import com.ccomp.br.domain.events.certificate.application.issuance.AutomaticCertificateServices;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
@@ -36,7 +38,8 @@ class CertificateServicesGenerationTest {
     @Mock EventCache eventCache;
     @Mock EventAccessPolicy accessPolicy;
     @Mock CertificateFetcher certificateFetcher;
-    @Mock CertificateVariablesServices variablesServices;
+    @Mock
+    CertificateVariablesServices variablesServices;
 
     @Test
     void buildCertificateFromEvent_generatesPngUsingEventTemplateAndVariables() throws Exception {
@@ -64,8 +67,8 @@ class CertificateServicesGenerationTest {
         when(variablesServices.loadEventVariablesValues(List.of("{participante.nome}"), EVENT_ID, USER_ID))
                 .thenReturn(Map.of("{participante.nome}", "Ana Souza"));
 
-        StorageExternal.StoredFile generated = new CertificateServices(eventCache, accessPolicy,
-                certificateFetcher, variablesServices, null, null, null).buildCertificateFromEvent(EVENT_ID, USER_ID);
+        StorageExternal.StoredFile generated = new AutomaticCertificateServices(eventCache, accessPolicy,
+                certificateFetcher, variablesServices, null, null).buildCertificateFromEvent(EVENT_ID, USER_ID);
 
         BufferedImage output = ImageIO.read(generated.resource().getInputStream());
         assertThat(generated.contentType()).isEqualTo("image/png");
@@ -95,9 +98,9 @@ class CertificateServicesGenerationTest {
                 .hasMessage("O usuário não tem acesso a este recurso.");
     }
 
-    private CertificateServices createService() {
-        return new CertificateServices(eventCache, accessPolicy, certificateFetcher,
-                variablesServices, null, null, null);
+    private AutomaticCertificateServices createService() {
+        return new AutomaticCertificateServices(eventCache, accessPolicy, certificateFetcher,
+                variablesServices, null, null);
     }
 
     private EventDTO event() {

@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.events.certificate.web;
 
-import com.ccomp.br.domain.events.certificate.application.CertificateServices;
+import com.ccomp.br.domain.events.certificate.application.issuance.AutomaticCertificateServices;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -23,10 +23,10 @@ import java.util.UUID;
 @Tag(name = "events/certificate/issuance (Emissão de certificados)",
         description = "Emissão de certificados para participantes, ministrantes e equipe do evento")
 public class EventCertificateIssuanceController {
-    private final CertificateServices certificateServices;
+    private final AutomaticCertificateServices automaticCertificateServices;
 
-    public EventCertificateIssuanceController(CertificateServices certificateServices) {
-        this.certificateServices = certificateServices;
+    public EventCertificateIssuanceController(AutomaticCertificateServices automaticCertificateServices) {
+        this.automaticCertificateServices = automaticCertificateServices;
     }
 
     @Operation(summary = "Consultar certificado do evento",
@@ -40,7 +40,7 @@ public class EventCertificateIssuanceController {
     @GetMapping(value = "/{eventId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateFromEvent(@PathVariable Long eventId,
                                                                @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromEvent(eventId, extractUserId(jwt));
+        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromEvent(eventId, extractUserId(jwt));
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(certificate.contentType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"certificado-evento-%d.png\"".formatted(eventId))
@@ -58,7 +58,7 @@ public class EventCertificateIssuanceController {
     @GetMapping(value = "/activities/{activityId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateFromActivity(@PathVariable Long activityId,
                                                                   @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromActivity(activityId, extractUserId(jwt));
+        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromActivity(activityId, extractUserId(jwt));
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(certificate.contentType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"certificado-atividade-%d.png\"".formatted(activityId))
@@ -77,7 +77,7 @@ public class EventCertificateIssuanceController {
     public ResponseEntity<Resource> buildCertificateFromInstructor(@PathVariable Long eventId,
                                                                     @PathVariable Long instructorId,
                                                                     @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromInstructor(
+        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromInstructor(
                 eventId, instructorId, extractUserId(jwt));
         return certificateResponse(certificate, "certificado-ministrante-%d.png".formatted(instructorId));
     }
@@ -94,7 +94,7 @@ public class EventCertificateIssuanceController {
     public ResponseEntity<Resource> buildCertificateFromActivityGuest(@PathVariable Long eventId,
             @PathVariable Long activityId, @PathVariable Long activityGuestId,
             @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromActivityGuest(
+        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromActivityGuest(
                 eventId, activityId, activityGuestId, extractUserId(jwt));
         return certificateResponse(certificate, "certificado-ministrante-convidado-%d.png".formatted(activityGuestId));
     }
@@ -110,7 +110,7 @@ public class EventCertificateIssuanceController {
     @GetMapping(value = "/{eventId}/team-certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateForEditor(@PathVariable Long eventId,
                                                                @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = certificateServices.buildCertificateForEditor(
+        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateForEditor(
                 eventId, extractUserId(jwt));
         return certificateResponse(certificate, "certificado-equipe-%d.png".formatted(eventId));
     }

@@ -1,5 +1,7 @@
-package com.ccomp.br.domain.events.certificate.application;
+package com.ccomp.br.domain.events.certificate.application.boxes;
 
+import com.ccomp.br.domain.events.certificate.application.CertificateFetcher;
+import com.ccomp.br.domain.events.certificate.application.variables.CertificateTemplateVariableExtractor;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.enums.EnumCertificateVariableContext;
 import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplate;
