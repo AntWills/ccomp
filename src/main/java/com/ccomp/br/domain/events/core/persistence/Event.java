@@ -219,6 +219,8 @@ public class Event {
         return EnumEnrollmentStatus.OPEN;
     }
 
+    public EnumEnrollmentStatus getEnrollmentStatus() { return getEnrollmentStatus(LocalDateTime.now()); }
+
     /**
      * Informa se o evento está aceitando inscrições no momento exato da verificação.
      */
@@ -316,6 +318,8 @@ public class Event {
         this.status = EnumEventStatus.PUBLISHED;
     }
 
+    public void publish() { publish(LocalDateTime.now()); }
+
     public void unlist(LocalDateTime now) {
         if (this.startDate == null || this.endDate == null) {
             throw new DomainException("Não é possível tornar um evento não listado sem definir as datas de início e término.");
@@ -332,6 +336,8 @@ public class Event {
         }
         this.status = EnumEventStatus.CANCELED;
     }
+
+    public void cancel() { cancel(LocalDateTime.now()); }
 
     public void moveToDraft() {
         // Exemplo: impede voltar para rascunho se já existirem inscrições ativas

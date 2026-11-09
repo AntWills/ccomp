@@ -214,12 +214,12 @@ public class EventsServices {
     public EventDTO updateCapacity(Long eventId, CapacityUpdateRequest request, UUID userId) {
         Event event = eventRepository.findByIdForUpdate(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
-        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId))
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event, LocalDateTime.now(clock)), userId))
             throw new AccessDeniedException("Você não tem permissão para alterar a capacidade deste evento.");
         event.setMaxCapacity(request.maxCapacity());
         Event saved = eventRepository.save(event);
         eventCache.evict(saved);
-        return eventMapper.eventToEventDTO(saved);
+        return eventMapper.eventToEventDTO(saved, LocalDateTime.now(clock));
     }
 
     @Transactional

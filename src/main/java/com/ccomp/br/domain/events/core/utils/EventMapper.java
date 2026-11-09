@@ -25,4 +25,8 @@ public interface EventMapper {
     @Mapping(target = "executionStatus", expression = "java(event.getExecutionStatus(now))")
     @Mapping(target = "enrollmentStatus", expression = "java(event.getEnrollmentStatus(now))")
     EventDTO eventToEventDTO(Event event, LocalDateTime now);
+
+    default EventDTO eventToEventDTO(Event event) {
+        return eventToEventDTO(event, LocalDateTime.now());
+    }
 }

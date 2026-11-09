@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.CreateActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
@@ -252,7 +253,7 @@ public class ActivityServicesTest {
     class SearchActivities {
         @Test
         void searchByCursor_returnsPage_whenUserCanViewEvent() {
-            ActivityDTO activity = new ActivityDTO(activityId, eventId, "Palestra", null, 1L,
+            EventActivityDTO activity = new EventActivityDTO(activityId, eventId, "Palestra", null, 1L,
                     null, null, null, null, null, null, (java.time.LocalDateTime) null);
             when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
             when(eventAccessPolicy.canView(eventDTO, userId)).thenReturn(true);

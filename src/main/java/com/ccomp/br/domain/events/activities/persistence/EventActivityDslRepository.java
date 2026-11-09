@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.activities.persistence;
 import com.ccomp.br.domain.events.activities.dto.EventActivityConflictCursor;
 import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.events.instructor.enums.EnumInstructorStatus;
@@ -44,7 +45,7 @@ public class EventActivityDslRepository {
         return Optional.ofNullable(result);
     }
 
-    public List<ActivityDTO> findAllByEventIdWithCursor(
+    public List<EventActivityDTO> findAllByEventIdWithCursor(
             Long eventId, @Nullable EventActivityCursor cursor, int limit) {
         BooleanBuilder whereClause = new BooleanBuilder();
 
@@ -60,7 +61,7 @@ public class EventActivityDslRepository {
 
         return queryFactory.select(
                 Projections.constructor(
-                        ActivityDTO.class,
+                        EventActivityDTO.class,
                         eventActivity.id,
                         eventActivity.event.id,
                         eventActivity.title,

@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.activities.persistence;
 import com.ccomp.br.config.QueryDslConfig;
 import com.ccomp.br.domain.events.activities.dto.EventActivityConflictCursor;
 import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
+import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
@@ -152,7 +153,7 @@ class EventActivityDslRepositoryTest {
         entityManager.clear();
 
         // Ação: Primeira página (limite = 2)
-        List<ActivityDTO> page1 = eventActivityDslRepository.findAllByEventIdWithCursor(event.getId(), null, 2);
+        List<EventActivityDTO> page1 = eventActivityDslRepository.findAllByEventIdWithCursor(event.getId(), null, 2);
 
         // Asserções: Primeira página (deve trazer as 2 mais recentes: activity3 depois activity2)
         assertThat(page1).hasSize(2);
@@ -160,11 +161,11 @@ class EventActivityDslRepositoryTest {
         assertThat(page1.get(1).title()).isEqualTo("Palestra de Abertura");
 
         // Construção do cursor com base no último item da primeira página
-        ActivityDTO lastItem = page1.getLast();
+        EventActivityDTO lastItem = page1.getLast();
         EventActivityCursor cursor = new EventActivityCursor(lastItem.displayOrder(), lastItem.id());
 
         // Ação: Segunda página utilizando o cursor (limite = 2)
-        List<ActivityDTO> page2 = eventActivityDslRepository.findAllByEventIdWithCursor(event.getId(), cursor, 2);
+        List<EventActivityDTO> page2 = eventActivityDslRepository.findAllByEventIdWithCursor(event.getId(), cursor, 2);
 
         // Asserções: Segunda página (deve trazer a atividade mais antiga: activity1)
         assertThat(page2).hasSize(1);

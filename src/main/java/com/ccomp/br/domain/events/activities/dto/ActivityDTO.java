@@ -21,14 +21,24 @@ public record ActivityDTO(
         BigDecimal workloadHours,
         EnumActivityRegistrationPolicy registrationPolicy,
         EnumActivityType type,
+        LocalDateTime createdAt,
         @Schema(name = "time_zone", description = "Fuso IANA herdado do evento; os horários locais de início e término seguem essa zona.", example = "America/Manaus")
-        String timeZone
+        String timeZone,
+        Integer maxCapacity
 ) {
+    public ActivityDTO(Long id, Long eventId, String title, String description, Long displayOrder,
+                       String location, LocalDateTime startDate, LocalDateTime endDate,
+                       BigDecimal workloadHours, EnumActivityRegistrationPolicy registrationPolicy,
+                       EnumActivityType type, LocalDateTime createdAt) {
+        this(id, eventId, title, description, displayOrder, location, startDate, endDate, workloadHours,
+                registrationPolicy, type, createdAt, "America/Sao_Paulo", null);
+    }
+
     public ActivityDTO(Long id, Long eventId, String title, String description, Long displayOrder,
                        String location, LocalDateTime startDate, LocalDateTime endDate,
                        BigDecimal workloadHours, EnumActivityRegistrationPolicy registrationPolicy,
                        EnumActivityType type) {
         this(id, eventId, title, description, displayOrder, location, startDate, endDate, workloadHours,
-                registrationPolicy, type, "America/Sao_Paulo");
+                registrationPolicy, type, null, "America/Sao_Paulo", null);
     }
 }
