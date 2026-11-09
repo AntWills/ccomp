@@ -6,6 +6,7 @@ import com.ccomp.br.domain.events.notifications.enums.NotificationAudience;
 import com.ccomp.br.domain.events.notifications.enums.NotificationEmailStatus;
 import com.ccomp.br.domain.events.notifications.enums.NotificationStatus;
 import com.ccomp.br.domain.events.notifications.persistence.*;
+import com.ccomp.br.domain.events.notifications.application.EventNotificationCacheInvalidator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,15 +23,17 @@ public class EventNotificationDispatchProcessor {
     private final EventNotificationRecipientRepository recipientRepository;
     private final EventNotificationDslRepository dslRepository;
     private final EventNotificationPublisher publisher;
+    private final EventNotificationCacheInvalidator cacheInvalidator;
     private final Clock clock;
 
     public EventNotificationDispatchProcessor(EventNotificationRepository notificationRepository,
             EventNotificationRecipientRepository recipientRepository, EventNotificationDslRepository dslRepository,
-            EventNotificationPublisher publisher, Clock clock) {
+            EventNotificationPublisher publisher, EventNotificationCacheInvalidator cacheInvalidator, Clock clock) {
         this.notificationRepository = notificationRepository;
         this.recipientRepository = recipientRepository;
         this.dslRepository = dslRepository;
         this.publisher = publisher;
+        this.cacheInvalidator = cacheInvalidator;
         this.clock = clock;
     }
 
@@ -39,6 +42,7 @@ public class EventNotificationDispatchProcessor {
         EventNotification notification = notificationRepository.findById(notificationId).orElseThrow();
         notification.setStatus(NotificationStatus.PROCESSING);
         notificationRepository.save(notification);
+        cacheInvalidator.evictSentHistory();
 
         List<NotificationRecipientCandidate> fetched = notification.getAudience() == NotificationAudience.EVENT
                 ? dslRepository.findEventRecipients(notification.getEventId(), cursor, BATCH_SIZE + 1)
@@ -63,6 +67,7 @@ public class EventNotificationDispatchProcessor {
                 .toList();
         recipientRepository.saveAll(fresh);
         recipientRepository.flush();
+        cacheInvalidator.evictUnreadCounts(fresh.stream().map(EventNotificationRecipient::getUserId).toList());
         fresh.forEach(recipient -> existing.put(recipient.getUserId(), recipient));
 
         List<Long> deliveryIds = page.stream().map(candidate -> existing.get(candidate.userId()))
@@ -82,6 +87,7 @@ public class EventNotificationDispatchProcessor {
         notification.setDispatchCompletedAt(LocalDateTime.now(clock));
         refreshStatus(notification);
         notificationRepository.save(notification);
+        cacheInvalidator.evictSentHistory();
     }
 
     @Transactional
@@ -89,6 +95,7 @@ public class EventNotificationDispatchProcessor {
         EventNotification notification = notificationRepository.findById(notificationId).orElseThrow();
         refreshStatus(notification);
         notificationRepository.save(notification);
+        cacheInvalidator.evictSentHistory();
     }
 
     private void refreshStatus(EventNotification notification) {

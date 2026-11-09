@@ -45,6 +45,7 @@ class EventNotificationServiceTest {
     @Mock EventNotificationRecipientRepository recipientRepository;
     @Mock EventNotificationDslRepository dslRepository;
     @Mock EventNotificationPublisher publisher;
+    @Mock EventNotificationCacheInvalidator cacheInvalidator;
 
     private EventNotificationService service;
     private EventDTO event;
@@ -52,7 +53,7 @@ class EventNotificationServiceTest {
     @BeforeEach
     void setUp() {
         service = new EventNotificationService(eventCache, accessPolicy, activityRepository, notificationRepository,
-                recipientRepository, dslRepository, publisher,
+                recipientRepository, dslRepository, publisher, cacheInvalidator,
                 Clock.fixed(Instant.parse("2026-11-09T10:00:00Z"), ZoneOffset.UTC));
         event = mock(EventDTO.class);
         lenient().when(event.title()).thenReturn("DevConf");

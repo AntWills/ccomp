@@ -33,6 +33,11 @@ public final class CacheNames {
     public static final String EVENT_GUEST_BY_ID = "events:guest:by-id";
     public static final String EVENT_GUEST_IMAGE = "events:guest:image";
     public static final String EVENT_GUEST_IMAGES_BULK = "events:guest:images-bulk";
+    public static final String EVENT_COVER_IMAGE = "events:cover:image";
+
+    // domain/events/notifications
+    public static final String EVENT_NOTIFICATION_UNREAD_COUNT = "events:notifications:unread-count";
+    public static final String EVENT_NOTIFICATION_SENT_HISTORY = "events:notifications:sent-history";
 
     // domain/events/editors
     public static final String EVENT_EDITOR_BY_EVENT_USER = "events:editors:by-event-user";
@@ -65,6 +70,10 @@ public final class CacheNames {
             Map.entry(EVENT_GUEST_BY_ID, SHORT),
             Map.entry(EVENT_GUEST_IMAGE, MEDIUM),
             Map.entry(EVENT_GUEST_IMAGES_BULK, VOLATILE),
+            Map.entry(EVENT_COVER_IMAGE, MEDIUM),
+
+            Map.entry(EVENT_NOTIFICATION_UNREAD_COUNT, VOLATILE),
+            Map.entry(EVENT_NOTIFICATION_SENT_HISTORY, VOLATILE),
 
             Map.entry(EVENT_EDITOR_BY_EVENT_USER, SHORT),
             Map.entry(EVENT_EDITOR_HAS_PERMISSION, SHORT),

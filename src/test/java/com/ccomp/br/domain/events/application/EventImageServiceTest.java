@@ -2,10 +2,13 @@ package com.ccomp.br.domain.events.application;
 
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.application.EventImageService;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
 import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
+import com.ccomp.br.domain.events.core.persistence.EventCoverImageCache;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.domain.storage.external.StorageKeyGenerator;
@@ -21,6 +24,7 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -33,15 +37,18 @@ class EventImageServiceTest {
 
     @Mock private EventAccessPolicy accessPolicy;
     @Mock private EventRepository eventRepository;
+    @Mock private EventCache eventCache;
     @Mock private StorageExternal storageExternal;
     @Mock private StorageKeyGenerator keyGenerator;
+    @Mock private EventCoverImageCache imageCache;
 
     private EventImageService service;
     private Event event;
 
     @BeforeEach
     void setUp() {
-        service = new EventImageService(accessPolicy, eventRepository, storageExternal, keyGenerator);
+        service = new EventImageService(accessPolicy, eventRepository, eventCache,
+                storageExternal, keyGenerator, imageCache);
         event = Event.builder()
                 .id(EVENT_ID)
                 .title("Evento")
@@ -53,6 +60,10 @@ class EventImageServiceTest {
                 .enrollmentPaused(false)
                 .build();
         when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        EventDTO eventDTO = mock(EventDTO.class);
+        lenient().when(eventCache.findById(EVENT_ID)).thenReturn(Optional.of(eventDTO));
+        lenient().when(accessPolicy.canView(eventDTO, USER_ID)).thenReturn(true);
+        lenient().when(accessPolicy.canView(eventDTO, null)).thenReturn(true);
     }
 
     @Test
@@ -115,19 +126,24 @@ class EventImageServiceTest {
     void getCoverImageReturnsEmptyWithoutCallingStorageWhenNoKeyIsSet() {
         assertThat(service.getCoverImage(EVENT_ID, null)).isEmpty();
 
-        verify(accessPolicy).assertCanView(event, null);
+        verify(accessPolicy).canView(eventCache.findById(EVENT_ID).orElseThrow(), null);
         verifyNoInteractions(storageExternal);
     }
 
     @Test
-    void getCoverImageDelegatesToStorageWhenKeyExists() {
+    void getCoverImageReturnsCachedImageWhenKeyExists() throws IOException {
         event.setCoverImageKey("events/27/cover/cover.webp");
-        var storedFile = new StorageExternal.StoredFile(null, "image/webp");
-        when(storageExternal.getObject(event.getCoverImageKey())).thenReturn(Optional.of(storedFile));
+        EventDTO eventDTO = eventCache.findById(EVENT_ID).orElseThrow();
+        when(eventDTO.coverImageKey()).thenReturn("events/27/cover/cover.webp");
+        when(imageCache.get(event.getCoverImageKey()))
+                .thenReturn(new EventCoverImageCache.CachedImage(new byte[]{1, 2, 3}, "image/webp"));
 
-        assertThat(service.getCoverImage(EVENT_ID, USER_ID)).contains(storedFile);
-        verify(accessPolicy).assertCanView(event, USER_ID);
-        verify(storageExternal).getObject("events/27/cover/cover.webp");
+        var image = service.getCoverImage(EVENT_ID, USER_ID).orElseThrow();
+        assertThat(image.contentType()).isEqualTo("image/webp");
+        assertThat(image.resource().getContentAsByteArray()).containsExactly(1, 2, 3);
+        verify(accessPolicy).canView(eventDTO, USER_ID);
+        verify(imageCache).get("events/27/cover/cover.webp");
+        verifyNoInteractions(storageExternal);
     }
 
     @Test
@@ -146,14 +162,16 @@ class EventImageServiceTest {
         assertThat(service.removeCoverImage(EVENT_ID, USER_ID)).isTrue();
 
         assertThat(event.getCoverImageKey()).isNull();
-        InOrder order = inOrder(storageExternal, eventRepository);
-        order.verify(storageExternal).deleteObject("events/27/cover/current.jpg");
+        InOrder order = inOrder(eventRepository, imageCache, storageExternal);
         order.verify(eventRepository).save(event);
+        order.verify(imageCache).evict("events/27/cover/current.jpg");
+        order.verify(storageExternal).deleteObject("events/27/cover/current.jpg");
     }
 
     @Test
     void operationsFailWhenEventDoesNotExist() {
         when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.empty());
+        when(eventCache.findById(EVENT_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.uploadCoverImage(EVENT_ID, USER_ID,
                 new MockMultipartFile("file", "cover.jpg", "image/jpeg", new byte[]{1})))

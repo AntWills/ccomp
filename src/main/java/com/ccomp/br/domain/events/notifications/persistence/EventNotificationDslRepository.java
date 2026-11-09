@@ -6,6 +6,7 @@ import com.ccomp.br.domain.events.notifications.dto.MyEventNotificationItem;
 import com.ccomp.br.domain.events.notifications.dto.NotificationRecipientCandidate;
 import com.ccomp.br.domain.events.notifications.dto.NotificationRecipientCursor;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
+import com.ccomp.br.shared.cache.CacheNames;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -13,6 +14,7 @@ import com.querydsl.core.types.dsl.DateTimePath;
 import com.querydsl.core.types.dsl.NumberPath;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.jspecify.annotations.Nullable;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -90,6 +92,8 @@ public class EventNotificationDslRepository {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.EVENT_NOTIFICATION_SENT_HISTORY,
+            key = "#eventId + ':' + #cursor + ':' + #limit")
     public List<EventNotificationListItem> findSentByEvent(Long eventId,
             @Nullable EventNotificationCursor cursor, int limit) {
         BooleanBuilder where = new BooleanBuilder(eventNotification.eventId.eq(eventId));

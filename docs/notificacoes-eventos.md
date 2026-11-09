@@ -56,19 +56,14 @@ As listagens têm ordenação estável decrescente por data e ID e aceitam pági
 | `EventNotificationRecipient` | Caixa e estado individual de cada inscrito, incluindo leitura e entrega de email. |
 | `EventNotificationOutbox` | Publicação confiável de trabalho assíncrono no RabbitMQ, com tentativas, confirmação e erro. |
 
-## Cache: candidatos e cuidados
+## Cache: implementação e cuidados
 
-O melhor candidato imediato é o **template de email**, carregado de classpath a cada envio. O serviço pode carregar o layout e o fragmento de notificação uma vez e mantê-los em memória; são recursos imutáveis durante a execução e não exigem invalidação por usuário. Isso evita leituras repetidas do storage de recursos, embora o ganho provavelmente seja pequeno frente ao custo de envio SMTP.
+- **Templates de email:** o layout e o fragmento são carregados uma vez quando `EventNotificationEmailService` inicia e reutilizados em memória. Como são recursos imutáveis no classpath, não precisam de invalidação ou Redis.
+- **Contagem de não lidas:** `GET /unread-count` usa Redis por usuário. O cache é invalidado quando o inscrito marca uma ou todas como lidas e quando a distribuição cria destinatários. O TTL volátil serve como proteção adicional.
+- **Histórico da equipe:** as páginas de envios são cacheadas por evento, cursor e tamanho da página. O cache é limpo ao criar/reprocessar envios e quando o processamento assíncrono atualiza destinatários ou status.
+- **Imagem de capa do evento:** os bytes são cacheados pela chave imutável do objeto, seguindo o padrão usado nas imagens de convidados. Substituir ou remover a capa invalida a imagem antiga; falha no Redis recua para o storage.
 
-Outras opções exigem mais cuidado:
-
-- **Contagem de não lidas:** pode ser acessada com frequência pelo frontend, mas toda leitura e marcação de notificação exige invalidar/atualizar a chave do usuário. Sem essa invalidação consistente, o número ficará desatualizado. A consulta atual é simples; medir antes de adicionar cache.
-- **Histórico de envios e caixa pessoal:** são consultas paginadas, e a caixa muda quando chegam notificações ou quando o usuário as marca como lidas. Cache requer chaves por usuário/evento, cursor e filtro, além de invalidação na entrega e na leitura. Não é um primeiro candidato.
-- **Destinatários e inscrições:** não cachear como lista de campanha. O conjunto pode ser grande e mudar enquanto uma distribuição está sendo processada; o cursor consulta a fonte atual e evita manter todos os inscritos em memória.
-- **Dados do evento usados na autorização:** já são obtidos via `EventCache`; reutilizar o cache existente evita uma consulta repetida ao repositório. A permissão deve continuar sendo avaliada para cada operação.
-- **Estado de entrega:** inclui outbox e contagens que mudam durante o processamento assíncrono. Cache pode ocultar progresso e erros recentes; manter leitura direto do banco, salvo se houver necessidade medida e uma política curta de atualização.
-
-Portanto, a recomendação é começar pelo cache em memória dos templates. Para contagens ou listagens, primeiro medir frequência/custo e só então definir TTL e invalidação explícita.
+A caixa pessoal, o estado detalhado de entrega e as listas de destinatários continuam sem cache, pois mudam com frequência ou precisam refletir imediatamente leitura, email e progresso. Os destinatários seguem sendo lidos em lotes por cursor. Os caches Redis usam os TTLs definidos em `app.cache.tiers` e podem ser ajustados sem mudar as rotas.
 
 ## Rotas
 

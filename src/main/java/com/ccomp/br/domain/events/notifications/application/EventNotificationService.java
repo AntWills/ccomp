@@ -29,13 +29,15 @@ public class EventNotificationService {
     private final EventNotificationRecipientRepository recipientRepository;
     private final EventNotificationDslRepository notificationDslRepository;
     private final EventNotificationPublisher publisher;
+    private final EventNotificationCacheInvalidator cacheInvalidator;
     private final Clock clock;
 
     public EventNotificationService(EventCache eventCache, EventAccessPolicy eventAccessPolicy,
             EventActivityRepository activityRepository, EventNotificationRepository notificationRepository,
             EventNotificationRecipientRepository recipientRepository,
             EventNotificationDslRepository notificationDslRepository,
-            EventNotificationPublisher publisher, Clock clock) {
+            EventNotificationPublisher publisher, EventNotificationCacheInvalidator cacheInvalidator,
+            Clock clock) {
         this.eventCache = eventCache;
         this.eventAccessPolicy = eventAccessPolicy;
         this.activityRepository = activityRepository;
@@ -43,6 +45,7 @@ public class EventNotificationService {
         this.recipientRepository = recipientRepository;
         this.notificationDslRepository = notificationDslRepository;
         this.publisher = publisher;
+        this.cacheInvalidator = cacheInvalidator;
         this.clock = clock;
     }
 
@@ -52,6 +55,7 @@ public class EventNotificationService {
         EventNotification notification = saveNotification(eventId, event.title(), null, senderId,
                 NotificationAudience.EVENT, request);
         publisher.dispatch(notification.getId());
+        cacheInvalidator.evictSentHistory();
         return notification;
     }
 
@@ -63,6 +67,7 @@ public class EventNotificationService {
         EventNotification notification = saveNotification(eventId, event.title(), activityId, senderId,
                 NotificationAudience.ACTIVITY, request);
         publisher.dispatch(notification.getId());
+        cacheInvalidator.evictSentHistory();
         return notification;
     }
 
@@ -90,6 +95,7 @@ public class EventNotificationService {
         List<EventNotificationRecipient> recipients = candidates.stream()
                 .map(candidate -> createRecipient(notification.getId(), candidate)).toList();
         recipients = recipientRepository.saveAll(recipients);
+        cacheInvalidator.evictUnreadCounts(uniqueIds);
         notification.setRecipientCount(recipients.size());
         notification.setDispatchCompletedAt(LocalDateTime.now(clock));
         notification.setStatus(recipients.isEmpty() ? NotificationStatus.COMPLETED : NotificationStatus.PROCESSING);
@@ -99,6 +105,7 @@ public class EventNotificationService {
                     Math.min(i + DELIVERY_BATCH_SIZE, recipients.size())).stream()
                     .map(EventNotificationRecipient::getId).toList());
         }
+        cacheInvalidator.evictSentHistory();
         return notification;
     }
 
@@ -125,6 +132,7 @@ public class EventNotificationService {
                     Math.min(i + DELIVERY_BATCH_SIZE, failed.size())).stream()
                     .map(EventNotificationRecipient::getId).toList());
         }
+        cacheInvalidator.evictSentHistory();
     }
 
     @Transactional
@@ -139,6 +147,7 @@ public class EventNotificationService {
         notification.setStatus(NotificationStatus.QUEUED);
         notificationRepository.save(notification);
         publisher.dispatch(notificationId);
+        cacheInvalidator.evictSentHistory();
     }
 
     private EventNotification saveNotification(Long eventId, String eventTitle, Long activityId, UUID senderId,

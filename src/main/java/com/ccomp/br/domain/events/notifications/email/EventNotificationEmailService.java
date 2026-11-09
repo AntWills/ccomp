@@ -13,9 +13,13 @@ import java.util.Map;
 @Service
 public class EventNotificationEmailService {
     private final EmailService emailService;
+    private final String notificationTemplate;
+    private final String layoutTemplate;
 
     public EventNotificationEmailService(EmailService emailService) {
         this.emailService = emailService;
+        this.notificationTemplate = readTemplate("templates/email/event-notification.html");
+        this.layoutTemplate = readTemplate("templates/email/layout.html");
     }
 
     public void send(String email, String recipientName, String eventTitle, String title, String message) {
@@ -24,7 +28,7 @@ public class EventNotificationEmailService {
     }
 
     String render(String recipientName, String eventTitle, String title, String message) {
-        String template = readTemplate("templates/email/event-notification.html");
+        String template = notificationTemplate;
         Map<String, String> values = Map.of(
                 "recipientName", recipientName,
                 "eventTitle", eventTitle,
@@ -33,7 +37,7 @@ public class EventNotificationEmailService {
         for (var value : values.entrySet()) {
             template = template.replace("{{" + value.getKey() + "}}", escapeHtml(value.getValue()));
         }
-        return readTemplate("templates/email/layout.html")
+        return layoutTemplate
                 .replace("{{title}}", escapeHtml(title))
                 .replace("{{body}}", template);
     }

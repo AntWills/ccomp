@@ -30,6 +30,7 @@ class EventNotificationQueryServiceTest {
     @Mock EventNotificationDslRepository dslRepository;
     @Mock EventNotificationOutboxRepository outboxRepository;
     @Mock EventNotificationRecipientDslRepository recipientDslRepository;
+    @Mock EventNotificationCacheInvalidator cacheInvalidator;
 
     private EventNotificationQueryService service;
     private final UUID userId = UUID.randomUUID();
@@ -39,6 +40,7 @@ class EventNotificationQueryServiceTest {
     void setUp() {
         service = new EventNotificationQueryService(eventCache, accessPolicy, notificationRepository,
                 recipientRepository, dslRepository, outboxRepository, recipientDslRepository,
+                cacheInvalidator,
                 Clock.fixed(Instant.parse("2026-11-09T10:00:00Z"), ZoneOffset.UTC));
         event = mock(EventDTO.class);
         lenient().when(eventCache.findById(42L)).thenReturn(Optional.of(event));

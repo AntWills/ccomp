@@ -6,11 +6,13 @@ import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.notifications.dto.*;
 import com.ccomp.br.domain.events.notifications.enums.NotificationEmailStatus;
 import com.ccomp.br.domain.events.notifications.persistence.*;
+import com.ccomp.br.shared.cache.CacheNames;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.CursorUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -27,13 +29,15 @@ public class EventNotificationQueryService {
     private final EventNotificationDslRepository dslRepository;
     private final EventNotificationOutboxRepository outboxRepository;
     private final EventNotificationRecipientDslRepository recipientDslRepository;
+    private final EventNotificationCacheInvalidator cacheInvalidator;
     private final Clock clock;
 
     public EventNotificationQueryService(EventCache eventCache, EventAccessPolicy accessPolicy,
             EventNotificationRepository notificationRepository,
             EventNotificationRecipientRepository recipientRepository,
             EventNotificationDslRepository dslRepository, EventNotificationOutboxRepository outboxRepository,
-            EventNotificationRecipientDslRepository recipientDslRepository, Clock clock) {
+            EventNotificationRecipientDslRepository recipientDslRepository,
+            EventNotificationCacheInvalidator cacheInvalidator, Clock clock) {
         this.eventCache = eventCache;
         this.accessPolicy = accessPolicy;
         this.notificationRepository = notificationRepository;
@@ -41,6 +45,7 @@ public class EventNotificationQueryService {
         this.dslRepository = dslRepository;
         this.outboxRepository = outboxRepository;
         this.recipientDslRepository = recipientDslRepository;
+        this.cacheInvalidator = cacheInvalidator;
         this.clock = clock;
     }
 
@@ -84,15 +89,19 @@ public class EventNotificationQueryService {
         if (recipient.getReadAt() == null) {
             recipient.setReadAt(LocalDateTime.now(clock));
             recipientRepository.save(recipient);
+            cacheInvalidator.evictUnreadCounts(List.of(userId));
         }
     }
 
     @Transactional
     public int markAllRead(UUID userId) {
-        return recipientDslRepository.markAllRead(userId, LocalDateTime.now(clock));
+        int updated = recipientDslRepository.markAllRead(userId, LocalDateTime.now(clock));
+        if (updated > 0) cacheInvalidator.evictUnreadCounts(List.of(userId));
+        return updated;
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.EVENT_NOTIFICATION_UNREAD_COUNT, key = "#userId")
     public long unreadCount(UUID userId) {
         return recipientRepository.countByUserIdAndReadAtIsNull(userId);
     }
