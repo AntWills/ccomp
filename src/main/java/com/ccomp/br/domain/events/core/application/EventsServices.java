@@ -159,7 +159,7 @@ public class EventsServices {
                 .ownerId(ownerId)
                 .build();
 
-        eventModel.setTimeZone(dto.timeZone());
+        eventModel.setTimeZone(clock.getZone().getId());
 
 
         dto.optionalStartDate().ifPresent(eventModel::setStartDate);

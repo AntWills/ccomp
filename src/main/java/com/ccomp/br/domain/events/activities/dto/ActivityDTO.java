@@ -22,7 +22,7 @@ public record ActivityDTO(
         EnumActivityRegistrationPolicy registrationPolicy,
         EnumActivityType type,
         LocalDateTime createdAt,
-        @Schema(name = "time_zone", description = "Fuso IANA herdado do evento; os horários locais de início e término seguem essa zona.", example = "America/Manaus")
+        @Schema(name = "time_zone", description = "Fuso global da aplicação; mantido por compatibilidade.", example = "America/Sao_Paulo", deprecated = true)
         String timeZone,
         Integer maxCapacity
 ) {

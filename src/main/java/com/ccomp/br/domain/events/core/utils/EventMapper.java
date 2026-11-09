@@ -20,6 +20,7 @@ public interface EventMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "slug", ignore = true)
     @Mapping(target = "title", ignore = true)
+    @Mapping(target = "timeZone", ignore = true)
     void updateEntityFromDto(UpdateEventDTO dto, @MappingTarget Event entity);
 
     @Mapping(target = "executionStatus", expression = "java(event.getExecutionStatus(now))")

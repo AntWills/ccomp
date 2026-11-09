@@ -1,24 +1,20 @@
-# Fuso horário dos eventos
+# Fuso horário global
 
 ## Horários de agenda
 
-Os campos de agenda sem offset — `start_date`, `end_date`, `enrollment_start_date` e `enrollment_end_date`, tanto de eventos quanto de atividades — representam horário de Brasília, com zona IANA `America/Sao_Paulo`. Envie valores locais sem offset, por exemplo `2026-11-08T09:05:00`. Não some nem subtraia horas no frontend.
+O projeto usa um único fuso global definido por `app.clock.zone`, com padrão `America/Sao_Paulo` e override por `APP_CLOCK_ZONE`. Todos os `LocalDateTime` representam horário local nessa zona, incluindo agenda, operações de domínio, metadados gerados pela aplicação e timestamps de persistência. Envie horários de agenda sem offset, por exemplo `2026-11-08T09:05:00`. Não some nem subtraia horas no frontend.
 
-As regras temporais do domínio de eventos recebem o `Clock` da aplicação. O bean usa `app.clock.zone`, configurado em `application.properties` com padrão `America/Sao_Paulo` e opção de override por `APP_CLOCK_ZONE`. Para manter o contrato dos horários de agenda, produção deve usar `America/Sao_Paulo`; o resultado dessas regras não depende do fuso padrão da JVM quando essa propriedade está configurada corretamente.
+As regras temporais usam o `Clock` da aplicação. Na inicialização, o fuso padrão da JVM e o fuso da sessão PostgreSQL também são alinhados a `app.clock.zone`, para cobrir chamadas `LocalDateTime.now()` existentes e timestamps gerados pelo Hibernate ou pelo banco. Em produção, mantenha `America/Sao_Paulo` para preservar o contrato da API.
 
 Para diagnóstico, `GET /api/server/status` retorna `timestamp` como instante UTC e também `server_local_time` e `time_zone`, gerados pelo mesmo `Clock` central. Em produção, o esperado é `time_zone: "America/Sao_Paulo"`; `server_local_time` deve ser interpretado nessa zona. A resposta também inclui o percentual do limite máximo de heap usado pela JVM. Isso permite comparar o horário efetivamente usado pelas regras com o relógio apresentado pelo frontend sem alterar o campo UTC já existente.
 
 Essa referência é usada para calcular estados de execução e inscrição, publicar eventos, validar convites, registrar check-in/credenciamento e preencher datas de criação de materiais de evento. Aplica-se a eventos presenciais em qualquer estado e a eventos online.
 
-## Metadados de auditoria
-
-Nem todo campo `LocalDateTime` do backend é horário de agenda. Campos como `created_at` e `updated_at` de entidades que usam `@CreationTimestamp` e `@UpdateTimestamp` são gerados pelo Hibernate e não recebem diretamente o `Clock` central. O `app.clock.zone` não deve ser entendido como garantia de fuso para esses metadados nem para timestamps de outras áreas do sistema.
-
 ## Campo `time_zone` depreciado
 
-O campo `time_zone` continua no schema e na API por compatibilidade. Está marcado como depreciado no OpenAPI. Na criação ele ainda é obrigatório pelo contrato atual; em atualizações permanece aceito; nas respostas continua sendo retornado. O backend ainda armazena o valor enviado, mas ele não determina a interpretação dos horários de agenda. Clientes devem deixar de usá-lo para conversão e informar `America/Sao_Paulo` enquanto o campo continuar obrigatório.
+O campo `time_zone` continua no schema e nas respostas por compatibilidade, marcado como depreciado no OpenAPI. Não é aceito na criação nem em atualizações. O backend grava nele o fuso global e usa esse mesmo fuso para os horários. Clientes devem ignorar esse campo como configuração por evento; ele apenas informa o fuso global atual.
 
-A migration V36 normaliza os valores já existentes para `America/Sao_Paulo` e define o mesmo valor como default. Ela não impede que novas chamadas de criação enviem outro valor para o campo legado.
+A migration V36 normaliza os valores existentes para `America/Sao_Paulo` e define o mesmo default. Novos eventos gravam o valor de `app.clock.zone` nesse campo legado.
 
 ## Borda de término
 
