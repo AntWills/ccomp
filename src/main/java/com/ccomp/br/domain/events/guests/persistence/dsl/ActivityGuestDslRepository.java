@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.guests.persistence.dsl;
 import java.util.List;
 import java.util.UUID;
 
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
@@ -19,6 +20,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.stereotype.Repository;
 
 import static com.ccomp.br.domain.events.guests.persistence.QActivityGuest.activityGuest;
+import static com.ccomp.br.domain.events.activities.persistence.QEventActivity.eventActivity;
 
 @Repository
 public class ActivityGuestDslRepository {
@@ -26,6 +28,32 @@ public class ActivityGuestDslRepository {
 
     public ActivityGuestDslRepository(JPAQueryFactory queryFactory) {
         this.queryFactory = queryFactory;
+    }
+
+    public List<ActivityDTO> findActivitiesByEventGuestId(Long eventGuestId) {
+        return queryFactory
+                .select(Projections.constructor(
+                        ActivityDTO.class,
+                        eventActivity.id,
+                        eventActivity.event.id,
+                        eventActivity.title,
+                        eventActivity.description,
+                        eventActivity.displayOrder,
+                        eventActivity.location,
+                        eventActivity.startDate,
+                        eventActivity.endDate,
+                        eventActivity.workloadHours,
+                        eventActivity.registrationPolicy,
+                        eventActivity.type,
+                        eventActivity.createdAt,
+                        eventActivity.event.timeZone,
+                        eventActivity.maxCapacity
+                ))
+                .from(activityGuest)
+                .innerJoin(activityGuest.activity, eventActivity)
+                .where(activityGuest.eventGuest.id.eq(eventGuestId))
+                .orderBy(eventActivity.displayOrder.asc(), eventActivity.id.desc())
+                .fetch();
     }
 
     public List<ActivityGuestDTO> findActivityGuestsWithCursor(
