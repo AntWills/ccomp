@@ -1,6 +1,7 @@
 package com.ccomp.br.shared.exceptions;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -19,6 +20,8 @@ public class ErrorResponse {
     private String route;
     private List<String> messages;
     private Map<String, String> details; // Erros por campo
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<?> conflicts;
 
     public ErrorResponse(LocalDateTime timestamp, int status, String error, String route,
                          List<String> messages, Map<String, String> details) {

@@ -15,6 +15,7 @@ import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityRepo
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
+import com.ccomp.br.shared.exceptions.SchedulingConflictException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -79,13 +80,39 @@ class ActivitiesEnrollmentsServicesTest {
         when(activity.getEvent()).thenReturn(event);
         when(enrollmentRepository.findByUserIdAndEvent(userId, event)).thenReturn(Optional.of(enrollment));
         when(event.isSchedulerPrevent()).thenReturn(true);
-        when(eventActivityDslRepository.existsSchedulingConflict(userId, activity)).thenReturn(false);
+        when(eventActivityDslRepository.findAllConflictingActivities(userId, activity)).thenReturn(List.of());
 
         var response = service.inscribe(userId, 9L);
 
         assertThat(response.response()).isEqualTo("Inscrição na atividade realizada com sucesso.");
-        verify(eventActivityDslRepository).existsSchedulingConflict(userId, activity);
+        verify(eventActivityDslRepository).findAllConflictingActivities(userId, activity);
         verify(enrollmentActivityRepository).save(any(EnrollmentActivity.class));
+    }
+
+    @Test
+    void inscribeReturnsConflictingActivitiesWhenScheduleOverlaps() {
+        EventActivity activity = mock(EventActivity.class);
+        Event event = mock(Event.class);
+        Enrollment enrollment = mock(Enrollment.class);
+        ActivityDTO conflictingActivity = new ActivityDTO(7L, 4L, "Atividade já inscrita", null,
+                0L, "Sala 1", null, null, null, null, null);
+        when(activityRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(activity));
+        when(activity.isPublic()).thenReturn(false);
+        when(enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, 9L)).thenReturn(Optional.empty());
+        when(activity.getEvent()).thenReturn(event);
+        when(enrollmentRepository.findByUserIdAndEvent(userId, event)).thenReturn(Optional.of(enrollment));
+        when(event.isSchedulerPrevent()).thenReturn(true);
+        when(eventActivityDslRepository.findAllConflictingActivities(userId, activity))
+                .thenReturn(List.of(conflictingActivity));
+
+        assertThatThrownBy(() -> service.inscribe(userId, 9L))
+                .isInstanceOfSatisfying(SchedulingConflictException.class, exception ->
+                        assertThat(exception.toErrorResponse("/api/events/activities/9/subscribe")
+                                .getConflicts()).satisfies(conflicts -> {
+                                    assertThat(conflicts).hasSize(1);
+                                    assertThat(conflicts.getFirst()).isEqualTo(conflictingActivity);
+                                }));
+        verify(enrollmentActivityRepository, never()).save(any(EnrollmentActivity.class));
     }
 
     @Test

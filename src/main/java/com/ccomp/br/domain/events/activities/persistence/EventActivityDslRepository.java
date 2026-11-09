@@ -236,6 +236,10 @@ public class EventActivityDslRepository {
                 .fetch();
     }
 
+    public List<ActivityDTO> findAllConflictingActivities(UUID userId, EventActivity activity) {
+        return findConflictingActivities(userId, activity, null, Integer.MAX_VALUE);
+    }
+
     /**
      * Carrega todas as atividades do evento em que o usuário realmente participou
      * (inscrição com check-in feito), ordenadas por ordem de exibição e id.
