@@ -31,6 +31,8 @@ public final class CacheNames {
     // domain/events/guests
     public static final String EVENT_GUESTS = "events:guests";
     public static final String EVENT_GUEST_BY_ID = "events:guest:by-id";
+    public static final String EVENT_GUEST_IMAGE = "events:guest:image";
+    public static final String EVENT_GUEST_IMAGES_BULK = "events:guest:images-bulk";
 
     // domain/events/editors
     public static final String EVENT_EDITOR_BY_EVENT_USER = "events:editors:by-event-user";
@@ -61,6 +63,8 @@ public final class CacheNames {
 
             Map.entry(EVENT_GUESTS, VOLATILE),
             Map.entry(EVENT_GUEST_BY_ID, SHORT),
+            Map.entry(EVENT_GUEST_IMAGE, MEDIUM),
+            Map.entry(EVENT_GUEST_IMAGES_BULK, VOLATILE),
 
             Map.entry(EVENT_EDITOR_BY_EVENT_USER, SHORT),
             Map.entry(EVENT_EDITOR_HAS_PERMISSION, SHORT),

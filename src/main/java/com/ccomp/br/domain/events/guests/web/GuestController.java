@@ -8,6 +8,7 @@ import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.AddGuestToActivityDTO;
 import com.ccomp.br.domain.events.guests.dto.CreateGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
+import com.ccomp.br.domain.events.guests.dto.GuestImageItem;
 import com.ccomp.br.domain.events.guests.dto.LinkGuestAccountDTO;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestProfileDTO;
@@ -343,6 +344,18 @@ public class GuestController {
                             .body(file.resource());
                 })
                 .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @GetMapping("/{eventId}/guests/images")
+    @Operation(summary = "Retorna em lote as imagens dos convidados do evento",
+            description = "Retorna uma lista JSON com guest_id, content_type e content (Base64). " +
+                    "Restrito a quem pode editar o evento. A resposta do evento é armazenada em cache e invalidada " +
+                    "quando uma imagem é alterada ou removida.")
+    public ResponseEntity<java.util.List<GuestImageItem>> getGuestImages(
+            @PathVariable Long eventId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ResponseEntity.ok(guestImageService.getAllImages(eventId, extractUserId(jwt)));
     }
 
     @DeleteMapping("/{eventId}/guests/{guestId}/image")
