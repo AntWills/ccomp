@@ -158,12 +158,12 @@ class CertificateVariablesServicesTest {
     }
 
     private Event finishedEvent(BigDecimal teamWorkloadHours) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime referenceTime = LocalDateTime.of(2026, 11, 8, 12, 0);
         return Event.builder()
                 .id(10L)
                 .title("Evento")
-                .startDate(now.minusDays(2))
-                .endDate(now.minusDays(1))
+                .startDate(referenceTime.minusDays(2))
+                .endDate(referenceTime.minusDays(1))
                 .organization("Organização de teste")
                 .teamCertificateWorkloadHours(teamWorkloadHours)
                 .ownerId(UUID.randomUUID())
