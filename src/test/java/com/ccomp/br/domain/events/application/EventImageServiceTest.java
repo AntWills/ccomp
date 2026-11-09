@@ -59,7 +59,6 @@ class EventImageServiceTest {
                 .ownerId(USER_ID)
                 .enrollmentPaused(false)
                 .build();
-        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
         EventDTO eventDTO = mock(EventDTO.class);
         lenient().when(eventCache.findById(EVENT_ID)).thenReturn(Optional.of(eventDTO));
         lenient().when(accessPolicy.canView(eventDTO, USER_ID)).thenReturn(true);
@@ -68,6 +67,7 @@ class EventImageServiceTest {
 
     @Test
     void uploadSavesNewImageBeforeDeletingPreviousImage() {
+        givenEventExists();
         event.setCoverImageKey("events/27/cover/old.jpg");
         var file = new MockMultipartFile("file", "cover.PNG", "image/png", new byte[]{1, 2, 3});
         when(keyGenerator.generate("events/27/cover", "cover.PNG")).thenReturn("events/27/cover/new.png");
@@ -84,6 +84,7 @@ class EventImageServiceTest {
 
     @Test
     void uploadRejectsMissingOrEmptyFile() {
+        givenEventExists();
         assertThatThrownBy(() -> service.uploadCoverImage(EVENT_ID, USER_ID, null))
                 .isInstanceOf(DomainException.class)
                 .hasMessage("Nenhum arquivo enviado.");
@@ -98,6 +99,7 @@ class EventImageServiceTest {
 
     @Test
     void uploadRejectsUnsupportedContentType() {
+        givenEventExists();
         var file = new MockMultipartFile("file", "document.gif", "image/gif", new byte[]{1});
 
         assertThatThrownBy(() -> service.uploadCoverImage(EVENT_ID, USER_ID, file))
@@ -110,6 +112,7 @@ class EventImageServiceTest {
 
     @Test
     void uploadAllowsJpegAndWebpTypes() {
+        givenEventExists();
         when(keyGenerator.generate("events/27/cover", "cover"))
                 .thenReturn("events/27/cover/jpeg", "events/27/cover/webp");
         for (String contentType : new String[]{"image/jpeg", "image/webp"}) {
@@ -148,6 +151,7 @@ class EventImageServiceTest {
 
     @Test
     void removeCoverImageReturnsFalseWhenNoImageExists() {
+        givenEventExists();
         assertThat(service.removeCoverImage(EVENT_ID, USER_ID)).isFalse();
 
         verify(accessPolicy).assertCanEdit(event, USER_ID);
@@ -157,6 +161,7 @@ class EventImageServiceTest {
 
     @Test
     void removeCoverImageDeletesStorageAndClearsDatabaseKey() {
+        givenEventExists();
         event.setCoverImageKey("events/27/cover/current.jpg");
 
         assertThat(service.removeCoverImage(EVENT_ID, USER_ID)).isTrue();
@@ -183,5 +188,9 @@ class EventImageServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
 
         verifyNoInteractions(accessPolicy, storageExternal, keyGenerator);
+    }
+
+    private void givenEventExists() {
+        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
     }
 }
