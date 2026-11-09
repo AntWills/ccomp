@@ -68,6 +68,27 @@ class ActivitiesEnrollmentsServicesTest {
     }
 
     @Test
+    void inscribeAllowsEventRegistrantWithNoExistingActivityEnrollment() {
+        EventActivity activity = mock(EventActivity.class);
+        Event event = mock(Event.class);
+        Enrollment enrollment = mock(Enrollment.class);
+        when(activityRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(activity));
+        when(activity.isPublic()).thenReturn(false);
+        when(activity.getMaxCapacity()).thenReturn(null);
+        when(enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, 9L)).thenReturn(Optional.empty());
+        when(activity.getEvent()).thenReturn(event);
+        when(enrollmentRepository.findByUserIdAndEvent(userId, event)).thenReturn(Optional.of(enrollment));
+        when(event.isSchedulerPrevent()).thenReturn(true);
+        when(eventActivityDslRepository.existsSchedulingConflict(userId, activity)).thenReturn(false);
+
+        var response = service.inscribe(userId, 9L);
+
+        assertThat(response.response()).isEqualTo("Inscrição na atividade realizada com sucesso.");
+        verify(eventActivityDslRepository).existsSchedulingConflict(userId, activity);
+        verify(enrollmentActivityRepository).save(any(EnrollmentActivity.class));
+    }
+
+    @Test
     void inscribeRejectsMissingActivity() {
         when(activityRepository.findByIdForUpdate(9L)).thenReturn(Optional.empty());
 
