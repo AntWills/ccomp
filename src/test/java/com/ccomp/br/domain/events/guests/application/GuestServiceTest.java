@@ -23,11 +23,11 @@ import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
 import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
+import com.ccomp.br.domain.events.guests.persistence.EventGuestCache;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
 import com.ccomp.br.domain.events.guests.persistence.dsl.ActivityGuestDslRepository;
-import com.ccomp.br.domain.events.guests.persistence.dsl.EventGuestDslRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.UserDTO;
@@ -58,7 +58,7 @@ class GuestServiceTest {
     @Mock private EventCache eventCache;
     @Mock private ActivityCache activityCache;
     @Mock private EventAccessPolicy eventAccessPolicy;
-    @Mock private EventGuestDslRepository eventGuestDslRepository;
+    @Mock private EventGuestCache eventGuestCache;
     @Mock private ActivityGuestDslRepository activityGuestDslRepository;
     @Mock private EventRepository eventRepository;
     @Mock private EventActivityRepository activityRepository;
@@ -96,12 +96,12 @@ class GuestServiceTest {
                 CursorPage<EventGuestDTO> expected = mock(CursorPage.class);
                 when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(false);
                 when(eventAccessPolicy.canView(event, requesterId)).thenReturn(true);
-                when(eventGuestDslRepository.findGuestsWithCursor(eventId, false, cursor, 20)).thenReturn(List.of(guest));
+                when(eventGuestCache.findGuestsWithCursor(eventId, false, cursor, 20)).thenReturn(List.of(guest));
                 cursorUtils.when(() -> CursorUtils.decode("raw", GuestCursor.class)).thenReturn(cursor);
                 cursorUtils.when(() -> CursorUtils.buildPage(anyList(), eq(20), any())).thenReturn(expected);
 
                 assertThat(guestService.searchEventGuests(eventId, requesterId, "raw", 20)).isSameAs(expected);
-                verify(eventGuestDslRepository).findGuestsWithCursor(eventId, false, cursor, 20);
+                verify(eventGuestCache).findGuestsWithCursor(eventId, false, cursor, 20);
             }
         }
 
@@ -113,12 +113,12 @@ class GuestServiceTest {
                 GuestCursor cursor = mock(GuestCursor.class);
                 when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
                 when(eventAccessPolicy.canView(event, requesterId)).thenReturn(true);
-                when(eventGuestDslRepository.findGuestsWithCursor(eventId, true, cursor, 50)).thenReturn(List.of());
+                when(eventGuestCache.findGuestsWithCursor(eventId, true, cursor, 50)).thenReturn(List.of());
                 cursorUtils.when(() -> CursorUtils.decode(null, GuestCursor.class)).thenReturn(cursor);
                 cursorUtils.when(() -> CursorUtils.buildPage(anyList(), eq(50), any())).thenReturn(mock(CursorPage.class));
 
                 guestService.searchEventGuests(eventId, requesterId, null, 100);
-                verify(eventGuestDslRepository).findGuestsWithCursor(eventId, true, cursor, 50);
+                verify(eventGuestCache).findGuestsWithCursor(eventId, true, cursor, 50);
             }
         }
 
@@ -130,7 +130,7 @@ class GuestServiceTest {
             when(eventAccessPolicy.canView(event, requesterId)).thenReturn(false);
             assertThatThrownBy(() -> guestService.searchEventGuests(eventId, requesterId, null, 20))
                     .isInstanceOf(AccessDeniedException.class);
-            verifyNoInteractions(eventGuestDslRepository);
+            verifyNoInteractions(eventGuestCache);
         }
 
         @Test

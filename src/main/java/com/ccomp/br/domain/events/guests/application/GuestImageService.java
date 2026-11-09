@@ -3,7 +3,9 @@ package com.ccomp.br.domain.events.guests.application;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
+import com.ccomp.br.domain.events.guests.persistence.EventGuestCache;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.domain.storage.external.StorageKeyGenerator;
@@ -27,6 +29,7 @@ public class GuestImageService {
     private final EventAccessPolicy eventAccessPolicy;
     private final EventRepository eventRepository;
     private final EventGuestRepository eventGuestRepository;
+    private final EventGuestCache eventGuestCache;
     private final StorageExternal storageExternal;
     private final StorageKeyGenerator storageKeyGenerator;
 
@@ -34,12 +37,14 @@ public class GuestImageService {
             EventAccessPolicy eventAccessPolicy,
             EventRepository eventRepository,
             EventGuestRepository eventGuestRepository,
+            EventGuestCache eventGuestCache,
             StorageExternal storageExternal,
             StorageKeyGenerator storageKeyGenerator
     ) {
         this.eventAccessPolicy = eventAccessPolicy;
         this.eventRepository = eventRepository;
         this.eventGuestRepository = eventGuestRepository;
+        this.eventGuestCache = eventGuestCache;
         this.storageExternal = storageExternal;
         this.storageKeyGenerator = storageKeyGenerator;
     }
@@ -60,6 +65,7 @@ public class GuestImageService {
 
         guest.setImageKey(imageKey);
         eventGuestRepository.save(guest);
+        eventGuestCache.evict(guest);
 
         if (previousKey != null) {
             storageExternal.deleteObject(previousKey);
@@ -74,12 +80,14 @@ public class GuestImageService {
         Event event = findEventOrThrow(eventId);
         eventAccessPolicy.assertCanView(event, userId);
 
-        EventGuest guest = findGuestOrThrow(eventId, guestId);
-        if (guest.getImageKey() == null) {
+        String imageKey = eventGuestCache.findByIdAndEventId(eventId, guestId)
+                .map(EventGuestDTO::imageKey)
+                .orElseThrow(() -> new ResourceNotFoundException("Convidado não encontrado neste evento."));
+        if (imageKey == null) {
             return Optional.empty();
         }
 
-        return storageExternal.getObject(guest.getImageKey());
+        return storageExternal.getObject(imageKey);
     }
 
     public boolean removeImage(Long eventId, Long guestId, UUID userId) {
@@ -93,6 +101,7 @@ public class GuestImageService {
         storageExternal.deleteObject(guest.getImageKey());
         guest.setImageKey(null);
         eventGuestRepository.save(guest);
+        eventGuestCache.evict(guest);
 
         return true;
     }
@@ -106,6 +115,7 @@ public class GuestImageService {
             storageExternal.deleteObject(guest.getImageKey());
         }
         eventGuestRepository.delete(guest);
+        eventGuestCache.evict(guest);
     }
 
     private Event findEventOrThrow(Long eventId) {

@@ -4,7 +4,11 @@ import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
+import com.ccomp.br.domain.events.guests.persistence.EventGuestCache;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
+import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
+import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
+import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.domain.storage.external.StorageKeyGenerator;
 import com.ccomp.br.shared.exceptions.DomainException;
@@ -41,6 +45,9 @@ class GuestImageServiceTest {
     private EventGuestRepository eventGuestRepository;
 
     @Mock
+    private EventGuestCache eventGuestCache;
+
+    @Mock
     private StorageExternal storageExternal;
 
     @Mock
@@ -56,6 +63,7 @@ class GuestImageServiceTest {
                 eventAccessPolicy,
                 eventRepository,
                 eventGuestRepository,
+                eventGuestCache,
                 storageExternal,
                 storageKeyGenerator
         );
@@ -69,7 +77,10 @@ class GuestImageServiceTest {
                 .build();
 
         when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
-        when(eventGuestRepository.findByIdAndEventId(GUEST_ID, EVENT_ID)).thenReturn(Optional.of(guest));
+        lenient().when(eventGuestRepository.findByIdAndEventId(GUEST_ID, EVENT_ID)).thenReturn(Optional.of(guest));
+        lenient().when(eventGuestCache.findByIdAndEventId(EVENT_ID, GUEST_ID)).thenReturn(Optional.of(
+                new EventGuestDTO(GUEST_ID, EVENT_ID, guest.getName(), guest.getDescription(), guest.getImageKey(),
+                        EnumGuestStatus.CONFIRMED, EnumGuestVisibility.PUBLIC, null)));
     }
 
     @Test
@@ -134,7 +145,7 @@ class GuestImageServiceTest {
 
     @Test
     void imageLookupRejectsGuestFromDifferentEvent() {
-        when(eventGuestRepository.findByIdAndEventId(GUEST_ID, EVENT_ID)).thenReturn(Optional.empty());
+        when(eventGuestCache.findByIdAndEventId(EVENT_ID, GUEST_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> guestImageService.getImage(EVENT_ID, GUEST_ID, null))
                 .isInstanceOf(ResourceNotFoundException.class)

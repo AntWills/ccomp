@@ -12,6 +12,7 @@ import com.ccomp.br.domain.events.guests.dto.EventInvitationDTO;
 import com.ccomp.br.domain.events.guests.external.GuestInvitationMessageDTO;
 import com.ccomp.br.domain.events.guests.external.message.GuestInvitationChannel;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
+import com.ccomp.br.domain.events.guests.persistence.EventGuestCache;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitation;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitationDslRepository;
 import com.ccomp.br.domain.events.guests.persistence.invitations.EventInvitationRepository;
@@ -57,6 +58,9 @@ class GuestInvitationServicesTest {
 
     @Mock
     private EventGuestRepository eventGuestRepository;
+
+    @Mock
+    private EventGuestCache eventGuestCache;
 
     @Mock
     private EventInvitationRepository eventInvitationRepository;
@@ -208,6 +212,7 @@ class GuestInvitationServicesTest {
             when(userDTO.isActive()).thenReturn(true);
             when(invitation.isSameEmail(emailAddress)).thenReturn(true);
             when(invitation.getEvent()).thenReturn(event);
+            when(eventGuestRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
             MessageResponse response = guestInvitationServices.acceptInvite(userId, code, true);
 
@@ -216,6 +221,7 @@ class GuestInvitationServicesTest {
             verify(invitation).accept(any(java.time.LocalDateTime.class));
             verify(eventInvitationRepository).save(invitation);
             verify(eventGuestRepository).save(any());
+            verify(eventGuestCache).evict(any());
         }
 
         @Test
