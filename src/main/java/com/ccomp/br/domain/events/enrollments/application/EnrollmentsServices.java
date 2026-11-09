@@ -72,7 +72,7 @@ public class EnrollmentsServices {
 
     @Transactional
     public Enrollment subscribe(UUID userId, Long eventId) {
-        Event event = eventRepository.findById(eventId)
+        Event event = eventRepository.findByIdForUpdate(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         EnumEnrollmentStatus enrollmentStatus = event.getEnrollmentStatus(LocalDateTime.now(clock));
@@ -100,8 +100,11 @@ public class EnrollmentsServices {
 
             // Se a inscrição estava cancelada previamente, reativa mantendo o mesmo registro no banco
             enrollment.confirm();
-            enrollmentRepository.save(enrollment);
-            return enrollment;
+            Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
+            event.registerActiveEnrollment();
+            eventRepository.save(event);
+            eventCache.evict(event);
+            return savedEnrollment;
         }
 
         Enrollment newEnrollment = Enrollment.builder()
@@ -110,19 +113,29 @@ public class EnrollmentsServices {
                 .status(EnumEnrollmentState.CONFIRMED)
                 .build();
 
-        return enrollmentRepository.save(newEnrollment);
+        Enrollment savedEnrollment = enrollmentRepository.save(newEnrollment);
+        event.registerActiveEnrollment();
+        eventRepository.save(event);
+        eventCache.evict(event);
+        return savedEnrollment;
     }
 
     @Transactional
     public MessageResponse unsubscribe(UUID userId, Long eventId) {
-        Event event = eventRepository.findById(eventId)
+        Event event = eventRepository.findByIdForUpdate(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         Enrollment enrollment = enrollmentRepository.findByUserIdAndEvent(userId, event)
                 .orElseThrow(() -> new ResourceNotFoundException("Você não possui uma inscrição neste evento."));
 
+        boolean wasActive = enrollment.isActive();
         enrollment.cancel();
         enrollmentRepository.save(enrollment);
+        if (wasActive) {
+            event.releaseActiveEnrollment();
+            eventRepository.save(event);
+            eventCache.evict(event);
+        }
 
         return new MessageResponse("Inscrição removida com sucesso.");
     }
@@ -136,12 +149,16 @@ public class EnrollmentsServices {
         if (!eventAccessPolicy.canEdit(event, userId))
             throw new AccessDeniedException("Você não tem permissão para alterar o status das inscrições deste evento.");
 
+        Event eventEntity = eventRepository.findByIdForUpdate(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+
         Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
 
         if (!enrollment.getEventId().equals(eventId))
             throw new ResourceNotFoundException("Inscrição não encontrada neste evento.");
 
+        boolean wasActive = enrollment.isActive();
         switch (newStatus) {
             case CONFIRMED -> enrollment.confirm();
             case CHECKED_IN -> enrollment.checkIn(LocalDateTime.now(clock));
@@ -150,6 +167,13 @@ public class EnrollmentsServices {
         }
 
         enrollmentRepository.save(enrollment);
+        boolean isActive = enrollment.isActive();
+        if (wasActive != isActive) {
+            if (isActive) eventEntity.registerActiveEnrollment();
+            else eventEntity.releaseActiveEnrollment();
+            eventRepository.save(eventEntity);
+            eventCache.evict(eventEntity);
+        }
         return new MessageResponse("Status da inscrição alterado para: " + newStatus.name());
     }
 }

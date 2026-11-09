@@ -30,7 +30,7 @@ public class ActivitiesController {
         this.activityServices = activityServices;
     }
 
-    @Operation(summary = "Lista as atividades de um evento", description = "Retorna uma lista paginada (por cursor) de todas as atividades associadas a um evento específico. start_date e end_date representam horário de Brasília (America/Sao_Paulo), sem offset. Acesso restrito a eventos abertos, dono do evento, editores ou administradores.")
+    @Operation(summary = "Lista as atividades de um evento", description = "Retorna uma lista paginada (por cursor) de todas as atividades associadas a um evento específico. start_date e end_date são horários locais interpretados no time_zone do evento pai; a resposta inclui time_zone. Acesso restrito a eventos abertos, dono do evento, editores ou administradores.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Atividades retornadas com sucesso"),
             @ApiResponse(responseCode = "403", description = "Acesso negado"),
@@ -46,7 +46,7 @@ public class ActivitiesController {
         return ResponseEntity.ok(activityServices.searchByCursor(eventId, cursor, userId));
     }
 
-    @Operation(summary = "Cria uma nova atividade", description = "Cria uma nova atividade para um evento específico. O cronograma é informado ao atualizar a atividade; start_date e end_date representam horário de Brasília (America/Sao_Paulo), sem offset. Requer autenticação do usuário e dados da atividade.")
+    @Operation(summary = "Cria uma nova atividade", description = "Cria uma nova atividade para um evento específico. O cronograma é informado ao atualizar a atividade; start_date e end_date são horários locais no time_zone do evento pai e não devem conter offset. As respostas incluem time_zone. Requer autenticação do usuário e dados da atividade.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Atividade criada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
@@ -84,7 +84,7 @@ public class ActivitiesController {
         return ResponseEntity.ok(new MessageResponse("Atividade removida com sucesso."));
     }
 
-    @Operation(summary = "Atualiza uma atividade", description = "Atualiza os dados de uma atividade existente. start_date e end_date representam horário de Brasília (America/Sao_Paulo), sem offset. Permitido ao gestor do evento, a ministrante com vínculo confirmado e conta ativa ou a convidado com conta ativa vinculado à atividade.")
+    @Operation(summary = "Atualiza uma atividade", description = "Atualiza os dados de uma atividade existente. start_date e end_date são horários locais no time_zone do evento pai; não envie offset. Permitido ao gestor do evento, a ministrante com vínculo confirmado e conta ativa ou a convidado com conta ativa vinculado à atividade.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Atividade atualizada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),

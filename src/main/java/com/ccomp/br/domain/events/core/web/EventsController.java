@@ -43,10 +43,8 @@ public class EventsController {
         **Acesso:** eventos `PUBLISHED` podem ser consultados sem autenticação. Para `DRAFT`, `UNLISTED` ou
         `CANCELED`, envie um JWT pertencente ao proprietário, a um editor ativo, `MODERATOR` ou `ADMIN`.
 
-        Os horários de agenda (`start_date`, `end_date`, `enrollment_start_date` e `enrollment_end_date`) são
-        horários de Brasília (`America/Sao_Paulo`), sem offset. `time_zone` está depreciado e é mantido por
-        compatibilidade; não altera essa interpretação. Os campos de auditoria `created_at` e `updated_at` são
-        metadados gerados pelo Hibernate, fora do `Clock` de regras de agenda.
+        `start_date`, `end_date` e datas de inscrição são horários locais no fuso global configurado em `app.clock.zone`
+        (padrão `America/Sao_Paulo`). Envie-os sem offset. `time_zone` continua na resposta por compatibilidade.
 
         **Respostas:** `200` com `EventDTO`; `403` quando o evento existe, mas o usuário não tem acesso;
         `404` sem corpo quando o evento não existe.
@@ -92,9 +90,7 @@ public class EventsController {
         - Esta consulta é **estritamente pública** e restrita a eventos com status **PUBLISHED**.
         - Eventos no estado `DRAFT`, `UNLISTED` ou `CANCELED` **não** serão retornados por esta rota (retornará `404 Not Found`).
 
-        `start_date`, `end_date` e datas de inscrição representam horário de Brasília (`America/Sao_Paulo`), sem
-        offset. O campo `time_zone` retornado no `EventDTO` está depreciado e não deve ser usado para converter esses
-        valores. `created_at` e `updated_at` são metadados gerados pelo Hibernate, fora do `Clock` de regras de agenda.
+        Datas e horários retornados usam o fuso global configurado em `app.clock.zone`; `time_zone` é retornado por compatibilidade.
         """
     )
     @ApiResponses(value = {
@@ -134,8 +130,7 @@ public class EventsController {
         `teamCertificateWorkloadHours` nem `organization`; consulte `GET /api/events/{eventId}` ou
         `GET /api/events/slug/{slug}` para obter o `EventDTO` completo. Esses campos também não são filtros desta rota.
 
-        Cada item inclui `time_zone` por compatibilidade. `start_date`, `end_date` e datas de inscrição são horários
-        de Brasília (`America/Sao_Paulo`), sem offset.
+        Cada item inclui `time_zone` por compatibilidade. `start_date`, `end_date` e datas de inscrição seguem o fuso global da aplicação.
 
         `pageSize` é um parâmetro de consulta opcional, padrão `10` e limitado a `50`. `nextCursor` é um token
         opaco retornado pela página anterior; continue usando o mesmo termo e os mesmos filtros. A resposta tem
@@ -173,11 +168,10 @@ public class EventsController {
             description = """
         Cria um novo evento atribuindo o status inicial como `DRAFT` (Rascunho).
 
-        Envie `title`, `category`, `format` e `time_zone` (campo depreciado, ainda obrigatório por compatibilidade;
-        use `America/Sao_Paulo`).
+        Envie `title`, `category` e `format`.
         `start_date`, `end_date`, `workload_hours`, `team_certificate_workload_hours` e `organization` são opcionais.
-        Os campos de agenda `start_date` e `end_date` representam horário de Brasília (`America/Sao_Paulo`) e devem ser
-        enviados sem offset. O campo `time_zone` é armazenado, mas não altera como o backend interpreta essas datas.
+        Datas são horários locais no fuso global `app.clock.zone` (padrão `America/Sao_Paulo`) e devem ser enviadas sem offset.
+        O backend preenche o campo legado `time_zone` com o fuso global e continua retornando-o nas respostas.
         `workload_hours` configura a carga horária
         base do evento, que é somada às atividades com presença durante a emissão do certificado de participante;
         `teamCertificateWorkloadHours`
@@ -222,9 +216,9 @@ public class EventsController {
             description = """
         Atualiza somente os campos enviados em `UpdateEventDTO`: `title`, `summary`, `content`, `category`, `format`,
         `schedule_conflict_policy`, datas de realização e de inscrição, `enrollment_paused`, `workload_hours`,
-        `team_certificate_workload_hours`, `organization` e `time_zone`. Campos omitidos ou enviados como `null` ficam inalterados.
-        Os campos de agenda do evento e de inscrição representam horário de Brasília (`America/Sao_Paulo`), sem offset.
-        O campo `time_zone` está depreciado e não muda a interpretação dessas datas.
+        `team_certificate_workload_hours` e `organization`. Campos omitidos ou enviados como `null` ficam inalterados.
+        As datas são horários locais no fuso global `app.clock.zone`; `time_zone` não pode ser alterado por evento e permanece
+        na resposta por compatibilidade.
         As cargas horárias não podem ser negativas; `organization` aceita até 255 caracteres. Alterar título também
         regenera o slug. Capa e status têm endpoints próprios. A resposta `EventDTO` inclui os campos atualizados.
 
@@ -265,7 +259,7 @@ public class EventsController {
             summary = "Atualiza o status de publicação de um evento",
             description = """
         Transiciona o evento para o status informado no caminho: `DRAFT`, `PUBLISHED`, `UNLISTED` ou `CANCELED`.
-        A validação de datas compara horário atual de Brasília (`America/Sao_Paulo`) com as datas cadastradas. As regras
+        A validação de datas compara a hora atual no fuso global da aplicação com os horários locais cadastrados. As regras
         de domínio podem rejeitar a transição, por exemplo, publicar sem datas ou um evento já encerrado. Requer JWT do proprietário,
         de um editor ativo, `MODERATOR` ou `ADMIN`.
         """

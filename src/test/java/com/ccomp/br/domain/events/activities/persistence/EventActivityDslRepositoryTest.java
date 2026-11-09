@@ -4,6 +4,7 @@ import com.ccomp.br.config.QueryDslConfig;
 import com.ccomp.br.domain.events.activities.dto.EventActivityConflictCursor;
 import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
 import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
 import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
@@ -242,7 +243,7 @@ class EventActivityDslRepositoryTest {
         entityManager.clear();
 
         // Ação: Busca da Primeira Página (limite = 2)
-        List<EventActivityDTO> page1 = eventActivityDslRepository.findSubscriptionsWithCursor(userId, event.getId(), null, 2);
+        List<ActivityDTO> page1 = eventActivityDslRepository.findSubscriptionsWithCursor(userId, event.getId(), null, 2);
 
         // Asserções Página 1: Espera displayOrder 10 (Abertura) e displayOrder 20 (Mesa Redonda)
         assertThat(page1).hasSize(2);
@@ -250,11 +251,11 @@ class EventActivityDslRepositoryTest {
         assertThat(page1.get(1).title()).isEqualTo("Mesa Redonda sobre Carreira");
 
         // Construção do Cursor a partir do último item retornado na Página 1
-        EventActivityDTO lastItem = page1.getLast();
+        ActivityDTO lastItem = page1.getLast();
         EventActivityCursor cursor = new EventActivityCursor(lastItem.displayOrder(), lastItem.id());
 
         // Ação: Busca da Segunda Página com Cursor
-        List<EventActivityDTO> page2 = eventActivityDslRepository.findSubscriptionsWithCursor(userId, event.getId(), cursor, 2);
+        List<ActivityDTO> page2 = eventActivityDslRepository.findSubscriptionsWithCursor(userId, event.getId(), cursor, 2);
 
         // Asserções Página 2: Espera displayOrder 30 (Workshop)
         assertThat(page2).hasSize(1);
@@ -425,7 +426,7 @@ class EventActivityDslRepositoryTest {
         entityManager.clear();
 
         // Ação: Busca da Primeira Página de Conflitos (limite = 2)
-        List<EventActivityDTO> page1 = eventActivityDslRepository.findConflictingActivities(userId, targetActivity, null, 2);
+        List<ActivityDTO> page1 = eventActivityDslRepository.findConflictingActivities(userId, targetActivity, null, 2);
 
         // Asserções Página 1 (em ordem de startDate crescente: 14:00 depois 16:00)
         assertThat(page1).hasSize(2);
@@ -433,11 +434,11 @@ class EventActivityDslRepositoryTest {
         assertThat(page1.get(1).title()).isEqualTo("Atividade Conflito B");
 
         // Construção do Cursor a partir do último item da Página 1
-        EventActivityDTO lastItem = page1.getLast();
+        ActivityDTO lastItem = page1.getLast();
         EventActivityConflictCursor cursor = new EventActivityConflictCursor(lastItem.id(), lastItem.startDate());
 
         // Ação: Busca da Segunda Página de Conflitos via Cursor (limite = 2)
-        List<EventActivityDTO> page2 = eventActivityDslRepository.findConflictingActivities(userId, targetActivity, cursor, 2);
+        List<ActivityDTO> page2 = eventActivityDslRepository.findConflictingActivities(userId, targetActivity, cursor, 2);
 
         // Asserções Página 2 (18:00)
         assertThat(page2).hasSize(1);
@@ -532,7 +533,7 @@ class EventActivityDslRepositoryTest {
         entityManager.clear();
 
         // Ação
-        List<EventActivityDTO> result =
+        List<ActivityDTO> result =
                 eventActivityDslRepository.findAllCheckedInByUserAndEvent(userId, event.getId());
 
         // Asserções: apenas as 2 com check-in, em ordem de displayOrder crescente

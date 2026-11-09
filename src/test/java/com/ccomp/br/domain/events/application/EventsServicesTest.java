@@ -68,7 +68,6 @@ public class EventsServicesTest {
     @Mock private EventAccessPolicy eventAccessPolicy;
     @Mock private EventStorageFileKeyCollector eventStorageFileKeyCollector;
     @Mock private ApplicationEventPublisher applicationEventPublisher;
-
     @Spy private Clock clock = Clock.fixed(Instant.parse("2026-11-08T12:10:00Z"), ZoneId.of("America/Sao_Paulo"));
 
     @InjectMocks
@@ -232,7 +231,7 @@ public class EventsServicesTest {
             Optional<EventDTO> result = eventsServices.getBySlug(slug);
 
             assertThat(result).isEmpty();
-            verify(eventMapper, never()).eventToEventDTO(any(), any(LocalDateTime.class));
+            verify(eventMapper, never()).eventToEventDTO(any());
         }
     }
 
@@ -247,7 +246,6 @@ public class EventsServicesTest {
             UserDTO userDTO = mock(UserDTO.class);
 
             when(dto.title()).thenReturn("I Encontro de Computação");
-            when(dto.timeZone()).thenReturn("America/Sao_Paulo");
             when(dto.optionalStartDate()).thenReturn(Optional.empty());
             when(dto.optionalEndDate()).thenReturn(Optional.empty());
 
@@ -255,7 +253,7 @@ public class EventsServicesTest {
             when(userDTO.isTeamMember()).thenReturn(true);
             when(eventRepository.existsBySlug(anyString())).thenReturn(false);
             when(eventRepository.save(any(Event.class))).thenReturn(existingEvent);
-            when(eventMapper.eventToEventDTO(any(), any())).thenReturn(expectedEventDTO);
+            when(eventMapper.eventToEventDTO(any(Event.class), any(LocalDateTime.class))).thenReturn(expectedEventDTO);
             EventDTO result = eventsServices.create(userId, dto);
 
             assertThat(result).isNotNull().isEqualTo(expectedEventDTO);
@@ -303,9 +301,9 @@ public class EventsServicesTest {
             UpdateEventDTO request = mock(UpdateEventDTO.class);
             when(request.titleOpt()).thenReturn(Optional.empty());
 
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
+            when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
             when(eventRepository.save(existingEvent)).thenReturn(existingEvent);
-            when(eventMapper.eventToEventDTO(any(), any())).thenReturn(expectedEventDTO);
+            when(eventMapper.eventToEventDTO(any(Event.class), any(LocalDateTime.class))).thenReturn(expectedEventDTO);
             when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(true);
 
             EventDTO result = eventsServices.update(request, eventId, userId);
@@ -320,9 +318,9 @@ public class EventsServicesTest {
         void updateRegeneratesSlugWhenTitleChanges() {
             UpdateEventDTO request = mock(UpdateEventDTO.class);
             when(request.titleOpt()).thenReturn(Optional.of("Novo título"));
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
+            when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
             when(eventRepository.existsBySlug(anyString())).thenReturn(false);
-            when(eventMapper.eventToEventDTO(any(), any())).thenReturn(expectedEventDTO);
+            when(eventMapper.eventToEventDTO(any(Event.class), any(LocalDateTime.class))).thenReturn(expectedEventDTO);
             when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(true);
             when(eventRepository.save(existingEvent)).thenReturn(existingEvent);
 
@@ -337,7 +335,7 @@ public class EventsServicesTest {
         @Test
         @DisplayName("Lança ResourceNotFoundException ao atualizar evento inexistente")
         void updateThrowsWhenEventDoesNotExist() {
-            when(eventRepository.findById(eventId)).thenReturn(Optional.empty());
+            when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> eventsServices.update(mock(UpdateEventDTO.class), eventId, userId))
                     .isInstanceOf(com.ccomp.br.shared.exceptions.ResourceNotFoundException.class)
@@ -351,8 +349,8 @@ public class EventsServicesTest {
         void update_throwsAccessDeniedException_whenUserHasNoPermission() {
             UpdateEventDTO request = mock(UpdateEventDTO.class);
 
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(eventMapper.eventToEventDTO(any(), any())).thenReturn(expectedEventDTO);
+            when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
+            when(eventMapper.eventToEventDTO(any(Event.class), any(LocalDateTime.class))).thenReturn(expectedEventDTO);
             when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(false);
 
             assertThatThrownBy(() -> eventsServices.update(request, eventId, userId))
@@ -371,7 +369,7 @@ public class EventsServicesTest {
         @DisplayName("Altera status do evento para PUBLISHED e chama o método de domínio publish()")
         void updateEventStatus_changesStatusToPublished_whenUserHasPermission() {
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(eventMapper.eventToEventDTO(any(), any())).thenReturn(expectedEventDTO);
+            when(eventMapper.eventToEventDTO(any(Event.class), any(LocalDateTime.class))).thenReturn(expectedEventDTO);
             when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(true);
             when(eventRepository.save(existingEvent)).thenReturn(existingEvent);
 
@@ -388,7 +386,7 @@ public class EventsServicesTest {
         @DisplayName("Lança AccessDeniedException quando usuário não possui permissão para alterar o status")
         void updateEventStatus_throwsAccessDeniedException_whenUserHasNoPermission() {
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(eventMapper.eventToEventDTO(any(), any())).thenReturn(expectedEventDTO);
+            when(eventMapper.eventToEventDTO(any(Event.class), any(LocalDateTime.class))).thenReturn(expectedEventDTO);
             when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(false);
 
             assertThatThrownBy(() -> eventsServices.updateEventStatus(eventId, EnumEventStatus.CANCELED, userId))
@@ -408,7 +406,7 @@ public class EventsServicesTest {
         @DisplayName("Remove o evento com sucesso quando o usuário é o dono")
         void delete_removesEventSuccessfully_whenUserIsOwner() {
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(eventMapper.eventToEventDTO(any(), any())).thenReturn(expectedEventDTO);
+            when(eventMapper.eventToEventDTO(any(Event.class), any(LocalDateTime.class))).thenReturn(expectedEventDTO);
             when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(true);
             when(eventStorageFileKeyCollector.collect(existingEvent)).thenReturn(List.of());
 
@@ -421,7 +419,7 @@ public class EventsServicesTest {
         @DisplayName("Coleta todas as chaves, publica a limpeza e só então remove o evento")
         void delete_collectsEveryStorageKeyBeforeDeletingEvent() {
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(eventMapper.eventToEventDTO(any(), any())).thenReturn(expectedEventDTO);
+            when(eventMapper.eventToEventDTO(any(Event.class), any(LocalDateTime.class))).thenReturn(expectedEventDTO);
             when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(true);
             List<String> fileKeys = List.of(
                     "events/1/cover.png",
@@ -448,7 +446,7 @@ public class EventsServicesTest {
         @DisplayName("Lança AccessDeniedException quando um editor tenta remover o evento (apenas dono/admin pode)")
         void delete_throwsAccessDeniedException_whenUserIsNotOwner() {
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(eventMapper.eventToEventDTO(any(), any())).thenReturn(expectedEventDTO);
+            when(eventMapper.eventToEventDTO(any(Event.class), any(LocalDateTime.class))).thenReturn(expectedEventDTO);
             when(eventAccessPolicy.canEdit(expectedEventDTO, userId)).thenReturn(false);
 
             assertThatThrownBy(() -> eventsServices.delete(eventId, userId))

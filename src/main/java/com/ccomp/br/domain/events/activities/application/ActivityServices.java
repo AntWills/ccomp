@@ -3,7 +3,6 @@ package com.ccomp.br.domain.events.activities.application;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import java.time.Clock;
 
 import com.ccomp.br.domain.events.activities.dto.*;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
@@ -42,7 +41,6 @@ public class ActivityServices {
     private final ActivityCache activityCache;
     private final GuestService guestService;
     private final InstructorService instructorService;
-    private final Clock clock;
 
     public ActivityServices(EventRepository eventRepository,
                             EventAccessPolicy eventAccessPolicy,
@@ -52,7 +50,7 @@ public class ActivityServices {
                             ActivityMapper activityMapper,
                             ActivityCache activityCache,
                             GuestService guestService,
-                            InstructorService instructorService, Clock clock) {
+                            InstructorService instructorService) {
         this.eventRepository = eventRepository;
         this.eventAccessPolicy = eventAccessPolicy;
         this.eventCache = eventCache;
@@ -63,7 +61,6 @@ public class ActivityServices {
         this.activityCache = activityCache;
         this.guestService = guestService;
         this.instructorService = instructorService;
-        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -90,7 +87,7 @@ public class ActivityServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event, LocalDateTime.now(clock)), userId))
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event, LocalDateTime.now()), userId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         EventActivity activity = EventActivity.builder()
@@ -99,7 +96,8 @@ public class ActivityServices {
                 .description(request.description())
                 .registrationPolicy(EnumActivityRegistrationPolicy.EVENT_REGISTRANTS_ONLY)
                 .type(EnumActivityType.OTHER)
-                .createdAt(LocalDateTime.now(clock))
+                .maxCapacity(request.maxCapacity())
+                .createdAt(LocalDateTime.now())
                 .build();
 
         EventActivity activitySaved = activityRepository.save(activity);
@@ -110,7 +108,7 @@ public class ActivityServices {
 
     @Transactional
     public ActivityDTO updateActivity(UUID userId, Long activityId, UpdateActivityDTO request) {
-        EventActivity activity = activityRepository.findById(activityId)
+        EventActivity activity = activityRepository.findByIdForUpdate(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não existe."));
 
         EventDTO event = eventCache.findById(activity.getEventId())

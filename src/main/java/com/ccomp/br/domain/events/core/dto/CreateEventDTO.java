@@ -5,7 +5,7 @@ import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.PositiveOrZero;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
@@ -34,13 +34,13 @@ public record CreateEventDTO(
         @Size(max = 255, message = "A organização deve ter no máximo 255 caracteres.")
         @Schema(description = "Organização responsável pelo evento. Opcional.", example = "Instituto Federal do Maranhão")
         String organization,
-        @NotBlank(message = "O fuso horário do evento é obrigatório.")
-        @Schema(name = "time_zone", description = "DEPRECATED. Ainda obrigatório e persistido por compatibilidade, mas não define o fuso dos horários. Use Brasília (America/Sao_Paulo).", example = "America/Sao_Paulo", requiredMode = Schema.RequiredMode.REQUIRED, deprecated = true)
-        String timeZone
+        @PositiveOrZero(message = "A capacidade máxima não pode ser negativa.")
+        @Schema(description = "Número máximo de inscrições ativas. Null significa sem limite; se omitido, inicia sem limite.", example = "150")
+        Integer maxCapacity
 ) {
     public CreateEventDTO(String title, EnumEventCategory category, EnumEventFormat format,
                           LocalDateTime startDate, LocalDateTime endDate) {
-        this(title, category, format, startDate, endDate, null, null, null, "America/Sao_Paulo");
+        this(title, category, format, startDate, endDate, null, null, null, null);
     }
 
     public Optional<LocalDateTime> optionalStartDate() {

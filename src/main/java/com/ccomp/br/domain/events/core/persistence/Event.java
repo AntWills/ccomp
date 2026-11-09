@@ -92,6 +92,10 @@ public class Event {
     @Column(name = "max_capacity")
     private Integer maxCapacity;
 
+    @Column(name = "active_enrollment_count", nullable = false)
+    @Builder.Default
+    private Integer activeEnrollmentCount = 0;
+
     @OneToMany(mappedBy = "event", cascade = CascadeType.REMOVE, orphanRemoval = true)
     @Builder.Default
     private Set<Enrollment> enrollments = new HashSet<>();
@@ -196,8 +200,10 @@ public class Event {
         if (this.enrollmentPaused) {
             return EnumEnrollmentStatus.PAUSED;
         }
-        if (this.maxCapacity != null && this.enrollments != null && this.enrollments.size() >= this.maxCapacity) {
-            return EnumEnrollmentStatus.SOLD_OUT;
+        if (this.maxCapacity != null) {
+            if (this.activeEnrollmentCount >= this.maxCapacity) {
+                return EnumEnrollmentStatus.SOLD_OUT;
+            }
         }
         if (this.enrollmentStartDate == null || this.enrollmentEndDate == null) {
             return EnumEnrollmentStatus.CLOSED;
@@ -213,11 +219,23 @@ public class Event {
         return EnumEnrollmentStatus.OPEN;
     }
 
+    public EnumEnrollmentStatus getEnrollmentStatus() { return getEnrollmentStatus(LocalDateTime.now()); }
+
     /**
      * Informa se o evento está aceitando inscrições no momento exato da verificação.
      */
     public boolean isEnrollmentOpen(LocalDateTime now) {
         return getEnrollmentStatus(now) == EnumEnrollmentStatus.OPEN;
+    }
+
+    public void registerActiveEnrollment() {
+        this.activeEnrollmentCount++;
+    }
+
+    public void releaseActiveEnrollment() {
+        if (this.activeEnrollmentCount > 0) {
+            this.activeEnrollmentCount--;
+        }
     }
 
     public ZoneId getZoneId() {
@@ -243,6 +261,12 @@ public class Event {
     @PreUpdate
     private void validateTimeZone() {
         getZoneId();
+        if (maxCapacity != null && maxCapacity < 0) {
+            throw new DomainException("A capacidade máxima do evento não pode ser negativa.");
+        }
+        if (activeEnrollmentCount == null || activeEnrollmentCount < 0) {
+            throw new DomainException("A quantidade de inscrições ativas do evento está inválida.");
+        }
     }
 
     /**
@@ -294,6 +318,8 @@ public class Event {
         this.status = EnumEventStatus.PUBLISHED;
     }
 
+    public void publish() { publish(LocalDateTime.now()); }
+
     public void unlist(LocalDateTime now) {
         if (this.startDate == null || this.endDate == null) {
             throw new DomainException("Não é possível tornar um evento não listado sem definir as datas de início e término.");
@@ -310,6 +336,8 @@ public class Event {
         }
         this.status = EnumEventStatus.CANCELED;
     }
+
+    public void cancel() { cancel(LocalDateTime.now()); }
 
     public void moveToDraft() {
         // Exemplo: impede voltar para rascunho se já existirem inscrições ativas

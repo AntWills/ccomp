@@ -142,7 +142,7 @@ claims de usuário montadas pelo frontend.
 
 ## Fuso horário da API
 
-Os horários de agenda de eventos e atividades sem offset representam horário de Brasília (`America/Sao_Paulo`), independentemente da localização do servidor ou do cliente. Consulte [a documentação de fusos horários](docs/fusos-horarios-eventos.md) para o escopo, metadados e exemplos.
+Todos os valores `LocalDateTime` seguem o fuso global da aplicação, configurado por `app.clock.zone` (padrão `America/Sao_Paulo`). Consulte [a documentação de fusos horários](docs/fusos-horarios-eventos.md) para escopo e exemplos.
 
 ## Documentação da API
 

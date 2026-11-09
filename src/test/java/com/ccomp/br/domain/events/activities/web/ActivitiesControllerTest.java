@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.activities.web;
 
 import com.ccomp.br.domain.events.activities.application.ActivityServices;
+import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.CreateActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
