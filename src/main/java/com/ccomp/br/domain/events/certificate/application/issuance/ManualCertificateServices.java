@@ -5,10 +5,13 @@ import com.ccomp.br.domain.events.certificate.application.CertificateFetcher;
 import com.ccomp.br.domain.events.certificate.application.variables.CertificateVariablesServices;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.dto.ManualInstructorCertificateRequest;
+import com.ccomp.br.domain.events.certificate.dto.ManualCertificateContentRequest;
 import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.enums.EnumEventExecutionStatus;
+import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
@@ -17,6 +20,7 @@ import com.ccomp.br.domain.events.instructor.persistence.EventInstructorReposito
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.module.certificate.Certificate;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
+import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -121,6 +125,30 @@ public class ManualCertificateServices {
             if (e.getCause() instanceof RuntimeException runtimeException) throw runtimeException;
             throw new IllegalStateException("Falha ao gerar certificado.", e.getCause());
         }
+    }
+
+    public StorageExternal.StoredFile previewCustomCertificate(
+            Long eventId, UUID requesterId, ManualCertificateContentRequest request) {
+        return generateCustomCertificate(eventId, requesterId, request, false);
+    }
+
+    public StorageExternal.StoredFile issueCustomCertificate(
+            Long eventId, UUID requesterId, ManualCertificateContentRequest request) {
+        return generateCustomCertificate(eventId, requesterId, request, true);
+    }
+
+    private StorageExternal.StoredFile generateCustomCertificate(
+            Long eventId, UUID requesterId, ManualCertificateContentRequest request, boolean definitive) {
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        if (!accessPolicy.canEdit(event, requesterId))
+            throw new AccessDeniedException("Somente a equipe do evento pode gerar certificados manuais.");
+        if (definitive && (event.executionStatus() != EnumEventExecutionStatus.FINISHED
+                || event.status() == EnumEventStatus.CANCELED))
+            throw new DomainException("O certificado definitivo só pode ser emitido após o encerramento do evento.");
+
+        StorageExternal.StoredFile cover = certificateFetcher.fetchCoverTemplate(eventId);
+        return render(cover, request.boxes(), request.variables());
     }
 
     private StorageExternal.StoredFile render(StorageExternal.StoredFile cover, List<BoxElementDTO> boxes,

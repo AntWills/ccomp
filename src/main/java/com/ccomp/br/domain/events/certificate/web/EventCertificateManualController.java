@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.certificate.web;
 
 import com.ccomp.br.domain.events.certificate.application.issuance.ManualCertificateServices;
+import com.ccomp.br.domain.events.certificate.dto.ManualCertificateContentRequest;
 import com.ccomp.br.domain.events.certificate.dto.ManualInstructorCertificateRequest;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import io.swagger.v3.oas.annotations.Operation;
@@ -85,6 +86,64 @@ public class EventCertificateManualController {
         StorageExternal.StoredFile certificate = manualCertificateServices.buildTeamCertificate(
                 eventId, recipientId, extractUserId(jwt));
         return certificateResponse(certificate, "certificado-equipe-%s.png".formatted(recipientId));
+    }
+
+    @Operation(summary = "Pré-visualizar certificado manual personalizado",
+            description = "Renderiza o fundo configurado para o evento com caixas e variáveis fornecidas pelo cliente. Não grava nem emite um certificado definitivo.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Prévia PNG gerada",
+                    content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
+            @ApiResponse(responseCode = "400", description = "Conteúdo do certificado inválido",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Solicitante sem permissão de edição do evento",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @PostMapping(value = "/{eventId}/certificate/manual/preview",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> previewCustomCertificate(
+            @PathVariable Long eventId,
+            @Valid @RequestBody ManualCertificateContentRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        StorageExternal.StoredFile preview = manualCertificateServices.previewCustomCertificate(
+                eventId, extractUserId(jwt), request);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(preview.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"certificado-previa-manual-%d.png\"".formatted(eventId))
+                .body(preview.resource());
+    }
+
+    @Operation(summary = "Emitir certificado manual personalizado",
+            description = "Gera o PNG definitivo usando as caixas e variáveis fornecidas pelo cliente. Exige permissão de edição e evento encerrado. Não cria código de validação nem salva os dados recebidos.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Certificado PNG gerado",
+                    content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
+            @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado ou conteúdo inválido",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Solicitante sem permissão de edição do evento",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @PostMapping(value = "/{eventId}/certificate/manual",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> issueCustomCertificate(
+            @PathVariable Long eventId,
+            @Valid @RequestBody ManualCertificateContentRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        StorageExternal.StoredFile certificate = manualCertificateServices.issueCustomCertificate(
+                eventId, extractUserId(jwt), request);
+        return certificateResponse(certificate, "certificado-manual-%d.png".formatted(eventId));
     }
 
     private UUID extractUserId(Jwt jwt) {
