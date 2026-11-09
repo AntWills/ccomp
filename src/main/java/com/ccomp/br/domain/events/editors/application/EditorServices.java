@@ -31,6 +31,7 @@ import com.ccomp.br.shared.utils.CursorUtils;
 import com.ccomp.br.shared.utils.CursorPage;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -50,6 +51,7 @@ public class EditorServices {
     private final UserManagement userManagement;
     private final RabbitTemplate rabbitTemplate;
     private final EventEditorInvitationsRepository invitationsRepository;
+    private final Clock clock;
 
     public EditorServices(EventRepository eventRepository,
                           EventCache eventCache,
@@ -58,7 +60,8 @@ public class EditorServices {
                           EventEditorDslRepository editorDslRepository,
                           EventEditorCache eventEditorCache, EventAccessPolicy eventAccessPolicy,
                           RabbitTemplate rabbitTemplate,
-                          EventEditorInvitationsRepository invitationsRepository) {
+                          EventEditorInvitationsRepository invitationsRepository,
+                          Clock clock) {
         this.eventRepository = eventRepository;
         this.eventCache = eventCache;
         this.editorRepository = editorRepository;
@@ -68,6 +71,7 @@ public class EditorServices {
         this.eventAccessPolicy = eventAccessPolicy;
         this.rabbitTemplate = rabbitTemplate;
         this.invitationsRepository = invitationsRepository;
+        this.clock = clock;
     }
 
     @Transactional
@@ -117,7 +121,7 @@ public class EditorServices {
                 .userId(userDTO.id())
                 .event(event)
                 .status(EnumEditorsStatus.ACTIVE)
-                .assignedAt(LocalDateTime.now())
+                .assignedAt(LocalDateTime.now(clock))
                 .build();
 
         editorRepository.save(editor);
@@ -181,7 +185,7 @@ public class EditorServices {
 
     private EventEditorInvitations getInviteAndValid(UUID code) {
         return invitationsRepository.findByCode(code)
-                .filter(inv -> !inv.isExpired())
+                .filter(inv -> !inv.isExpired(LocalDateTime.now(clock)))
                 .orElseThrow(() -> new ResourceNotFoundException("Código de convite inválido ou expirado."));
     }
 
@@ -194,7 +198,7 @@ public class EditorServices {
                 .code(code)
                 .eventId(event.id())
                 .emailAddress(emailAddress)
-                .expiresAt(LocalDateTime.now().plusHours(24))
+                .expiresAt(LocalDateTime.now(clock).plusHours(24))
                 .build();
 
         invitationsRepository.save(newInvite);

@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.CreateActivityDTO;
 import com.ccomp.br.domain.events.activities.dto.UpdateActivityDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
@@ -16,7 +17,7 @@ import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
-import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 
 import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.domain.events.guests.application.GuestService;
@@ -30,12 +31,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 
 @ExtendWith(MockitoExtension.class)
 public class ActivityServicesTest {
@@ -62,6 +67,8 @@ public class ActivityServicesTest {
 
     @Mock private GuestService guestService;
     @Mock private InstructorService instructorService;
+
+    @Spy private Clock clock = Clock.fixed(Instant.parse("2026-11-08T12:10:00Z"), ZoneId.of("America/Sao_Paulo"));
 
     @InjectMocks
     private ActivityServices activityServices;
@@ -96,7 +103,7 @@ public class ActivityServicesTest {
             EventActivity savedActivity = mock(EventActivity.class);
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(eventDTO);
+            when(eventMapper.eventToEventDTO(any(), any())).thenReturn(eventDTO);
             when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
             when(activityRepository.save(any(EventActivity.class))).thenReturn(savedActivity);
             when(activityMapper.eventActivityToActivityDTO(savedActivity)).thenReturn(expectedDTO);
@@ -115,7 +122,7 @@ public class ActivityServicesTest {
             CreateActivityDTO request = new CreateActivityDTO("Palestra Spring Boot", "Descrição da palestra");
 
             when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(eventMapper.eventToEventDTO(existingEvent)).thenReturn(eventDTO);
+            when(eventMapper.eventToEventDTO(any(), any())).thenReturn(eventDTO);
             when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(false);
 
             assertThatThrownBy(() -> activityServices.createActivity(userId, eventId, request))
@@ -151,7 +158,7 @@ public class ActivityServicesTest {
 
             ActivityDTO expectedDTO = mock(ActivityDTO.class);
 
-            when(activityRepository.findById(activityId)).thenReturn(Optional.of(existingActivity));
+            when(activityRepository.findByIdForUpdate(activityId)).thenReturn(Optional.of(existingActivity));
             when(existingActivity.getEventId()).thenReturn(eventId);
             when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
             when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
@@ -174,7 +181,7 @@ public class ActivityServicesTest {
                     .description("nova descrição")
                     .build();
 
-            when(activityRepository.findById(activityId)).thenReturn(Optional.empty());
+            when(activityRepository.findByIdForUpdate(activityId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> activityServices.updateActivity(userId, activityId, request))
                     .isInstanceOf(ResourceNotFoundException.class)
@@ -186,7 +193,7 @@ public class ActivityServicesTest {
         @Test
         void updateActivity_throwsAccessDenied_whenUserCannotEditEvent() {
             UpdateActivityDTO request = UpdateActivityDTO.builder().title("Novo título").build();
-            when(activityRepository.findById(activityId)).thenReturn(Optional.of(existingActivity));
+            when(activityRepository.findByIdForUpdate(activityId)).thenReturn(Optional.of(existingActivity));
             when(existingActivity.getEventId()).thenReturn(eventId);
             when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
             when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(false);
@@ -247,7 +254,7 @@ public class ActivityServicesTest {
         @Test
         void searchByCursor_returnsPage_whenUserCanViewEvent() {
             EventActivityDTO activity = new EventActivityDTO(activityId, eventId, "Palestra", null, 1L,
-                    null, null, null, null, null, null, null);
+                    null, null, null, null, null, null, (java.time.LocalDateTime) null);
             when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
             when(eventAccessPolicy.canView(eventDTO, userId)).thenReturn(true);
             when(activityCache.findAllByEventIdWithCursor(eventId, null, 51)).thenReturn(java.util.List.of(activity));

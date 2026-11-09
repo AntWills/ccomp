@@ -44,6 +44,7 @@ public class CheckInService {
     private final EventCache eventCache;
     private final EventAccessPolicy eventAccessPolicy;
     private final RabbitTemplate rabbitTemplate;
+    private final Clock clock;
 
     @Value("${app.frontend.check-in-url}")
     private String checkInUrl;
@@ -53,7 +54,7 @@ public class CheckInService {
                           EventActivityRepository activityRepository,
                           EnrollmentActivityRepository enrollmentActivityRepository,
                           EnrollmentActivityDslRepository enrollmentActivityDslRepository, EventCache eventCache,
-                          EventAccessPolicy eventAccessPolicy, RabbitTemplate rabbitTemplate) {
+                          EventAccessPolicy eventAccessPolicy, RabbitTemplate rabbitTemplate, Clock clock) {
         this.checkInRepository = checkInRepository;
         this.checkInCache = checkInCache;
         this.checkInMapper = checkInMapper;
@@ -63,6 +64,7 @@ public class CheckInService {
         this.eventCache = eventCache;
         this.eventAccessPolicy = eventAccessPolicy;
         this.rabbitTemplate = rabbitTemplate;
+        this.clock = clock;
     }
 
     public byte[] generateCode(long activityId, UUID userId) {
@@ -111,7 +113,7 @@ public class CheckInService {
         EventActivity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não existe."));
 
-        if(!activity.isInProgress(activity.getEvent().now(Clock.systemUTC())))
+        if(!activity.isInProgress(LocalDateTime.now(clock)))
             throw new DomainException("Não é possível fazer check-in.");
 
         var enrollment = enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, activityId)
@@ -120,7 +122,7 @@ public class CheckInService {
         if(enrollment.haveCheckIn())
             return;
 
-        enrollment.makeAttendance();
+        enrollment.makeAttendance(LocalDateTime.now(clock));
         enrollmentActivityRepository.save(enrollment);
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE_NAME,

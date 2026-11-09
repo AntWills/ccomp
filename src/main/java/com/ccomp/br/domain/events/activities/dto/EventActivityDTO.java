@@ -22,14 +22,15 @@ public record EventActivityDTO(
         EnumActivityRegistrationPolicy registrationPolicy,
         EnumActivityType type,
         LocalDateTime createdAt,
-        @Schema(name = "time_zone", description = "Fuso IANA herdado do evento; os horários locais de início e término seguem essa zona.", example = "America/Manaus")
-        String timeZone
+        @Schema(name = "time_zone", description = "Fuso global da aplicação; mantido por compatibilidade.", example = "America/Sao_Paulo", deprecated = true)
+        String timeZone,
+        Integer maxCapacity
 ) {
     public EventActivityDTO(Long id, Long eventId, String title, String description, Long displayOrder,
                             String location, LocalDateTime startDate, LocalDateTime endDate,
                             BigDecimal workloadHours, EnumActivityRegistrationPolicy registrationPolicy,
                             EnumActivityType type, LocalDateTime createdAt) {
         this(id, eventId, title, description, displayOrder, location, startDate, endDate, workloadHours,
-                registrationPolicy, type, createdAt, "America/Sao_Paulo");
+                registrationPolicy, type, createdAt, "America/Sao_Paulo", null);
     }
 }

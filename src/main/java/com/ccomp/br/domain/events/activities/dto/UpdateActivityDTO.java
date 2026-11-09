@@ -4,7 +4,9 @@ import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolic
 import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 
 import java.math.BigDecimal;
@@ -32,7 +34,11 @@ public record UpdateActivityDTO(
 
         EnumActivityRegistrationPolicy registrationPolicy,
 
-        EnumActivityType type
+        EnumActivityType type,
+
+        @PositiveOrZero(message = "A capacidade máxima não pode ser negativa.")
+        @Schema(description = "Número máximo de inscrições ativas. Null mantém o valor atual neste PATCH; use PUT /api/events/activities/{id}/capacity com null para remover o limite.", example = "40")
+        Integer maxCapacity
 ) {
     @AssertTrue(message = "A data de início não pode ser posterior à data de término")
     public boolean isStartDateBeforeEndDate() {

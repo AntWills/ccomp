@@ -1,8 +1,9 @@
 package com.ccomp.br.domain.events.activities.persistence;
 
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
-import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
 import com.ccomp.br.domain.events.activities.dto.EventActivityDTO;
+import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.shared.cache.CacheNames;
 import org.springframework.cache.annotation.CacheEvict;

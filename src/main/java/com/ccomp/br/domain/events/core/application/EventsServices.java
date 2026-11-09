@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.core.application;
 
 import com.ccomp.br.domain.events.core.dto.*;
+import com.ccomp.br.domain.events.shared.dto.CapacityUpdateRequest;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.persistence.EventDslRepository;
@@ -27,6 +28,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Clock;
+import java.time.LocalDateTime;
 
 @Service
 @Slf4j
@@ -40,6 +43,7 @@ public class EventsServices {
     private final EventAccessPolicy eventAccessPolicy;
     private final EventStorageFileKeyCollector eventStorageFileKeyCollector;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final Clock clock;
 
     public EventsServices(
             EventRepository eventRepository, EventCache eventCache,
@@ -48,7 +52,7 @@ public class EventsServices {
             EventDslRepository eventDslRepository,
             EventAccessPolicy eventAccessPolicy,
             EventStorageFileKeyCollector eventStorageFileKeyCollector,
-            ApplicationEventPublisher applicationEventPublisher) {
+            ApplicationEventPublisher applicationEventPublisher, Clock clock) {
         this.eventRepository = eventRepository;
         this.eventCache = eventCache;
         this.userManagement = userManagement;
@@ -57,6 +61,7 @@ public class EventsServices {
         this.eventAccessPolicy = eventAccessPolicy;
         this.eventStorageFileKeyCollector = eventStorageFileKeyCollector;
         this.applicationEventPublisher = applicationEventPublisher;
+        this.clock = clock;
     }
 
     // ---- Consultas ----
@@ -154,7 +159,7 @@ public class EventsServices {
                 .ownerId(ownerId)
                 .build();
 
-        eventModel.setTimeZone(dto.timeZone());
+        eventModel.setTimeZone(clock.getZone().getId());
 
 
         dto.optionalStartDate().ifPresent(eventModel::setStartDate);
@@ -162,11 +167,12 @@ public class EventsServices {
         eventModel.setWorkloadHours(dto.workloadHours());
         eventModel.setTeamCertificateWorkloadHours(dto.teamCertificateWorkloadHours());
         eventModel.setOrganization(dto.organization());
+        eventModel.setMaxCapacity(dto.maxCapacity());
 
         var savedEvent = eventRepository.save(eventModel);
         eventCache.evict(savedEvent);
 
-        return eventMapper.eventToEventDTO(savedEvent);
+        return eventMapper.eventToEventDTO(savedEvent, LocalDateTime.now(clock));
     }
 
     private String generateSlug(String title) {
@@ -185,10 +191,10 @@ public class EventsServices {
     @Transactional
     @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
     public EventDTO update(UpdateEventDTO request, Long eventId, UUID userId) {
-        Event event = eventRepository.findById(eventId)
+        Event event = eventRepository.findByIdForUpdate(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId))
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event, LocalDateTime.now(clock)), userId))
             throw new AccessDeniedException("Você não tem permissão para alterar o status deste evento.");
 
         request.titleOpt().ifPresent(title -> {
@@ -200,7 +206,20 @@ public class EventsServices {
 
         var eventUpdated = eventRepository.save(event);
         eventCache.evict(eventUpdated);
-        return eventMapper.eventToEventDTO(event);
+        return eventMapper.eventToEventDTO(event, LocalDateTime.now(clock));
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"public-highlights", "public-highlight-clubs", "public-highlight-news", "public-highlight-events"}, allEntries = true)
+    public EventDTO updateCapacity(Long eventId, CapacityUpdateRequest request, UUID userId) {
+        Event event = eventRepository.findByIdForUpdate(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event, LocalDateTime.now(clock)), userId))
+            throw new AccessDeniedException("Você não tem permissão para alterar a capacidade deste evento.");
+        event.setMaxCapacity(request.maxCapacity());
+        Event saved = eventRepository.save(event);
+        eventCache.evict(saved);
+        return eventMapper.eventToEventDTO(saved, LocalDateTime.now(clock));
     }
 
     @Transactional
@@ -209,15 +228,15 @@ public class EventsServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId))
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event, LocalDateTime.now(clock)), userId))
             throw new AccessDeniedException("Você não tem permissão para alterar o status deste evento.");
 
         // Executa a transição através dos métodos de domínio encapsulados
         switch (newStatus) {
-            case PUBLISHED -> event.publish();
-            case CANCELED -> event.cancel();
+            case PUBLISHED -> event.publish(LocalDateTime.now(clock));
+            case CANCELED -> event.cancel(LocalDateTime.now(clock));
             case DRAFT -> event.moveToDraft();
-            case UNLISTED -> event.unlist();
+            case UNLISTED -> event.unlist(LocalDateTime.now(clock));
         }
 
         var eventUpdated = eventRepository.save(event);
@@ -232,7 +251,7 @@ public class EventsServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId)) {
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event, LocalDateTime.now(clock)), userId)) {
             throw new AccessDeniedException("Você não tem permissão para remover este evento.");
         }
 

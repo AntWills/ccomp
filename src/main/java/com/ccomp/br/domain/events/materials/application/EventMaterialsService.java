@@ -32,6 +32,8 @@ import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Clock;
+import java.time.LocalDateTime;
 
 @Service
 public class EventMaterialsService {
@@ -49,13 +51,14 @@ public class EventMaterialsService {
     private final StorageExternal storage;
     private final StorageKeyGenerator keyGenerator;
     private final MaterialMapper mapper;
+    private final Clock clock;
 
     public EventMaterialsService(EventRepository eventRepository, EventMaterialRepository materialRepository,
                                  EventAccessPolicy accessPolicy,
                                  StorageExternal storage,
                                  EventMaterialDslRepository materialDslRepository,
                                  StorageKeyGenerator keyGenerator,
-                                 MaterialMapper mapper) {
+                                 MaterialMapper mapper, Clock clock) {
         this.eventRepository = eventRepository;
         this.materialRepository = materialRepository;
         this.accessPolicy = accessPolicy;
@@ -63,6 +66,7 @@ public class EventMaterialsService {
         this.materialDslRepository = materialDslRepository;
         this.keyGenerator = keyGenerator;
         this.mapper = mapper;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -87,6 +91,7 @@ public class EventMaterialsService {
         EventMaterial material = EventMaterial.builder()
                 .eventId(eventId)
                 .createdBy(userId)
+                .createdAt(LocalDateTime.now(clock))
                 .title(request.title().trim())
                 .description(request.description())
                 .type(EnumMaterialType.LINK)
@@ -113,6 +118,7 @@ public class EventMaterialsService {
         EventMaterial material = EventMaterial.builder()
                 .eventId(eventId)
                 .createdBy(userId)
+                .createdAt(LocalDateTime.now(clock))
                 .title(title.trim())
                 .description(description)
                 .type(contentType.startsWith("image/") ? EnumMaterialType.IMAGE : EnumMaterialType.FILE)

@@ -23,16 +23,16 @@ public record EventDTO(
         EnumEventStatus status,
 
         // Execução do Evento
-        @Schema(name = "start_date", description = "Horário local de início no fuso retornado em time_zone.", example = "2026-11-08T09:05:00")
+        @Schema(name = "start_date", description = "Horário local de início no fuso global da aplicação.", example = "2026-11-08T09:05:00")
         LocalDateTime startDate,
-        @Schema(name = "end_date", description = "Horário local de término no fuso retornado em time_zone.", example = "2026-11-08T12:00:00")
+        @Schema(name = "end_date", description = "Horário local de término no fuso global da aplicação.", example = "2026-11-08T12:00:00")
         LocalDateTime endDate,
         EnumEventExecutionStatus executionStatus,
 
         // Inscrições e Capacidade
-        @Schema(name = "enrollment_start_date", description = "Início local das inscrições no fuso retornado em time_zone.", example = "2026-10-01T09:00:00")
+        @Schema(name = "enrollment_start_date", description = "Início local das inscrições no fuso global da aplicação.", example = "2026-10-01T09:00:00")
         LocalDateTime enrollmentStartDate,
-        @Schema(name = "enrollment_end_date", description = "Fim local das inscrições no fuso retornado em time_zone.", example = "2026-11-08T12:00:00")
+        @Schema(name = "enrollment_end_date", description = "Fim local das inscrições no fuso global da aplicação.", example = "2026-11-08T12:00:00")
         LocalDateTime enrollmentEndDate,
         Boolean enrollmentPaused,
         EnumEnrollmentStatus enrollmentStatus,
@@ -50,7 +50,7 @@ public record EventDTO(
         BigDecimal teamCertificateWorkloadHours,
         @Schema(description = "Organização responsável pelo evento.")
         String organization,
-        @Schema(name = "time_zone", description = "Identificador IANA que define o fuso dos horários locais deste evento e de suas atividades.", example = "America/Sao_Paulo")
+        @Schema(name = "time_zone", description = "Fuso global da aplicação, persistido e retornado por compatibilidade.", example = "America/Sao_Paulo", deprecated = true)
         String timeZone
 ) {
     public EventDTO(Long id, String title, String slug, String summary, String content, String coverImageKey,

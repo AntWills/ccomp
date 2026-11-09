@@ -63,7 +63,9 @@ class EventMaterialsServiceTest {
     @BeforeEach
     void setUp() {
         service = new EventMaterialsService(
-                events, materials, access, storage, materialDsl, keyGenerator, new MaterialMapper());
+                events, materials, access, storage, materialDsl, keyGenerator, new MaterialMapper(),
+                java.time.Clock.fixed(java.time.Instant.parse("2026-11-08T12:10:00Z"),
+                        java.time.ZoneId.of("America/Sao_Paulo")));
         event = Event.builder().id(EVENT_ID).build();
         when(events.findById(EVENT_ID)).thenReturn(Optional.of(event));
     }

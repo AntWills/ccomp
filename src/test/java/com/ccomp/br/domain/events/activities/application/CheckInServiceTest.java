@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.MockedStatic;
 import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -36,6 +37,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.awt.image.BufferedImage;
 import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -56,6 +60,7 @@ class CheckInServiceTest {
     @Mock private EventCache eventCache;
     @Mock private EventAccessPolicy eventAccessPolicy;
     @Mock private RabbitTemplate rabbitTemplate;
+    @Spy private Clock clock = Clock.fixed(Instant.parse("2026-11-08T12:10:00Z"), ZoneId.of("America/Sao_Paulo"));
 
     @InjectMocks
     private CheckInService checkInService;
@@ -189,7 +194,7 @@ class CheckInServiceTest {
 
             checkInService.checkIn(activityId, userId, presenceCode);
 
-            verify(enrollmentMock).makeAttendance();
+            verify(enrollmentMock).makeAttendance(LocalDateTime.parse("2026-11-08T09:10:00"));
             verify(enrollmentActivityRepository).save(enrollmentMock);
             ArgumentCaptor<CheckInMessageDTO> messageCaptor = ArgumentCaptor.forClass(CheckInMessageDTO.class);
             verify(rabbitTemplate).convertAndSend(anyString(), anyString(), messageCaptor.capture());
@@ -214,7 +219,7 @@ class CheckInServiceTest {
             checkInService.checkIn(activityId, userId, presenceCode);
 
             // Confirma que não prossegue para salvamento ou envio de mensagem
-            verify(enrollmentMock, never()).makeAttendance();
+            verify(enrollmentMock, never()).makeAttendance(LocalDateTime.now());
             verify(enrollmentActivityRepository, never()).save(any());
             verify(rabbitTemplate, never()).convertAndSend(any());
         }

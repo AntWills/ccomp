@@ -72,8 +72,8 @@ public class EnrollmentActivity {
         this.activity = activity;
     }
 
-    public void makeAttendance() {
-        attendedAt = LocalDateTime.now();
+    public void makeAttendance(LocalDateTime now) {
+        attendedAt = now;
     }
 
     public boolean haveCheckIn() {

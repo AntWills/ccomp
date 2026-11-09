@@ -5,6 +5,9 @@ import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
+import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
+import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
 import com.ccomp.br.shared.dto.MessageResponse;
@@ -16,10 +19,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -30,6 +37,11 @@ import static org.mockito.Mockito.*;
 public class EnrollmentsServiceTest {
     @Mock
     private EventRepository eventRepository;
+
+    @Mock private EventCache eventCache;
+    @Mock private EnrollmentDslRepository enrollmentDslRepository;
+    @Mock private EventAccessPolicy eventAccessPolicy;
+    @Spy private Clock clock = Clock.fixed(Instant.parse("2026-11-08T12:10:00Z"), ZoneId.of("America/Sao_Paulo"));
 
     @Mock
     private EnrollmentRepository enrollmentRepository;
@@ -63,8 +75,8 @@ public class EnrollmentsServiceTest {
                     .build();
 
 
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.getEnrollmentStatus()).thenReturn(EnumEnrollmentStatus.OPEN);
+            when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
+            when(existingEvent.getEnrollmentStatus(any(java.time.LocalDateTime.class))).thenReturn(EnumEnrollmentStatus.OPEN);
             when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.empty());
             when(enrollmentRepository.save(any(Enrollment.class))).thenReturn(existingEnrollment);
 
@@ -80,10 +92,11 @@ public class EnrollmentsServiceTest {
         void subscribe_returnSuccess_whenAlreadyBeenSubscriber() {
             UUID userId = UUID.randomUUID();
 
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.getEnrollmentStatus()).thenReturn(EnumEnrollmentStatus.OPEN);
+            when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
+            when(existingEvent.getEnrollmentStatus(any(java.time.LocalDateTime.class))).thenReturn(EnumEnrollmentStatus.OPEN);
             when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(existingEnrollment));
             when(existingEnrollment.isActive()).thenReturn(false);
+            when(enrollmentRepository.save(existingEnrollment)).thenReturn(existingEnrollment);
 
             var enrollment = enrollmentsServices.subscribe(userId, eventId);
 
@@ -97,8 +110,8 @@ public class EnrollmentsServiceTest {
         void subscribe_returnSuccess_whenAlreadyBeenActive() {
             UUID userId = UUID.randomUUID();
 
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-            when(existingEvent.getEnrollmentStatus()).thenReturn(EnumEnrollmentStatus.OPEN);
+            when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
+            when(existingEvent.getEnrollmentStatus(any(java.time.LocalDateTime.class))).thenReturn(EnumEnrollmentStatus.OPEN);
             when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(existingEnrollment));
             when(existingEnrollment.isActive()).thenReturn(true); // Indica que u usuário tem inscrição ativa.
 
@@ -125,7 +138,7 @@ public class EnrollmentsServiceTest {
                     .userId(userId)
                     .build();
 
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
+            when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
             when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(enrollment));
 
             MessageResponse response = enrollmentsServices.unsubscribe(userId, eventId);
@@ -149,7 +162,7 @@ public class EnrollmentsServiceTest {
                     .userId(userId)
                     .build();
 
-            when(eventRepository.findById(eventId)).thenReturn(Optional.of(existingEvent));
+            when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
             when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(enrollment));
 
             DomainException exception = assertThrows(DomainException.class, () ->

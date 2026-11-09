@@ -33,6 +33,8 @@ import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Clock;
+import java.time.LocalDateTime;
 
 @Service
 public class ActivityMaterialsService {
@@ -51,6 +53,7 @@ public class ActivityMaterialsService {
     private final StorageExternal storage;
     private final StorageKeyGenerator keyGenerator;
     private final MaterialMapper mapper;
+    private final Clock clock;
 
     public ActivityMaterialsService(EventActivityRepository activityRepository, EventRepository eventRepository,
                                     ActivityMaterialRepository materialRepository,
@@ -58,7 +61,7 @@ public class ActivityMaterialsService {
                                     ActivityMaterialDslRepository materialDslRepository,
                                     StorageExternal storage,
                                     StorageKeyGenerator keyGenerator,
-                                    MaterialMapper mapper) {
+                                    MaterialMapper mapper, Clock clock) {
         this.activityRepository = activityRepository;
         this.eventRepository = eventRepository;
         this.materialRepository = materialRepository;
@@ -67,6 +70,7 @@ public class ActivityMaterialsService {
         this.storage = storage;
         this.keyGenerator = keyGenerator;
         this.mapper = mapper;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -91,6 +95,7 @@ public class ActivityMaterialsService {
         ActivityMaterial material = ActivityMaterial.builder()
                 .activityId(activityId)
                 .createdBy(userId)
+                .createdAt(LocalDateTime.now(clock))
                 .title(request.title().trim())
                 .description(request.description())
                 .type(EnumMaterialType.LINK)
@@ -115,6 +120,7 @@ public class ActivityMaterialsService {
         ActivityMaterial material = ActivityMaterial.builder()
                 .activityId(activityId)
                 .createdBy(userId)
+                .createdAt(LocalDateTime.now(clock))
                 .title(title.trim())
                 .description(description)
                 .type(contentType.startsWith("image/") ? EnumMaterialType.IMAGE : EnumMaterialType.FILE)

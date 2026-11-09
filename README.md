@@ -140,6 +140,10 @@ const tokens = await response.json();
 O token Google deve ser enviado inteiro para validação no backend; não envie
 claims de usuário montadas pelo frontend.
 
+## Fuso horário da API
+
+Todos os valores `LocalDateTime` seguem o fuso global da aplicação, configurado por `app.clock.zone` (padrão `America/Sao_Paulo`). Consulte [a documentação de fusos horários](docs/fusos-horarios-eventos.md) para escopo e exemplos.
+
 ## Documentação da API
 
 Com a aplicação em execução, a documentação interativa (Swagger UI)

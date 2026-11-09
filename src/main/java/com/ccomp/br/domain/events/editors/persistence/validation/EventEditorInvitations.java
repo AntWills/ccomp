@@ -35,7 +35,7 @@ public class EventEditorInvitations {
     @Column(nullable = false)
     private LocalDateTime expiresAt;
 
-    public boolean isExpired() {
-        return LocalDateTime.now().isAfter(expiresAt);
+    public boolean isExpired(LocalDateTime now) {
+        return now.isAfter(expiresAt);
     }
 }

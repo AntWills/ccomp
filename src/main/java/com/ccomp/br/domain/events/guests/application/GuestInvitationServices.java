@@ -33,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -48,6 +49,7 @@ public class GuestInvitationServices {
     private final EventMapper eventMapper;
     private final UserManagement userManagement;
     private final RabbitTemplate rabbitTemplate;
+    private final Clock clock;
 
     public GuestInvitationServices(
             EventGuestRepository eventGuestRepository,
@@ -55,7 +57,7 @@ public class GuestInvitationServices {
             EventInvitationDslRepository eventInvitationDspRepository,
             EventRepository eventRepository, EventCache eventCache,
             EventAccessPolicy eventAccessPolicy, EventMapper eventMapper,
-            UserManagement userManagement, RabbitTemplate rabbitTemplate) {
+            UserManagement userManagement, RabbitTemplate rabbitTemplate, Clock clock) {
         this.eventGuestRepository = eventGuestRepository;
         this.eventInvitationRepository = eventInvitationRepository;
         this.eventInvitationDspRepository = eventInvitationDspRepository;
@@ -65,6 +67,7 @@ public class GuestInvitationServices {
         this.eventMapper = eventMapper;
         this.userManagement = userManagement;
         this.rabbitTemplate = rabbitTemplate;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -93,7 +96,7 @@ public class GuestInvitationServices {
         Event event =  eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId)) {
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event, LocalDateTime.now(clock)), userId)) {
             throw new AccessDeniedException("Você não tem permissão para gerenciar enviar convites neste evento.");
         }
 
@@ -127,8 +130,8 @@ public class GuestInvitationServices {
                 .emailAddress(emailAddress)
                 .status(EnumInvitationStatus.PENDING)
                 .userId(guestId)
-                .invitedAt(LocalDateTime.now())
-                .expiresAt(LocalDateTime.now().plusHours(24))
+                .invitedAt(LocalDateTime.now(clock))
+                .expiresAt(LocalDateTime.now(clock).plusHours(24))
                 .build();
 
         eventInvitationRepository.save(invitation);
@@ -146,7 +149,8 @@ public class GuestInvitationServices {
         EventInvitation invitation = eventInvitationRepository.findByCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Código não encontrado."));
 
-        if(!invitation.isValid())
+        LocalDateTime now = LocalDateTime.now(clock);
+        if(!invitation.isValid(now))
             throw new DomainException("Convite inválido");
 
         UserDTO userDTO = userManagement.findById(userId)
@@ -164,7 +168,7 @@ public class GuestInvitationServices {
 
             return new MessageResponse("Convite recusado.");
         }
-        invitation.accept();
+        invitation.accept(now);
         EventGuest guest = EventGuest.builder()
                 .userId(userId)
                 .event(invitation.getEvent())

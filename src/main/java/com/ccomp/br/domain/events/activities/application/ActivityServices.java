@@ -87,7 +87,7 @@ public class ActivityServices {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event), userId))
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event, LocalDateTime.now()), userId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
         EventActivity activity = EventActivity.builder()
@@ -96,6 +96,7 @@ public class ActivityServices {
                 .description(request.description())
                 .registrationPolicy(EnumActivityRegistrationPolicy.EVENT_REGISTRANTS_ONLY)
                 .type(EnumActivityType.OTHER)
+                .maxCapacity(request.maxCapacity())
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -107,7 +108,7 @@ public class ActivityServices {
 
     @Transactional
     public ActivityDTO updateActivity(UUID userId, Long activityId, UpdateActivityDTO request) {
-        EventActivity activity = activityRepository.findById(activityId)
+        EventActivity activity = activityRepository.findByIdForUpdate(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não existe."));
 
         EventDTO event = eventCache.findById(activity.getEventId())

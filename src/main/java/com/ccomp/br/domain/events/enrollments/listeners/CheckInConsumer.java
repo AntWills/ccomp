@@ -17,6 +17,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
+import java.time.Clock;
+import java.time.LocalDateTime;
 
 @Component
 @Slf4j
@@ -26,19 +28,22 @@ public class CheckInConsumer {
     private final UserManagement userManagement;
     private final EmailService emailService;
     private final EmailTemplateService emailTemplateService;
+    private final Clock clock;
 
     public CheckInConsumer(
             EnrollmentRepository enrollmentRepository,
             EventActivityRepository activityRepository,
             UserManagement userManagement,
             EmailService emailService,
-            EmailTemplateService emailTemplateService
+            EmailTemplateService emailTemplateService,
+            Clock clock
     ) {
         this.enrollmentRepository = enrollmentRepository;
         this.activityRepository = activityRepository;
         this.userManagement = userManagement;
         this.emailService = emailService;
         this.emailTemplateService = emailTemplateService;
+        this.clock = clock;
     }
 
     @RabbitListener(queues = CheckInChannel.QUEUE)
@@ -48,7 +53,7 @@ public class CheckInConsumer {
             Enrollment enrollment = enrollmentRepository.findById(dto.enrollmentId())
                     .orElseThrow(() -> new DomainException("O usuário não está inscrito no evento, mas o check-in foi emitido."));
 
-            enrollment.checkIn();
+            enrollment.checkIn(LocalDateTime.now(clock));
             EventActivity activity = activityRepository.findById(dto.activityId())
                     .orElseThrow(() -> new DomainException("A atividade do check-in não existe mais."));
             var user = userManagement.findById(enrollment.getUserId())

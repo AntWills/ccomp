@@ -50,7 +50,7 @@ class ActivityUpdateAuthorizationTest {
         EventDTO event = mock(EventDTO.class);
         ActivityDTO expected = mock(ActivityDTO.class);
         UpdateActivityDTO request = UpdateActivityDTO.builder().title("Atualizado").build();
-        when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
+        when(activityRepository.findByIdForUpdate(activityId)).thenReturn(Optional.of(activity));
         when(activity.getEventId()).thenReturn(4L);
         when(eventCache.findById(4L)).thenReturn(Optional.of(event));
         when(instructorService.canEditActivity(activityId, userId)).thenReturn(true);
@@ -71,7 +71,7 @@ class ActivityUpdateAuthorizationTest {
         UUID userId = UUID.randomUUID();
         EventActivity activity = mock(EventActivity.class);
         EventDTO event = mock(EventDTO.class);
-        when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
+        when(activityRepository.findByIdForUpdate(activityId)).thenReturn(Optional.of(activity));
         when(activity.getEventId()).thenReturn(4L);
         when(eventCache.findById(4L)).thenReturn(Optional.of(event));
         when(guestService.canEditActivity(activityId, userId)).thenReturn(true);
@@ -89,7 +89,7 @@ class ActivityUpdateAuthorizationTest {
         UUID userId = UUID.randomUUID();
         EventActivity activity = mock(EventActivity.class);
         EventDTO event = mock(EventDTO.class);
-        when(activityRepository.findById(activityId)).thenReturn(Optional.of(activity));
+        when(activityRepository.findByIdForUpdate(activityId)).thenReturn(Optional.of(activity));
         when(activity.getEventId()).thenReturn(4L);
         when(eventCache.findById(4L)).thenReturn(Optional.of(event));
 
