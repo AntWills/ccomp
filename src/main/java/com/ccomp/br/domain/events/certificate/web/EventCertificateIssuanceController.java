@@ -1,9 +1,6 @@
 package com.ccomp.br.domain.events.certificate.web;
 
 import com.ccomp.br.domain.events.certificate.application.CertificateServices;
-import com.ccomp.br.domain.events.certificate.application.CertificateValidatorService;
-import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
-import com.ccomp.br.domain.events.certificate.dto.ManualInstructorCertificateRequest;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -19,22 +16,17 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
-
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/events")
-@Tag(name = "events/certificate/consultation (Consulta de certificados)",
-        description = "Emissão de certificados para participantes, ministrantes e equipe, além da validação pública")
-public class EventCertificateConsultationController {
+@Tag(name = "events/certificate/issuance (Emissão de certificados)",
+        description = "Emissão de certificados para participantes, ministrantes e equipe do evento")
+public class EventCertificateIssuanceController {
     private final CertificateServices certificateServices;
-    private final CertificateValidatorService certificateValidatorService;
 
-    public EventCertificateConsultationController(CertificateServices certificateServices,
-                                                  CertificateValidatorService certificateValidatorService) {
+    public EventCertificateIssuanceController(CertificateServices certificateServices) {
         this.certificateServices = certificateServices;
-        this.certificateValidatorService = certificateValidatorService;
     }
 
     @Operation(summary = "Consultar certificado do evento",
@@ -107,23 +99,6 @@ public class EventCertificateConsultationController {
         return certificateResponse(certificate, "certificado-ministrante-convidado-%d.png".formatted(activityGuestId));
     }
 
-    @Operation(summary = "Emitir manualmente certificado de ministrante",
-            description = "A equipe emite um certificado individual para um ministrante cadastrado ou para um convidado confirmado com papel PRESENTER na atividade. Não exige conta para o convidado. Emissão manual não gera código de validação; carga horária usa a atividade indicada ou a soma das atividades do ministrante vinculado.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
-            @ApiResponse(responseCode = "400", description = "Identificador inválido, evento ainda não encerrado ou cancelado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Solicitante não pertence à equipe ou vínculo do destinatário não está confirmado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Evento, atividade, ministrante ou convidado não encontrado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
-    })
-    @PostMapping(value = "/{eventId}/instructor-certificate/manual", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<Resource> buildManualInstructorCertificate(@PathVariable Long eventId,
-            @Valid @RequestBody ManualInstructorCertificateRequest request,
-            @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = certificateServices.buildManualInstructorCertificate(
-                eventId, request, extractUserId(jwt));
-        return certificateResponse(certificate, "certificado-ministrante-manual.png");
-    }
-
     @Operation(summary = "Gerar certificado da equipe do evento",
             description = "Gera o certificado do owner ou editor ativo autenticado após o encerramento do evento. Eventos cancelados não emitem certificado. Usa template próprio de equipe, fundo compartilhado e a carga horária da equipe configurada no evento.")
     @ApiResponses({
@@ -138,35 +113,6 @@ public class EventCertificateConsultationController {
         StorageExternal.StoredFile certificate = certificateServices.buildCertificateForEditor(
                 eventId, extractUserId(jwt));
         return certificateResponse(certificate, "certificado-equipe-%d.png".formatted(eventId));
-    }
-
-    @Operation(summary = "Emitir manualmente certificado de integrante da equipe",
-            description = "Owner, editor ativo, moderator ou admin emite um certificado individual para o owner ou um editor ativo. Usa o template EDITOR, carga horária configurada para a equipe e código de validação associado ao destinatário.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
-            @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado, cancelado ou sem carga horária de equipe", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Solicitante sem permissão ou destinatário fora da equipe", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Evento ou conta de destino não encontrada", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
-    })
-    @PostMapping(value = "/{eventId}/team-certificate/manual/{recipientId}", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<Resource> buildManualTeamCertificate(@PathVariable Long eventId,
-            @PathVariable UUID recipientId,
-            @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = certificateServices.buildCertificateForEditor(
-                eventId, recipientId, extractUserId(jwt));
-        return certificateResponse(certificate, "certificado-equipe-%s.png".formatted(recipientId));
-    }
-
-    @Operation(summary = "Validar certificado pelo código",
-            description = "Rota pública. Retorna os dados associados ao código impresso no certificado ou 404 se ele não existir.",
-            security = {})
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Certificado válido", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = CertificateValidationResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Código de validação não encontrado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
-    })
-    @GetMapping(value = "/certificates/validate/{code}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<CertificateValidationResponse> validateCertificate(@PathVariable String code) {
-        return ResponseEntity.ok(certificateValidatorService.validate(code));
     }
 
     private UUID extractUserId(Jwt jwt) {

@@ -65,7 +65,7 @@ class CertificateServicesGenerationTest {
                 .thenReturn(Map.of("{participante.nome}", "Ana Souza"));
 
         StorageExternal.StoredFile generated = new CertificateServices(eventCache, accessPolicy,
-                certificateFetcher, variablesServices, null).buildCertificateFromEvent(EVENT_ID, USER_ID);
+                certificateFetcher, variablesServices, null, null, null).buildCertificateFromEvent(EVENT_ID, USER_ID);
 
         BufferedImage output = ImageIO.read(generated.resource().getInputStream());
         assertThat(generated.contentType()).isEqualTo("image/png");
@@ -97,7 +97,7 @@ class CertificateServicesGenerationTest {
 
     private CertificateServices createService() {
         return new CertificateServices(eventCache, accessPolicy, certificateFetcher,
-                variablesServices, null);
+                variablesServices, null, null, null);
     }
 
     private EventDTO event() {

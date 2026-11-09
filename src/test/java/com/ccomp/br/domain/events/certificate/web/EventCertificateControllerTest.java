@@ -106,9 +106,11 @@ class EventCertificateControllerTest {
         var managementController = new EventCertificateManagementController(certificateCoverService,
                 certificateBoxServices,
                 activityCertificateBoxServices);
-        var consultationController = new EventCertificateConsultationController(certificateServices,
-                certificateValidatorService);
-        mockMvc = MockMvcBuilders.standaloneSetup(managementController, consultationController)
+        var issuanceController = new EventCertificateIssuanceController(certificateServices);
+        var manualController = new EventCertificateManualController(certificateServices);
+        var validationController = new EventCertificateValidationController(certificateValidatorService);
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        managementController, issuanceController, manualController, validationController)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
