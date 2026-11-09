@@ -18,15 +18,19 @@ events/notifications/
 ├── application/
 │   ├── EventNotificationService
 │   ├── EventNotificationQueryService
-│   └── EventNotificationBatchPublisher
+│   └── EventNotificationPublisher
 ├── persistence/
 │   ├── EventNotification
 │   ├── EventNotificationRecipient
 │   ├── EventNotificationRepository
 │   └── EventNotificationDslRepository
 ├── dto/
-├── external/message/EventNotificationChannel
-├── listeners/EventNotificationConsumer
+├── external/message/
+│   ├── EventNotificationDispatchChannel
+│   └── EventNotificationDeliveryChannel
+├── listeners/
+│   ├── EventNotificationDispatchConsumer
+│   └── EventNotificationDeliveryConsumer
 └── web/
     ├── EventNotificationManagementController
     └── MyEventNotificationsController
@@ -65,11 +69,11 @@ A autorização de envio deve validar acesso de edição ao evento e, quando apl
 4. O consumer torna a notificação disponível na plataforma, envia email pelo módulo existente e atualiza tentativas/resultado.
 5. Mensagens redeliveradas devem ser idempotentes para evitar notificações ou emails duplicados. Falhas transitórias podem ser repetidas; falhas definitivas ficam visíveis na DLQ e no estado persistido.
 
-Para não perder trabalho entre a gravação no banco e a publicação RabbitMQ, recomenda-se uma outbox persistida e publicada por um processo próprio. O cursor permite retomar o processamento sem carregar todos os inscritos na memória.
+Para não perder trabalho entre a gravação no banco e a publicação RabbitMQ, as solicitações de distribuição e os lotes de entrega são gravados numa outbox na mesma transação. Um relay publica a outbox, aguarda confirmação do broker e tenta novamente em caso de falha. O cursor permite retomar o processamento sem carregar todos os inscritos na memória.
 
 ## Monitoramento
 
-Expor por envio: quantidade total, pendentes, emails enviados e falhos; estado geral (`QUEUED`, `PROCESSING`, `COMPLETED`, `COMPLETED_WITH_ERRORS`); última tentativa e opção de reprocessar destinatários falhos. O status deve derivar dos registros por destinatário ou ser atualizado transacionalmente ao concluir lotes.
+Expor por envio: quantidade total, pendentes, emails enviados e falhos; estado geral (`QUEUED`, `PROCESSING`, `COMPLETED`, `COMPLETED_WITH_ERRORS`); mensagens ainda pendentes na outbox, último erro de publicação e opção de reprocessar a distribuição ou destinatários falhos. O status deriva dos registros por destinatário e é atualizado transacionalmente ao concluir lotes.
 
 ## Endpoints sugeridos
 
@@ -78,7 +82,7 @@ Expor por envio: quantidade total, pendentes, emails enviados e falhos; estado g
 
 ## Decisões de implementação
 
-- Definir limite máximo do lote e política de retry.
-- Definir se destinatários sem email recebem apenas na plataforma ou são excluídos do envio.
-- Implementar outbox se não existir mecanismo equivalente no projeto.
+- O lote de entrega é limitado a 100 destinatários e o envio selecionado a 500 IDs.
+- A inscrição exige uma conta com email; esse endereço é copiado para o destinatário no momento do envio.
+- A outbox é persistida no banco; o relay usa confirmação do RabbitMQ e continua tentando publicar pendências.
 - Não inserir notificações diretamente em serviços de eventos/atividades: os pontos de negócio devem chamar o serviço de notificações ou publicar eventos internos, mantendo o subdomínio como dono do envio.
