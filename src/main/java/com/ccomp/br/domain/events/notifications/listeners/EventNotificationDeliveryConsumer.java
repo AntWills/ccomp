@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.events.notifications.listeners;
 
-import com.ccomp.br.domain.events.notifications.application.EventNotificationDeliveryProcessor;
-import com.ccomp.br.domain.events.notifications.application.EventNotificationDispatchProcessor;
+import com.ccomp.br.domain.events.notifications.application.async.EventNotificationDeliveryProcessor;
+import com.ccomp.br.domain.events.notifications.application.async.EventNotificationDispatchProcessor;
 import com.ccomp.br.domain.events.notifications.external.message.EventNotificationDeliveryBatchMessage;
 import com.ccomp.br.domain.events.notifications.external.message.EventNotificationDeliveryChannel;
 import lombok.extern.slf4j.Slf4j;

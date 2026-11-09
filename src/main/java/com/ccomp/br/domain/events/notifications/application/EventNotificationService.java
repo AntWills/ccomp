@@ -7,6 +7,7 @@ import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.notifications.dto.*;
 import com.ccomp.br.domain.events.notifications.enums.*;
 import com.ccomp.br.domain.events.notifications.persistence.*;
+import com.ccomp.br.domain.events.notifications.application.async.EventNotificationPublisher;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;

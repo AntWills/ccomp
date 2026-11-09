@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.events.notifications.application;
+package com.ccomp.br.domain.events.notifications.application.async;
 
 import com.ccomp.br.domain.events.notifications.persistence.EventNotificationOutbox;
 import com.ccomp.br.domain.events.notifications.persistence.EventNotificationOutboxRepository;

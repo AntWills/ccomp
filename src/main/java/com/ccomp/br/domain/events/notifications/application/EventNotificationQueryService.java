@@ -26,19 +26,21 @@ public class EventNotificationQueryService {
     private final EventNotificationRecipientRepository recipientRepository;
     private final EventNotificationDslRepository dslRepository;
     private final EventNotificationOutboxRepository outboxRepository;
+    private final EventNotificationRecipientDslRepository recipientDslRepository;
     private final Clock clock;
 
     public EventNotificationQueryService(EventCache eventCache, EventAccessPolicy accessPolicy,
             EventNotificationRepository notificationRepository,
             EventNotificationRecipientRepository recipientRepository,
             EventNotificationDslRepository dslRepository, EventNotificationOutboxRepository outboxRepository,
-            Clock clock) {
+            EventNotificationRecipientDslRepository recipientDslRepository, Clock clock) {
         this.eventCache = eventCache;
         this.accessPolicy = accessPolicy;
         this.notificationRepository = notificationRepository;
         this.recipientRepository = recipientRepository;
         this.dslRepository = dslRepository;
         this.outboxRepository = outboxRepository;
+        this.recipientDslRepository = recipientDslRepository;
         this.clock = clock;
     }
 
@@ -87,7 +89,7 @@ public class EventNotificationQueryService {
 
     @Transactional
     public int markAllRead(UUID userId) {
-        return recipientRepository.markAllRead(userId, LocalDateTime.now(clock));
+        return recipientDslRepository.markAllRead(userId, LocalDateTime.now(clock));
     }
 
     @Transactional(readOnly = true)

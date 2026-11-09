@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.events.notifications.listeners;
 
-import com.ccomp.br.domain.events.notifications.application.EventNotificationDispatchProcessor;
+import com.ccomp.br.domain.events.notifications.application.async.EventNotificationDispatchProcessor;
 import com.ccomp.br.domain.events.notifications.dto.NotificationRecipientCursor;
 import com.ccomp.br.domain.events.notifications.external.message.EventNotificationDispatchChannel;
 import com.ccomp.br.domain.events.notifications.external.message.EventNotificationDispatchMessage;

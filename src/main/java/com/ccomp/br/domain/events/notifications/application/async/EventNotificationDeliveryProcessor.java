@@ -1,11 +1,8 @@
-package com.ccomp.br.domain.events.notifications.application;
+package com.ccomp.br.domain.events.notifications.application.async;
 
 import com.ccomp.br.domain.events.notifications.enums.NotificationEmailStatus;
 import com.ccomp.br.domain.events.notifications.persistence.*;
-import com.ccomp.br.module.email.EmailAddress;
-import com.ccomp.br.module.email.EmailService;
-import com.ccomp.br.module.email.EmailTemplateService;
-import com.ccomp.br.shared.dto.SendMailDTO;
+import com.ccomp.br.domain.events.notifications.email.EventNotificationEmailService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,37 +13,32 @@ import java.util.Map;
 @Service
 public class EventNotificationDeliveryProcessor {
     private final EventNotificationRecipientRepository recipientRepository;
+    private final EventNotificationRecipientDslRepository recipientDslRepository;
     private final EventNotificationRepository notificationRepository;
-    private final EmailService emailService;
-    private final EmailTemplateService templateService;
+    private final EventNotificationEmailService notificationEmailService;
     private final Clock clock;
 
     public EventNotificationDeliveryProcessor(EventNotificationRecipientRepository recipientRepository,
-            EventNotificationRepository notificationRepository, EmailService emailService,
-            EmailTemplateService templateService, Clock clock) {
+            EventNotificationRecipientDslRepository recipientDslRepository,
+            EventNotificationRepository notificationRepository, EventNotificationEmailService notificationEmailService,
+            Clock clock) {
         this.recipientRepository = recipientRepository;
+        this.recipientDslRepository = recipientDslRepository;
         this.notificationRepository = notificationRepository;
-        this.emailService = emailService;
-        this.templateService = templateService;
+        this.notificationEmailService = notificationEmailService;
         this.clock = clock;
     }
 
     @Transactional
     public void deliver(Long notificationId, Long recipientId) {
         LocalDateTime now = LocalDateTime.now(clock);
-        if (recipientRepository.claimPending(recipientId, NotificationEmailStatus.PENDING,
-                NotificationEmailStatus.PROCESSING, now) == 0) return;
+        if (recipientDslRepository.claimPending(recipientId, now) == 0) return;
 
         EventNotificationRecipient recipient = recipientRepository.findById(recipientId).orElseThrow();
         EventNotification notification = notificationRepository.findById(notificationId).orElseThrow();
         try {
-            String subject = notification.getTitle();
-            String html = templateService.render("event-notification", subject, Map.of(
-                    "recipientName", recipient.getUserName(),
-                    "message", notification.getMessage(),
-                    "eventTitle", notification.getEventTitle()
-            ));
-            emailService.send(new SendMailDTO(new EmailAddress(recipient.getEmailAddress()), subject, html, true));
+            notificationEmailService.send(recipient.getEmailAddress(), recipient.getUserName(),
+                    notification.getEventTitle(), notification.getTitle(), notification.getMessage());
             recipient.setEmailStatus(NotificationEmailStatus.SENT);
             recipient.setEmailSentAt(LocalDateTime.now(clock));
             recipient.setEmailError(null);

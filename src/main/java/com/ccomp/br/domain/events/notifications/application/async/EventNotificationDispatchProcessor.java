@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.events.notifications.application;
+package com.ccomp.br.domain.events.notifications.application.async;
 
 import com.ccomp.br.domain.events.notifications.dto.NotificationRecipientCandidate;
 import com.ccomp.br.domain.events.notifications.dto.NotificationRecipientCursor;
