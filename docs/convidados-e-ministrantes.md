@@ -73,6 +73,6 @@ O perfil reúne nome, descrição e conta opcional; cada vínculo mantém sua pr
 
 As operações centrais permitem listar, criar, editar e excluir perfis, além de associá-los a atividades. Convites e associação de conta continuam disponíveis por atividade. Cancelar o próprio vínculo continua sendo uma ação por atividade; excluir um vínculo não remove o perfil nem os demais vínculos. Excluir o perfil remove todos os vínculos associados.
 
-Na migração V39, os registros existentes mantêm vínculos, funções e status. Registros com conta são agrupados por evento e conta; registros sem conta não são unidos com base somente em nomes coincidentes. As rotas existentes por atividade continuam disponíveis.
+Na migração V40, os registros existentes mantêm vínculos, funções e status. Registros com conta são agrupados por evento e conta; registros sem conta não são unidos com base somente em nomes coincidentes. As rotas existentes por atividade continuam disponíveis.
 
 As cargas gerais de ministrante e convidado usadas nos certificados gerais serão configurações distintas na entidade evento, aplicadas uma vez por certificado. Elas não pertencem aos perfis individuais nem aos vínculos de atividade. `Event.workloadHours` permanece destinado ao certificado geral de participante. Ver [Certificados de eventos](event-certificado.md) para os cálculos e critérios de aceite.

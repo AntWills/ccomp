@@ -48,8 +48,8 @@ A regra de resolução esperada é: **template específico da atividade e do con
 
 | Necessidade | Situação atual | Trabalho necessário |
 |---|---|---|
-| Template de atividade individual | V39 possuía um template compartilhado por evento; a V40 adiciona configuração por atividade e contexto | Resolvido em ordem: template da atividade/contexto → template de atividade do evento/contexto → padrão do sistema. |
-| Fundo por atividade | A V40 permite fundo opcional no template específico da atividade | O fundo é resolvido na mesma camada das caixas; sem fundo próprio nessa camada, usa a imagem padrão do sistema. |
+| Template de atividade individual | Até a V40 havia um template compartilhado por evento; a V41 adiciona configuração por atividade e contexto | Resolvido em ordem: template da atividade/contexto → template de atividade do evento/contexto → padrão do sistema. |
+| Fundo por atividade | A V41 permite fundo opcional no template específico da atividade | O fundo é resolvido na mesma camada das caixas; sem fundo próprio nessa camada, usa a imagem padrão do sistema. |
 | Template geral de convidado | Contexto `GUEST` e template geral próprios adicionados | O preenchimento/emissão geral de convidado permanece para etapa posterior. |
 | Certificado de atividade para ministrante | Não há rota de emissão por atividade para ministrante | Implementar elegibilidade, carga horária e emissão usando o template resolvido para a atividade e contexto. |
 | Certificado de atividade para convidado | Não há rota de emissão por atividade para convidado; o convidado usa emissão geral de ministrante | Implementar emissão específica para vínculo `PRESENTER`, incluindo convidado sem conta na emissão manual. |
@@ -94,7 +94,7 @@ A regra de resolução esperada é: **template específico da atividade e do con
 - enviar convites para atividade pelas rotas existentes; cancelar o próprio vínculo confirmado e permitir que a equipe reative ou remova vínculos;
 - manter as rotas existentes de consulta por atividade e de listagem combinada de ministrantes e convidados.
 
-**Compatibilidade e migração:** a migração V39 cria os perfis centrais e associa os vínculos existentes. Registros com conta são agrupados por evento e conta; registros sem conta permanecem perfis separados, mesmo com nomes iguais. As rotas anteriores por atividade permanecem disponíveis. A operação de gestão central não transforma convidados com papel `PRESENTER` em ministrantes: são cadastros distintos e aparecem juntos apenas nas listagens combinadas de atividade.
+**Compatibilidade e migração:** a migração V40 cria os perfis centrais e associa os vínculos existentes. Registros com conta são agrupados por evento e conta; registros sem conta permanecem perfis separados, mesmo com nomes iguais. As rotas anteriores por atividade permanecem disponíveis. A operação de gestão central não transforma convidados com papel `PRESENTER` em ministrantes: são cadastros distintos e aparecem juntos apenas nas listagens combinadas de atividade.
 
 **Critérios de aceite:** a equipe consegue ver todos os perfis do evento, inclusive os ainda sem atividade; uma pessoa com vários vínculos aparece uma vez na listagem central; as funções/status continuam específicos por atividade; exclusão de um vínculo não apaga o perfil nem os outros vínculos; exclusão do perfil remove seus vínculos; permissões de visualização/edição seguem as regras do evento.
 
@@ -105,7 +105,7 @@ A regra de resolução esperada é: **template específico da atividade e do con
 3. **Concluída:** separar contextos de template geral e atividade; resolver templates de atividade pelo escopo da atividade, fallback do evento e padrão.
 4. **Concluída:** persistir caixas/fundos por atividade e contexto, com migração, gestão, preview, emissão participante e limpeza dos arquivos.
 5. Implementar emissão geral e por atividade de ministrantes e convidados, com rotas automáticas/manuais e regras de vínculo confirmado.
-6. Atualizar prévias, consulta de variáveis, documentação das rotas e testes para cobrir templates próprios, fallback e cargas ausentes.
+6. **Parcialmente concluída:** previews e documentação das rotas foram atualizados; faltam testes para templates próprios/fallback e validação das cargas ausentes.
 
 ### Organização interna planejada
 
