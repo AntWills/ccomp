@@ -56,6 +56,10 @@ public class EventActivity {
     @Column(name = "max_capacity")
     private Integer maxCapacity;
 
+    @Column(name = "active_enrollment_count", nullable = false)
+    @Builder.Default
+    private Integer activeEnrollmentCount = 0;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "registration_policy", nullable = false)
     private EnumActivityRegistrationPolicy registrationPolicy;
@@ -116,5 +120,13 @@ public class EventActivity {
 
     public boolean requireRegistrationEvent() {
         return registrationPolicy == EnumActivityRegistrationPolicy.EVENT_REGISTRANTS_ONLY;
+    }
+
+    public void registerActiveEnrollment() {
+        activeEnrollmentCount++;
+    }
+
+    public void releaseActiveEnrollment() {
+        if (activeEnrollmentCount > 0) activeEnrollmentCount--;
     }
 }

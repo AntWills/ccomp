@@ -27,6 +27,11 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select e from Enrollment e where e.userId = :userId and e.event.id = :eventId")
+    Optional<Enrollment> findForActivityRegistrationByUserIdAndEventId(
+            @Param("userId") UUID userId, @Param("eventId") Long eventId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select e from Enrollment e where e.userId = :userId and e.event.id = :eventId")
     Optional<Enrollment> findForCredentialByUserIdAndEventId(
             @Param("userId") UUID userId, @Param("eventId") Long eventId);
 

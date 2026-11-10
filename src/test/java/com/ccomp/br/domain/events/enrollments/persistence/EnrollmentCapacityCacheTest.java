@@ -18,15 +18,13 @@ import static org.mockito.Mockito.*;
 class EnrollmentCapacityCacheTest {
     private EventRepository eventRepository;
     private EventActivityRepository activityRepository;
-    private EnrollmentActivityDslRepository enrollmentActivityDslRepository;
     private EnrollmentCapacityCache cache;
 
     @BeforeEach
     void setUp() {
         eventRepository = mock(EventRepository.class);
         activityRepository = mock(EventActivityRepository.class);
-        enrollmentActivityDslRepository = mock(EnrollmentActivityDslRepository.class);
-        cache = new EnrollmentCapacityCache(eventRepository, activityRepository, enrollmentActivityDslRepository);
+        cache = new EnrollmentCapacityCache(eventRepository, activityRepository);
     }
 
     @Test
@@ -39,8 +37,8 @@ class EnrollmentCapacityCacheTest {
 
     @Test
     void returnsZeroAndCapacityWhenActivityHasNoActiveEnrollments() {
-        when(activityRepository.findById(9L)).thenReturn(Optional.of(EventActivity.builder().maxCapacity(25).build()));
-        when(enrollmentActivityDslRepository.countActiveByActivityId(9L)).thenReturn(0L);
+        when(activityRepository.findById(9L)).thenReturn(Optional.of(
+                EventActivity.builder().maxCapacity(25).activeEnrollmentCount(0).build()));
 
         assertThat(cache.getActivityEnrollmentCapacity(9L)).isEqualTo(new EnrollmentCapacityDTO(0, 25));
     }
@@ -52,6 +50,5 @@ class EnrollmentCapacityCacheTest {
 
         assertThrows(ResourceNotFoundException.class, () -> cache.getEventEnrollmentCapacity(404L));
         assertThrows(ResourceNotFoundException.class, () -> cache.getActivityEnrollmentCapacity(405L));
-        verifyNoInteractions(enrollmentActivityDslRepository);
     }
 }

@@ -10,6 +10,7 @@ import com.ccomp.br.domain.events.enrollments.dto.UserActivitySummaryDTO;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentActivityCursor;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivity;
+import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityRepository;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
@@ -62,10 +63,21 @@ public class ActivitiesEnrollmentsServices {
 
     @Transactional
     public MessageResponse inscribe(UUID userId, Long activityId) {
-        EventActivity activity = activityRepository.findByIdForUpdate(activityId)
+        EventActivity activitySnapshot = activityRepository.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
 
-        if(activity.isPublic())
+        if (activitySnapshot.isPublic())
+            return new MessageResponse("Atividade pública não precisa de inscrição.");
+
+        Event event = activitySnapshot.getEvent();
+        var enrollment = enrollmentRepository.findForActivityRegistrationByUserIdAndEventId(userId, event.getId())
+                .orElseThrow(() -> new ConflictException("Você precisa estar inscrito no evento."));
+        if (!enrollment.isActive())
+            throw new ConflictException("Você precisa estar inscrito no evento.");
+
+        EventActivity activity = activityRepository.findByIdForUpdate(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        if (activity.isPublic())
             return new MessageResponse("Atividade pública não precisa de inscrição.");
 
         Optional<EnrollmentActivity> enrollmentOpt = enrollmentActivityDslRepository
@@ -74,11 +86,6 @@ public class ActivitiesEnrollmentsServices {
         if(enrollmentOpt.isPresent())
             throw new ConflictException("Você já está inscrito na atividade.");
 
-        Event event = activity.getEvent();
-
-        var enrollment = enrollmentRepository.findByUserIdAndEvent(userId, event)
-                .orElseThrow(() -> new ConflictException("Você precisa estar inscrito no evento."));
-
         if (event.isSchedulerPrevent()) {
             List<ActivityDTO> conflicts = eventActivityDslRepository.findAllConflictingActivities(userId, activity);
             if (!conflicts.isEmpty())
@@ -86,7 +93,7 @@ public class ActivitiesEnrollmentsServices {
         }
 
         if (activity.getMaxCapacity() != null
-                && enrollmentActivityDslRepository.countActiveByActivityId(activityId) >= activity.getMaxCapacity())
+                && activity.getActiveEnrollmentCount() >= activity.getMaxCapacity())
             throw new ConflictException("As vagas para esta atividade estão esgotadas.");
 
         enrollmentActivityRepository.save(EnrollmentActivity.builder()
@@ -94,6 +101,7 @@ public class ActivitiesEnrollmentsServices {
                         .enrollment(enrollment)
                 .build()
         );
+        activity.registerActiveEnrollment();
 
         return new MessageResponse("Inscrição na atividade realizada com sucesso.");
     }
@@ -137,11 +145,25 @@ public class ActivitiesEnrollmentsServices {
     }
 
     public MessageResponse unsubscribe(UUID userId, Long activityId) {
-        EnrollmentActivity enrollment = enrollmentActivityDslRepository
+        EnrollmentActivity enrollmentActivity = enrollmentActivityDslRepository
                 .findByUserIdAndActivityId(userId, activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Você não está incrito neste evento."));
 
-        enrollmentActivityRepository.delete(enrollment);
+        EventActivity activitySnapshot = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        Event event = activitySnapshot.getEvent();
+        enrollmentRepository.findByIdAndEventId(
+                        enrollmentActivity.getEnrollmentId(), event.getId())
+                .filter(Enrollment::isActive)
+                .orElseThrow(() -> new ResourceNotFoundException("Você não está incrito nesta atividade."));
+        EventActivity activity = activityRepository.findByIdForUpdate(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        EnrollmentActivity activityEnrollment = enrollmentActivityDslRepository
+                .findByUserIdAndActivityId(userId, activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Você não está incrito nesta atividade."));
+
+        enrollmentActivityRepository.delete(activityEnrollment);
+        activity.releaseActiveEnrollment();
 
         return new MessageResponse("Inscrição removida com sucesso.");
     }

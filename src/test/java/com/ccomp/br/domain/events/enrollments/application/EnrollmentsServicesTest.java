@@ -3,10 +3,12 @@ package com.ccomp.br.domain.events.enrollments.application;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
+import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentCapacityDTO;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentCapacityCache;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
+import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -28,7 +30,9 @@ class EnrollmentsServicesTest {
                 mock(EnrollmentDslRepository.class),
                 mock(EventAccessPolicy.class),
                 Clock.systemUTC(),
-                enrollmentCapacityCache);
+                enrollmentCapacityCache,
+                mock(EnrollmentActivityRepository.class),
+                mock(EventActivityRepository.class));
     }
 
     @Test
