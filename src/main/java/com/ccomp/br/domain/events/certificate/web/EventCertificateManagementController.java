@@ -103,7 +103,10 @@ public class EventCertificateManagementController {
             @RequestParam(defaultValue = "PARTICIPANT") EnumActivityCertificateTemplateType type,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        var template = activityCertificateBoxServices.loadBoxTemplate(eventId, extractUserId(jwt), type);
+        var userId = extractUserId(jwt);
+        var template = type == EnumActivityCertificateTemplateType.PARTICIPANT
+                ? activityCertificateBoxServices.loadBoxTemplate(eventId, userId)
+                : activityCertificateBoxServices.loadBoxTemplate(eventId, userId, type);
         return ResponseEntity.ok(new BoxTemplateResponse(template.getBoxes(), template.getVariables()));
     }
 
@@ -191,7 +194,9 @@ public class EventCertificateManagementController {
         UUID userId = extractUserId(jwt);
         if (activityId == null) {
             var cover = certificateCoverService.loadCoverTemplate(eventId, userId);
-            var template = activityCertificateBoxServices.loadBoxTemplate(eventId, userId, type);
+            var template = type == EnumActivityCertificateTemplateType.PARTICIPANT
+                    ? activityCertificateBoxServices.loadBoxTemplate(eventId, userId)
+                    : activityCertificateBoxServices.loadBoxTemplate(eventId, userId, type);
             return renderPreview(cover, template.getBoxes(), mockCertificateVariables());
         }
         var template = activityCertificateBoxServices.loadActivityTemplate(eventId, activityId, userId, type);
@@ -343,7 +348,10 @@ public class EventCertificateManagementController {
             @RequestParam(defaultValue = "PARTICIPANT") EnumActivityCertificateTemplateType type,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        activityCertificateBoxServices.saveBoxTemplate(eventId, extractUserId(jwt), request.boxes(), type);
+        if (type == EnumActivityCertificateTemplateType.PARTICIPANT)
+            activityCertificateBoxServices.saveBoxTemplate(eventId, extractUserId(jwt), request.boxes());
+        else
+            activityCertificateBoxServices.saveBoxTemplate(eventId, extractUserId(jwt), request.boxes(), type);
         return ResponseEntity.ok(new MessageResponse("Template de caixas do certificado de atividade salvo com sucesso."));
     }
 

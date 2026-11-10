@@ -4,6 +4,7 @@ import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.activities.persistence.EventActivityDslRepository;
 import com.ccomp.br.domain.events.certificate.application.CertificateValidatorService;
+import com.ccomp.br.domain.events.certificate.application.CertificateWorkloadService;
 import com.ccomp.br.domain.events.core.enums.EnumEventExecutionStatus;
 import com.ccomp.br.domain.events.core.enums.EnumEventStatus;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
@@ -22,6 +23,7 @@ import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -50,6 +52,7 @@ public class CertificateVariablesServices {
     private final CertificateValidatorService validatorService;
     private final ActivityCache activityCache;
     private final EnrollmentRepository enrollmentRepository;
+    private final CertificateWorkloadService workloadService;
 
     public static final List<String> PARTICIPANT_VARIABLES = List.of(
             "{participante.nome}",
@@ -133,12 +136,14 @@ public class CertificateVariablesServices {
         return variablesFor(context);
     }
 
+    @Autowired
     public CertificateVariablesServices(EnrollmentActivityDslRepository enrollmentActivityDslRepository,
                                         EventActivityDslRepository activityDslRepository,
                                         UserManagement userManagement,
                                         EventCache eventCache, CertificateValidatorService validatorService,
                                         ActivityCache activityCache,
-                                        EnrollmentRepository enrollmentRepository) {
+                                        EnrollmentRepository enrollmentRepository,
+                                        CertificateWorkloadService workloadService) {
         this.enrollmentActivityDslRepository = enrollmentActivityDslRepository;
         this.activityDslRepository = activityDslRepository;
         this.userManagement = userManagement;
@@ -146,6 +151,16 @@ public class CertificateVariablesServices {
         this.validatorService = validatorService;
         this.activityCache = activityCache;
         this.enrollmentRepository = enrollmentRepository;
+        this.workloadService = workloadService;
+    }
+
+    public CertificateVariablesServices(EnrollmentActivityDslRepository enrollmentActivityDslRepository,
+                                        EventActivityDslRepository activityDslRepository,
+                                        UserManagement userManagement, EventCache eventCache,
+                                        CertificateValidatorService validatorService, ActivityCache activityCache,
+                                        EnrollmentRepository enrollmentRepository) {
+        this(enrollmentActivityDslRepository, activityDslRepository, userManagement, eventCache, validatorService,
+                activityCache, enrollmentRepository, new CertificateWorkloadService(activityDslRepository));
     }
 
     /**
@@ -176,8 +191,7 @@ public class CertificateVariablesServices {
             // Fork-2: Soma da carga horária das atividades em que o participante fez check-in
             CompletableFuture<BigDecimal> workloadFuture = needsWorkload
                     ? CompletableFuture.supplyAsync(
-                            () -> addHours(event.workloadHours(),
-                                    activityDslRepository.sumWorkloadHoursByCheckIn(userId, eventId)), executor)
+                            () -> workloadService.forEvent(event, userId, EnumCertificateType.EVENT), executor)
                     : CompletableFuture.completedFuture(null);
 
             // Fork-3: Código de validação (emitido uma única vez por participante/evento)
@@ -210,7 +224,7 @@ public class CertificateVariablesServices {
             CompletableFuture<Optional<UUID>> instructorAccountFuture = CompletableFuture.supplyAsync(
                     () -> activityDslRepository.findConfirmedInstructorAccount(instructorId, eventId), executor);
             CompletableFuture<BigDecimal> workloadFuture = CompletableFuture.supplyAsync(
-                    () -> activityDslRepository.sumWorkloadHoursByInstructor(userId, eventId), executor);
+                    () -> workloadService.forEvent(event, userId, EnumCertificateType.INSTRUCTOR), executor);
             CompletableFuture.allOf(instructorAccountFuture, workloadFuture).join();
             if (instructorAccountFuture.join().filter(userId::equals).isEmpty()) {
                 throw new AccessDeniedException("O usuário não possui vínculo confirmado como ministrante neste evento.");
@@ -225,9 +239,9 @@ public class CertificateVariablesServices {
 
     public Map<String, String> loadGuestInstructorVariablesValues(Long eventId, UUID userId) {
         EventDTO event = findCertificateEligibleEventDto(eventId);
-        return loadRoleEventVariables(INSTRUCTOR_VARIABLES, eventId, event.title(), event.address(),
-                event.organization(), userId, activityDslRepository.sumWorkloadHoursByInstructor(userId, eventId),
-                EnumCertificateType.INSTRUCTOR);
+        BigDecimal workload = workloadService.forEvent(event, userId, EnumCertificateType.GUEST);
+        return loadRoleEventVariables(GUEST_VARIABLES, event.id(), event.title(), event.startDate(), event.endDate(),
+                event.address(), event.organization(), userId, workload, EnumCertificateType.GUEST);
     }
 
     public UUID findInstructorCertificateRecipient(Long eventId, Long instructorId) {
@@ -236,8 +250,20 @@ public class CertificateVariablesServices {
                         "Ministrante confirmado com conta vinculada não encontrado neste evento."));
     }
 
+    public UUID findActivityInstructorCertificateRecipient(Long eventId, Long activityId, Long instructorId) {
+        return activityDslRepository.findConfirmedInstructorAccount(instructorId, activityId, eventId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Ministrante confirmado com conta vinculada não encontrado nesta atividade."));
+    }
+
     public BigDecimal sumInstructorWorkload(UUID userId, Long eventId) {
-        return activityDslRepository.sumWorkloadHoursByInstructor(userId, eventId);
+        EventDTO event = findCertificateEligibleEventDto(eventId);
+        return workloadService.forEvent(event, userId, EnumCertificateType.INSTRUCTOR);
+    }
+
+    public BigDecimal sumGuestWorkload(UUID userId, Long eventId) {
+        EventDTO event = findCertificateEligibleEventDto(eventId);
+        return workloadService.forEvent(event, userId, EnumCertificateType.GUEST);
     }
 
     public Map<String, String> loadManualInstructorVariablesValues(Long eventId, String instructorName,
@@ -255,6 +281,44 @@ public class CertificateVariablesServices {
         values.put("{evento.carga_horaria}", formattedWorkload);
         values.put("{validacao.codigo}", "Emissão manual");
         values.put("{validacao.url}", "");
+        return values;
+    }
+
+    public Map<String, String> loadManualGuestVariablesValues(Long eventId, String guestName,
+                                                               BigDecimal workloadHours) {
+        EventDTO event = findCertificateEligibleEventDto(eventId);
+        String formattedWorkload = workloadHours == null ? "0" : workloadHours.stripTrailingZeros().toPlainString();
+        Map<String, String> values = new HashMap<>();
+        values.put("{convidado.nome}", guestName);
+        values.put("{convidado.carga_horaria}", formattedWorkload);
+        values.put("{participante.nome}", guestName);
+        values.put("{evento.title}", event.title());
+        values.put("{evento.local}", event.address() == null ? "Não consta" : event.address());
+        values.put("{evento.organizacao}", event.organization() == null ? "Não consta" : event.organization());
+        values.put("{evento.carga_horaria}", formattedWorkload);
+        values.put("{validacao.codigo}", "Emissão manual");
+        values.put("{validacao.url}", "");
+        return values;
+    }
+
+    public Map<String, String> loadManualActivityRoleVariables(Long activityId, String personName, boolean guest) {
+        ActivityDTO activity = activityCache.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        EventDTO event = findCertificateEligibleEventDto(activity.eventId());
+        Map<String, String> values = new HashMap<>();
+        extractValuesFromActivity(values, activity);
+        extractValuesFromEvent(values, event, activity.workloadHours());
+        String hours = activity.workloadHours() == null ? "0" : activity.workloadHours().stripTrailingZeros().toPlainString();
+        values.put("{participante.nome}", personName);
+        values.put("{validacao.codigo}", "Emissão manual");
+        values.put("{validacao.url}", "");
+        if (guest) {
+            values.put("{convidado.nome}", personName);
+            values.put("{convidado.carga_horaria}", hours);
+        } else {
+            values.put("{ministrante.nome}", personName);
+            values.put("{ministrante.carga_horaria}", hours);
+        }
         return values;
     }
 
@@ -308,6 +372,9 @@ public class CertificateVariablesServices {
             if (type == EnumCertificateType.INSTRUCTOR) {
                 values.put("{ministrante.nome}", user.name());
                 values.put("{ministrante.carga_horaria}", formattedWorkload);
+            } else if (type == EnumCertificateType.GUEST) {
+                values.put("{convidado.nome}", user.name());
+                values.put("{convidado.carga_horaria}", formattedWorkload);
             } else if (type == EnumCertificateType.EDITOR) {
                 values.put("{equipe.nome}", user.name());
                 values.put("{equipe.carga_horaria}", formattedWorkload);
@@ -373,8 +440,7 @@ public class CertificateVariablesServices {
 
             CompletableFuture<BigDecimal> eventWorkloadFuture = eventFuture.thenApplyAsync(event -> {
                 if (event == null || !variables.contains("{evento.carga_horaria}")) return null;
-                return addHours(event.workloadHours(),
-                        activityDslRepository.sumWorkloadHoursByCheckIn(userId, event.id()));
+                return workloadService.forEvent(event, userId, EnumCertificateType.EVENT);
             }, executor);
             CompletableFuture.allOf(userFuture, activityFuture, eventFuture, validationCodeFuture,
                     eventWorkloadFuture).join();
@@ -393,6 +459,34 @@ public class CertificateVariablesServices {
             }
             throw new IllegalStateException("Falha ao carregar variaveis do certificado.", e.getCause());
         }
+    }
+
+    public Map<String, String> loadActivityRoleVariables(List<String> variables, Long activityId, UUID userId,
+                                                          EnumCertificateType type) {
+        if (type != EnumCertificateType.INSTRUCTOR && type != EnumCertificateType.GUEST)
+            throw new IllegalArgumentException("Tipo de certificado de atividade inválido.");
+        ActivityDTO activity = activityCache.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        EventDTO event = findCertificateEligibleEventDto(activity.eventId());
+        UserDTO user = userManagement.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+        EventCertificateValidationCode code = (variables == null || variables.contains("{validacao.codigo}")
+                || variables.contains("{validacao.url}"))
+                ? validatorService.issueForActivity(event.id(), activity.id(), userId, type) : null;
+        String hours = activity.workloadHours() == null ? "0" : activity.workloadHours().stripTrailingZeros().toPlainString();
+        Map<String, String> values = new HashMap<>();
+        extractValuesFromActivity(values, activity);
+        extractValuesFromEvent(values, event, activity.workloadHours());
+        values.put("{participante.nome}", user.name());
+        if (type == EnumCertificateType.INSTRUCTOR) {
+            values.put("{ministrante.nome}", user.name());
+            values.put("{ministrante.carga_horaria}", hours);
+        } else {
+            values.put("{convidado.nome}", user.name());
+            values.put("{convidado.carga_horaria}", hours);
+        }
+        extractValuesFromValidator(values, code);
+        return values;
     }
 
     private void extractValuesFromUser(Map<String, String> values, @Nullable UserDTO user) {

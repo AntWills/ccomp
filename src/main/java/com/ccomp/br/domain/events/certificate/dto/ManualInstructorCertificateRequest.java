@@ -10,10 +10,10 @@ public record ManualInstructorCertificateRequest(
         @Positive Long activityId,
         @Positive Long activityGuestId
 ) {
-    @AssertTrue(message = "Informe instructorId ou o par activityId e activityGuestId, sem misturar as opções.")
+    @AssertTrue(message = "Informe instructorId, opcionalmente com activityId, ou o par activityId e activityGuestId.")
     @Schema(hidden = true)
     public boolean isTargetValid() {
-        return (instructorId != null && activityId == null && activityGuestId == null)
+        return (instructorId != null && activityGuestId == null)
                 || (instructorId == null && activityId != null && activityGuestId != null);
     }
 }

@@ -6,7 +6,7 @@ Este documento reúne o funcionamento dos certificados: relacionamentos usados p
 
 Os certificados são imagens PNG montadas sob demanda. A aplicação combina uma imagem de fundo com caixas de texto; os marcadores nas caixas são substituídos pelos dados do evento e da pessoa. As emissões automáticas elegíveis podem criar ou reutilizar um código público de validação. A imagem não é persistida como um arquivo de certificado.
 
-Há quatro contextos de certificado: participante do evento, participante de atividade, ministrante e equipe. Além deles, a equipe pode emitir certificados personalizados usando caixas e valores enviados na requisição.
+Há cinco contextos de certificado: participante do evento, participante de atividade, ministrante, convidado e equipe. Ministrantes e convidados também podem receber certificados específicos de atividade. Além deles, a equipe pode emitir certificados personalizados usando caixas e valores enviados na requisição.
 
 ## 1.1. Estado atual, comportamento desejado e diferenças
 
@@ -18,7 +18,7 @@ As seções seguintes descrevem primeiro o que o código faz hoje e depois a esp
 - O certificado de atividade do participante usa o valor de carga horária da própria atividade.
 - Há templates gerais separados para `PARTICIPANT`, `INSTRUCTOR`, `GUEST` e `EDITOR`. Há templates de atividade por contexto no evento e configuração opcional por atividade.
 - O fundo próprio é único por evento e é compartilhado entre todos os tipos e atividades. Sem fundo próprio, usa-se a imagem padrão do sistema.
-- O certificado geral de ministrante tem template distinto do certificado geral de participante. Seu cálculo soma a carga das atividades com vínculo confirmado. A consulta também soma as horas de atividades em que a pessoa tem vínculo de convidado `PRESENTER` confirmado.
+- O certificado geral de ministrante tem template distinto do certificado geral de participante. Ministrantes e convidados têm somas separadas: vínculo confirmado de ministrante e vínculo confirmado `PRESENTER`, respectivamente.
 - Os modelos de dados de atividade aceitam carga horária nula. Nas somas atuais, uma atividade sem carga contribui com zero.
 
 ### Especificação desejada
@@ -50,12 +50,12 @@ A regra de resolução esperada é: **template específico da atividade e do con
 |---|---|---|
 | Template de atividade individual | Até a V40 havia um template compartilhado por evento; a V41 adiciona configuração por atividade e contexto | Resolvido em ordem: template da atividade/contexto → template de atividade do evento/contexto → padrão do sistema. |
 | Fundo por atividade | A V41 permite fundo opcional no template específico da atividade | O fundo é resolvido na mesma camada das caixas; sem fundo próprio nessa camada, usa a imagem padrão do sistema. |
-| Template geral de convidado | Contexto `GUEST` e template geral próprios adicionados | O preenchimento/emissão geral de convidado permanece para etapa posterior. |
-| Certificado de atividade para ministrante | Não há rota de emissão por atividade para ministrante | Implementar elegibilidade, carga horária e emissão usando o template resolvido para a atividade e contexto. |
-| Certificado de atividade para convidado | Não há rota de emissão por atividade para convidado; o convidado usa emissão geral de ministrante | Implementar emissão específica para vínculo `PRESENTER`, incluindo convidado sem conta na emissão manual. |
-| Carga geral de ministrante/convidado | Os campos específicos já existem em `Event` e podem ser definidos na criação/edição do evento; o cálculo do certificado ainda soma apenas atividades | Somar a carga geral correspondente no certificado geral e na validação, sem reaproveitar `Event.workloadHours`. |
-| Variáveis comuns e específicas | As listas são separadas por contexto; convidado reutiliza variáveis de ministrante | Definir nomes e regras das variáveis de convidado e garantir a extração, validação, prévia e preenchimento real em cada contexto. |
-| Validação dos novos certificados | Há códigos para evento, atividade, ministrante e equipe | Garantir identificação do vínculo/contexto específico para ministrante e convidado por atividade; manter verificação pública coerente com a carga impressa. |
+| Template geral de convidado | Implementado com contexto e template geral próprios | Emissão geral usa variáveis e carga de convidado e emite código do tipo `GUEST`. |
+| Certificado de atividade para ministrante | Implementado | Rota automática e emissão manual usam o template resolvido para a atividade/contexto, com fallback do evento e carga somente da atividade. |
+| Certificado de atividade para convidado | Implementado para vínculo `PRESENTER` confirmado | Rota automática exige conta; emissão manual aceita perfil sem conta. Usa o contexto `GUEST` e carga somente da atividade. |
+| Carga geral de ministrante/convidado | Implementado em serviço comum de cálculo | Emissão geral e validação somam a configuração correspondente do evento às atividades elegíveis; certificados de atividade não recebem essa carga. |
+| Variáveis comuns e específicas | Implementado para participante, ministrante, convidado e equipe | Variáveis gerais e de atividade são preenchidas por contexto; emissão manual identifica explicitamente a emissão sem código público. |
+| Validação dos novos certificados | Implementado para códigos gerais e de atividade | Tipo e carga por atividade são preservados na resposta pública; ministrante e convidado possuem códigos distintos. |
 
 ### Caso 1 — carga geral de ministrante e convidado
 
@@ -101,11 +101,19 @@ A regra de resolução esperada é: **template específico da atividade e do con
 ### Plano de implementação sugerido
 
 1. **Concluídas:** adicionar ao evento as cargas gerais distintas de ministrante e convidado e implementar perfis centrais/vínculos de ministrante com migração preservadora.
-2. Centralizar o cálculo de carga por destinatário/contexto; aplicar a carga geral apenas nos certificados gerais e alinhar emissão, variáveis e validação.
+2. **Concluída:** centralizar o cálculo de carga por destinatário/contexto; aplicar a carga geral apenas nos certificados gerais e alinhar emissão, variáveis e validação.
 3. **Concluída:** separar contextos de template geral e atividade; resolver templates de atividade pelo escopo da atividade, fallback do evento e padrão.
 4. **Concluída:** persistir caixas/fundos por atividade e contexto, com migração, gestão, preview, emissão participante e limpeza dos arquivos.
-5. Implementar emissão geral e por atividade de ministrantes e convidados, com rotas automáticas/manuais e regras de vínculo confirmado.
-6. **Parcialmente concluída:** previews e documentação das rotas foram atualizados; faltam testes para templates próprios/fallback e validação das cargas ausentes.
+5. **Concluída:** implementar emissão geral e por atividade de ministrantes e convidados, com rotas automáticas/manuais e regras de vínculo confirmado.
+6. **Parcialmente concluída:** documentação das rotas e regras foi atualizada; falta cobrir os cenários com testes automatizados.
+
+### Rotas de emissão de ministrantes e convidados
+
+- `GET /api/events/{eventId}/instructors/{instructorId}/certificate`: certificado geral de ministrante.
+- `GET /api/events/{eventId}/activities/{activityId}/instructors/{instructorId}/activity-certificate`: certificado de ministrante da atividade.
+- `GET /api/events/{eventId}/activities/{activityId}/guests/{activityGuestId}/instructor-certificate`: certificado geral de convidado apresentador associado à atividade.
+- `GET /api/events/{eventId}/activities/{activityId}/guests/{activityGuestId}/activity-certificate`: certificado do convidado para aquela atividade.
+- `POST /api/events/{eventId}/instructor-certificate/manual`: emissão manual geral por perfil de ministrante ou convidado; com `instructorId` e `activityId`, ou com `activityId` e `activityGuestId`, emite o certificado contextual da atividade. Emissão manual não cria código público de validação.
 
 ### Organização interna planejada
 

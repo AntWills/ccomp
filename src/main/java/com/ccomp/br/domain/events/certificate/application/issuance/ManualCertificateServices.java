@@ -68,18 +68,24 @@ public class ManualCertificateServices {
 
         String instructorName;
         BigDecimal workload;
+        boolean guestCertificate = request.instructorId() == null;
         if (request.instructorId() != null) {
             var instructor = instructorRepository.findById(request.instructorId())
                     .orElseThrow(() -> new ResourceNotFoundException("Ministrante não encontrado."));
-            var activity = activityCache.findById(instructor.getActivityId())
+            Long targetActivityId = request.activityId() == null ? instructor.getActivityId() : request.activityId();
+            if (request.activityId() != null && !request.activityId().equals(instructor.getActivityId()))
+                throw new ResourceNotFoundException("Ministrante não está vinculado a esta atividade.");
+            var activity = activityCache.findById(targetActivityId)
                     .filter(item -> item.eventId().equals(eventId))
                     .orElseThrow(() -> new ResourceNotFoundException("Ministrante não pertence a este evento."));
             if (instructor.getStatus() != EnumInstructorStatus.CONFIRMED)
                 throw new AccessDeniedException("O vínculo do ministrante não está confirmado.");
             instructorName = instructor.getName();
-            workload = instructor.getUserId() == null
+            workload = request.activityId() != null
                     ? activity.workloadHours()
-                    : variablesServices.sumInstructorWorkload(instructor.getUserId(), eventId);
+                    : instructor.getUserId() == null
+                        ? addHours(event.instructorCertificateWorkloadHours(), activity.workloadHours())
+                        : variablesServices.sumInstructorWorkload(instructor.getUserId(), eventId);
         } else {
             var activity = activityCache.findById(request.activityId())
                     .filter(item -> item.eventId().equals(eventId))
@@ -91,14 +97,27 @@ public class ManualCertificateServices {
                     || !activityGuest.getEventGuest().isConfirmed())
                 throw new AccessDeniedException("Somente apresentadores confirmados podem receber este certificado.");
             instructorName = activityGuest.getEventGuest().getName();
-            workload = activity.workloadHours();
+            workload = activityGuest.getEventGuest().getUserId() == null
+                    ? addHours(event.guestCertificateWorkloadHours(), activity.workloadHours())
+                    : variablesServices.sumGuestWorkload(activityGuest.getEventGuest().getUserId(), eventId);
+        }
+
+        if (request.activityId() != null) {
+            var context = guestCertificate
+                    ? com.ccomp.br.domain.events.certificate.enums.EnumActivityCertificateTemplateType.GUEST
+                    : com.ccomp.br.domain.events.certificate.enums.EnumActivityCertificateTemplateType.INSTRUCTOR;
+            var resolved = certificateFetcher.resolveActivityTemplate(eventId, request.activityId(), context);
+            Map<String, String> values = variablesServices.loadManualActivityRoleVariables(
+                    request.activityId(), instructorName, guestCertificate);
+            return render(resolved.cover(), resolved.boxes(), values);
         }
 
         StorageExternal.StoredFile cover = certificateFetcher.fetchCoverTemplate(eventId);
         EventBoxTemplate template = certificateFetcher.fetchBoxTemplate(
-                eventId, EnumEventCertificateTemplateType.INSTRUCTOR);
-        Map<String, String> values = variablesServices.loadManualInstructorVariablesValues(
-                eventId, instructorName, workload);
+                eventId, guestCertificate ? EnumEventCertificateTemplateType.GUEST : EnumEventCertificateTemplateType.INSTRUCTOR);
+        Map<String, String> values = guestCertificate
+                ? variablesServices.loadManualGuestVariablesValues(eventId, instructorName, workload)
+                : variablesServices.loadManualInstructorVariablesValues(eventId, instructorName, workload);
         return render(cover, template.getBoxes(), values);
     }
 
@@ -159,5 +178,9 @@ public class ManualCertificateServices {
                 .toReplace(variables)
                 .build()
                 .generate();
+    }
+
+    private BigDecimal addHours(BigDecimal first, BigDecimal second) {
+        return (first == null ? BigDecimal.ZERO : first).add(second == null ? BigDecimal.ZERO : second);
     }
 }

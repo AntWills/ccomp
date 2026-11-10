@@ -170,9 +170,50 @@ public class AutomaticCertificateServices {
 
         StorageExternal.StoredFile cover = certificateFetcher.fetchCoverTemplate(eventId);
         EventBoxTemplate template = certificateFetcher.fetchBoxTemplate(eventId,
-                EnumEventCertificateTemplateType.INSTRUCTOR);
+                EnumEventCertificateTemplateType.GUEST);
         Map<String, String> values = variablesServices.loadGuestInstructorVariablesValues(eventId, guest.getUserId());
         return render(cover, template.getBoxes(), values);
+    }
+
+    public StorageExternal.StoredFile buildActivityCertificateFromInstructor(Long eventId, Long activityId,
+            Long instructorId, UUID requesterId) {
+        var activity = activityCache.findById(activityId)
+                .filter(item -> item.eventId().equals(eventId))
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada neste evento."));
+        UUID recipient = variablesServices.findActivityInstructorCertificateRecipient(eventId, activityId, instructorId);
+        authorizeRecipientOrEditor(eventId, requesterId, recipient,
+                "Somente o ministrante ou a equipe do evento pode emitir este certificado.");
+        var template = certificateFetcher.resolveActivityTemplate(eventId, activityId,
+                EnumActivityCertificateTemplateType.INSTRUCTOR);
+        var values = variablesServices.loadActivityRoleVariables(template.variables(), activityId, recipient,
+                com.ccomp.br.domain.events.certificate.enums.EnumCertificateType.INSTRUCTOR);
+        return render(template.cover(), template.boxes(), values);
+    }
+
+    public StorageExternal.StoredFile buildActivityCertificateFromGuest(Long eventId, Long activityId,
+            Long activityGuestId, UUID requesterId) {
+        activityCache.findById(activityId).filter(item -> item.eventId().equals(eventId))
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada neste evento."));
+        var link = activityGuestRepository.findByActivityIdAndId(activityId, activityGuestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Convidado não está vinculado a esta atividade."));
+        var guest = link.getEventGuest();
+        if (link.getRole() != EnumActivityGuestRole.PRESENTER || !guest.isConfirmed() || guest.getUserId() == null)
+            throw new AccessDeniedException("Somente apresentadores confirmados com conta vinculada podem emitir este certificado.");
+        authorizeRecipientOrEditor(eventId, requesterId, guest.getUserId(),
+                "Somente o apresentador ou a equipe do evento pode emitir este certificado.");
+        var template = certificateFetcher.resolveActivityTemplate(eventId, activityId,
+                EnumActivityCertificateTemplateType.GUEST);
+        var values = variablesServices.loadActivityRoleVariables(template.variables(), activityId, guest.getUserId(),
+                com.ccomp.br.domain.events.certificate.enums.EnumCertificateType.GUEST);
+        return render(template.cover(), template.boxes(), values);
+    }
+
+    private void authorizeRecipientOrEditor(Long eventId, UUID requesterId, UUID recipientId, String message) {
+        if (!recipientId.equals(requesterId)) {
+            EventDTO event = eventCache.findById(eventId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+            if (!accessPolicy.canEdit(event, requesterId)) throw new AccessDeniedException(message);
+        }
     }
 
     public StorageExternal.StoredFile buildCertificateForEditor(Long eventId, UUID userId) {

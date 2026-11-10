@@ -99,6 +99,24 @@ public class EventCertificateIssuanceController {
         return certificateResponse(certificate, "certificado-ministrante-convidado-%d.png".formatted(activityGuestId));
     }
 
+    @GetMapping(value = "/{eventId}/activities/{activityId}/instructors/{instructorId}/activity-certificate",
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> buildActivityCertificateFromInstructor(@PathVariable Long eventId,
+            @PathVariable Long activityId, @PathVariable Long instructorId, @AuthenticationPrincipal Jwt jwt) {
+        var certificate = automaticCertificateServices.buildActivityCertificateFromInstructor(
+                eventId, activityId, instructorId, extractUserId(jwt));
+        return certificateResponse(certificate, "certificado-ministrante-atividade-%d.png".formatted(instructorId));
+    }
+
+    @GetMapping(value = "/{eventId}/activities/{activityId}/guests/{activityGuestId}/activity-certificate",
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> buildActivityCertificateFromGuest(@PathVariable Long eventId,
+            @PathVariable Long activityId, @PathVariable Long activityGuestId, @AuthenticationPrincipal Jwt jwt) {
+        var certificate = automaticCertificateServices.buildActivityCertificateFromGuest(
+                eventId, activityId, activityGuestId, extractUserId(jwt));
+        return certificateResponse(certificate, "certificado-convidado-atividade-%d.png".formatted(activityGuestId));
+    }
+
     @Operation(summary = "Gerar certificado da equipe do evento",
             description = "Gera o certificado do owner ou editor ativo autenticado após o encerramento do evento. Eventos cancelados não emitem certificado. Usa template próprio de equipe, fundo compartilhado e a carga horária da equipe configurada no evento.")
     @ApiResponses({

@@ -312,6 +312,10 @@ public class EventActivityDslRepository {
                         eventInstructor.status.eq(EnumInstructorStatus.CONFIRMED),
                         eventActivity.eventId.eq(eventId))
                 .fetchOne();
+        return instructorResult == null ? BigDecimal.ZERO : instructorResult;
+    }
+
+    public BigDecimal sumWorkloadHoursByGuest(UUID userId, Long eventId) {
         BigDecimal guestResult = queryFactory
                 .select(Expressions.numberTemplate(BigDecimal.class, "coalesce(sum({0}), 0)", eventActivity.workloadHours))
                 .from(eventActivity)
@@ -322,8 +326,7 @@ public class EventActivityDslRepository {
                         activityGuest.role.eq(EnumActivityGuestRole.PRESENTER),
                         eventActivity.eventId.eq(eventId))
                 .fetchOne();
-        return (instructorResult == null ? BigDecimal.ZERO : instructorResult)
-                .add(guestResult == null ? BigDecimal.ZERO : guestResult);
+        return guestResult == null ? BigDecimal.ZERO : guestResult;
     }
 
     public Optional<UUID> findConfirmedInstructorAccount(Long instructorId, Long eventId) {
@@ -334,6 +337,17 @@ public class EventActivityDslRepository {
                         eventInstructor.status.eq(EnumInstructorStatus.CONFIRMED),
                         eventInstructor.userId.isNotNull(),
                         eventActivity.eventId.eq(eventId))
+                .fetchFirst();
+        return Optional.ofNullable(userId);
+    }
+
+    public Optional<UUID> findConfirmedInstructorAccount(Long instructorId, Long activityId, Long eventId) {
+        UUID userId = queryFactory.select(eventInstructor.userId)
+                .from(eventActivity)
+                .join(eventInstructor).on(eventInstructor.activityId.eq(eventActivity.id))
+                .where(eventInstructor.id.eq(instructorId), eventActivity.id.eq(activityId),
+                        eventActivity.eventId.eq(eventId),
+                        eventInstructor.status.eq(EnumInstructorStatus.CONFIRMED), eventInstructor.userId.isNotNull())
                 .fetchFirst();
         return Optional.ofNullable(userId);
     }
