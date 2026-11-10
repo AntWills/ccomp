@@ -13,14 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class EnrollmentCapacityCache {
     private final EventRepository eventRepository;
     private final EventActivityRepository activityRepository;
-    private final EnrollmentActivityDslRepository enrollmentActivityDslRepository;
 
     public EnrollmentCapacityCache(EventRepository eventRepository,
-                                   EventActivityRepository activityRepository,
-                                   EnrollmentActivityDslRepository enrollmentActivityDslRepository) {
+                                   EventActivityRepository activityRepository) {
         this.eventRepository = eventRepository;
         this.activityRepository = activityRepository;
-        this.enrollmentActivityDslRepository = enrollmentActivityDslRepository;
     }
 
     @Transactional(readOnly = true)
@@ -36,8 +33,6 @@ public class EnrollmentCapacityCache {
     public EnrollmentCapacityDTO getActivityEnrollmentCapacity(Long activityId) {
         var activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
-        // countActiveByActivityId returns zero when no active enrollment rows exist.
-        long currentEnrollments = enrollmentActivityDslRepository.countActiveByActivityId(activityId);
-        return new EnrollmentCapacityDTO(currentEnrollments, activity.getMaxCapacity());
+        return new EnrollmentCapacityDTO(activity.getActiveEnrollmentCount(), activity.getMaxCapacity());
     }
 }

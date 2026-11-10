@@ -4,12 +4,17 @@ import com.ccomp.br.domain.events.enrollments.application.EnrollmentsServices;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
+import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityRepository;
+import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentCapacityCache;
+import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.DomainException;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +50,9 @@ public class EnrollmentsServiceTest {
 
     @Mock
     private EnrollmentRepository enrollmentRepository;
+    @Mock private EnrollmentActivityRepository enrollmentActivityRepository;
+    @Mock private EventActivityRepository activityRepository;
+    @Mock private EnrollmentCapacityCache enrollmentCapacityCache;
 
     @InjectMocks
     private EnrollmentsServices enrollmentsServices;
@@ -77,7 +85,7 @@ public class EnrollmentsServiceTest {
 
             when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
             when(existingEvent.getEnrollmentStatus(any(java.time.LocalDateTime.class))).thenReturn(EnumEnrollmentStatus.OPEN);
-            when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.empty());
+            when(enrollmentRepository.findForActivityRegistrationByUserIdAndEventId(userId, eventId)).thenReturn(Optional.empty());
             when(enrollmentRepository.save(any(Enrollment.class))).thenReturn(existingEnrollment);
 
             var enrollment = enrollmentsServices.subscribe(userId, eventId);
@@ -94,7 +102,7 @@ public class EnrollmentsServiceTest {
 
             when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
             when(existingEvent.getEnrollmentStatus(any(java.time.LocalDateTime.class))).thenReturn(EnumEnrollmentStatus.OPEN);
-            when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(existingEnrollment));
+            when(enrollmentRepository.findForActivityRegistrationByUserIdAndEventId(userId, eventId)).thenReturn(Optional.of(existingEnrollment));
             when(existingEnrollment.isActive()).thenReturn(false);
             when(enrollmentRepository.save(existingEnrollment)).thenReturn(existingEnrollment);
 
@@ -112,7 +120,7 @@ public class EnrollmentsServiceTest {
 
             when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
             when(existingEvent.getEnrollmentStatus(any(java.time.LocalDateTime.class))).thenReturn(EnumEnrollmentStatus.OPEN);
-            when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(existingEnrollment));
+            when(enrollmentRepository.findForActivityRegistrationByUserIdAndEventId(userId, eventId)).thenReturn(Optional.of(existingEnrollment));
             when(existingEnrollment.isActive()).thenReturn(true); // Indica que u usuário tem inscrição ativa.
 
             var enrollment = enrollmentsServices.subscribe(userId, eventId);
@@ -121,6 +129,27 @@ public class EnrollmentsServiceTest {
 
             verify(enrollmentRepository, never()).save(any(Enrollment.class));
         }
+    }
+
+    @Test
+    void deactivatingEventEnrollmentReleasesLinkedActivityCounters() {
+        UUID actorId = UUID.randomUUID();
+        EventDTO eventDTO = mock(EventDTO.class);
+        EventActivity activity = mock(EventActivity.class);
+        when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
+        when(eventAccessPolicy.canEdit(eventDTO, actorId)).thenReturn(true);
+        when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
+        when(enrollmentRepository.findByIdAndEventId(20L, eventId)).thenReturn(Optional.of(existingEnrollment));
+        when(existingEnrollment.getEventId()).thenReturn(eventId);
+        when(existingEnrollment.getId()).thenReturn(20L);
+        when(existingEnrollment.isActive()).thenReturn(true, false);
+        when(enrollmentActivityRepository.findActivityIdsByEnrollmentId(20L)).thenReturn(java.util.List.of(7L));
+        when(activityRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(activity));
+
+        enrollmentsServices.updateEnrollmentStatus(eventId, 20L, EnumEnrollmentState.CANCELED, actorId);
+
+        verify(activity).releaseActiveEnrollment();
+        verify(existingEvent).releaseActiveEnrollment();
     }
 
     @Nested
@@ -139,7 +168,7 @@ public class EnrollmentsServiceTest {
                     .build();
 
             when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
-            when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(enrollment));
+            when(enrollmentRepository.findForActivityRegistrationByUserIdAndEventId(userId, eventId)).thenReturn(Optional.of(enrollment));
 
             MessageResponse response = enrollmentsServices.unsubscribe(userId, eventId);
 
@@ -163,7 +192,7 @@ public class EnrollmentsServiceTest {
                     .build();
 
             when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
-            when(enrollmentRepository.findByUserIdAndEvent(userId, existingEvent)).thenReturn(Optional.of(enrollment));
+            when(enrollmentRepository.findForActivityRegistrationByUserIdAndEventId(userId, eventId)).thenReturn(Optional.of(enrollment));
 
             DomainException exception = assertThrows(DomainException.class, () ->
                     enrollmentsServices.unsubscribe(userId, eventId)

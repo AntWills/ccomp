@@ -7,6 +7,7 @@ import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
+import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivity;
@@ -38,6 +39,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ActivitiesEnrollmentsServicesTest {
     @Mock private EventActivityRepository activityRepository;
+    @Mock private EventRepository eventRepository;
     @Mock private EnrollmentRepository enrollmentRepository;
     @Mock private EnrollmentActivityRepository enrollmentActivityRepository;
     @Mock private EnrollmentActivityDslRepository enrollmentActivityDslRepository;
@@ -54,18 +56,17 @@ class ActivitiesEnrollmentsServicesTest {
         EventActivity activity = mock(EventActivity.class);
         Event event = mock(Event.class);
         Enrollment enrollment = mock(Enrollment.class);
-        when(activityRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(activity));
+        stubActivityEnrollment(activity, event, enrollment);
         when(activity.isPublic()).thenReturn(false);
         when(activity.getMaxCapacity()).thenReturn(null);
         when(enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, 9L)).thenReturn(Optional.empty());
-        when(activity.getEvent()).thenReturn(event);
         when(event.isSchedulerPrevent()).thenReturn(false);
-        when(enrollmentRepository.findByUserIdAndEvent(userId, event)).thenReturn(Optional.of(enrollment));
 
         var response = service.inscribe(userId, 9L);
 
         assertThat(response.response()).isEqualTo("Inscrição na atividade realizada com sucesso.");
         verify(enrollmentActivityRepository).save(any(EnrollmentActivity.class));
+        verify(activity).registerActiveEnrollment();
     }
 
     @Test
@@ -73,12 +74,10 @@ class ActivitiesEnrollmentsServicesTest {
         EventActivity activity = mock(EventActivity.class);
         Event event = mock(Event.class);
         Enrollment enrollment = mock(Enrollment.class);
-        when(activityRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(activity));
+        stubActivityEnrollment(activity, event, enrollment);
         when(activity.isPublic()).thenReturn(false);
         when(activity.getMaxCapacity()).thenReturn(null);
         when(enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, 9L)).thenReturn(Optional.empty());
-        when(activity.getEvent()).thenReturn(event);
-        when(enrollmentRepository.findByUserIdAndEvent(userId, event)).thenReturn(Optional.of(enrollment));
         when(event.isSchedulerPrevent()).thenReturn(true);
         when(eventActivityDslRepository.findAllConflictingActivities(userId, activity)).thenReturn(List.of());
 
@@ -96,11 +95,9 @@ class ActivitiesEnrollmentsServicesTest {
         Enrollment enrollment = mock(Enrollment.class);
         ActivityDTO conflictingActivity = new ActivityDTO(7L, 4L, "Atividade já inscrita", null,
                 0L, "Sala 1", null, null, null, null, null);
-        when(activityRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(activity));
+        stubActivityEnrollment(activity, event, enrollment);
         when(activity.isPublic()).thenReturn(false);
         when(enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, 9L)).thenReturn(Optional.empty());
-        when(activity.getEvent()).thenReturn(event);
-        when(enrollmentRepository.findByUserIdAndEvent(userId, event)).thenReturn(Optional.of(enrollment));
         when(event.isSchedulerPrevent()).thenReturn(true);
         when(eventActivityDslRepository.findAllConflictingActivities(userId, activity))
                 .thenReturn(List.of(conflictingActivity));
@@ -117,7 +114,7 @@ class ActivitiesEnrollmentsServicesTest {
 
     @Test
     void inscribeRejectsMissingActivity() {
-        when(activityRepository.findByIdForUpdate(9L)).thenReturn(Optional.empty());
+        when(activityRepository.findById(9L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.inscribe(userId, 9L))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -151,6 +148,16 @@ class ActivitiesEnrollmentsServicesTest {
     @Test
     void unsubscribeDeletesExistingEnrollment() {
         EnrollmentActivity enrollment = mock(EnrollmentActivity.class);
+        EventActivity activity = mock(EventActivity.class);
+        Event event = mock(Event.class);
+        when(activityRepository.findById(9L)).thenReturn(Optional.of(activity));
+        when(activityRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(activity));
+        when(activity.getEvent()).thenReturn(event);
+        when(event.getId()).thenReturn(4L);
+        when(enrollment.getEnrollmentId()).thenReturn(12L);
+        Enrollment lockedEnrollment = mock(Enrollment.class);
+        when(lockedEnrollment.isActive()).thenReturn(true);
+        when(enrollmentRepository.findByIdAndEventId(12L, 4L)).thenReturn(Optional.of(lockedEnrollment));
         when(enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, 9L))
                 .thenReturn(Optional.of(enrollment));
 
@@ -158,6 +165,18 @@ class ActivitiesEnrollmentsServicesTest {
 
         assertThat(response.response()).isEqualTo("Inscrição removida com sucesso.");
         verify(enrollmentActivityRepository).delete(enrollment);
+        verify(activity).releaseActiveEnrollment();
+    }
+
+    private void stubActivityEnrollment(EventActivity activity, Event event, Enrollment enrollment) {
+        when(activityRepository.findById(9L)).thenReturn(Optional.of(activity));
+        when(activityRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(activity));
+        when(activity.isPublic()).thenReturn(false);
+        when(activity.getEvent()).thenReturn(event);
+        when(event.getId()).thenReturn(4L);
+        when(enrollmentRepository.findForActivityRegistrationByUserIdAndEventId(userId, 4L))
+                .thenReturn(Optional.of(enrollment));
+        when(enrollment.isActive()).thenReturn(true);
     }
 
     @Test
