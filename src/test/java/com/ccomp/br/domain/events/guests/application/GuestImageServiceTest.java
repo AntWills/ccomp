@@ -2,9 +2,15 @@ package com.ccomp.br.domain.events.guests.application;
 
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.persistence.Event;
-import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.core.dto.EventDTO;
+import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
+import com.ccomp.br.domain.events.guests.persistence.EventGuestCache;
+import com.ccomp.br.domain.events.guests.persistence.GuestImageCache;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
+import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
+import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
+import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.domain.storage.external.StorageKeyGenerator;
 import com.ccomp.br.shared.exceptions.DomainException;
@@ -35,10 +41,16 @@ class GuestImageServiceTest {
     private EventAccessPolicy eventAccessPolicy;
 
     @Mock
-    private EventRepository eventRepository;
+    private EventCache eventCache;
 
     @Mock
     private EventGuestRepository eventGuestRepository;
+
+    @Mock
+    private EventGuestCache eventGuestCache;
+
+    @Mock
+    private GuestImageCache guestImageCache;
 
     @Mock
     private StorageExternal storageExternal;
@@ -48,19 +60,23 @@ class GuestImageServiceTest {
 
     private GuestImageService guestImageService;
     private Event event;
+    private EventDTO eventDTO;
     private EventGuest guest;
 
     @BeforeEach
     void setUp() {
         guestImageService = new GuestImageService(
                 eventAccessPolicy,
-                eventRepository,
+                eventCache,
                 eventGuestRepository,
+                eventGuestCache,
+                guestImageCache,
                 storageExternal,
                 storageKeyGenerator
         );
 
         event = Event.builder().id(EVENT_ID).build();
+        eventDTO = mock(EventDTO.class);
         guest = EventGuest.builder()
                 .id(GUEST_ID)
                 .event(event)
@@ -68,8 +84,13 @@ class GuestImageServiceTest {
                 .imageKey("events/12/guests/35/old.webp")
                 .build();
 
-        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
-        when(eventGuestRepository.findByIdAndEventId(GUEST_ID, EVENT_ID)).thenReturn(Optional.of(guest));
+        lenient().when(eventCache.findById(EVENT_ID)).thenReturn(Optional.of(eventDTO));
+        lenient().when(eventAccessPolicy.canView(eventDTO, null)).thenReturn(true);
+        lenient().when(eventAccessPolicy.canEdit(eventDTO, USER_ID)).thenReturn(true);
+        lenient().when(eventGuestRepository.findByIdAndEventId(GUEST_ID, EVENT_ID)).thenReturn(Optional.of(guest));
+        lenient().when(eventGuestCache.findByIdAndEventId(EVENT_ID, GUEST_ID)).thenReturn(Optional.of(
+                new EventGuestDTO(GUEST_ID, EVENT_ID, guest.getName(), guest.getDescription(), guest.getImageKey(),
+                        EnumGuestStatus.CONFIRMED, EnumGuestVisibility.PUBLIC, null)));
     }
 
     @Test
@@ -80,7 +101,7 @@ class GuestImageServiceTest {
 
         guestImageService.uploadImage(EVENT_ID, GUEST_ID, USER_ID, file);
 
-        verify(eventAccessPolicy).assertCanEdit(event, USER_ID);
+        verify(eventAccessPolicy).canEdit(eventDTO, USER_ID);
         verify(storageExternal).putObject("events/12/guests/35/new.webp", file);
         verify(eventGuestRepository).save(guest);
         verify(storageExternal).deleteObject("events/12/guests/35/old.webp");
@@ -100,24 +121,46 @@ class GuestImageServiceTest {
 
     @Test
     void getImageReturnsStoredFileForVisibleEvent() {
-        StorageExternal.StoredFile storedFile = new StorageExternal.StoredFile(
-                new ByteArrayResource(new byte[]{1}),
-                "image/webp"
-        );
+        when(guestImageCache.get("events/12/guests/35/old.webp"))
+                .thenReturn(new GuestImageCache.CachedImage(new byte[]{1}, "image/webp"));
+
+        assertThat(guestImageService.getImage(EVENT_ID, GUEST_ID, null)).isPresent();
+
+        verify(eventAccessPolicy).canView(eventDTO, null);
+    }
+
+    @Test
+    void getImageFallsBackToStorageWhenImageCacheFails() {
+        var storedFile = new StorageExternal.StoredFile(new ByteArrayResource(new byte[]{1}), "image/webp");
+        when(guestImageCache.get("events/12/guests/35/old.webp"))
+                .thenThrow(new IllegalStateException("Redis unavailable"));
         when(storageExternal.getObject("events/12/guests/35/old.webp"))
                 .thenReturn(Optional.of(storedFile));
 
-        assertThat(guestImageService.getImage(EVENT_ID, GUEST_ID, null))
-                .containsSame(storedFile);
+        assertThat(guestImageService.getImage(EVENT_ID, GUEST_ID, null)).containsSame(storedFile);
 
-        verify(eventAccessPolicy).assertCanView(event, null);
+        verify(eventCache).findById(EVENT_ID);
+        verify(storageExternal).getObject("events/12/guests/35/old.webp");
+    }
+
+    @Test
+    void getAllImagesFallsBackToStorageWhenBulkCacheFails() {
+        var images = java.util.List.of(new com.ccomp.br.domain.events.guests.dto.GuestImageItem(
+                GUEST_ID, "image/webp", new byte[]{1}));
+        when(guestImageCache.getAllForEvent(EVENT_ID)).thenThrow(new IllegalStateException("Redis unavailable"));
+        when(guestImageCache.loadAllForEvent(EVENT_ID)).thenReturn(images);
+
+        assertThat(guestImageService.getAllImages(EVENT_ID, USER_ID)).isEqualTo(images);
+
+        verify(eventAccessPolicy).canEdit(eventDTO, USER_ID);
+        verify(guestImageCache).loadAllForEvent(EVENT_ID);
     }
 
     @Test
     void removeImageClearsKeyAndDeletesStoredObject() {
         assertThat(guestImageService.removeImage(EVENT_ID, GUEST_ID, USER_ID)).isTrue();
 
-        verify(eventAccessPolicy).assertCanEdit(event, USER_ID);
+        verify(eventAccessPolicy).canEdit(eventDTO, USER_ID);
         verify(storageExternal).deleteObject("events/12/guests/35/old.webp");
         verify(eventGuestRepository).save(guest);
         assertThat(guest.getImageKey()).isNull();
@@ -127,14 +170,14 @@ class GuestImageServiceTest {
     void deleteGuestRemovesImageAndGuestProfile() {
         guestImageService.deleteGuest(EVENT_ID, GUEST_ID, USER_ID);
 
-        verify(eventAccessPolicy).assertCanEdit(event, USER_ID);
+        verify(eventAccessPolicy).canEdit(eventDTO, USER_ID);
         verify(storageExternal).deleteObject("events/12/guests/35/old.webp");
         verify(eventGuestRepository).delete(guest);
     }
 
     @Test
     void imageLookupRejectsGuestFromDifferentEvent() {
-        when(eventGuestRepository.findByIdAndEventId(GUEST_ID, EVENT_ID)).thenReturn(Optional.empty());
+        when(eventGuestCache.findByIdAndEventId(EVENT_ID, GUEST_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> guestImageService.getImage(EVENT_ID, GUEST_ID, null))
                 .isInstanceOf(ResourceNotFoundException.class)

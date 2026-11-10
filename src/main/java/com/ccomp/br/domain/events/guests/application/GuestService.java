@@ -20,12 +20,14 @@ import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
 import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestProfileDTO;
+import com.ccomp.br.domain.events.guests.enums.EnumGuestStatus;
+import com.ccomp.br.domain.events.guests.enums.EnumGuestVisibility;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuest;
 import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.EventGuest;
+import com.ccomp.br.domain.events.guests.persistence.EventGuestCache;
 import com.ccomp.br.domain.events.guests.persistence.EventGuestRepository;
 import com.ccomp.br.domain.events.guests.persistence.dsl.ActivityGuestDslRepository;
-import com.ccomp.br.domain.events.guests.persistence.dsl.EventGuestDslRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
@@ -42,7 +44,7 @@ public class GuestService {
     private final EventCache eventCache;
     private final ActivityCache activityCache;
     private final EventAccessPolicy eventAccessPolicy;
-    private final EventGuestDslRepository eventGuestDslRepository;
+    private final EventGuestCache eventGuestCache;
     private final ActivityGuestDslRepository activityGuestDslRepository;
     private final EventRepository eventRepository;
     private final EventActivityRepository activityRepository;
@@ -54,7 +56,7 @@ public class GuestService {
             EventCache eventCache,
             ActivityCache activityCache,
             EventAccessPolicy eventAccessPolicy,
-            EventGuestDslRepository eventGuestDslRepository,
+            EventGuestCache eventGuestCache,
             ActivityGuestDslRepository activityGuestDslRepository,
             EventRepository eventRepository,
             EventActivityRepository activityRepository,
@@ -65,7 +67,7 @@ public class GuestService {
         this.eventCache = eventCache;
         this.activityCache = activityCache;
         this.eventAccessPolicy = eventAccessPolicy;
-        this.eventGuestDslRepository = eventGuestDslRepository;
+        this.eventGuestCache = eventGuestCache;
         this.activityGuestDslRepository = activityGuestDslRepository;
         this.eventRepository = eventRepository;
         this.activityRepository = activityRepository;
@@ -146,6 +148,7 @@ public class GuestService {
 
         guest.setUserId(guestUserId);
         eventGuestRepository.save(guest);
+        eventGuestCache.evict(guest);
 
         if (!activityGuestRepository.existsByActivityIdAndEventGuestUserId(activityId, guestUserId))
             activityGuestRepository.save(
@@ -175,6 +178,7 @@ public class GuestService {
                         .userId(resolveActiveAccount(request.accountEmail()))
                         .build()
         );
+        eventGuestCache.evict(guest);
 
         return guest;
     }
@@ -201,7 +205,7 @@ public class GuestService {
 
         GuestCursor decodedCursor = CursorUtils.decode(cursorRaw, GuestCursor.class);
 
-        List<EventGuestDTO> results = eventGuestDslRepository.findGuestsWithCursor(eventId, isManager, decodedCursor, limit);
+        List<EventGuestDTO> results = eventGuestCache.findGuestsWithCursor(eventId, isManager, decodedCursor, limit);
         return CursorUtils.buildPage(
                 results, limit, guest -> new GuestCursor(guest.id(), guest.createdAt())
         );
@@ -267,6 +271,7 @@ public class GuestService {
         }
 
         eventGuestRepository.save(guest);
+        eventGuestCache.evict(guest);
     }
 
     @Transactional
@@ -290,6 +295,7 @@ public class GuestService {
         guest.setName(request.name());
         guest.setDescription(request.description());
         eventGuestRepository.save(guest);
+        eventGuestCache.evict(guest);
     }
 
     @Transactional(readOnly = true)

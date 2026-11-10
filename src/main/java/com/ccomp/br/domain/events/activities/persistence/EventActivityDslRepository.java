@@ -155,6 +155,8 @@ public class EventActivityDslRepository {
                         EnumEnrollmentState.CHECKED_IN
                 )
         );
+        // Horários são locais ao evento; atividades de eventos distintos não conflitam.
+        whereClause.and(eventActivity.event.id.eq(activity.getEvent().getId()));
 
         // Condição de sobreposição de horários: inicioA < fimB E fimA > inicioB
         whereClause.and(eventActivity.startDate.lt(activity.getEndDate()))
@@ -187,6 +189,9 @@ public class EventActivityDslRepository {
                         EnumEnrollmentState.CHECKED_IN
                 )
         );
+
+        // Mantém a consulta de conflitos consistente com existsSchedulingConflict.
+        whereClause.and(eventActivity.event.id.eq(activity.getEvent().getId()));
 
         whereClause.and(eventActivity.startDate.lt(activity.getEndDate()))
                 .and(eventActivity.endDate.gt(activity.getStartDate()));
@@ -231,6 +236,10 @@ public class EventActivityDslRepository {
                 )
                 .limit(limit)
                 .fetch();
+    }
+
+    public List<ActivityDTO> findAllConflictingActivities(UUID userId, EventActivity activity) {
+        return findConflictingActivities(userId, activity, null, Integer.MAX_VALUE);
     }
 
     /**

@@ -339,6 +339,103 @@ class EventActivityDslRepositoryTest {
     }
 
     @Test
+    @DisplayName("Inscrição somente no evento não gera conflito com atividade")
+    void shouldNotFindConflictWhenEventRegistrantHasNoActivityEnrollments() {
+        UUID userId = UUID.randomUUID();
+        LocalDateTime start = LocalDateTime.of(2026, 11, 9, 15, 0);
+        Event event = Event.builder()
+                .title("Evento sem atividades inscritas")
+                .slug("evento-sem-atividades-" + UUID.randomUUID())
+                .category(EnumEventCategory.ACADEMIC_EDUCATIONAL)
+                .format(EnumEventFormat.IN_PERSON)
+                .ownerId(UUID.randomUUID())
+                .createdAt(start.minusDays(1))
+                .build();
+        entityManager.persist(event);
+
+        Enrollment eventEnrollment = Enrollment.builder()
+                .event(event)
+                .userId(userId)
+                .status(EnumEnrollmentState.CONFIRMED)
+                .createdAt(start.minusDays(1))
+                .build();
+        entityManager.persist(eventEnrollment);
+
+        EventActivity target = EventActivity.builder()
+                .title("Atividade alvo")
+                .type(EnumActivityType.WORKSHOP)
+                .displayOrder(0L)
+                .startDate(start)
+                .endDate(start.plusHours(1))
+                .registrationPolicy(EnumActivityRegistrationPolicy.EVENT_REGISTRANTS_ONLY)
+                .createdAt(start.minusDays(1))
+                .event(event)
+                .build();
+        entityManager.persist(target);
+        entityManager.flush();
+        entityManager.clear();
+
+        EventActivity loadedTarget = entityManager.find(EventActivity.class, target.getId());
+
+        assertThat(eventActivityDslRepository.existsSchedulingConflict(userId, loadedTarget)).isFalse();
+        assertThat(eventActivityDslRepository.findConflictingActivities(userId, loadedTarget, null, 10)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Inscrição conflitante em outro evento não bloqueia a atividade")
+    void shouldIgnoreOverlappingActivityFromAnotherEvent() {
+        UUID userId = UUID.randomUUID();
+        LocalDateTime start = LocalDateTime.of(2026, 11, 9, 15, 0);
+        Event targetEvent = schedulingEvent("evento-alvo-" + UUID.randomUUID());
+        Event otherEvent = schedulingEvent("evento-inscrito-" + UUID.randomUUID());
+        entityManager.persist(targetEvent);
+        entityManager.persist(otherEvent);
+
+        EventActivity target = schedulingActivity(targetEvent, "Alvo", start, start.plusHours(1));
+        EventActivity otherActivity = schedulingActivity(otherEvent, "Outra atividade", start, start.plusHours(1));
+        entityManager.persist(target);
+        entityManager.persist(otherActivity);
+        Enrollment enrollment = Enrollment.builder()
+                .event(otherEvent)
+                .userId(userId)
+                .status(EnumEnrollmentState.CONFIRMED)
+                .createdAt(start.minusDays(1))
+                .build();
+        entityManager.persist(enrollment);
+        entityManager.persist(new EnrollmentActivity(enrollment, otherActivity));
+        entityManager.flush();
+        entityManager.clear();
+
+        EventActivity loadedTarget = entityManager.find(EventActivity.class, target.getId());
+        assertThat(eventActivityDslRepository.existsSchedulingConflict(userId, loadedTarget)).isFalse();
+        assertThat(eventActivityDslRepository.findConflictingActivities(userId, loadedTarget, null, 10)).isEmpty();
+    }
+
+    private Event schedulingEvent(String slug) {
+        return Event.builder()
+                .title(slug)
+                .slug(slug)
+                .category(EnumEventCategory.ACADEMIC_EDUCATIONAL)
+                .format(EnumEventFormat.IN_PERSON)
+                .ownerId(UUID.randomUUID())
+                .createdAt(LocalDateTime.now())
+                .build();
+    }
+
+    private EventActivity schedulingActivity(Event event, String title, LocalDateTime start, LocalDateTime end) {
+        return EventActivity.builder()
+                .title(title)
+                .type(EnumActivityType.WORKSHOP)
+                .displayOrder(0L)
+                .startDate(start)
+                .endDate(end)
+                .registrationPolicy(EnumActivityRegistrationPolicy.EVENT_REGISTRANTS_ONLY)
+                .createdAt(start.minusDays(1))
+                .event(event)
+                .build();
+    }
+
+    @Test
     @DisplayName("Deve realizar a paginação de atividades conflitantes via cursor ordenada por startDate crescente")
     void shouldPaginateConflictingActivitiesUsingCursor() {
         // Arranjo

@@ -34,7 +34,7 @@ public class ActivitiesEnrollmentsController {
             @ApiResponse(responseCode = "200", description = "Inscrição na atividade realizada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
             @ApiResponse(responseCode = "404", description = "Atividade não encontrada"),
-            @ApiResponse(responseCode = "409", description = "Conflito (Usuário não inscrito no evento ou já inscrito na atividade)")
+            @ApiResponse(responseCode = "409", description = "Conflito de inscrição. Quando houver conflito de horário, a resposta inclui o array conflicts com todas as atividades inscritas que se sobrepõem à atividade solicitada.")
     })
     @PostMapping("/activities/{activityId}/subscribe")
     public ResponseEntity<MessageResponse> subscribeToActivity(

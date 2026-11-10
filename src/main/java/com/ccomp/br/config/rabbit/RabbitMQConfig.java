@@ -7,11 +7,14 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Configuration
+@EnableScheduling
 public class RabbitMQConfig {
 
     public static final String EXCHANGE_NAME = "ccomp.events.exchange";
@@ -55,9 +58,18 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    @Primary
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
         template.setMessageConverter(jsonMessageConverter());
+        return template;
+    }
+
+    @Bean("notificationRabbitTemplate")
+    public RabbitTemplate notificationRabbitTemplate(ConnectionFactory connectionFactory) {
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setMessageConverter(jsonMessageConverter());
+        template.setMandatory(true);
         return template;
     }
 }
