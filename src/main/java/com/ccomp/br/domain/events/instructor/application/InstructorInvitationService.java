@@ -8,11 +8,15 @@ import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
+import com.ccomp.br.domain.events.core.persistence.Event;
+import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.instructor.external.InstructorInvitationMessageDTO;
 import com.ccomp.br.domain.events.instructor.external.message.InstructorInvitationChannel;
 import com.ccomp.br.domain.events.instructor.dto.InstructorInvitationDTO;
 import com.ccomp.br.domain.events.instructor.persistence.EventInstructor;
 import com.ccomp.br.domain.events.instructor.persistence.EventInstructorRepository;
+import com.ccomp.br.domain.events.instructor.persistence.EventInstructorProfile;
+import com.ccomp.br.domain.events.instructor.persistence.EventInstructorProfileRepository;
 import com.ccomp.br.domain.events.instructor.persistence.InstructorInvitation;
 import com.ccomp.br.domain.events.instructor.persistence.InstructorInvitationRepository;
 import com.ccomp.br.domain.events.instructor.enums.EnumInstructorRole;
@@ -27,6 +31,7 @@ import com.ccomp.br.shared.exceptions.UserBlockedException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -46,7 +51,10 @@ public class InstructorInvitationService {
     private final UserManagement userManagement;
     private final RabbitTemplate rabbitTemplate;
     private final Clock clock;
+    private final EventRepository eventRepository;
+    private final EventInstructorProfileRepository profileRepository;
 
+    @Autowired
     public InstructorInvitationService(
             ActivityCache activityCache,
             EventActivityRepository activityRepository,
@@ -56,7 +64,9 @@ public class InstructorInvitationService {
             EventAccessPolicy eventAccessPolicy,
             UserManagement userManagement,
             RabbitTemplate rabbitTemplate,
-            Clock clock
+            Clock clock,
+            EventRepository eventRepository,
+            EventInstructorProfileRepository profileRepository
     ) {
         this.activityCache = activityCache;
         this.activityRepository = activityRepository;
@@ -67,6 +77,16 @@ public class InstructorInvitationService {
         this.userManagement = userManagement;
         this.rabbitTemplate = rabbitTemplate;
         this.clock = clock;
+        this.eventRepository = eventRepository;
+        this.profileRepository = profileRepository;
+    }
+
+    public InstructorInvitationService(ActivityCache activityCache, EventActivityRepository activityRepository,
+            EventInstructorRepository instructorRepository, InstructorInvitationRepository invitationRepository,
+            EventCache eventCache, EventAccessPolicy eventAccessPolicy, UserManagement userManagement,
+            RabbitTemplate rabbitTemplate, Clock clock) {
+        this(activityCache, activityRepository, instructorRepository, invitationRepository, eventCache,
+                eventAccessPolicy, userManagement, rabbitTemplate, clock, null, null);
     }
 
     @Transactional
@@ -142,6 +162,21 @@ public class InstructorInvitationService {
             if (existing.isPresent()) {
                 EventInstructor instructor = existing.get();
                 if (instructor.isCanceled()) instructor.reactivate();
+                EventInstructorProfile profile = instructor.getProfile();
+                if (profile == null) {
+                    profile = findOrCreateProfile(activity.getEventId(), accountId, name, description);
+                    instructor.setProfile(profile);
+                }
+                if (profile != null) {
+                    profile.setName(name);
+                    profile.setDescription(description);
+                    profileRepository.save(profile);
+                    for (EventInstructor link : instructorRepository.findAllByProfile_Id(profile.getId())) {
+                        link.setName(name);
+                        link.setDescription(description);
+                        instructorRepository.save(link);
+                    }
+                }
                 instructor.setName(name);
                 instructor.setDescription(description);
                 instructor.setRole(role == null ? EnumInstructorRole.INSTRUCTOR : role);
@@ -150,7 +185,13 @@ public class InstructorInvitationService {
             }
         }
 
+        EventInstructorProfile profile = findOrCreateProfile(activity.getEventId(), accountId, name, description);
+        if (profile != null) {
+            name = profile.getName();
+            description = profile.getDescription();
+        }
         instructorRepository.save(EventInstructor.builder()
+                .profile(profile)
                 .activityId(activityId)
                 .userId(accountId)
                 .name(name)
@@ -174,6 +215,32 @@ public class InstructorInvitationService {
         instructorRepository.findByActivityIdAndUserId(activityId, account.id())
                 .filter(other -> !other.getId().equals(instructorId) && other.isConfirmed())
                 .ifPresent(other -> { throw new DomainException("Esta conta já está vinculada como ministrante da atividade."); });
+        EventInstructorProfile existingProfile = profileRepository == null ? null
+                : profileRepository.findByEventIdAndUserId(activity.getEventId(), account.id()).orElse(null);
+        if (existingProfile != null && instructor.getProfile() != null
+                && !existingProfile.getId().equals(instructor.getProfile().getId())) {
+            throw new DomainException("Esta conta já possui outro perfil de ministrante neste evento.");
+        }
+        instructor.setUserId(account.id());
+        EventInstructorProfile profile = instructor.getProfile();
+        if (profile == null) {
+            profile = findOrCreateProfile(activity.getEventId(), account.id(), instructor.getName(), instructor.getDescription());
+            instructor.setProfile(profile);
+        } else {
+            profile.setUserId(account.id());
+            profile.setName(instructor.getName());
+            profile.setDescription(instructor.getDescription());
+            profileRepository.save(profile);
+        }
+        if (profile != null) {
+            for (EventInstructor link : instructorRepository.findAllByProfile_Id(profile.getId())) {
+                link.setUserId(account.id());
+                link.setName(profile.getName());
+                link.setDescription(profile.getDescription());
+                instructorRepository.save(link);
+            }
+            instructor.setProfile(profile);
+        }
         instructor.setUserId(account.id());
         instructorRepository.save(instructor);
         return new MessageResponse("Conta vinculada ao ministrante.");
@@ -206,6 +273,7 @@ public class InstructorInvitationService {
         EventInstructor instructor = instructorRepository
                 .findByActivityIdAndUserId(invitation.getActivity().getId(), userId)
                 .orElseGet(() -> EventInstructor.builder()
+                        .profile(findOrCreateProfile(invitation.getActivity().getEventId(), userId, user.name(), null))
                         .activityId(invitation.getActivity().getId())
                         .userId(userId)
                         .name(user.name())
@@ -219,6 +287,15 @@ public class InstructorInvitationService {
 
         if (instructor.isCanceled()) {
             instructor.reactivate();
+        }
+
+        if (profileRepository != null && instructor.getProfile() == null) {
+            instructor.setProfile(findOrCreateProfile(invitation.getActivity().getEventId(), userId,
+                    instructor.getName(), instructor.getDescription()));
+        }
+        if (instructor.getProfile() != null) {
+            instructor.setName(instructor.getProfile().getName());
+            instructor.setDescription(instructor.getProfile().getDescription());
         }
 
         instructorRepository.save(instructor);
@@ -268,6 +345,22 @@ public class InstructorInvitationService {
     private EventDTO getEvent(EventActivity activity) {
         return eventCache.findById(activity.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+    }
+
+    private EventInstructorProfile findOrCreateProfile(Long eventId, UUID userId, String name, String description) {
+        if (profileRepository == null) return null;
+        if (userId != null) {
+            return profileRepository.findByEventIdAndUserId(eventId, userId)
+                    .orElseGet(() -> createProfile(eventId, userId, name, description));
+        }
+        return createProfile(eventId, null, name, description);
+    }
+
+    private EventInstructorProfile createProfile(Long eventId, UUID userId, String name, String description) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        return profileRepository.save(EventInstructorProfile.builder().event(event).userId(userId)
+                .name(name).description(description).build());
     }
 
     private void assertCanManage(EventDTO event, UUID requesterId) {

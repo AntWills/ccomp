@@ -24,6 +24,10 @@ public class EventInstructor {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profile_id")
+    private EventInstructorProfile profile;
+
     @Column(name = "user_id")
     private UUID userId;
 

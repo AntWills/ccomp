@@ -16,6 +16,9 @@ import com.ccomp.br.domain.events.instructor.dto.EventInstructorDTO;
 import com.ccomp.br.domain.events.instructor.enums.EnumInstructorStatus;
 import com.ccomp.br.domain.events.instructor.persistence.EventInstructor;
 import com.ccomp.br.domain.events.instructor.persistence.EventInstructorRepository;
+import com.ccomp.br.domain.events.instructor.persistence.EventInstructorProfile;
+import com.ccomp.br.domain.events.instructor.persistence.EventInstructorProfileRepository;
+import com.ccomp.br.domain.events.instructor.enums.EnumInstructorRole;
 import com.ccomp.br.domain.events.instructor.persistence.InstructorDslRepository;
 import com.ccomp.br.domain.events.guests.persistence.dsl.ActivityGuestDslRepository;
 import com.ccomp.br.domain.users.external.UserManagement;
@@ -26,6 +29,7 @@ import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.CursorUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -37,7 +41,9 @@ public class InstructorService {
     private final EventCache eventCache;
     private final EventAccessPolicy eventAccessPolicy;
     private final UserManagement userManagement;
+    private final EventInstructorProfileRepository profileRepository;
 
+    @Autowired
     public InstructorService(
             EventActivityRepository activityRepository,
             EventInstructorRepository instructorRepository,
@@ -45,7 +51,8 @@ public class InstructorService {
             ActivityGuestDslRepository activityGuestDslRepository,
             EventCache eventCache,
             EventAccessPolicy eventAccessPolicy,
-            UserManagement userManagement
+            UserManagement userManagement,
+            EventInstructorProfileRepository profileRepository
     ) {
         this.activityRepository = activityRepository;
         this.instructorRepository = instructorRepository;
@@ -54,6 +61,43 @@ public class InstructorService {
         this.eventCache = eventCache;
         this.eventAccessPolicy = eventAccessPolicy;
         this.userManagement = userManagement;
+        this.profileRepository = profileRepository;
+    }
+
+    public InstructorService(EventActivityRepository activityRepository,
+                             EventInstructorRepository instructorRepository,
+                             InstructorDslRepository instructorDslRepository,
+                             ActivityGuestDslRepository activityGuestDslRepository,
+                             EventCache eventCache, EventAccessPolicy eventAccessPolicy,
+                             UserManagement userManagement) {
+        this(activityRepository, instructorRepository, instructorDslRepository, activityGuestDslRepository,
+                eventCache, eventAccessPolicy, userManagement, null);
+    }
+
+    @Transactional
+    public void addProfileToActivity(Long eventId, Long profileId, Long activityId, UUID requesterId,
+                                     EnumInstructorRole role) {
+        EventActivity activity = activityRepository.findById(activityId)
+                .filter(a -> a.getEventId().equals(eventId))
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada neste evento."));
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        if (!eventAccessPolicy.canEdit(event, requesterId))
+            throw new AccessDeniedException("Você não tem permissão para gerenciar ministrantes deste evento.");
+        EventInstructorProfile profile = profileRepository.findByIdAndEventId(profileId, eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Perfil de ministrante não encontrado."));
+        var existingLink = instructorRepository.findByActivityIdAndProfile_Id(activityId, profileId);
+        if (existingLink.isPresent()) {
+            EventInstructor link = existingLink.get();
+            if (link.isConfirmed()) throw new DomainException("Este perfil já está associado à atividade.");
+            link.reactivate();
+            link.setRole(role == null ? EnumInstructorRole.INSTRUCTOR : role);
+            instructorRepository.save(link);
+            return;
+        }
+        instructorRepository.save(EventInstructor.builder().profile(profile).activityId(activity.getId())
+                .userId(profile.getUserId()).name(profile.getName()).description(profile.getDescription())
+                .role(role == null ? EnumInstructorRole.INSTRUCTOR : role).build());
     }
 
     @Transactional(readOnly = true)
