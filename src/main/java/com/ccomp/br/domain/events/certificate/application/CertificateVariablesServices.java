@@ -24,6 +24,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +38,7 @@ import java.util.stream.Stream;
 
 @Service
 public class CertificateVariablesServices {
+    private static final DateTimeFormatter CERTIFICATE_DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     @Value("${app.frontend.validate-certificate-url}")
     String validationBaseUrl;
 
@@ -51,6 +54,8 @@ public class CertificateVariablesServices {
             "{participante.nome}",
             "{evento.carga_horaria}",
             "{evento.title}",
+            "{evento.data_inicio}",
+            "{evento.data_fim}",
             "{evento.local}",
             "{evento.organizacao}",
             "{validacao.codigo}",
@@ -60,6 +65,8 @@ public class CertificateVariablesServices {
     public static final List<String> ACTIVITY_VARIABLES = List.of(
             "{participante.nome}",
             "{evento.title}",
+            "{evento.data_inicio}",
+            "{evento.data_fim}",
             "{evento.local}",
             "{evento.organizacao}",
             "{evento.carga_horaria}",
@@ -74,6 +81,8 @@ public class CertificateVariablesServices {
             "{ministrante.nome}",
             "{ministrante.carga_horaria}",
             "{evento.title}",
+            "{evento.data_inicio}",
+            "{evento.data_fim}",
             "{evento.local}",
             "{evento.organizacao}",
             "{validacao.codigo}",
@@ -84,6 +93,8 @@ public class CertificateVariablesServices {
             "{equipe.nome}",
             "{equipe.carga_horaria}",
             "{evento.title}",
+            "{evento.data_inicio}",
+            "{evento.data_fim}",
             "{evento.local}",
             "{evento.organizacao}",
             "{validacao.codigo}",
@@ -163,15 +174,7 @@ public class CertificateVariablesServices {
             Map<String, String> values = new HashMap<>();
 
             extractValuesFromUser(values, userFuture.join());
-            values.put("{evento.title}", event.title());
-            values.put("{evento.local}", event.address() != null
-                    ? event.address()
-                    : "Não consta");
-            values.put("{evento.organizacao}", event.organization() != null
-                    ? event.organization() : "Não consta");
-            if (workloadFuture.join() != null) {
-                values.put("{evento.carga_horaria}", workloadFuture.join().stripTrailingZeros().toPlainString());
-            }
+            extractValuesFromEvent(values, event, workloadFuture.join());
             extractValuesFromValidator(values, validationCodeFuture.join());
 
             return values;
@@ -195,8 +198,8 @@ public class CertificateVariablesServices {
             if (instructorAccountFuture.join().filter(userId::equals).isEmpty()) {
                 throw new AccessDeniedException("O usuário não possui vínculo confirmado como ministrante neste evento.");
             }
-            return loadRoleEventVariables(variables, event.id(), event.title(), event.address(), event.organization(),
-                    userId, workloadFuture.join(), EnumCertificateType.INSTRUCTOR);
+            return loadRoleEventVariables(variables, event.id(), event.title(), event.startDate(), event.endDate(),
+                    event.address(), event.organization(), userId, workloadFuture.join(), EnumCertificateType.INSTRUCTOR);
         } catch (CompletionException e) {
             if (e.getCause() instanceof RuntimeException runtimeException) throw runtimeException;
             throw new IllegalStateException("Falha ao carregar variáveis do certificado.", e.getCause());
@@ -214,8 +217,8 @@ public class CertificateVariablesServices {
         if (event.teamCertificateWorkloadHours() == null)
             throw new DomainException("A carga horária dos certificados da equipe não foi definida para este evento.");
 
-        return loadRoleEventVariables(variables, event.id(), event.title(), event.address(), event.organization(),
-                userId, event.teamCertificateWorkloadHours(), EnumCertificateType.EDITOR);
+        return loadRoleEventVariables(variables, event.id(), event.title(), event.startDate(), event.endDate(),
+                event.address(), event.organization(), userId, event.teamCertificateWorkloadHours(), EnumCertificateType.EDITOR);
     }
 
     private EventDTO findCertificateEligibleEventDto(Long eventId) {
@@ -229,6 +232,7 @@ public class CertificateVariablesServices {
     }
 
     private Map<String, String> loadRoleEventVariables(List<String> variables, Long eventId, String eventTitle,
+                                                        LocalDateTime eventStartDate, LocalDateTime eventEndDate,
                                                         String eventAddress, String organization, UUID userId,
                                                         BigDecimal workload, EnumCertificateType type) {
         boolean needsCode = variables == null || variables.contains("{validacao.codigo}")
@@ -249,6 +253,8 @@ public class CertificateVariablesServices {
 
             values.put("{participante.nome}", user.name());
             values.put("{evento.title}", eventTitle);
+            values.put("{evento.data_inicio}", formatEventDate(eventStartDate));
+            values.put("{evento.data_fim}", formatEventDate(eventEndDate));
             values.put("{evento.local}", eventAddress == null ? "Não consta" : eventAddress);
             values.put("{evento.carga_horaria}", formattedWorkload);
             values.put("{evento.organizacao}", organization == null ? "Não consta" : organization);
@@ -362,6 +368,8 @@ public class CertificateVariablesServices {
                                         @Nullable BigDecimal workload) {
         if (event != null) {
             values.put("{evento.title}", event.title());
+            values.put("{evento.data_inicio}", formatEventDate(event.startDate()));
+            values.put("{evento.data_fim}", formatEventDate(event.endDate()));
             values.put("{evento.local}", event.address() != null ? event.address() : "Não consta");
             values.put("{evento.organizacao}", event.organization() != null
                     ? event.organization() : "Não consta");
@@ -369,6 +377,10 @@ public class CertificateVariablesServices {
                 values.put("{evento.carga_horaria}", workload.stripTrailingZeros().toPlainString());
             }
         }
+    }
+
+    private String formatEventDate(@Nullable LocalDateTime dateTime) {
+        return dateTime == null ? "Não consta" : dateTime.format(CERTIFICATE_DATE_FORMAT);
     }
 
     private void extractValuesFromValidator(Map<String, String> values, @Nullable EventCertificateValidationCode validationCode) {

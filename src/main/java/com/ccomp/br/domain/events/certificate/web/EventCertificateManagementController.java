@@ -358,6 +358,8 @@ public class EventCertificateManagementController {
                 Map.entry("{ministrante.nome}", "Nome de Exemplo"),
                 Map.entry("{equipe.nome}", "Nome de Exemplo"),
                 Map.entry("{evento.title}", "Evento de Exemplo"),
+                Map.entry("{evento.data_inicio}", "08/11/2026"),
+                Map.entry("{evento.data_fim}", "09/11/2026"),
                 Map.entry("{evento.local}", "Auditório de Exemplo"),
                 Map.entry("{evento.carga_horaria}", "20"),
                 Map.entry("{ministrante.carga_horaria}", "12"),
