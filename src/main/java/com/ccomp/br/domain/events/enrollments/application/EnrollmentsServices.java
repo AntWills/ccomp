@@ -4,6 +4,7 @@ import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentListItem;
+import com.ccomp.br.domain.events.enrollments.dto.EnrollmentCapacityDTO;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentsCursor;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentStatus;
@@ -12,6 +13,7 @@ import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
+import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentCapacityCache;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.DomainException;
@@ -35,17 +37,30 @@ public class EnrollmentsServices {
     private final EnrollmentDslRepository enrollmentDslRepository;
     private final EventAccessPolicy eventAccessPolicy;
     private final Clock clock;
+    private final EnrollmentCapacityCache enrollmentCapacityCache;
 
     public EnrollmentsServices(EventRepository eventRepository, EventCache eventCache,
                                EnrollmentRepository enrollmentRepository,
                                EnrollmentDslRepository enrollmentDslRepository,
-                               EventAccessPolicy eventAccessPolicy, Clock clock) {
+                               EventAccessPolicy eventAccessPolicy, Clock clock,
+                               EnrollmentCapacityCache enrollmentCapacityCache) {
         this.eventRepository = eventRepository;
         this.eventCache = eventCache;
         this.enrollmentRepository = enrollmentRepository;
         this.enrollmentDslRepository = enrollmentDslRepository;
         this.eventAccessPolicy = eventAccessPolicy;
         this.clock = clock;
+        this.enrollmentCapacityCache = enrollmentCapacityCache;
+    }
+
+    @Transactional(readOnly = true)
+    public EnrollmentCapacityDTO getEventEnrollmentCapacity(Long eventId) {
+        return enrollmentCapacityCache.getEventEnrollmentCapacity(eventId);
+    }
+
+    @Transactional(readOnly = true)
+    public EnrollmentCapacityDTO getActivityEnrollmentCapacity(Long activityId) {
+        return enrollmentCapacityCache.getActivityEnrollmentCapacity(activityId);
     }
 
     @Transactional(readOnly = true)
