@@ -23,6 +23,8 @@ public final class CacheNames {
     public static final String EVENTS_LIST = "events:list";
     public static final String EVENTS_SEARCH_BY = "events:search-by";
     public static final String EVENT_ACTIVITIES = "events:activities";
+    public static final String EVENT_ENROLLMENT_CAPACITY = "events:enrollments:capacity";
+    public static final String ACTIVITY_ENROLLMENT_CAPACITY = "events:activities:enrollments:capacity";
 
     // domain/events/activity
     public static final String EVENT_ACTIVITY_BY_ID = "events:activity:by-id";
@@ -62,6 +64,8 @@ public final class CacheNames {
             Map.entry(EVENTS_LIST, VOLATILE),
             Map.entry(EVENTS_SEARCH_BY, VOLATILE),
             Map.entry(EVENT_ACTIVITIES, SHORT),
+            Map.entry(EVENT_ENROLLMENT_CAPACITY, VOLATILE),
+            Map.entry(ACTIVITY_ENROLLMENT_CAPACITY, VOLATILE),
 
             Map.entry(EVENT_ACTIVITY_BY_ID, SHORT),
             Map.entry(EVENT_ACTIVITY_CHECK_IN_BY_ACTIVITY_ID, SHORT),

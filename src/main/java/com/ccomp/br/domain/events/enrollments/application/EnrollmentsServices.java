@@ -4,14 +4,19 @@ import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentListItem;
+import com.ccomp.br.domain.events.enrollments.dto.EnrollmentCapacityDTO;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentsCursor;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentStatus;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
+import com.ccomp.br.domain.events.activities.persistence.EventActivity;
+import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
+import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityRepository;
+import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentCapacityCache;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.DomainException;
@@ -35,17 +40,36 @@ public class EnrollmentsServices {
     private final EnrollmentDslRepository enrollmentDslRepository;
     private final EventAccessPolicy eventAccessPolicy;
     private final Clock clock;
+    private final EnrollmentCapacityCache enrollmentCapacityCache;
+    private final EnrollmentActivityRepository enrollmentActivityRepository;
+    private final EventActivityRepository activityRepository;
 
     public EnrollmentsServices(EventRepository eventRepository, EventCache eventCache,
                                EnrollmentRepository enrollmentRepository,
                                EnrollmentDslRepository enrollmentDslRepository,
-                               EventAccessPolicy eventAccessPolicy, Clock clock) {
+                               EventAccessPolicy eventAccessPolicy, Clock clock,
+                               EnrollmentCapacityCache enrollmentCapacityCache,
+                               EnrollmentActivityRepository enrollmentActivityRepository,
+                               EventActivityRepository activityRepository) {
         this.eventRepository = eventRepository;
         this.eventCache = eventCache;
         this.enrollmentRepository = enrollmentRepository;
         this.enrollmentDslRepository = enrollmentDslRepository;
         this.eventAccessPolicy = eventAccessPolicy;
         this.clock = clock;
+        this.enrollmentCapacityCache = enrollmentCapacityCache;
+        this.enrollmentActivityRepository = enrollmentActivityRepository;
+        this.activityRepository = activityRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public EnrollmentCapacityDTO getEventEnrollmentCapacity(Long eventId) {
+        return enrollmentCapacityCache.getEventEnrollmentCapacity(eventId);
+    }
+
+    @Transactional(readOnly = true)
+    public EnrollmentCapacityDTO getActivityEnrollmentCapacity(Long activityId) {
+        return enrollmentCapacityCache.getActivityEnrollmentCapacity(activityId);
     }
 
     @Transactional(readOnly = true)
@@ -86,7 +110,8 @@ public class EnrollmentsServices {
             }
         }
 
-        Optional<Enrollment> existingEnrollment = enrollmentRepository.findByUserIdAndEvent(userId, event);
+        Optional<Enrollment> existingEnrollment = enrollmentRepository
+                .findForActivityRegistrationByUserIdAndEventId(userId, eventId);
 
         if (existingEnrollment.isPresent()) {
             Enrollment enrollment = existingEnrollment.get();
@@ -101,6 +126,7 @@ public class EnrollmentsServices {
             // Se a inscrição estava cancelada previamente, reativa mantendo o mesmo registro no banco
             enrollment.confirm();
             Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
+            updateLinkedActivityCounters(enrollment.getId(), true);
             event.registerActiveEnrollment();
             eventRepository.save(event);
             eventCache.evict(event);
@@ -125,13 +151,14 @@ public class EnrollmentsServices {
         Event event = eventRepository.findByIdForUpdate(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        Enrollment enrollment = enrollmentRepository.findByUserIdAndEvent(userId, event)
+        Enrollment enrollment = enrollmentRepository.findForActivityRegistrationByUserIdAndEventId(userId, eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Você não possui uma inscrição neste evento."));
 
         boolean wasActive = enrollment.isActive();
         enrollment.cancel();
         enrollmentRepository.save(enrollment);
         if (wasActive) {
+            updateLinkedActivityCounters(enrollment.getId(), false);
             event.releaseActiveEnrollment();
             eventRepository.save(event);
             eventCache.evict(event);
@@ -152,7 +179,7 @@ public class EnrollmentsServices {
         Event eventEntity = eventRepository.findByIdForUpdate(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
-        Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
+        Enrollment enrollment = enrollmentRepository.findByIdAndEventId(enrollmentId, eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
 
         if (!enrollment.getEventId().equals(eventId))
@@ -169,11 +196,21 @@ public class EnrollmentsServices {
         enrollmentRepository.save(enrollment);
         boolean isActive = enrollment.isActive();
         if (wasActive != isActive) {
+            updateLinkedActivityCounters(enrollment.getId(), isActive);
             if (isActive) eventEntity.registerActiveEnrollment();
             else eventEntity.releaseActiveEnrollment();
             eventRepository.save(eventEntity);
             eventCache.evict(eventEntity);
         }
         return new MessageResponse("Status da inscrição alterado para: " + newStatus.name());
+    }
+
+    private void updateLinkedActivityCounters(Long enrollmentId, boolean active) {
+        for (Long activityId : enrollmentActivityRepository.findActivityIdsByEnrollmentId(enrollmentId)) {
+            EventActivity activity = activityRepository.findByIdForUpdate(activityId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+            if (active) activity.registerActiveEnrollment();
+            else activity.releaseActiveEnrollment();
+        }
     }
 }

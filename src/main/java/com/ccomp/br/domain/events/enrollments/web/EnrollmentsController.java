@@ -2,6 +2,7 @@ package com.ccomp.br.domain.events.enrollments.web;
 
 import com.ccomp.br.domain.events.enrollments.application.EnrollmentsServices;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentListItem;
+import com.ccomp.br.domain.events.enrollments.dto.EnrollmentCapacityDTO;
 import com.ccomp.br.domain.events.enrollments.dto.UpdateEnrollmentStatusDTO;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.shared.dto.MessageResponse;
@@ -79,6 +80,20 @@ public class EnrollmentsController {
     ) {
         return ResponseEntity.ok(enrollmentsServices.searchEnrollments(
                 eventId, extractUserId(jwt), nextCursor, pageSize, status));
+    }
+
+    @Operation(summary = "Consulta inscritos e capacidade de um evento",
+            description = "Retorna as inscrições ativas atuais e a capacidade máxima configurada. A resposta pode ter consistência eventual por cache de curta duração.")
+    @GetMapping("/{eventId}/enrollments/summary")
+    public ResponseEntity<EnrollmentCapacityDTO> getEventEnrollmentCapacity(@PathVariable Long eventId) {
+        return ResponseEntity.ok(enrollmentsServices.getEventEnrollmentCapacity(eventId));
+    }
+
+    @Operation(summary = "Consulta inscritos e capacidade de uma atividade",
+            description = "Retorna as inscrições ativas atuais e a capacidade máxima configurada. A resposta pode ter consistência eventual por cache de curta duração.")
+    @GetMapping("/activities/{activityId}/enrollments/summary")
+    public ResponseEntity<EnrollmentCapacityDTO> getActivityEnrollmentCapacity(@PathVariable Long activityId) {
+        return ResponseEntity.ok(enrollmentsServices.getActivityEnrollmentCapacity(activityId));
     }
 
     @Operation(summary = "Inscreve-se em um evento", description = "Realiza a inscrição do usuário autenticado no evento informado.")
