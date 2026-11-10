@@ -248,6 +248,14 @@ class EventCertificateControllerTest {
     }
 
     @Test
+    void loadActivityCertificateVariables_includesEventDates() throws Exception {
+        mockMvc.perform(get("/api/events/certificate-variables").param("type", "ACTIVITY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{evento.data_inicio}")))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{evento.data_fim}")));
+    }
+
+    @Test
     void loadInstructorCertificateVariables_returnsRoleSpecificVariables() throws Exception {
         mockMvc.perform(get("/api/events/certificate-variables").param("type", "INSTRUCTOR"))
                 .andExpect(status().isOk())
@@ -257,7 +265,9 @@ class EventCertificateControllerTest {
                         org.hamcrest.Matchers.hasItem("{atividade.nome}"))));
         mockMvc.perform(get("/api/events/certificate-variables").param("type", "INSTRUCTOR"))
                 .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{participante.nome}")))
-                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{evento.carga_horaria}")));
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{evento.carga_horaria}")))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{evento.data_inicio}")))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{evento.data_fim}")));
     }
 
     @Test
@@ -267,6 +277,8 @@ class EventCertificateControllerTest {
                 .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{equipe.nome}")))
                 .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{participante.nome}")))
                 .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{evento.carga_horaria}")))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{evento.data_inicio}")))
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("{evento.data_fim}")))
                 .andExpect(jsonPath("$").value(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.hasItem("{atividade.nome}"))));
     }

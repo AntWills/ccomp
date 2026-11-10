@@ -225,6 +225,8 @@ class CertificateVariablesServicesTest {
         Map<String, String> values = createService().loadEventVariablesValues(List.of(
                 "{participante.nome}",
                 "{evento.title}",
+                "{evento.data_inicio}",
+                "{evento.data_fim}",
                 "{evento.local}",
                 "{evento.carga_horaria}",
                 "{validacao.codigo}",
@@ -234,10 +236,43 @@ class CertificateVariablesServicesTest {
         assertThat(values)
                 .containsEntry("{participante.nome}", "Ana Souza")
                 .containsEntry("{evento.title}", "Semanas de Tecnologia")
+                .containsEntry("{evento.data_inicio}", "06/11/2026")
+                .containsEntry("{evento.data_fim}", "07/11/2026")
                 .containsEntry("{evento.local}", "Auditório Central")
                 .containsEntry("{evento.carga_horaria}", "6")
                 .containsEntry("{validacao.codigo}", "ABC12345")
                 .containsEntry("{validacao.url}", "https://exemplo.com/validar/ABC12345");
+    }
+
+    @Test
+    void loadActivityVariables_returnsEventStartAndEndDates() {
+        Event event = finishedEvent();
+        EventActivity activity = EventActivity.builder()
+                .title("Workshop")
+                .type(EnumActivityType.WORKSHOP)
+                .displayOrder(1L)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .event(event)
+                .build();
+        activity.setId(77L);
+        activity.setEventId(10L);
+        Enrollment enrollment = Enrollment.builder().userId(USER_ID).event(event)
+                .status(EnumEnrollmentState.CHECKED_IN).build();
+        EnrollmentActivity enrollmentActivity = new EnrollmentActivity(enrollment, activity);
+        enrollmentActivity.makeAttendance(LocalDateTime.now());
+
+        when(enrollmentActivityDslRepository.findByUserIdAndActivityId(USER_ID, 77L))
+                .thenReturn(Optional.of(enrollmentActivity));
+        when(activityCache.findById(77L)).thenReturn(Optional.of(new ActivityDTO(
+                77L, 10L, "Workshop", null, null, "Sala", null, null, null, null, null)));
+        when(eventCache.findById(10L)).thenReturn(Optional.of(toDto(event)));
+
+        Map<String, String> values = createService().loadActivityVariablesValues(List.of(
+                "{evento.data_inicio}", "{evento.data_fim}"), 77L, USER_ID);
+
+        assertThat(values)
+                .containsEntry("{evento.data_inicio}", "06/11/2026")
+                .containsEntry("{evento.data_fim}", "07/11/2026");
     }
 
     @Test
