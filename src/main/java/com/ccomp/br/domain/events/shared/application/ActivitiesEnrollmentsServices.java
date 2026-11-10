@@ -144,6 +144,7 @@ public class ActivitiesEnrollmentsServices {
         );
     }
 
+    @Transactional
     public MessageResponse unsubscribe(UUID userId, Long activityId) {
         EnrollmentActivity enrollmentActivity = enrollmentActivityDslRepository
                 .findByUserIdAndActivityId(userId, activityId)
