@@ -8,6 +8,7 @@ import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.dto.BoxTemplateResponse;
 import com.ccomp.br.domain.events.certificate.dto.SaveCertificateBoxesRequest;
 import com.ccomp.br.domain.events.certificate.enums.EnumCertificateVariableContext;
+import com.ccomp.br.domain.events.certificate.enums.EnumActivityCertificateTemplateType;
 import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.module.certificate.Certificate;
@@ -81,8 +82,8 @@ public class EventCertificateManagementController {
 
     @Operation(
             summary = "Consultar template do certificado de atividade",
-            description = "Retorna as caixas de texto e as variáveis do template único compartilhado por todas as " +
-                    "atividades do evento. Se ainda não houver template salvo, retorna o template padrão. " +
+            description = "Retorna as caixas e variáveis do template de fallback do evento para o contexto selecionado. " +
+                    "Se ainda não houver template salvo para esse contexto, retorna o padrão. " +
                     "Requer acesso de visualização do evento."
     )
     @ApiResponses(value = {
@@ -99,9 +100,10 @@ public class EventCertificateManagementController {
     @GetMapping(value = "/{eventId}/activity-certificate-box-template", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<BoxTemplateResponse> getActivityBoxTemplate(
             @PathVariable Long eventId,
+            @RequestParam(defaultValue = "PARTICIPANT") EnumActivityCertificateTemplateType type,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        var template = activityCertificateBoxServices.loadBoxTemplate(eventId, extractUserId(jwt));
+        var template = activityCertificateBoxServices.loadBoxTemplate(eventId, extractUserId(jwt), type);
         return ResponseEntity.ok(new BoxTemplateResponse(template.getBoxes(), template.getVariables()));
     }
 
@@ -135,7 +137,7 @@ public class EventCertificateManagementController {
 
     @Operation(
             summary = "Gerar prévia do certificado do evento",
-            description = "Renderiza o fundo compartilhado e as caixas do tipo selecionado (PARTICIPANT, INSTRUCTOR ou EDITOR), preenchendo as variáveis com dados de exemplo. " +
+            description = "Renderiza o fundo compartilhado e as caixas do tipo selecionado (PARTICIPANT, INSTRUCTOR, GUEST ou EDITOR), preenchendo as variáveis com dados de exemplo. " +
                     "Requer acesso de visualização do evento."
     )
     @ApiResponses(value = {
@@ -182,12 +184,18 @@ public class EventCertificateManagementController {
             produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> previewActivityCertificate(
             @PathVariable Long eventId,
+            @RequestParam(required = false) Long activityId,
+            @RequestParam(defaultValue = "PARTICIPANT") EnumActivityCertificateTemplateType type,
             @AuthenticationPrincipal Jwt jwt
     ) {
         UUID userId = extractUserId(jwt);
-        var cover = certificateCoverService.loadCoverTemplate(eventId, userId);
-        var template = activityCertificateBoxServices.loadBoxTemplate(eventId, userId);
-        return renderPreview(cover, template.getBoxes(), mockCertificateVariables());
+        if (activityId == null) {
+            var cover = certificateCoverService.loadCoverTemplate(eventId, userId);
+            var template = activityCertificateBoxServices.loadBoxTemplate(eventId, userId, type);
+            return renderPreview(cover, template.getBoxes(), mockCertificateVariables());
+        }
+        var template = activityCertificateBoxServices.loadActivityTemplate(eventId, activityId, userId, type);
+        return renderPreview(template.cover(), template.boxes(), mockCertificateVariables());
     }
 
     @Operation(
@@ -258,7 +266,7 @@ public class EventCertificateManagementController {
 
     @Operation(
             summary = "Listar variáveis suportadas por tipo de certificado",
-            description = "Retorna somente as variáveis válidas para o contexto selecionado: PARTICIPANT, ACTIVITY, INSTRUCTOR ou EDITOR. Se omitido, usa PARTICIPANT."
+            description = "Retorna somente as variáveis válidas para o contexto selecionado: PARTICIPANT, ACTIVITY, INSTRUCTOR, GUEST, ACTIVITY_INSTRUCTOR, ACTIVITY_GUEST ou EDITOR. Se omitido, usa PARTICIPANT."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de variáveis para o contexto informado",
@@ -276,7 +284,7 @@ public class EventCertificateManagementController {
 
     @Operation(
             summary = "Salvar template do evento",
-            description = "Cria ou substitui as caixas do tipo selecionado pelo parâmetro `type` (PARTICIPANT, INSTRUCTOR ou EDITOR). Aceita até 30 caixas. " +
+            description = "Cria ou substitui as caixas do tipo selecionado pelo parâmetro `type` (PARTICIPANT, INSTRUCTOR, GUEST ou EDITOR). Aceita até 30 caixas. " +
                     "Requer permissão de edição do evento (dono, editor ativo ou moderador/admin)."
     )
     @ApiResponses(value = {
@@ -332,10 +340,80 @@ public class EventCertificateManagementController {
     public ResponseEntity<MessageResponse> saveActivityBoxTemplate(
             @PathVariable Long eventId,
             @Valid @RequestBody SaveCertificateBoxesRequest request,
+            @RequestParam(defaultValue = "PARTICIPANT") EnumActivityCertificateTemplateType type,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        activityCertificateBoxServices.saveBoxTemplate(eventId, extractUserId(jwt), request.boxes());
+        activityCertificateBoxServices.saveBoxTemplate(eventId, extractUserId(jwt), request.boxes(), type);
         return ResponseEntity.ok(new MessageResponse("Template de caixas do certificado de atividade salvo com sucesso."));
+    }
+
+    @GetMapping(value = "/{eventId}/activities/{activityId}/certificate-box-template",
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<BoxTemplateResponse> getSpecificActivityBoxTemplate(
+            @PathVariable Long eventId, @PathVariable Long activityId,
+            @RequestParam(defaultValue = "PARTICIPANT") EnumActivityCertificateTemplateType type,
+            @AuthenticationPrincipal Jwt jwt) {
+        var template = activityCertificateBoxServices.loadActivityTemplate(
+                eventId, activityId, extractUserId(jwt), type);
+        return ResponseEntity.ok(new BoxTemplateResponse(template.boxes(), template.variables()));
+    }
+
+    @PostMapping(value = "/{eventId}/activities/{activityId}/certificate-box-template",
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<MessageResponse> saveSpecificActivityBoxTemplate(
+            @PathVariable Long eventId, @PathVariable Long activityId,
+            @RequestParam(defaultValue = "PARTICIPANT") EnumActivityCertificateTemplateType type,
+            @Valid @RequestBody SaveCertificateBoxesRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        activityCertificateBoxServices.saveActivityTemplate(eventId, activityId, extractUserId(jwt),
+                request.boxes(), type);
+        return ResponseEntity.ok(new MessageResponse("Template específico da atividade salvo com sucesso."));
+    }
+
+    @DeleteMapping(value = "/{eventId}/activities/{activityId}/certificate-box-template")
+    public ResponseEntity<?> deleteSpecificActivityBoxTemplate(
+            @PathVariable Long eventId, @PathVariable Long activityId,
+            @RequestParam(defaultValue = "PARTICIPANT") EnumActivityCertificateTemplateType type,
+            @AuthenticationPrincipal Jwt jwt) {
+        boolean removed = certificateCoverService.deleteActivityCertificateTemplate(
+                eventId, activityId, extractUserId(jwt), type);
+        return removed ? ResponseEntity.noContent().build()
+                : ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new MessageResponse("A atividade não possui template específico para este contexto."));
+    }
+
+    @GetMapping(value = "/{eventId}/activities/{activityId}/certificate-cover-template",
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_JPEG_VALUE, "image/webp"})
+    public ResponseEntity<Resource> getSpecificActivityCoverTemplate(
+            @PathVariable Long eventId, @PathVariable Long activityId,
+            @RequestParam(defaultValue = "PARTICIPANT") EnumActivityCertificateTemplateType type,
+            @AuthenticationPrincipal Jwt jwt) {
+        var resolved = activityCertificateBoxServices.loadActivityTemplate(
+                eventId, activityId, extractUserId(jwt), type);
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(resolved.cover().contentType()))
+                .body(resolved.cover().resource());
+    }
+
+    @PostMapping(value = "/{eventId}/activities/{activityId}/certificate-cover-template",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<MessageResponse> uploadSpecificActivityCoverTemplate(
+            @PathVariable Long eventId, @PathVariable Long activityId,
+            @RequestParam(defaultValue = "PARTICIPANT") EnumActivityCertificateTemplateType type,
+            @RequestParam("file") MultipartFile file, @AuthenticationPrincipal Jwt jwt) {
+        certificateCoverService.uploadActivityCoverTemplate(eventId, activityId, extractUserId(jwt), type, file);
+        return ResponseEntity.ok(new MessageResponse("Fundo específico da atividade atualizado com sucesso."));
+    }
+
+    @DeleteMapping(value = "/{eventId}/activities/{activityId}/certificate-cover-template")
+    public ResponseEntity<?> deleteSpecificActivityCoverTemplate(
+            @PathVariable Long eventId, @PathVariable Long activityId,
+            @RequestParam(defaultValue = "PARTICIPANT") EnumActivityCertificateTemplateType type,
+            @AuthenticationPrincipal Jwt jwt) {
+        boolean removed = certificateCoverService.deleteActivityCoverTemplate(
+                eventId, activityId, extractUserId(jwt), type);
+        return removed ? ResponseEntity.noContent().build()
+                : ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new MessageResponse("A atividade não possui um fundo específico deste contexto."));
     }
 
     private ResponseEntity<Resource> renderPreview(StorageExternal.StoredFile cover,
@@ -358,11 +436,13 @@ public class EventCertificateManagementController {
         return Map.ofEntries(
                 Map.entry("{participante.nome}", "Nome de Exemplo"),
                 Map.entry("{ministrante.nome}", "Nome de Exemplo"),
+                Map.entry("{convidado.nome}", "Convidado de Exemplo"),
                 Map.entry("{equipe.nome}", "Nome de Exemplo"),
                 Map.entry("{evento.title}", "Evento de Exemplo"),
                 Map.entry("{evento.local}", "Auditório de Exemplo"),
                 Map.entry("{evento.carga_horaria}", "20"),
                 Map.entry("{ministrante.carga_horaria}", "12"),
+                Map.entry("{convidado.carga_horaria}", "10"),
                 Map.entry("{equipe.carga_horaria}", "8"),
                 Map.entry("{atividade.nome}", "Atividade de Exemplo"),
                 Map.entry("{atividade.local}", "Sala de Exemplo"),

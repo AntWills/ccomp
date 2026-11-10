@@ -2,9 +2,11 @@ package com.ccomp.br.domain.events.certificate.application.issuance;
 
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.certificate.application.CertificateFetcher;
+import com.ccomp.br.domain.events.certificate.application.ResolvedActivityCertificateTemplate;
 import com.ccomp.br.domain.events.certificate.application.variables.CertificateVariablesServices;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
+import com.ccomp.br.domain.events.certificate.enums.EnumActivityCertificateTemplateType;
 import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
 import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
@@ -92,24 +94,21 @@ public class AutomaticCertificateServices {
         Long eventId = activity.eventId();
 
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            CompletableFuture<StorageExternal.StoredFile> templateFuture =
-                    CompletableFuture.supplyAsync(() -> certificateFetcher.fetchCoverTemplate(eventId), executor);
+            CompletableFuture<ResolvedActivityCertificateTemplate> activityTemplateFuture =
+                    CompletableFuture.supplyAsync(() -> certificateFetcher.resolveActivityTemplate(
+                            eventId, activityId, EnumActivityCertificateTemplateType.PARTICIPANT), executor);
 
-            CompletableFuture<EventActivityBoxTemplate> activityBoxFuture =
-                    CompletableFuture.supplyAsync(() -> certificateFetcher.fetchActivityBoxTemplate(eventId), executor);
-
-            CompletableFuture<Map<String, String>> variablesFuture = activityBoxFuture.thenApplyAsync(
-                    activityBox -> variablesServices.loadActivityVariablesValues(activityBox.getVariables(), activityId, userId),
+            CompletableFuture<Map<String, String>> variablesFuture = activityTemplateFuture.thenApplyAsync(
+                    activityTemplate -> variablesServices.loadActivityVariablesValues(activityTemplate.variables(), activityId, userId),
                     executor
             );
 
-            CompletableFuture.allOf(templateFuture, activityBoxFuture, variablesFuture).join();
+            CompletableFuture.allOf(activityTemplateFuture, variablesFuture).join();
 
-            StorageExternal.StoredFile template = templateFuture.join();
-            var activityBox = activityBoxFuture.join();
+            var activityTemplate = activityTemplateFuture.join();
             Map<String, String> variables = variablesFuture.join();
 
-            return render(template, activityBox.getBoxes(), variables);
+            return render(activityTemplate.cover(), activityTemplate.boxes(), variables);
 
         } catch (CompletionException e) {
             if (e.getCause() instanceof RuntimeException runtimeException) {

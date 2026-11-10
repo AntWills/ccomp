@@ -16,7 +16,7 @@ As seções seguintes descrevem primeiro o que o código faz hoje e depois a esp
 
 - O certificado geral de participante soma `Event.workloadHours` (quando configurado) à carga das atividades em que há presença registrada. Atividades sem carga somam zero.
 - O certificado de atividade do participante usa o valor de carga horária da própria atividade.
-- Há templates gerais separados para `PARTICIPANT`, `INSTRUCTOR` e `EDITOR`. Há também um único template de atividade por evento, compartilhado entre todas as atividades.
+- Há templates gerais separados para `PARTICIPANT`, `INSTRUCTOR`, `GUEST` e `EDITOR`. Há templates de atividade por contexto no evento e configuração opcional por atividade.
 - O fundo próprio é único por evento e é compartilhado entre todos os tipos e atividades. Sem fundo próprio, usa-se a imagem padrão do sistema.
 - O certificado geral de ministrante tem template distinto do certificado geral de participante. Seu cálculo soma a carga das atividades com vínculo confirmado. A consulta também soma as horas de atividades em que a pessoa tem vínculo de convidado `PRESENTER` confirmado.
 - Os modelos de dados de atividade aceitam carga horária nula. Nas somas atuais, uma atividade sem carga contribui com zero.
@@ -48,9 +48,9 @@ A regra de resolução esperada é: **template específico da atividade e do con
 
 | Necessidade | Situação atual | Trabalho necessário |
 |---|---|---|
-| Template de atividade individual | Há um template único por evento | Persistir e consultar templates por atividade e contexto (participante, ministrante e convidado), com fallback. |
-| Fundo por atividade | Há um único fundo por evento | Permitir imagem de fundo no template específico da atividade e aplicar a mesma ordem de fallback das caixas. |
-| Template geral de convidado | Convidados usam `INSTRUCTOR` | Criar contexto e configuração geral próprios para convidado, coerentes com suas variáveis específicas. |
+| Template de atividade individual | V39 possuía um template compartilhado por evento; a V40 adiciona configuração por atividade e contexto | Resolvido em ordem: template da atividade/contexto → template de atividade do evento/contexto → padrão do sistema. |
+| Fundo por atividade | A V40 permite fundo opcional no template específico da atividade | O fundo é resolvido na mesma camada das caixas; sem fundo próprio nessa camada, usa a imagem padrão do sistema. |
+| Template geral de convidado | Contexto `GUEST` e template geral próprios adicionados | O preenchimento/emissão geral de convidado permanece para etapa posterior. |
 | Certificado de atividade para ministrante | Não há rota de emissão por atividade para ministrante | Implementar elegibilidade, carga horária e emissão usando o template resolvido para a atividade e contexto. |
 | Certificado de atividade para convidado | Não há rota de emissão por atividade para convidado; o convidado usa emissão geral de ministrante | Implementar emissão específica para vínculo `PRESENTER`, incluindo convidado sem conta na emissão manual. |
 | Carga geral de ministrante/convidado | Os campos específicos já existem em `Event` e podem ser definidos na criação/edição do evento; o cálculo do certificado ainda soma apenas atividades | Somar a carga geral correspondente no certificado geral e na validação, sem reaproveitar `Event.workloadHours`. |
@@ -102,8 +102,8 @@ A regra de resolução esperada é: **template específico da atividade e do con
 
 1. **Concluídas:** adicionar ao evento as cargas gerais distintas de ministrante e convidado e implementar perfis centrais/vínculos de ministrante com migração preservadora.
 2. Centralizar o cálculo de carga por destinatário/contexto; aplicar a carga geral apenas nos certificados gerais e alinhar emissão, variáveis e validação.
-3. Definir a matriz de tipos de template e a regra de fallback: atividade/contexto, evento/contexto e padrão do sistema.
-4. Modelar configuração de atividade com contexto, caixas e fundo opcionais; adicionar migração compatível com eventos existentes.
+3. **Concluída:** separar contextos de template geral e atividade; resolver templates de atividade pelo escopo da atividade, fallback do evento e padrão.
+4. **Concluída:** persistir caixas/fundos por atividade e contexto, com migração, gestão, preview, emissão participante e limpeza dos arquivos.
 5. Implementar emissão geral e por atividade de ministrantes e convidados, com rotas automáticas/manuais e regras de vínculo confirmado.
 6. Atualizar prévias, consulta de variáveis, documentação das rotas e testes para cobrir templates próprios, fallback e cargas ausentes.
 
@@ -167,7 +167,7 @@ A carga horária exibida é a carga horária configurada para o evento somada à
 
 `GET /api/events/activities/{activityId}/certificate`
 
-Emite para a própria pessoa autenticada. Exige inscrição ativa na atividade, check-in no evento e presença registrada especificamente naquela atividade. Não exige que o evento esteja encerrado. Usa o template de atividade do evento. A carga horária da atividade exibida é a carga horária configurada para ela; quando o template usa variáveis do evento, a carga do evento segue o cálculo do certificado de evento.
+Emite para a própria pessoa autenticada. Exige inscrição ativa na atividade, check-in no evento e presença registrada especificamente naquela atividade. Não exige que o evento esteja encerrado. Usa o template resolvido para participante: atividade, fallback de atividade do evento ou padrão. A carga horária da atividade exibida é a carga horária configurada para ela; quando o template usa variáveis do evento, a carga do evento segue o cálculo do certificado de evento.
 
 O código de validação identifica atividade e destinatário. A confirmação de presença por QR Code pode atualizar o check-in do evento e disparar o aviso por e-mail de que o certificado está disponível; credenciamento operacional continua sendo um fluxo separado.
 
@@ -232,9 +232,10 @@ O fundo é compartilhado por todos os tipos de certificado do evento. Se não ho
 | Tipo | Escopo |
 |---|---|
 | `PARTICIPANT` | Certificado geral de participante do evento |
-| `INSTRUCTOR` | Ministrantes e convidados apresentadores |
+| `INSTRUCTOR` | Certificado geral de ministrante |
+| `GUEST` | Certificado geral de convidado |
 | `EDITOR` | Proprietário e editores da equipe |
-| Atividade | Um único template compartilhado por todas as atividades do evento |
+| Atividade `PARTICIPANT`, `INSTRUCTOR`, `GUEST` | Template geral de atividade do evento, substituível por configuração própria da atividade |
 
 Quando um template de caixas não foi salvo, a aplicação usa um padrão. A prévia usa o fundo e as caixas configurados, mas preenche os marcadores com valores de exemplo; ela não valida a elegibilidade de um destinatário real.
 
@@ -249,7 +250,10 @@ Os nomes devem ser usados exatamente como mostrados, incluindo chaves e acentos:
 | Participante | `{participante.nome}`, `{evento.carga_horaria}`, `{evento.title}`, `{evento.local}`, `{evento.organizacao}`, `{validacao.codigo}`, `{validacao.url}` |
 | Atividade | `{participante.nome}`, `{evento.title}`, `{evento.local}`, `{evento.organizacao}`, `{evento.carga_horaria}`, `{atividade.nome}`, `{atividade.local}`, `{atividade.carga_horaria}`, `{validacao.codigo}`, `{validacao.url}` |
 | Ministrante | `{ministrante.nome}`, `{ministrante.carga_horaria}`, `{evento.title}`, `{evento.local}`, `{evento.organizacao}`, `{validacao.codigo}`, `{validacao.url}`; o contexto também aceita `{participante.nome}` e `{evento.carga_horaria}` |
+| Convidado | `{convidado.nome}`, `{convidado.carga_horaria}`, `{evento.title}`, `{evento.local}`, `{evento.organizacao}`, `{validacao.codigo}`, `{validacao.url}`; o contexto também aceita `{participante.nome}` e `{evento.carga_horaria}` |
 | Equipe | `{equipe.nome}`, `{equipe.carga_horaria}`, `{evento.title}`, `{evento.local}`, `{evento.organizacao}`, `{validacao.codigo}`, `{validacao.url}`; o contexto também aceita `{participante.nome}` e `{evento.carga_horaria}` |
+
+Os contextos de atividade `ACTIVITY_INSTRUCTOR` e `ACTIVITY_GUEST` também aceitam as variáveis comuns de atividade (`{atividade.nome}`, `{atividade.local}`, `{atividade.carga_horaria}`) e as variáveis específicas da pessoa.
 
 `atividade.carga_horaria` contém apenas o número de horas. Cargas são formatadas sem zeros decimais finais. Local e organização ausentes são apresentados como `Não consta`. Marcadores de validação só geram código quando são usados no template, salvo a emissão manual de ministrante, que sempre usa `Emissão manual` e URL vazia.
 
@@ -265,16 +269,20 @@ Todas as rotas abaixo exigem JWT. Consultas e prévias exigem acesso de visualiz
 
 | Método e rota | Uso |
 |---|---|
-| `GET /api/events/{eventId}/certificate-box-template?type=PARTICIPANT\|INSTRUCTOR\|EDITOR` | Consulta caixas e variáveis de um template de evento; `type` padrão é `PARTICIPANT`. |
-| `POST /api/events/{eventId}/certificate-box-template?type=PARTICIPANT\|INSTRUCTOR\|EDITOR` | Salva as caixas para o tipo indicado. |
-| `GET /api/events/{eventId}/activity-certificate-box-template` | Consulta o template compartilhado pelas atividades. |
-| `POST /api/events/{eventId}/activity-certificate-box-template` | Salva o template compartilhado pelas atividades. |
+| `GET /api/events/{eventId}/certificate-box-template?type=PARTICIPANT\|INSTRUCTOR\|GUEST\|EDITOR` | Consulta caixas e variáveis de um template geral do evento; `type` padrão é `PARTICIPANT`. |
+| `POST /api/events/{eventId}/certificate-box-template?type=PARTICIPANT\|INSTRUCTOR\|GUEST\|EDITOR` | Salva as caixas para o tipo indicado. |
+| `GET /api/events/{eventId}/activity-certificate-box-template?type=PARTICIPANT\|INSTRUCTOR\|GUEST` | Consulta o template de atividade do evento para o contexto indicado. |
+| `POST /api/events/{eventId}/activity-certificate-box-template?type=PARTICIPANT\|INSTRUCTOR\|GUEST` | Salva o template de atividade de fallback do evento para o contexto indicado. |
+| `GET /api/events/{eventId}/activities/{activityId}/certificate-box-template?type=PARTICIPANT\|INSTRUCTOR\|GUEST` | Consulta o template efetivo da atividade/contexto, incluindo fallback. |
+| `POST /api/events/{eventId}/activities/{activityId}/certificate-box-template?type=PARTICIPANT\|INSTRUCTOR\|GUEST` | Salva as caixas específicas da atividade/contexto. |
+| `DELETE /api/events/{eventId}/activities/{activityId}/certificate-box-template?type=...` | Remove a configuração específica e volta ao fallback; também remove seu fundo específico. |
+| `GET`, `POST`, `DELETE /api/events/{eventId}/activities/{activityId}/certificate-cover-template?type=...` | GET consulta o fundo efetivo; POST/DELETE configuram ou removem o fundo específico da atividade. |
 | `GET /api/events/{eventId}/certificate-cover-template` | Baixa o fundo atual ou o padrão. |
 | `POST /api/events/{eventId}/certificate-cover-template` | Envia/substitui o fundo do evento (PNG, JPEG ou WebP). |
 | `DELETE /api/events/{eventId}/certificate-cover-template` | Remove o fundo próprio. |
-| `GET /api/events/{eventId}/certificate-preview?type=PARTICIPANT\|INSTRUCTOR\|EDITOR` | Prévia de um template do evento com valores de exemplo. |
-| `GET /api/events/{eventId}/activity-certificate-preview` | Prévia do template de atividade com valores de exemplo. |
-| `GET /api/events/certificate-variables?type=PARTICIPANT\|ACTIVITY\|INSTRUCTOR\|EDITOR` | Lista as variáveis válidas para o contexto; `type` padrão é `PARTICIPANT`. |
+| `GET /api/events/{eventId}/certificate-preview?type=PARTICIPANT\|INSTRUCTOR\|GUEST\|EDITOR` | Prévia de um template do evento com valores de exemplo. |
+| `GET /api/events/{eventId}/activity-certificate-preview?activityId=...&type=PARTICIPANT\|INSTRUCTOR\|GUEST` | Prévia efetiva para atividade e contexto; sem `activityId`, mostra o fallback do evento. |
+| `GET /api/events/certificate-variables?type=PARTICIPANT\|ACTIVITY\|INSTRUCTOR\|GUEST\|ACTIVITY_INSTRUCTOR\|ACTIVITY_GUEST\|EDITOR` | Lista as variáveis válidas para o contexto; `type` padrão é `PARTICIPANT`. |
 
 O upload aceita imagem PNG, JPEG ou WebP. As dimensões da caixa são proporcionais ao fundo usado na geração.
 

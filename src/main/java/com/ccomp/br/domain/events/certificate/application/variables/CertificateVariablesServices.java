@@ -81,6 +81,16 @@ public class CertificateVariablesServices {
             "{validacao.url}"
     );
 
+    public static final List<String> GUEST_VARIABLES = List.of(
+            "{convidado.nome}",
+            "{convidado.carga_horaria}",
+            "{evento.title}",
+            "{evento.local}",
+            "{evento.organizacao}",
+            "{validacao.codigo}",
+            "{validacao.url}"
+    );
+
     public static final List<String> EDITOR_VARIABLES = List.of(
             "{equipe.nome}",
             "{equipe.carga_horaria}",
@@ -97,6 +107,12 @@ public class CertificateVariablesServices {
             case ACTIVITY -> ACTIVITY_VARIABLES;
             case INSTRUCTOR -> Stream.concat(INSTRUCTOR_VARIABLES.stream(),
                     List.of("{participante.nome}", "{evento.carga_horaria}").stream()).toList();
+            case GUEST -> Stream.concat(GUEST_VARIABLES.stream(),
+                    List.of("{participante.nome}", "{evento.carga_horaria}").stream()).toList();
+            case ACTIVITY_INSTRUCTOR -> Stream.concat(ACTIVITY_VARIABLES.stream(), INSTRUCTOR_VARIABLES.stream())
+                    .distinct().toList();
+            case ACTIVITY_GUEST -> Stream.concat(ACTIVITY_VARIABLES.stream(), GUEST_VARIABLES.stream())
+                    .distinct().toList();
             case EDITOR -> Stream.concat(EDITOR_VARIABLES.stream(),
                     List.of("{participante.nome}", "{evento.carga_horaria}").stream()).toList();
         };

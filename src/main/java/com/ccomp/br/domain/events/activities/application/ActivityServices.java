@@ -20,12 +20,16 @@ import com.ccomp.br.domain.events.activities.utils.ActivityMapper;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.domain.events.guests.application.GuestService;
 import com.ccomp.br.domain.events.instructor.application.InstructorService;
+import com.ccomp.br.domain.events.certificate.persistence.ActivityCertificateTemplateRepository;
+import com.ccomp.br.domain.events.core.external.EventStorageCleanupRequested;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.CursorUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -41,7 +45,10 @@ public class ActivityServices {
     private final ActivityCache activityCache;
     private final GuestService guestService;
     private final InstructorService instructorService;
+    private final ActivityCertificateTemplateRepository certificateTemplateRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
+    @Autowired
     public ActivityServices(EventRepository eventRepository,
                             EventAccessPolicy eventAccessPolicy,
                             EventCache eventCache, EventMapper eventMapper,
@@ -50,7 +57,9 @@ public class ActivityServices {
                             ActivityMapper activityMapper,
                             ActivityCache activityCache,
                             GuestService guestService,
-                            InstructorService instructorService) {
+                            InstructorService instructorService,
+                            ActivityCertificateTemplateRepository certificateTemplateRepository,
+                            ApplicationEventPublisher applicationEventPublisher) {
         this.eventRepository = eventRepository;
         this.eventAccessPolicy = eventAccessPolicy;
         this.eventCache = eventCache;
@@ -61,6 +70,19 @@ public class ActivityServices {
         this.activityCache = activityCache;
         this.guestService = guestService;
         this.instructorService = instructorService;
+        this.certificateTemplateRepository = certificateTemplateRepository;
+        this.applicationEventPublisher = applicationEventPublisher;
+    }
+
+    public ActivityServices(EventRepository eventRepository, EventAccessPolicy eventAccessPolicy,
+                            EventCache eventCache, EventMapper eventMapper,
+                            EventActivityRepository activityRepository,
+                            EventActivityDslRepository activityDslRepository,
+                            ActivityMapper activityMapper, ActivityCache activityCache,
+                            GuestService guestService, InstructorService instructorService) {
+        this(eventRepository, eventAccessPolicy, eventCache, eventMapper, activityRepository,
+                activityDslRepository, activityMapper, activityCache, guestService, instructorService,
+                null, null);
     }
 
     @Transactional(readOnly = true)
@@ -140,6 +162,15 @@ public class ActivityServices {
         if (!eventAccessPolicy.canEdit(event, userId))
             throw new AccessDeniedException("O usuario não tem acesso a este recurso.");
 
+        if (certificateTemplateRepository != null && applicationEventPublisher != null) {
+            List<String> certificateCoverKeys = certificateTemplateRepository
+                    .findByActivityIdAndTemplateTypeIn(activityId,
+                            java.util.List.of(com.ccomp.br.domain.events.certificate.enums.EnumActivityCertificateTemplateType.values()))
+                    .stream().map(template -> template.getCoverTemplateKey())
+                    .filter(java.util.Objects::nonNull).distinct().toList();
+            if (!certificateCoverKeys.isEmpty())
+                applicationEventPublisher.publishEvent(new EventStorageCleanupRequested(certificateCoverKeys));
+        }
         activityRepository.deleteById(activityId);
         activityCache.evict(activity);
     }

@@ -89,6 +89,7 @@ public class CertificateBoxServices {
         return switch (templateType) {
             case PARTICIPANT -> EnumCertificateVariableContext.PARTICIPANT;
             case INSTRUCTOR -> EnumCertificateVariableContext.INSTRUCTOR;
+            case GUEST -> EnumCertificateVariableContext.GUEST;
             case EDITOR -> EnumCertificateVariableContext.EDITOR;
         };
     }
