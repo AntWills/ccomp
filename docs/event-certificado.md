@@ -66,6 +66,31 @@ A regra de resolução esperada é: **template específico da atividade e do con
 5. Implementar emissão geral e por atividade de ministrantes e convidados, com rotas automáticas e manuais e regras de vínculo confirmado.
 6. Atualizar prévias, consulta de variáveis, documentação das rotas e testes para cobrir atividade com template próprio, fallback e ausência de carga horária.
 
+### Organização interna planejada
+
+A refatoração manterá o domínio único `domain/events/certificate`. Não serão criados subdomínios de certificado. A estrutura planejada separa as camadas existentes por fluxo:
+
+```text
+certificate/
+  web/
+    issuance/
+    management/
+    validation/
+  application/
+    issuance/
+    management/
+    templates/
+    variables/
+    validation/
+  persistence/
+  dto/
+  enums/
+```
+
+Os controllers de emissão, gestão e validação ficarão, respectivamente, em `web/issuance`, `web/management` e `web/validation`. Os serviços correspondentes ficarão em `application/issuance`, `application/management` e `application/validation`. Resolução de templates e carregamento de variáveis ficarão em `application/templates` e `application/variables`. Classes auxiliares compartilhadas poderão permanecer diretamente em `application` ou ser agrupadas em `application/shared`, conforme a responsabilidade.
+
+Essa é a organização alvo; ela não implica que os arquivos já tenham sido movidos. A separação dos serviços por tipo de destinatário será feita dentro dessas pastas quando os fluxos tiverem regras próprias, mantendo componentes comuns para renderização, cálculo de horas e resolução de templates.
+
 ## 2. Relacionamentos que determinam o destinatário
 
 ```text
