@@ -53,18 +53,59 @@ A regra de resolução esperada é: **template específico da atividade e do con
 | Template geral de convidado | Convidados usam `INSTRUCTOR` | Criar contexto e configuração geral próprios para convidado, coerentes com suas variáveis específicas. |
 | Certificado de atividade para ministrante | Não há rota de emissão por atividade para ministrante | Implementar elegibilidade, carga horária e emissão usando o template resolvido para a atividade e contexto. |
 | Certificado de atividade para convidado | Não há rota de emissão por atividade para convidado; o convidado usa emissão geral de ministrante | Implementar emissão específica para vínculo `PRESENTER`, incluindo convidado sem conta na emissão manual. |
-| Carga geral de ministrante/convidado | O cálculo atual soma as cargas das atividades vinculadas | Definir e armazenar a “carga geral da pessoa no evento”. Hoje `Event.workloadHours` é uma carga genérica do evento; não existe carga de evento específica para ministrante ou convidado. Não se deve somá-la automaticamente sem confirmar que representa essa atuação. |
+| Carga geral de ministrante/convidado | O cálculo atual soma as cargas das atividades vinculadas | Adicionar à entidade `Event` campos distintos para as cargas gerais de ministrante e convidado; não reaproveitar `Event.workloadHours`. |
 | Variáveis comuns e específicas | As listas são separadas por contexto; convidado reutiliza variáveis de ministrante | Definir nomes e regras das variáveis de convidado e garantir a extração, validação, prévia e preenchimento real em cada contexto. |
 | Validação dos novos certificados | Há códigos para evento, atividade, ministrante e equipe | Garantir identificação do vínculo/contexto específico para ministrante e convidado por atividade; manter verificação pública coerente com a carga impressa. |
 
+### Caso 1 — carga geral de ministrante e convidado
+
+**Objetivo:** permitir que um ministrante ou convidado apresentador tenha uma carga de atuação geral no evento, além das horas das atividades específicas.
+
+**Decisão de domínio:** as cargas gerais destinadas a ministrantes e convidados pertencem à entidade `Event`, como configurações do evento, e não aos perfis individuais. O evento terá valores próprios para carga geral de ministrante e carga geral de convidado, ambos opcionais, não negativos e configurados pela equipe. `Event.workloadHours` continua sendo a carga geral usada no certificado de participante e não é reaproveitada nesses contextos. Sem carga específica configurada no evento, o valor contribui com zero.
+
+**Cálculo do certificado geral:**
+
+- Ministrante: carga geral de ministrante configurada no evento + soma das cargas das atividades em que seu vínculo estiver confirmado.
+- Convidado: carga geral de convidado configurada no evento + soma das cargas das atividades em que seu vínculo `PRESENTER` estiver confirmado e a atividade tiver carga configurada.
+- Carga nula de atividade contribui com zero. Vínculos cancelados ou não confirmados não contribuem.
+- Em certificados específicos de atividade, é considerada somente a carga da atividade; a carga geral configurada no evento não é adicionada.
+
+**Persistência:** adicionar à entidade/tabela de evento dois campos distintos, um para carga geral de ministrante e outro para carga geral de convidado. Cada valor é aplicado uma única vez no cálculo geral do destinatário, independentemente de quantos vínculos confirmados ele tenha. O perfil central de ministrante do Caso 1.1 não armazena essa carga; `EventGuest` também não recebe esse campo.
+
+**Transição dos dados atuais:** os novos campos de carga do evento começam sem valor (`NULL`, interpretado como zero); a migração não deve copiá-los de `Event.workloadHours` nem inferi-los das cargas das atividades. Os registros de ministrante atuais devem ser preservados; qualquer associação automática de registros existentes a um perfil central deve ser feita somente quando a identidade puder ser determinada sem ambiguidade. Registros sem conta não devem ser unidos apenas por nomes iguais.
+
+**Critérios de aceite:** a equipe pode configurar e remover as cargas gerais de ministrante e convidado no evento; valores negativos são rejeitados; a carga correspondente ao contexto é aplicada uma única vez nos certificados gerais e na validação pública; certificados por atividade continuam mostrando apenas a carga da atividade; eventos sem carga específica configurada permanecem válidos.
+
+### Caso 1.1 — cadastro e gestão central de ministrantes
+
+**Objetivo:** oferecer uma lista central de ministrantes do evento e permitir cadastrar, consultar, editar e remover perfis, de forma semelhante à gestão de convidados. O cadastro central representa a pessoa no evento; vínculos a atividades representam onde e em qual função ela atua.
+
+**Modelo proposto:** criar perfil de ministrante pertencente ao evento, contendo nome, descrição e conta opcional. Criar/ajustar a associação entre perfil e atividade para conter atividade, função (`INSTRUCTOR` ou `ASSISTANT`), status e dados de convite/resposta aplicáveis. A pessoa poderá estar associada a várias atividades sem duplicar seu perfil. A carga geral dos certificados permanece na entidade evento, conforme o Caso 1.
+
+**Operações esperadas:**
+
+- listar perfis de ministrantes de um evento com cursor, incluindo status e conta;
+- criar perfil de ministrante sem conta, com associação opcional a uma ou mais atividades;
+- editar nome e descrição do perfil;
+- associar ou remover o vínculo com uma atividade e definir a função naquele vínculo;
+- vincular uma conta ativa existente ou enviar convite para uma atividade;
+- cancelar o próprio vínculo confirmado e permitir que a equipe reative ou remova vínculos;
+- excluir o perfil do evento, removendo seus vínculos, com confirmação explícita na interface/cliente;
+- manter as rotas atuais de consulta por atividade e de listagem combinada de ministrantes e convidados, ajustando sua implementação para o novo relacionamento.
+
+**Compatibilidade e migração:** preservar os endpoints existentes enquanto clientes forem dependentes deles. Na migração, manter cada registro atual de ministrante e seu status/função. Registros com conta podem ser consolidados por evento e conta quando não houver duplicidade conflitante; registros sem conta permanecem perfis separados até uma associação explícita da equipe. A operação de gestão central não deve transformar convidados com papel `PRESENTER` em ministrantes: são cadastros distintos e aparecem juntos apenas nas listagens combinadas de atividade.
+
+**Critérios de aceite:** a equipe consegue ver todos os perfis do evento, inclusive os ainda sem atividade; uma pessoa com vários vínculos aparece uma vez na listagem central; as funções/status continuam específicos por atividade; exclusão de um vínculo não apaga o perfil nem os outros vínculos; exclusão do perfil remove seus vínculos; permissões de visualização/edição seguem as regras do evento.
+
 ### Plano de implementação sugerido
 
-1. Definir a origem e o significado da carga geral de ministrante/convidado: campo por pessoa e evento, ou reaproveitamento explícito de `Event.workloadHours`.
-2. Definir a matriz de tipos de template e confirmar a regra de fallback: atividade específica, template geral do evento no mesmo contexto e padrão do sistema.
-3. Modelar configuração de atividade com contexto, caixas e fundo opcionais; adicionar migração sem exigir dados novos para atividades existentes.
-4. Centralizar cálculo de carga por destinatário/contexto para que imagem, variável impressa e resposta de validação usem o mesmo cálculo.
-5. Implementar emissão geral e por atividade de ministrantes e convidados, com rotas automáticas e manuais e regras de vínculo confirmado.
-6. Atualizar prévias, consulta de variáveis, documentação das rotas e testes para cobrir atividade com template próprio, fallback e ausência de carga horária.
+1. Adicionar à entidade/tabela de evento as cargas gerais distintas de ministrante e convidado (Caso 1), sem preencher automaticamente a partir de `workloadHours`.
+2. Implementar os perfis centrais de ministrante e os vínculos perfil-atividade (Caso 1.1), com migração preservando registros existentes.
+3. Centralizar o cálculo de carga por destinatário/contexto; manter a carga geral apenas nos certificados gerais e alinhar emissão, variáveis e validação.
+4. Definir a matriz de tipos de template e a regra de fallback: atividade/contexto, evento/contexto e padrão do sistema.
+5. Modelar configuração de atividade com contexto, caixas e fundo opcionais; adicionar migração compatível com eventos existentes.
+6. Implementar emissão geral e por atividade de ministrantes e convidados, com rotas automáticas/manuais e regras de vínculo confirmado.
+7. Atualizar prévias, consulta de variáveis, documentação das rotas e testes para cobrir templates próprios, fallback e cargas ausentes.
 
 ### Organização interna planejada
 

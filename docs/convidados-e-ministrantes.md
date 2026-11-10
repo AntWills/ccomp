@@ -64,3 +64,15 @@ As rotas de listagem de convidados também existem separadamente: `GET /api/even
 ## Efeito da exclusão sobre os recursos
 
 Excluir um convidado remove seu perfil e as referências de atividade associadas, além de apagar a imagem do storage quando houver. Excluir um ministrante remove somente o registro indicado. Nenhuma dessas operações exclui a atividade ou o evento.
+
+## Evolução proposta: perfil central de ministrante
+
+Atualmente, ministrantes são cadastrados diretamente em cada atividade. Por isso, a listagem `GET /api/events/{eventId}/instructors` agrega vínculos e pode exibir várias vezes a mesma pessoa. A gestão central abaixo é uma evolução planejada, ainda não implementada.
+
+O modelo futuro terá um perfil de ministrante pertencente ao evento e vínculos desse perfil com atividades. O perfil reunirá nome, descrição e conta opcional; cada vínculo manterá sua própria função (`INSTRUCTOR` ou `ASSISTANT`), status e estado de convite. Assim, a equipe poderá listar uma pessoa uma vez no evento, mesmo quando ela ministrar várias atividades.
+
+As operações futuras de gestão deverão permitir listar, criar e editar perfis no escopo do evento, associar/desassociar atividades, vincular uma conta ativa ou convidar para uma atividade e excluir um perfil. Cancelar o próprio vínculo continuará sendo uma ação por atividade; excluir um vínculo não removerá o perfil nem os demais vínculos. Excluir o perfil removerá todos os vínculos associados.
+
+Para migrar os registros existentes, manter todos os vínculos, funções e status. Registros com conta poderão ser consolidados por evento e conta apenas quando não houver conflito; registros sem conta não serão unidos com base somente em nomes coincidentes. As rotas existentes por atividade e de consulta agregada continuarão disponíveis durante a transição.
+
+As cargas gerais de ministrante e convidado usadas nos certificados gerais serão configurações distintas na entidade evento, aplicadas uma vez por certificado. Elas não pertencem aos perfis individuais nem aos vínculos de atividade. `Event.workloadHours` permanece destinado ao certificado geral de participante. Ver [Certificados de eventos](event-certificado.md) para os cálculos e critérios de aceite.
