@@ -122,6 +122,13 @@ public class GuestImageService {
         } catch (RuntimeException cacheException) {
             log.warn("Cache em lote das imagens dos convidados indisponível; buscando direto no storage. eventId={}",
                     eventId, cacheException);
+            try {
+                guestImageCache.evictEvent(eventId);
+                return guestImageCache.getAllForEvent(eventId);
+            } catch (RuntimeException recoveryException) {
+                log.debug("Não foi possível reconstruir o cache em lote das imagens. eventId={}",
+                        eventId, recoveryException);
+            }
             return guestImageCache.loadAllForEvent(eventId);
         }
     }
