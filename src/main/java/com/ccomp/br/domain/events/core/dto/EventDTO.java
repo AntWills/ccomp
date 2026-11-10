@@ -51,8 +51,27 @@ public record EventDTO(
         @Schema(description = "Organização responsável pelo evento.")
         String organization,
         @Schema(name = "time_zone", description = "Fuso global da aplicação, persistido e retornado por compatibilidade.", example = "America/Sao_Paulo", deprecated = true)
-        String timeZone
+        String timeZone,
+        @Schema(description = "Carga geral destinada aos certificados de ministrante.")
+        BigDecimal instructorCertificateWorkloadHours,
+        @Schema(description = "Carga geral destinada aos certificados de convidado apresentador.")
+        BigDecimal guestCertificateWorkloadHours
 ) {
+    public EventDTO(Long id, String title, String slug, String summary, String content, String coverImageKey,
+                    EnumEventCategory category, EnumEventFormat format,
+                    EnumScheduleConflictPolicy scheduleConflictPolicy, EnumEventStatus status,
+                    LocalDateTime startDate, LocalDateTime endDate, EnumEventExecutionStatus executionStatus,
+                    LocalDateTime enrollmentStartDate, LocalDateTime enrollmentEndDate,
+                    Boolean enrollmentPaused, EnumEnrollmentStatus enrollmentStatus, UUID ownerId,
+                    LocalDateTime createdAt, LocalDateTime updatedAt, String address,
+                    BigDecimal workloadHours, BigDecimal teamCertificateWorkloadHours, String organization,
+                    String timeZone) {
+        this(id, title, slug, summary, content, coverImageKey, category, format, scheduleConflictPolicy, status,
+                startDate, endDate, executionStatus, enrollmentStartDate, enrollmentEndDate, enrollmentPaused,
+                enrollmentStatus, ownerId, createdAt, updatedAt, address, workloadHours,
+                teamCertificateWorkloadHours, organization, timeZone, null, null);
+    }
+
     public EventDTO(Long id, String title, String slug, String summary, String content, String coverImageKey,
                     EnumEventCategory category, EnumEventFormat format,
                     EnumScheduleConflictPolicy scheduleConflictPolicy, EnumEventStatus status,
@@ -64,7 +83,7 @@ public record EventDTO(
         this(id, title, slug, summary, content, coverImageKey, category, format, scheduleConflictPolicy, status,
                 startDate, endDate, executionStatus, enrollmentStartDate, enrollmentEndDate, enrollmentPaused,
                 enrollmentStatus, ownerId, createdAt, updatedAt, address, workloadHours,
-                teamCertificateWorkloadHours, organization, "America/Sao_Paulo");
+                teamCertificateWorkloadHours, organization, "America/Sao_Paulo", null, null);
     }
     public EventDTO(Long id, String title, String slug, String summary, String content, String coverImageKey,
                     EnumEventCategory category, EnumEventFormat format,
@@ -76,7 +95,7 @@ public record EventDTO(
         this(id, title, slug, summary, content, coverImageKey, category, format, scheduleConflictPolicy,
                 status, startDate, endDate, executionStatus, enrollmentStartDate, enrollmentEndDate,
                 enrollmentPaused, enrollmentStatus, ownerId, createdAt, updatedAt, address, null, null, null,
-                "America/Sao_Paulo");
+                "America/Sao_Paulo", null, null);
     }
 
     public boolean isPubliclyAccessible() {

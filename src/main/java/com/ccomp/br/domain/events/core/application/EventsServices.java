@@ -166,6 +166,8 @@ public class EventsServices {
         dto.optionalEndDate().ifPresent(eventModel::setEndDate);
         eventModel.setWorkloadHours(dto.workloadHours());
         eventModel.setTeamCertificateWorkloadHours(dto.teamCertificateWorkloadHours());
+        eventModel.setInstructorCertificateWorkloadHours(dto.instructorCertificateWorkloadHours());
+        eventModel.setGuestCertificateWorkloadHours(dto.guestCertificateWorkloadHours());
         eventModel.setOrganization(dto.organization());
         eventModel.setMaxCapacity(dto.maxCapacity());
 
