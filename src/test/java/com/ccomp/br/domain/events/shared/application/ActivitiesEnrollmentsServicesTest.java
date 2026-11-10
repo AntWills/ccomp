@@ -23,6 +23,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -146,7 +147,16 @@ class ActivitiesEnrollmentsServicesTest {
     }
 
     @Test
-    void unsubscribeDeletesExistingEnrollment() {
+    void unsubscribeRunsInsideTransaction() throws NoSuchMethodException {
+        var transaction = ActivitiesEnrollmentsServices.class
+                .getMethod("unsubscribe", UUID.class, Long.class)
+                .getAnnotation(Transactional.class);
+
+        assertThat(transaction).isNotNull();
+    }
+
+    @Test
+    void unsubscribeDeletesExistingEnrollmentAfterLockingActiveEventEnrollment() {
         EnrollmentActivity enrollment = mock(EnrollmentActivity.class);
         EventActivity activity = mock(EventActivity.class);
         Event event = mock(Event.class);
@@ -164,8 +174,33 @@ class ActivitiesEnrollmentsServicesTest {
         var response = service.unsubscribe(userId, 9L);
 
         assertThat(response.response()).isEqualTo("Inscrição removida com sucesso.");
+        verify(enrollmentRepository).findByIdAndEventId(12L, 4L);
+        verify(activityRepository).findByIdForUpdate(9L);
         verify(enrollmentActivityRepository).delete(enrollment);
         verify(activity).releaseActiveEnrollment();
+    }
+
+    @Test
+    void unsubscribeRejectsInactiveEventEnrollmentWithoutDeletingActivityEnrollment() {
+        EnrollmentActivity enrollment = mock(EnrollmentActivity.class);
+        EventActivity activity = mock(EventActivity.class);
+        Event event = mock(Event.class);
+        Enrollment lockedEnrollment = mock(Enrollment.class);
+        when(enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, 9L))
+                .thenReturn(Optional.of(enrollment));
+        when(activityRepository.findById(9L)).thenReturn(Optional.of(activity));
+        when(activity.getEvent()).thenReturn(event);
+        when(event.getId()).thenReturn(4L);
+        when(enrollment.getEnrollmentId()).thenReturn(12L);
+        when(enrollmentRepository.findByIdAndEventId(12L, 4L)).thenReturn(Optional.of(lockedEnrollment));
+        when(lockedEnrollment.isActive()).thenReturn(false);
+
+        assertThatThrownBy(() -> service.unsubscribe(userId, 9L))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        verify(activityRepository, never()).findByIdForUpdate(9L);
+        verifyNoInteractions(enrollmentActivityRepository);
+        verify(activity, never()).releaseActiveEnrollment();
     }
 
     private void stubActivityEnrollment(EventActivity activity, Event event, Enrollment enrollment) {
