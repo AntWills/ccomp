@@ -11,11 +11,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class QRCode {
-    private static final int QR_SIZE = 200;
-    private static final int IMAGE_WIDTH = 280;
+    private static final int QR_SIZE = 300;
+    private static final int IMAGE_WIDTH = 320;
     private static final int HORIZONTAL_PADDING = 16;
-    private static final int QR_TOP = 16;
-    private static final int LABEL_GAP = 14;
+    private static final int QR_TOP = 12;
+    private static final int LABEL_GAP = 0;
     private static final int LINE_HEIGHT = 22;
 
     public static BufferedImage generateQRCodeImage(String barcodeText) throws Exception {
