@@ -94,7 +94,7 @@ public class CheckInService {
         log.debug("URL: {}", url);
 
         try {
-            BufferedImage image = QRCode.generateQRCodeImage(url);
+            BufferedImage image = QRCode.generateQRCodeImage(url, activity.getTitle());
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ImageIO.write(image, "png", baos);
             return baos.toByteArray();
