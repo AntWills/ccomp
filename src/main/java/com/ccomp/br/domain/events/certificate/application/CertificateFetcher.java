@@ -12,6 +12,7 @@ import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplateReposi
 import com.ccomp.br.domain.events.certificate.persistence.EventCoverTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventCoverTemplateRepository;
 import com.ccomp.br.domain.storage.external.StorageExternal;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
@@ -32,6 +33,7 @@ public class CertificateFetcher {
     private final EventActivityBoxTemplateRepository activityBoxTemplateRepository;
     private final ActivityCertificateTemplateRepository specificActivityTemplateRepository;
 
+    @Autowired
     public CertificateFetcher(EventCoverTemplateRepository coverTemplateRepository,
                               StorageExternal storageExternal,
                               EventBoxTemplateRepository boxTemplateRepository,
