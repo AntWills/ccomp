@@ -28,15 +28,21 @@ class PasswordValidationTest {
     }
 
     @Test
-    void resetPasswordDoesNotRequireMinimumLengthButKeepsMaximum() {
-        var shortPasswordRequest = new ResetPasswordRequestDTO("valid-token", "1");
+    void resetPasswordRequiresSixCharactersAndKeepsMaximum() {
+        var shortPasswordRequest = new ResetPasswordRequestDTO("valid-token", "12345");
+        var minimumLengthRequest = new ResetPasswordRequestDTO("valid-token", "123456");
         var overLimitRequest = new ResetPasswordRequestDTO("valid-token", "a".repeat(256));
 
-        assertThat(validator.validate(shortPasswordRequest)).isEmpty();
+        assertThat(validator.validate(shortPasswordRequest))
+                .anySatisfy(violation -> {
+                    assertThat(violation.getPropertyPath().toString()).isEqualTo("password");
+                    assertThat(violation.getMessage()).isEqualTo("A senha deve ter entre 6 e 255 caracteres.");
+                });
+        assertThat(validator.validate(minimumLengthRequest)).isEmpty();
         assertThat(validator.validate(overLimitRequest))
                 .anySatisfy(violation -> {
                     assertThat(violation.getPropertyPath().toString()).isEqualTo("password");
-                    assertThat(violation.getMessage()).isEqualTo("A senha deve ter no máximo 255 caracteres.");
+                    assertThat(violation.getMessage()).isEqualTo("A senha deve ter entre 6 e 255 caracteres.");
                 });
     }
 
