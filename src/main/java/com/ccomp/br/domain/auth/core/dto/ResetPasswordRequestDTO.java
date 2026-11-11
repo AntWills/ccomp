@@ -10,7 +10,7 @@ public record ResetPasswordRequestDTO (
         String token,
         @NotNull(message = "A senha é obrigatória.")
         @NotBlank(message = "A senha é obrigatória.")
-        @Size(min = 6, max = 255, message = "A senha deve ter no máximo 255 caracteres.")
+        @Size(min = 6, max = 255, message = "A senha deve ter entre 6 e 255 caracteres.")
         String password
 ) {
 }

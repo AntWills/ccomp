@@ -19,6 +19,7 @@ import com.ccomp.br.module.qrcode.QRCode;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
+import com.ccomp.br.shared.exceptions.ConflictException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
@@ -93,7 +94,7 @@ public class CheckInService {
         log.debug("URL: {}", url);
 
         try {
-            BufferedImage image = QRCode.generateQRCodeImage(url);
+            BufferedImage image = QRCode.generateQRCodeImage(url, activity.getTitle());
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ImageIO.write(image, "png", baos);
             return baos.toByteArray();
@@ -128,5 +129,28 @@ public class CheckInService {
                 RabbitMQConfig.EXCHANGE_NAME,
                 CheckInChannel.ROUTING,
                 new CheckInMessageDTO(enrollment.getEnrollmentId(), activityId));
+    }
+
+    @Transactional
+    public void markAttendanceManually(long activityId, Long enrollmentId, UUID managerId) {
+        EventActivity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        EventDTO event = eventCache.findById(activity.getEventId())
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não existe."));
+        if (!eventAccessPolicy.canEdit(event, managerId))
+            throw new AccessDeniedException("O usuário não tem permissão para acessar este recurso.");
+
+        var activityEnrollment = enrollmentActivityRepository.findByEnrollmentIdAndActivityId(enrollmentId, activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("A pessoa não está inscrita nesta atividade."));
+        if (!activityEnrollment.getEnrollment().isActive())
+            throw new ConflictException("A inscrição no evento não está ativa.");
+        if (activityEnrollment.haveCheckIn()) return;
+
+        activityEnrollment.makeAttendance(LocalDateTime.now(clock));
+        enrollmentActivityRepository.save(activityEnrollment);
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE_NAME,
+                CheckInChannel.ROUTING,
+                new CheckInMessageDTO(enrollmentId, activityId));
     }
 }

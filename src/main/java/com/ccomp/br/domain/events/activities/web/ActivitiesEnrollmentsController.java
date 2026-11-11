@@ -49,6 +49,19 @@ public class ActivitiesEnrollmentsController {
         return ResponseEntity.ok(activitiesEnrollmentsServices.inscribe(userId, activityId));
     }
 
+    @Operation(summary = "Inscreve uma pessoa do evento em uma atividade",
+            description = "Operação de gerência. A inscrição no evento precisa estar ativa e pertencer ao mesmo evento da atividade. Respeita capacidade e conflitos de horário configurados.")
+    @PostMapping("/activities/{activityId}/enrollments/{enrollmentId}")
+    public ResponseEntity<MessageResponse> enrollParticipant(
+            @PathVariable Long activityId,
+            @PathVariable Long enrollmentId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID managerId = Optional.ofNullable(jwt).map(Jwt::getSubject).map(UUID::fromString)
+                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
+        return ResponseEntity.ok(activitiesEnrollmentsServices.enrollParticipant(managerId, activityId, enrollmentId));
+    }
+
     @Operation(summary = "Cancela inscrição em uma atividade", description = "Remove a inscrição do usuário autenticado em uma atividade específica.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Inscrição removida com sucesso"),

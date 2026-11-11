@@ -95,6 +95,25 @@ public class CheckInController {
         );
     }
 
+    @PostMapping("/activity/{activityId}/enrollments/{enrollmentId}/attendance")
+    @Operation(summary = "Marca manualmente a presença de uma pessoa na atividade",
+            description = "Operação de gerência. A pessoa precisa estar inscrita na atividade e ter inscrição ativa no evento. Registra a presença e dispara o fluxo de certificado da atividade.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Presença registrada"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão"),
+            @ApiResponse(responseCode = "404", description = "Atividade ou inscrição na atividade não encontrada"),
+            @ApiResponse(responseCode = "409", description = "Inscrição no evento inativa")
+    })
+    public ResponseEntity<MessageResponse> markAttendanceManually(
+            @PathVariable long activityId,
+            @PathVariable Long enrollmentId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        checkInService.markAttendanceManually(activityId, enrollmentId, extractUserId(jwt));
+        return ResponseEntity.ok(new MessageResponse("Presença registrada com sucesso."));
+    }
+
     private UUID extractUserId(Jwt jwt) {
         return UUID.fromString(jwt.getSubject());
     }

@@ -15,6 +15,7 @@ import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivity; // Assumindo o nome da entidade
+import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityRepository;
 import com.ccomp.br.module.qrcode.QRCode;
@@ -111,6 +112,7 @@ class CheckInServiceTest {
             try (MockedStatic<QRCode> mockedQrCode = mockStatic(QRCode.class)) {
                 BufferedImage dummyImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
                 mockedQrCode.when(() -> QRCode.generateQRCodeImage(anyString())).thenReturn(dummyImage);
+                mockedQrCode.when(() -> QRCode.generateQRCodeImage(anyString(), anyString())).thenReturn(dummyImage);
 
                 byte[] response = checkInService.generateCode(activityId, userId);
 
@@ -140,6 +142,7 @@ class CheckInServiceTest {
             try (MockedStatic<QRCode> mockedQrCode = mockStatic(QRCode.class)) {
                 BufferedImage dummyImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
                 mockedQrCode.when(() -> QRCode.generateQRCodeImage(anyString())).thenReturn(dummyImage);
+                mockedQrCode.when(() -> QRCode.generateQRCodeImage(anyString(), anyString())).thenReturn(dummyImage);
 
                 byte[] response = checkInService.generateCode(activityId, userId);
 
@@ -176,6 +179,50 @@ class CheckInServiceTest {
     @Nested
     @DisplayName("Check-In - Registrar Presença")
     class CheckInAction {
+
+        @Test
+        void managerCanMarkAttendanceManuallyAndTriggersExistingCheckInFlow() {
+            Long enrollmentId = 27L;
+            EnrollmentActivity activityEnrollment = mock(EnrollmentActivity.class);
+            Enrollment enrollment = mock(Enrollment.class);
+            when(activityRepository.findById(activityId)).thenReturn(Optional.of(activityMock));
+            when(activityMock.getEventId()).thenReturn(eventId);
+            when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTOMock));
+            when(eventAccessPolicy.canEdit(eventDTOMock, userId)).thenReturn(true);
+            when(enrollmentActivityRepository.findByEnrollmentIdAndActivityId(enrollmentId, activityId))
+                    .thenReturn(Optional.of(activityEnrollment));
+            when(activityEnrollment.getEnrollment()).thenReturn(enrollment);
+            when(enrollment.isActive()).thenReturn(true);
+            when(activityEnrollment.haveCheckIn()).thenReturn(false);
+
+            checkInService.markAttendanceManually(activityId, enrollmentId, userId);
+
+            verify(activityEnrollment).makeAttendance(LocalDateTime.parse("2026-11-08T09:10:00"));
+            verify(enrollmentActivityRepository).save(activityEnrollment);
+            verify(rabbitTemplate).convertAndSend(eq(RabbitMQConfig.EXCHANGE_NAME),
+                    eq(CheckInChannel.ROUTING), any(CheckInMessageDTO.class));
+        }
+
+        @Test
+        void managerManualAttendanceIsIdempotent() {
+            Long enrollmentId = 27L;
+            EnrollmentActivity activityEnrollment = mock(EnrollmentActivity.class);
+            Enrollment enrollment = mock(Enrollment.class);
+            when(activityRepository.findById(activityId)).thenReturn(Optional.of(activityMock));
+            when(activityMock.getEventId()).thenReturn(eventId);
+            when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTOMock));
+            when(eventAccessPolicy.canEdit(eventDTOMock, userId)).thenReturn(true);
+            when(enrollmentActivityRepository.findByEnrollmentIdAndActivityId(enrollmentId, activityId))
+                    .thenReturn(Optional.of(activityEnrollment));
+            when(activityEnrollment.getEnrollment()).thenReturn(enrollment);
+            when(enrollment.isActive()).thenReturn(true);
+            when(activityEnrollment.haveCheckIn()).thenReturn(true);
+
+            checkInService.markAttendanceManually(activityId, enrollmentId, userId);
+
+            verify(enrollmentActivityRepository, never()).save(any());
+            verifyNoInteractions(rabbitTemplate);
+        }
 
         @Test
         @DisplayName("Realiza o check-in com sucesso, envia mensagem pro RabbitMQ e salva")

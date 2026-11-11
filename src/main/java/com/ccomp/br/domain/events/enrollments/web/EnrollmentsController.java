@@ -36,17 +36,6 @@ public class EnrollmentsController {
         this.enrollmentsServices = enrollmentsServices;
     }
 
-    @Operation(
-            summary = "Lista os inscritos de um evento com paginação por cursor",
-            description = """
-        Retorna a listagem dos participantes inscritos no evento de forma paginada (*Cursor-based Pagination*).
-
-        ### Comportamento e Detalhes da Resposta:
-        - **`pageSize`:** Quantidade de registros retornados por página (limite ajustado automaticamente para no máximo 50).
-        - **`nextCursor`:** Hash de paginação enviado para carregar os próximos inscritos.
-        - **Dados do Inscrito:** Cada item traz os dados de auditoria da inscrição (`id`, `status`, `createdAt`) e a visão resumida do perfil do participante (`UserSummaryView`).
-        """
-    )
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -69,6 +58,8 @@ public class EnrollmentsController {
             )
     })
     @GetMapping("/{eventId}/enrollments")
+    @Operation(summary = "Busca inscritos de um evento",
+            description = "Lista inscrições com paginação por cursor (máximo de 50 por página). `searchTerm` pesquisa nome e e-mail por similaridade e ordena por relevância; pode ser combinado com `status`. Ao continuar uma busca textual, mantenha os mesmos filtros e use o cursor retornado.")
     public ResponseEntity<CursorPage<EnrollmentListItem>> searchEnrollments(
             @PathVariable Long eventId,
             @Parameter(description = "Cursor para carregar a próxima página (retornado em 'nextCursor' na busca anterior)")
@@ -76,10 +67,11 @@ public class EnrollmentsController {
             @Parameter(description = "Quantidade de registros por página (Padrão: 10, Máximo: 50)")
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) EnumEnrollmentState status,
+            @RequestParam(required = false) String searchTerm,
             @AuthenticationPrincipal Jwt jwt
     ) {
         return ResponseEntity.ok(enrollmentsServices.searchEnrollments(
-                eventId, extractUserId(jwt), nextCursor, pageSize, status));
+                eventId, extractUserId(jwt), nextCursor, pageSize, status, searchTerm));
     }
 
     @Operation(summary = "Consulta inscritos e capacidade de um evento",

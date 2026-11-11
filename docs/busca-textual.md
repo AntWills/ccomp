@@ -32,6 +32,10 @@ Sem termo, o score não é projetado nem calculado; a ordenação continua por `
 
 Para o PostgreSQL poder usar os índices GIN de `tb_users.name` e `tb_users.email_address` criados na V22, a consulta usa a função genérica `text_search_match`, adicionada na V30. Ela encapsula o operador indexável `<%`; o limiar do operador é definido localmente na transação como `0.399999`, e a condição `word_similarity >= 0.4` preserva o limite documentado. A função genérica `text_search_score`, também adicionada na V30, calcula `word_similarity + similarity` para ordenar os candidatos. Essa pontuação é calculada por linha e não usa o GIN; o ganho potencial do índice vem do filtro `text_search_match`. A V30 não cria índices duplicados. O mesmo par de funções pode ser reutilizado em outras tabelas, desde que os campos tenham índices GIN compatíveis e o filtro local aplique o limiar apropriado.
 
+### Busca de inscritos do evento
+
+`GET /api/events/{eventId}/enrollments` aceita `searchTerm` opcional para pesquisar nome e e-mail dos inscritos, além dos filtros existentes `status`, `pageSize` e `nextCursor`. O termo usa o mesmo limiar de similaridade de 40% e a pontuação por melhor correspondência de nome/e-mail da busca de credenciamento. Quando há termo, a ordenação é por relevância decrescente, `createdAt` e ID decrescentes; o cursor inclui a relevância para continuar essa ordenação. Sem termo, a ordenação e o cursor continuam usando `createdAt` e ID. Ao avançar páginas, o cliente deve manter os mesmos filtros e o mesmo `searchTerm`.
+
 ## Índices e planos de consulta
 
 O PostgreSQL permite criar índices GIN trigramáticos usando `gin_trgm_ops` para os campos pesquisáveis. No exemplo de usuários, a migração `V22__add_user_text_search.sql` habilita `pg_trgm` e cria índices para `tb_users.name` e `tb_users.email_address`.
