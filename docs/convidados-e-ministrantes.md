@@ -64,3 +64,15 @@ As rotas de listagem de convidados também existem separadamente: `GET /api/even
 ## Efeito da exclusão sobre os recursos
 
 Excluir um convidado remove seu perfil e as referências de atividade associadas, além de apagar a imagem do storage quando houver. Excluir um ministrante remove somente o registro indicado. Nenhuma dessas operações exclui a atividade ou o evento.
+
+## Perfis centrais de ministrante
+
+Ministrantes agora possuem um perfil pertencente ao evento, associado a vínculos específicos de atividade. A rota legada `GET /api/events/{eventId}/instructors` continua listando vínculos por atividade; a lista central de perfis usa `GET /api/events/{eventId}/instructor-profiles`.
+
+O perfil reúne nome, descrição e conta opcional; cada vínculo mantém sua própria função (`INSTRUCTOR` ou `ASSISTANT`) e status. Assim, a equipe lista uma pessoa uma vez no evento, mesmo quando ela ministra várias atividades.
+
+As operações centrais permitem listar, criar, editar e excluir perfis, além de associá-los a atividades. Convites e associação de conta continuam disponíveis por atividade. Cancelar o próprio vínculo continua sendo uma ação por atividade; excluir um vínculo não remove o perfil nem os demais vínculos. Excluir o perfil remove todos os vínculos associados.
+
+Na migração V40, os registros existentes mantêm vínculos, funções e status. Registros com conta são agrupados por evento e conta; registros sem conta não são unidos com base somente em nomes coincidentes. As rotas existentes por atividade continuam disponíveis.
+
+As cargas gerais de ministrante e convidado usadas nos certificados gerais serão configurações distintas na entidade evento, aplicadas uma vez por certificado. Elas não pertencem aos perfis individuais nem aos vínculos de atividade. `Event.workloadHours` permanece destinado ao certificado geral de participante. Ver [Certificados de eventos](event-certificado.md) para os cálculos e critérios de aceite.

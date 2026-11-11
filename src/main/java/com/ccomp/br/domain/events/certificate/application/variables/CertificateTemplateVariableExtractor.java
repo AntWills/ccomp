@@ -1,4 +1,4 @@
-package com.ccomp.br.domain.events.certificate.application;
+package com.ccomp.br.domain.events.certificate.application.variables;
 
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.enums.EnumCertificateVariableContext;
@@ -10,13 +10,13 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-final class CertificateTemplateVariableExtractor {
+final public class CertificateTemplateVariableExtractor {
     private static final Pattern VARIABLE_PATTERN = Pattern.compile("\\{[^{}]+}");
 
     private CertificateTemplateVariableExtractor() {
     }
 
-    static List<String> extract(List<BoxElementDTO> boxes, EnumCertificateVariableContext context) {
+    public static List<String> extract(List<BoxElementDTO> boxes, EnumCertificateVariableContext context) {
         Set<String> allowedVariables = Set.copyOf(CertificateVariablesServices.acceptedVariablesFor(context));
         Set<String> extractedVariables = new LinkedHashSet<>();
 

@@ -5,12 +5,17 @@ import java.util.UUID;
 
 import com.ccomp.br.domain.events.instructor.application.InstructorInvitationService;
 import com.ccomp.br.domain.events.instructor.application.InstructorService;
+import com.ccomp.br.domain.events.instructor.application.InstructorProfileService;
 import com.ccomp.br.domain.events.instructor.dto.ActivityParticipantDTO;
 import com.ccomp.br.domain.events.instructor.dto.AddInstructorRequest;
 import com.ccomp.br.domain.events.instructor.dto.EventInstructorDTO;
 import com.ccomp.br.domain.events.instructor.dto.InstructorInvitationDTO;
 import com.ccomp.br.domain.events.instructor.dto.InviteInstructorRequest;
 import com.ccomp.br.domain.events.instructor.dto.LinkInstructorAccountRequest;
+import com.ccomp.br.domain.events.instructor.dto.InstructorProfileDTO;
+import com.ccomp.br.domain.events.instructor.dto.InstructorProfileRequest;
+import com.ccomp.br.domain.events.instructor.dto.UpdateInstructorProfileRequest;
+import com.ccomp.br.domain.events.instructor.dto.LinkInstructorProfileRequest;
 import com.ccomp.br.module.email.EmailAddress;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -35,13 +40,16 @@ import org.springframework.web.bind.annotation.*;
 )
 public class InstructorController {
     private final InstructorService instructorService;
+    private final InstructorProfileService instructorProfileService;
     private final InstructorInvitationService invitationService;
 
     public InstructorController(
             InstructorService instructorService,
+            InstructorProfileService instructorProfileService,
             InstructorInvitationService invitationService
     ) {
         this.instructorService = instructorService;
+        this.instructorProfileService = instructorProfileService;
         this.invitationService = invitationService;
     }
 
@@ -67,6 +75,62 @@ public class InstructorController {
         return ResponseEntity.ok(
                 instructorService.searchByEvent(eventId, extractUserId(jwt), cursor, pageSize)
         );
+    }
+
+    @GetMapping("/{eventId}/instructor-profiles")
+    @Operation(summary = "Lista os perfis únicos de ministrantes do evento")
+    public ResponseEntity<List<InstructorProfileDTO>> listProfiles(
+            @PathVariable Long eventId, @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(instructorProfileService.listProfiles(eventId, extractUserId(jwt)));
+    }
+
+    @PostMapping("/{eventId}/instructor-profiles")
+    @Operation(summary = "Cadastra um perfil central de ministrante no evento")
+    public ResponseEntity<InstructorProfileDTO> createProfile(
+            @PathVariable Long eventId, @Valid @RequestBody InstructorProfileRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(instructorProfileService.createProfile(eventId, extractUserId(jwt),
+                request.name(), request.description(), request.accountEmail()));
+    }
+
+    @PatchMapping("/{eventId}/instructor-profiles/{profileId}")
+    @Operation(summary = "Atualiza o perfil central de ministrante")
+    public ResponseEntity<InstructorProfileDTO> updateProfile(
+            @PathVariable Long eventId, @PathVariable Long profileId,
+            @Valid @RequestBody UpdateInstructorProfileRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(instructorProfileService.updateProfile(eventId, profileId,
+                extractUserId(jwt), request));
+    }
+
+    @PatchMapping("/{eventId}/instructor-profiles/{profileId}/account")
+    @Operation(summary = "Vincula uma conta ativa ao perfil de ministrante")
+    public ResponseEntity<InstructorProfileDTO> linkProfileAccount(
+            @PathVariable Long eventId, @PathVariable Long profileId,
+            @Valid @RequestBody LinkInstructorAccountRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(instructorProfileService.linkProfileAccount(eventId, profileId,
+                extractUserId(jwt), request.email()));
+    }
+
+    @DeleteMapping("/{eventId}/instructor-profiles/{profileId}")
+    @Operation(summary = "Remove o perfil e todos os vínculos com atividades")
+    public ResponseEntity<Void> deleteProfile(
+            @PathVariable Long eventId, @PathVariable Long profileId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+        instructorProfileService.deleteProfile(eventId, profileId, extractUserId(jwt));
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{eventId}/instructor-profiles/{profileId}/activities/{activityId}")
+    @Operation(summary = "Associa um perfil de ministrante a uma atividade")
+    public ResponseEntity<MessageResponse> linkProfileToActivity(
+            @PathVariable Long eventId, @PathVariable Long profileId, @PathVariable Long activityId,
+            @RequestBody(required = false) LinkInstructorProfileRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+        instructorService.addProfileToActivity(eventId, profileId, activityId, extractUserId(jwt),
+                request == null ? null : request.role());
+        return ResponseEntity.ok(new MessageResponse("Ministrante associado à atividade."));
     }
 
     @GetMapping("/activities/{activityId}/instructors")

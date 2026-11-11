@@ -4,5 +4,6 @@ public enum EnumCertificateType {
     EVENT,
     ACTIVITY,
     INSTRUCTOR,
+    GUEST,
     EDITOR
 }

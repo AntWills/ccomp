@@ -1,12 +1,14 @@
 package com.ccomp.br.domain.events.certificate.web;
 
-import com.ccomp.br.domain.events.certificate.application.ActivityCertificateBoxServices;
-import com.ccomp.br.domain.events.certificate.application.CertificateBoxServices;
+import com.ccomp.br.domain.events.certificate.application.boxes.ActivityCertificateBoxServices;
+import com.ccomp.br.domain.events.certificate.application.boxes.CertificateBoxServices;
 import com.ccomp.br.domain.events.certificate.application.CertificateCoverService;
-import com.ccomp.br.domain.events.certificate.application.CertificateServices;
+import com.ccomp.br.domain.events.certificate.application.issuance.AutomaticCertificateServices;
+import com.ccomp.br.domain.events.certificate.application.issuance.ManualCertificateServices;
 import com.ccomp.br.domain.events.certificate.application.CertificateValidatorService;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
+import com.ccomp.br.domain.events.certificate.dto.ManualCertificateContentRequest;
 import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
@@ -66,8 +68,18 @@ class EventCertificateControllerTest {
     private static final String ACTIVITY_BOX_TEMPLATE_URL = "/api/events/50/activity-certificate-box-template";
     private static final String COVER_TEMPLATE_URL = "/api/events/50/certificate-cover-template";
     private static final String EVENT_CERTIFICATE_URL = "/api/events/50/certificate";
+    private static final String CUSTOM_MANUAL_PREVIEW_URL = "/api/events/50/certificate/manual/preview";
+    private static final String CUSTOM_MANUAL_CERTIFICATE_URL = "/api/events/50/certificate/manual";
     private static final String ACTIVITY_PREVIEW_URL = "/api/events/50/activity-certificate-preview";
     private static final String ACTIVITY_SAVE_BOX_URL = "/api/events/50/activity-certificate-box-template";
+    private static final String CUSTOM_MANUAL_BODY = """
+            {
+              "boxes": [
+                {"textTemplate": "Certificado para {nome}", "x": 0.1, "y": 0.2, "width": 0.8}
+              ],
+              "variables": {"{nome}": "Ana Souza"}
+            }
+            """;
     private static final String SAVE_BOX_BODY = """
             {
               "boxes": [
@@ -83,7 +95,10 @@ class EventCertificateControllerTest {
     private CertificateBoxServices certificateBoxServices;
 
     @Mock
-    private CertificateServices certificateServices;
+    private AutomaticCertificateServices automaticCertificateServices;
+
+    @Mock
+    private ManualCertificateServices manualCertificateServices;
 
     @Mock
     private ActivityCertificateBoxServices activityCertificateBoxServices;
@@ -106,9 +121,11 @@ class EventCertificateControllerTest {
         var managementController = new EventCertificateManagementController(certificateCoverService,
                 certificateBoxServices,
                 activityCertificateBoxServices);
-        var consultationController = new EventCertificateConsultationController(certificateServices,
-                certificateValidatorService);
-        mockMvc = MockMvcBuilders.standaloneSetup(managementController, consultationController)
+        var issuanceController = new EventCertificateIssuanceController(automaticCertificateServices);
+        var manualController = new EventCertificateManualController(manualCertificateServices);
+        var validationController = new EventCertificateValidationController(certificateValidatorService);
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        managementController, issuanceController, manualController, validationController)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
@@ -303,7 +320,7 @@ class EventCertificateControllerTest {
 
     @Test
     void buildCertificateFromActivity_validRequest_returnsPngWithDisposition() throws Exception {
-        when(certificateServices.buildCertificateFromActivity(eq(77L), any()))
+        when(automaticCertificateServices.buildCertificateFromActivity(eq(77L), any()))
                 .thenReturn(new StorageExternal.StoredFile(
                         new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
                         MediaType.IMAGE_PNG_VALUE));
@@ -317,7 +334,7 @@ class EventCertificateControllerTest {
 
     @Test
     void buildCertificateFromEvent_validRequest_returnsPngWithDisposition() throws Exception {
-        when(certificateServices.buildCertificateFromEvent(eq(50L), any()))
+        when(automaticCertificateServices.buildCertificateFromEvent(eq(50L), any()))
                 .thenReturn(new StorageExternal.StoredFile(
                         new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
                         MediaType.IMAGE_PNG_VALUE));
@@ -327,6 +344,44 @@ class EventCertificateControllerTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"certificado-evento-50.png\""));
+    }
+
+    @Test
+    void previewCustomManualCertificate_returnsInlinePngAndUsesFrontendContent() throws Exception {
+        when(manualCertificateServices.previewCustomCertificate(eq(50L), any(), any()))
+                .thenReturn(new StorageExternal.StoredFile(
+                        new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
+                        MediaType.IMAGE_PNG_VALUE));
+
+        mockMvc.perform(post(CUSTOM_MANUAL_PREVIEW_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CUSTOM_MANUAL_BODY))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"certificado-previa-manual-50.png\""));
+
+        verify(manualCertificateServices).previewCustomCertificate(
+                eq(50L), eq(PARTICIPANT_ID), any(ManualCertificateContentRequest.class));
+    }
+
+    @Test
+    void issueCustomManualCertificate_returnsPngAttachmentAndUsesFrontendContent() throws Exception {
+        when(manualCertificateServices.issueCustomCertificate(eq(50L), any(), any()))
+                .thenReturn(new StorageExternal.StoredFile(
+                        new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
+                        MediaType.IMAGE_PNG_VALUE));
+
+        mockMvc.perform(post(CUSTOM_MANUAL_CERTIFICATE_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CUSTOM_MANUAL_BODY))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"certificado-manual-50.png\""));
+
+        verify(manualCertificateServices).issueCustomCertificate(
+                eq(50L), eq(PARTICIPANT_ID), any(ManualCertificateContentRequest.class));
     }
 
     @Test
@@ -342,7 +397,7 @@ class EventCertificateControllerTest {
 
     @Test
     void buildCertificateFromActivity_notSubscribed_returns404Json() throws Exception {
-        when(certificateServices.buildCertificateFromActivity(eq(77L), any()))
+        when(automaticCertificateServices.buildCertificateFromActivity(eq(77L), any()))
                 .thenThrow(new ResourceNotFoundException("O usuário não é inscrito nesta atividade."));
 
         mockMvc.perform(get(ACTIVITY_CERTIFICATE_URL))
@@ -353,7 +408,7 @@ class EventCertificateControllerTest {
 
     @Test
     void buildCertificateFromActivity_checkInNotDone_returns400Json() throws Exception {
-        when(certificateServices.buildCertificateFromActivity(eq(77L), any()))
+        when(automaticCertificateServices.buildCertificateFromActivity(eq(77L), any()))
                 .thenThrow(new DomainException("O inscrito não participou desta atividade."));
 
         mockMvc.perform(get(ACTIVITY_CERTIFICATE_URL))

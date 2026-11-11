@@ -1,10 +1,16 @@
-package com.ccomp.br.domain.events.certificate.application;
+package com.ccomp.br.domain.events.certificate.application.issuance;
 
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
+import com.ccomp.br.domain.events.certificate.application.CertificateFetcher;
+import com.ccomp.br.domain.events.certificate.application.ResolvedActivityCertificateTemplate;
+import com.ccomp.br.domain.events.certificate.application.variables.CertificateVariablesServices;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
+import com.ccomp.br.domain.events.certificate.enums.EnumActivityCertificateTemplateType;
 import com.ccomp.br.domain.events.certificate.persistence.EventActivityBoxTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventBoxTemplate;
+import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
+import com.ccomp.br.domain.events.guests.persistence.ActivityGuestRepository;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
@@ -22,23 +28,26 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
 
 @Service
-public class CertificateServices {
+public class AutomaticCertificateServices {
     private final EventCache eventCache;
     private final EventAccessPolicy accessPolicy;
     private final CertificateFetcher certificateFetcher;
     private final CertificateVariablesServices variablesServices;
     private final ActivityCache activityCache;
+    private final ActivityGuestRepository activityGuestRepository;
 
-    public CertificateServices(EventCache eventCache,
+    public AutomaticCertificateServices(EventCache eventCache,
                                EventAccessPolicy accessPolicy,
                                CertificateFetcher certificateFetcher,
                                CertificateVariablesServices variablesServices,
-                               ActivityCache activityCache) {
+                               ActivityCache activityCache,
+                               ActivityGuestRepository activityGuestRepository) {
         this.eventCache = eventCache;
         this.accessPolicy = accessPolicy;
         this.certificateFetcher = certificateFetcher;
         this.variablesServices = variablesServices;
         this.activityCache = activityCache;
+        this.activityGuestRepository = activityGuestRepository;
     }
 
     public StorageExternal.StoredFile buildCertificateFromEvent(Long eventId, UUID userId) {
@@ -85,24 +94,21 @@ public class CertificateServices {
         Long eventId = activity.eventId();
 
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            CompletableFuture<StorageExternal.StoredFile> templateFuture =
-                    CompletableFuture.supplyAsync(() -> certificateFetcher.fetchCoverTemplate(eventId), executor);
+            CompletableFuture<ResolvedActivityCertificateTemplate> activityTemplateFuture =
+                    CompletableFuture.supplyAsync(() -> certificateFetcher.resolveActivityTemplate(
+                            eventId, activityId, EnumActivityCertificateTemplateType.PARTICIPANT), executor);
 
-            CompletableFuture<EventActivityBoxTemplate> activityBoxFuture =
-                    CompletableFuture.supplyAsync(() -> certificateFetcher.fetchActivityBoxTemplate(eventId), executor);
-
-            CompletableFuture<Map<String, String>> variablesFuture = activityBoxFuture.thenApplyAsync(
-                    activityBox -> variablesServices.loadActivityVariablesValues(activityBox.getVariables(), activityId, userId),
+            CompletableFuture<Map<String, String>> variablesFuture = activityTemplateFuture.thenApplyAsync(
+                    activityTemplate -> variablesServices.loadActivityVariablesValues(activityTemplate.variables(), activityId, userId),
                     executor
             );
 
-            CompletableFuture.allOf(templateFuture, activityBoxFuture, variablesFuture).join();
+            CompletableFuture.allOf(activityTemplateFuture, variablesFuture).join();
 
-            StorageExternal.StoredFile template = templateFuture.join();
-            var activityBox = activityBoxFuture.join();
+            var activityTemplate = activityTemplateFuture.join();
             Map<String, String> variables = variablesFuture.join();
 
-            return render(template, activityBox.getBoxes(), variables);
+            return render(activityTemplate.cover(), activityTemplate.boxes(), variables);
 
         } catch (CompletionException e) {
             if (e.getCause() instanceof RuntimeException runtimeException) {
@@ -142,12 +148,80 @@ public class CertificateServices {
         }
     }
 
+    public StorageExternal.StoredFile buildCertificateFromActivityGuest(Long eventId, Long activityId,
+            Long activityGuestId, UUID requesterId) {
+        var activity = activityCache.findById(activityId)
+                .filter(item -> item.eventId().equals(eventId))
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada neste evento."));
+
+        var activityGuest = activityGuestRepository.findByActivityIdAndId(activityId, activityGuestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Convidado não está vinculado a esta atividade."));
+        var guest = activityGuest.getEventGuest();
+        if (activityGuest.getRole() != EnumActivityGuestRole.PRESENTER || !guest.isConfirmed())
+            throw new AccessDeniedException("Somente apresentadores confirmados podem emitir este certificado.");
+        if (guest.getUserId() == null)
+            throw new AccessDeniedException("O convidado precisa vincular uma conta para emitir o próprio certificado.");
+        if (!guest.getUserId().equals(requesterId)) {
+            EventDTO event = eventCache.findById(eventId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+            if (!accessPolicy.canEdit(event, requesterId))
+                throw new AccessDeniedException("Somente o apresentador ou a equipe do evento pode emitir este certificado.");
+        }
+
+        StorageExternal.StoredFile cover = certificateFetcher.fetchCoverTemplate(eventId);
+        EventBoxTemplate template = certificateFetcher.fetchBoxTemplate(eventId,
+                EnumEventCertificateTemplateType.GUEST);
+        Map<String, String> values = variablesServices.loadGuestInstructorVariablesValues(eventId, guest.getUserId());
+        return render(cover, template.getBoxes(), values);
+    }
+
+    public StorageExternal.StoredFile buildActivityCertificateFromInstructor(Long eventId, Long activityId,
+            Long instructorId, UUID requesterId) {
+        var activity = activityCache.findById(activityId)
+                .filter(item -> item.eventId().equals(eventId))
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada neste evento."));
+        UUID recipient = variablesServices.findActivityInstructorCertificateRecipient(eventId, activityId, instructorId);
+        authorizeRecipientOrEditor(eventId, requesterId, recipient,
+                "Somente o ministrante ou a equipe do evento pode emitir este certificado.");
+        var template = certificateFetcher.resolveActivityTemplate(eventId, activityId,
+                EnumActivityCertificateTemplateType.INSTRUCTOR);
+        var values = variablesServices.loadActivityRoleVariables(template.variables(), activityId, recipient,
+                com.ccomp.br.domain.events.certificate.enums.EnumCertificateType.INSTRUCTOR);
+        return render(template.cover(), template.boxes(), values);
+    }
+
+    public StorageExternal.StoredFile buildActivityCertificateFromGuest(Long eventId, Long activityId,
+            Long activityGuestId, UUID requesterId) {
+        activityCache.findById(activityId).filter(item -> item.eventId().equals(eventId))
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada neste evento."));
+        var link = activityGuestRepository.findByActivityIdAndId(activityId, activityGuestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Convidado não está vinculado a esta atividade."));
+        var guest = link.getEventGuest();
+        if (link.getRole() != EnumActivityGuestRole.PRESENTER || !guest.isConfirmed() || guest.getUserId() == null)
+            throw new AccessDeniedException("Somente apresentadores confirmados com conta vinculada podem emitir este certificado.");
+        authorizeRecipientOrEditor(eventId, requesterId, guest.getUserId(),
+                "Somente o apresentador ou a equipe do evento pode emitir este certificado.");
+        var template = certificateFetcher.resolveActivityTemplate(eventId, activityId,
+                EnumActivityCertificateTemplateType.GUEST);
+        var values = variablesServices.loadActivityRoleVariables(template.variables(), activityId, guest.getUserId(),
+                com.ccomp.br.domain.events.certificate.enums.EnumCertificateType.GUEST);
+        return render(template.cover(), template.boxes(), values);
+    }
+
+    private void authorizeRecipientOrEditor(Long eventId, UUID requesterId, UUID recipientId, String message) {
+        if (!recipientId.equals(requesterId)) {
+            EventDTO event = eventCache.findById(eventId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+            if (!accessPolicy.canEdit(event, requesterId)) throw new AccessDeniedException(message);
+        }
+    }
+
     public StorageExternal.StoredFile buildCertificateForEditor(Long eventId, UUID userId) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
         if (!event.isOwner(userId) && !accessPolicy.isActiveEditor(eventId, userId))
-            throw new AccessDeniedException("O certificado está disponível somente para owner ou editor ativo do evento.");
+            throw new AccessDeniedException("Somente owner ou editor ativo pode emitir este certificado.");
 
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             CompletableFuture<StorageExternal.StoredFile> coverFuture = CompletableFuture.supplyAsync(

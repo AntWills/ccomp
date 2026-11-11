@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.certificate.application;
 import com.ccomp.br.domain.events.certificate.persistence.*;
 import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
 import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
+import com.ccomp.br.domain.events.certificate.enums.EnumActivityCertificateTemplateType;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -110,7 +111,8 @@ class CertificateFetcherTest {
 
     @Test
     void fetchActivityBoxTemplate_withoutSavedTemplate_returnsActivityVariables() {
-        when(activityBoxRepository.findByEventId(EVENT_ID)).thenReturn(Optional.empty());
+        when(activityBoxRepository.findByEventIdAndTemplateType(
+                EVENT_ID, EnumActivityCertificateTemplateType.PARTICIPANT)).thenReturn(Optional.empty());
 
         EventActivityBoxTemplate result = createFetcher().fetchActivityBoxTemplate(EVENT_ID);
 

@@ -2,6 +2,9 @@ package com.ccomp.br.domain.events.guests.web;
 
 import com.ccomp.br.domain.events.guests.application.GuestImageService;
 import com.ccomp.br.domain.events.guests.application.GuestService;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
+import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
+import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
 import com.ccomp.br.domain.events.guests.dto.CreateGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
@@ -210,6 +213,23 @@ class GuestControllerTest {
         mockMvc.perform(get("/api/events/activities/{activityId}/guests", activityId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].role").value("SPECIAL_GUEST"));
+    }
+
+    @Test
+    void guestActivitiesEndpointSerializesActivityList() throws Exception {
+        ActivityDTO activity = new ActivityDTO(78L, EVENT_ID, "Palestra principal", null, 1L,
+                "Auditório", null, null, null, EnumActivityRegistrationPolicy.PUBLIC,
+                EnumActivityType.LECTURE);
+        when(guestService.findActivitiesByGuest(EVENT_ID, GUEST_ID, USER_ID))
+                .thenReturn(List.of(activity));
+
+        mockMvc.perform(get("/api/events/{eventId}/guests/{guestId}/activities", EVENT_ID, GUEST_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(78))
+                .andExpect(jsonPath("$[0].event_id").value(EVENT_ID))
+                .andExpect(jsonPath("$[0].title").value("Palestra principal"));
+
+        verify(guestService).findActivitiesByGuest(EVENT_ID, GUEST_ID, USER_ID);
     }
 
     @Test

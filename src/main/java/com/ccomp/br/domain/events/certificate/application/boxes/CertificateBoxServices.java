@@ -1,5 +1,7 @@
-package com.ccomp.br.domain.events.certificate.application;
+package com.ccomp.br.domain.events.certificate.application.boxes;
 
+import com.ccomp.br.domain.events.certificate.application.CertificateFetcher;
+import com.ccomp.br.domain.events.certificate.application.variables.CertificateTemplateVariableExtractor;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.enums.EnumCertificateVariableContext;
 import com.ccomp.br.domain.events.certificate.enums.EnumEventCertificateTemplateType;
@@ -87,6 +89,7 @@ public class CertificateBoxServices {
         return switch (templateType) {
             case PARTICIPANT -> EnumCertificateVariableContext.PARTICIPANT;
             case INSTRUCTOR -> EnumCertificateVariableContext.INSTRUCTOR;
+            case GUEST -> EnumCertificateVariableContext.GUEST;
             case EDITOR -> EnumCertificateVariableContext.EDITOR;
         };
     }

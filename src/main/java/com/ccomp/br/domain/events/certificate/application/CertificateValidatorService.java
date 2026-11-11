@@ -12,6 +12,7 @@ import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -28,17 +29,30 @@ public class CertificateValidatorService {
     private final ActivityCache activityCache;
     private final EventActivityDslRepository activityDslRepository;
     private final UserManagement userManagement;
+    private final CertificateWorkloadService workloadService;
+
+    @Autowired
+    public CertificateValidatorService(EventCertificateValidationCodeRepository validationCodeRepository,
+                                       EventCache eventCache,
+                                       ActivityCache activityCache,
+                                       EventActivityDslRepository activityDslRepository,
+                                       UserManagement userManagement,
+                                       CertificateWorkloadService workloadService) {
+        this.validationCodeRepository = validationCodeRepository;
+        this.eventCache = eventCache;
+        this.activityCache = activityCache;
+        this.activityDslRepository = activityDslRepository;
+        this.userManagement = userManagement;
+        this.workloadService = workloadService;
+    }
 
     public CertificateValidatorService(EventCertificateValidationCodeRepository validationCodeRepository,
                                        EventCache eventCache,
                                        ActivityCache activityCache,
                                        EventActivityDslRepository activityDslRepository,
                                        UserManagement userManagement) {
-        this.validationCodeRepository = validationCodeRepository;
-        this.eventCache = eventCache;
-        this.activityCache = activityCache;
-        this.activityDslRepository = activityDslRepository;
-        this.userManagement = userManagement;
+        this(validationCodeRepository, eventCache, activityCache, activityDslRepository, userManagement,
+                new CertificateWorkloadService(activityDslRepository));
     }
 
     @Transactional(readOnly = true)
@@ -52,7 +66,7 @@ public class CertificateValidatorService {
         var eventDto = eventCache.findById(validationCode.getEventId())
                 .orElseThrow(() -> new DomainException("O evento vinculado não existe."));
 
-        if (validationCode.getCertificateType() == EnumCertificateType.ACTIVITY || validationCode.getActivityId() != null) {
+        if (validationCode.getActivityId() != null) {
             var activity = activityCache.findById(validationCode.getActivityId())
                     .orElseThrow(() -> new DomainException("A atividade vinculada não existe."));
 
@@ -62,15 +76,12 @@ public class CertificateValidatorService {
                     eventDto.title(),
                     activity.title(),
                     formatWorkloadHours(activity.workloadHours()),
-                    validationCode.getCreatedAt(), EnumCertificateType.ACTIVITY);
+                    validationCode.getCreatedAt(), validationCode.getCertificateType());
         }
 
         BigDecimal workload = switch (validationCode.getCertificateType()) {
-            case EDITOR -> eventDto.teamCertificateWorkloadHours();
-            case INSTRUCTOR -> activityDslRepository.sumWorkloadHoursByInstructor(
-                    userDto.id(), eventDto.id());
-            case EVENT -> addHours(eventDto.workloadHours(),
-                    activityDslRepository.sumWorkloadHoursByCheckIn(userDto.id(), eventDto.id()));
+            case EVENT, INSTRUCTOR, GUEST, EDITOR -> workloadService.forEvent(
+                    eventDto, userDto.id(), validationCode.getCertificateType());
             case ACTIVITY -> BigDecimal.ZERO;
         };
 
@@ -122,9 +133,14 @@ public class CertificateValidatorService {
 
     @Transactional
     public EventCertificateValidationCode issueForActivity(Long eventId, Long activityId, UUID userId) {
-        return validationCodeRepository.findByActivityIdAndUserIdAndCertificateType(
-                        activityId, userId, EnumCertificateType.ACTIVITY)
-                .orElseGet(() -> createAndSaveValidationCode(eventId, activityId, userId, EnumCertificateType.ACTIVITY));
+        return issueForActivity(eventId, activityId, userId, EnumCertificateType.ACTIVITY);
+    }
+
+    @Transactional
+    public EventCertificateValidationCode issueForActivity(Long eventId, Long activityId, UUID userId,
+                                                            EnumCertificateType type) {
+        return validationCodeRepository.findByActivityIdAndUserIdAndCertificateType(activityId, userId, type)
+                .orElseGet(() -> createAndSaveValidationCode(eventId, activityId, userId, type));
     }
 
     private EventCertificateValidationCode createAndSaveValidationCode(Long eventId, Long activityId, UUID userId,

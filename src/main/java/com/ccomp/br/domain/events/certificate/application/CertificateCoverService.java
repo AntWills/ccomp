@@ -2,6 +2,10 @@ package com.ccomp.br.domain.events.certificate.application;
 
 import com.ccomp.br.domain.events.certificate.persistence.EventCoverTemplate;
 import com.ccomp.br.domain.events.certificate.persistence.EventCoverTemplateRepository;
+import com.ccomp.br.domain.events.certificate.persistence.ActivityCertificateTemplate;
+import com.ccomp.br.domain.events.certificate.persistence.ActivityCertificateTemplateRepository;
+import com.ccomp.br.domain.events.certificate.enums.EnumActivityCertificateTemplateType;
+import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
@@ -11,6 +15,7 @@ import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,14 +39,31 @@ public class CertificateCoverService {
     private final EventAccessPolicy accessPolicy;
     private final StorageKeyGenerator storageKeyGenerator;
     private final StorageExternal storageExternal;
+    private final ActivityCertificateTemplateRepository activityTemplateRepository;
+    private final EventActivityRepository activityRepository;
 
-    public CertificateCoverService(EventCoverTemplateRepository coverTemplateRepository, CertificateFetcher certificateFetcher, EventCache eventCache, EventAccessPolicy accessPolicy, StorageKeyGenerator storageKeyGenerator, StorageExternal storageExternal) {
+    @Autowired
+    public CertificateCoverService(EventCoverTemplateRepository coverTemplateRepository, CertificateFetcher certificateFetcher,
+                                   EventCache eventCache, EventAccessPolicy accessPolicy,
+                                   StorageKeyGenerator storageKeyGenerator, StorageExternal storageExternal,
+                                   ActivityCertificateTemplateRepository activityTemplateRepository,
+                                   EventActivityRepository activityRepository) {
         this.coverTemplateRepository = coverTemplateRepository;
         this.certificateFetcher = certificateFetcher;
         this.eventCache = eventCache;
         this.accessPolicy = accessPolicy;
         this.storageKeyGenerator = storageKeyGenerator;
         this.storageExternal = storageExternal;
+        this.activityTemplateRepository = activityTemplateRepository;
+        this.activityRepository = activityRepository;
+    }
+
+    public CertificateCoverService(EventCoverTemplateRepository coverTemplateRepository,
+                                   CertificateFetcher certificateFetcher, EventCache eventCache,
+                                   EventAccessPolicy accessPolicy, StorageKeyGenerator storageKeyGenerator,
+                                   StorageExternal storageExternal) {
+        this(coverTemplateRepository, certificateFetcher, eventCache, accessPolicy,
+                storageKeyGenerator, storageExternal, null, null);
     }
 
     @Transactional
@@ -86,6 +108,79 @@ public class CertificateCoverService {
         if (!TransactionSynchronizationManager.isSynchronizationActive() && oldKey != null) {
             storageExternal.deleteObject(oldKey);
         }
+    }
+
+    @Transactional
+    public void uploadActivityCoverTemplate(long eventId, long activityId, UUID userId,
+                                            EnumActivityCertificateTemplateType context,
+                                            MultipartFile file) {
+        if (file == null || file.isEmpty()) throw new DomainException("Nenhum arquivo enviado.");
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        if (!accessPolicy.canEdit(event, userId))
+            throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+        activityRepository.findById(activityId).filter(a -> a.getEventId().equals(eventId))
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada neste evento."));
+
+        ValidatedImage image = validateImage(file);
+        String newKey = storageKeyGenerator.generate(
+                "events/%d/activities/%d/certificate-cover-%s".formatted(eventId, activityId, context.name().toLowerCase(Locale.ROOT)),
+                file.getOriginalFilename());
+        ActivityCertificateTemplate specific = activityTemplateRepository
+                .findByActivityIdAndTemplateType(activityId, context)
+                .orElseGet(() -> {
+                    var inherited = certificateFetcher.fetchActivityBoxTemplate(eventId, context);
+                    return ActivityCertificateTemplate.builder().activityId(activityId).templateType(context)
+                            .boxes(inherited.getBoxes()).variables(inherited.getVariables()).build();
+                });
+        if (specific.getBoxes() == null) {
+            var inherited = certificateFetcher.fetchActivityBoxTemplate(eventId, context);
+            specific.setBoxes(inherited.getBoxes());
+            specific.setVariables(inherited.getVariables());
+        }
+        String oldKey = specific.getCoverTemplateKey();
+        storageExternal.putObject(newKey, image.bytes(), image.contentType());
+        registerStorageCompensation(newKey, oldKey);
+        specific.setCoverTemplateKey(newKey);
+        activityTemplateRepository.save(specific);
+        if (!TransactionSynchronizationManager.isSynchronizationActive() && oldKey != null)
+            storageExternal.deleteObject(oldKey);
+    }
+
+    @Transactional
+    public boolean deleteActivityCoverTemplate(long eventId, long activityId, UUID userId,
+                                              EnumActivityCertificateTemplateType context) {
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        if (!accessPolicy.canEdit(event, userId))
+            throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+        activityRepository.findById(activityId).filter(a -> a.getEventId().equals(eventId))
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada neste evento."));
+        ActivityCertificateTemplate specific = activityTemplateRepository
+                .findByActivityIdAndTemplateType(activityId, context).orElse(null);
+        if (specific == null || specific.getCoverTemplateKey() == null) return false;
+        String oldKey = specific.getCoverTemplateKey();
+        specific.setCoverTemplateKey(null);
+        activityTemplateRepository.save(specific);
+        storageExternal.deleteObject(oldKey);
+        return true;
+    }
+
+    @Transactional
+    public boolean deleteActivityCertificateTemplate(long eventId, long activityId, UUID userId,
+                                                     EnumActivityCertificateTemplateType context) {
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        if (!accessPolicy.canEdit(event, userId))
+            throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+        activityRepository.findById(activityId).filter(a -> a.getEventId().equals(eventId))
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada neste evento."));
+        ActivityCertificateTemplate specific = activityTemplateRepository
+                .findByActivityIdAndTemplateType(activityId, context).orElse(null);
+        if (specific == null) return false;
+        activityTemplateRepository.delete(specific);
+        if (specific.getCoverTemplateKey() != null) storageExternal.deleteObject(specific.getCoverTemplateKey());
+        return true;
     }
 
     private ValidatedImage validateImage(MultipartFile file) {

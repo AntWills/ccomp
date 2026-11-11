@@ -7,6 +7,7 @@ import java.util.UUID;
 import com.ccomp.br.config.QueryDslConfig;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
 import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
@@ -46,6 +47,44 @@ class ActivityGuestDslRepositoryTest {
 
     @Autowired
     private ActivityGuestRepository activityGuestRepository;
+
+    @Test
+    @DisplayName("Lista todas as atividades vinculadas ao convidado em ordem de exibição")
+    void findActivitiesByEventGuestIdReturnsOnlyLinkedActivitiesInDisplayOrder() {
+        LocalDateTime now = LocalDateTime.now();
+        Event event = Event.builder()
+                .title("Evento de atividades do convidado")
+                .slug("evento-atividades-convidado")
+                .category(EnumEventCategory.ACADEMIC_EDUCATIONAL)
+                .format(EnumEventFormat.IN_PERSON)
+                .ownerId(UUID.randomUUID())
+                .createdAt(now)
+                .build();
+        entityManager.persist(event);
+
+        EventActivity secondActivity = createActivity(event, "Segunda atividade", 2L, now);
+        EventActivity firstActivity = createActivity(event, "Primeira atividade", 1L, now);
+        EventActivity unrelatedActivity = createActivity(event, "Atividade de outro convidado", 3L, now);
+        EventGuest guest = createEventGuest(event, EnumGuestVisibility.PUBLIC, EnumGuestStatus.CONFIRMED, now);
+        EventGuest otherGuest = createEventGuest(event, EnumGuestVisibility.PUBLIC, EnumGuestStatus.CONFIRMED, now);
+        entityManager.persist(ActivityGuest.builder().activity(secondActivity).eventGuest(guest).build());
+        entityManager.persist(ActivityGuest.builder().activity(firstActivity).eventGuest(guest).build());
+        entityManager.persist(ActivityGuest.builder().activity(unrelatedActivity).eventGuest(otherGuest).build());
+        entityManager.flush();
+        entityManager.clear();
+
+        List<ActivityDTO> activities = activityGuestDslRepository
+                .findActivitiesByEventGuestIdAndEventId(guest.getId(), event.getId());
+
+        assertThat(activities)
+                .extracting(ActivityDTO::id)
+                .containsExactly(firstActivity.getId(), secondActivity.getId());
+        assertThat(activities)
+                .extracting(ActivityDTO::title)
+                .containsExactly("Primeira atividade", "Segunda atividade");
+        assertThat(activityGuestDslRepository
+                .findActivitiesByEventGuestIdAndEventId(Long.MAX_VALUE, event.getId())).isEmpty();
+    }
 
     @Test
     @DisplayName("Deve realizar a paginação de convidados de atividade baseada em cursor ordenada por createdAt decrescente")
@@ -297,5 +336,18 @@ class ActivityGuestDslRepositoryTest {
                 .build();
         entityManager.persist(guest);
         return guest;
+    }
+
+    private EventActivity createActivity(Event event, String title, Long displayOrder, LocalDateTime createdAt) {
+        EventActivity activity = EventActivity.builder()
+                .event(event)
+                .title(title)
+                .type(EnumActivityType.LECTURE)
+                .displayOrder(displayOrder)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .createdAt(createdAt)
+                .build();
+        entityManager.persist(activity);
+        return activity;
     }
 }

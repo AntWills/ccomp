@@ -2,6 +2,8 @@
 
 Gerada a partir dos controllers e do `SecurityConfig`. Rotas não listadas por anotação específica ficam protegidas pelo JWT global. A verificação de autoria e propriedade ocorre nos serviços; endpoints públicos de busca só retornam dados publicados.
 
+Para o funcionamento completo, os vínculos entre destinatários, elegibilidade, templates, variáveis e validação dos certificados, consulte [Certificados de eventos](event-certificado.md).
+
 | Método | Rota | Controller#método | Nível | Regra adicional |
 |---|---|---|---|---|
 | `GET` | `/actuator/health` | `SecurityConfig#health` | Pública | Healthcheck sem detalhes em produção. |
@@ -19,11 +21,14 @@ Gerada a partir dos controllers e do `SecurityConfig`. Rotas não listadas por a
 | `POST` | `/api/auth/reset-password` | `AuthController#resetPassword` | Pública | Pública; login e recuperação usam respostas genéricas. |
 | `POST` | `/api/auth/sign-in` | `AuthController#login` | Pública | Pública; login e recuperação usam respostas genéricas. |
 | `POST` | `/api/auth/sign-up` | `AuthController#signUp` | Pública | Pública; login e recuperação usam respostas genéricas. |
-| `GET` | `/api/events/certificates/validate/{code}` | `EventCertificateConsultationController#validateCertificate` | Pública | Pública; o validador só retorna dados se existir um certificado com o código informado. |
-| `GET` | `/api/events/{eventId}/certificate` | `EventCertificateConsultationController#buildCertificateFromEvent` | Protegida (JWT) | Evento encerrado e não cancelado; exige inscrição e check-in no evento. |
-| `GET` | `/api/events/activities/{activityId}/certificate` | `EventCertificateConsultationController#buildCertificateFromActivity` | Protegida (JWT) | Requer autenticação; a autorização é a inscrição na atividade com check-in, validada no serviço (não exige permissão no evento). |
-| `GET` | `/api/events/{eventId}/instructors/{instructorId}/certificate` | `EventCertificateConsultationController#buildCertificateFromInstructor` | Protegida (JWT) | O ministrante vinculado ou owner/editor ativo/MODERATOR/ADMIN; exige vínculo confirmado e evento encerrado. |
-| `GET` | `/api/events/{eventId}/team-certificate` | `EventCertificateConsultationController#buildCertificateForEditor` | Protegida (JWT) | Owner ou editor ativo; exige evento encerrado e carga horária da equipe configurada. |
+| `GET` | `/api/events/certificates/validate/{code}` | `EventCertificateValidationController#validateCertificate` | Pública | Pública; o validador só retorna dados se existir um certificado com o código informado. |
+| `GET` | `/api/events/{eventId}/certificate` | `EventCertificateIssuanceController#buildCertificateFromEvent` | Protegida (JWT) | Evento encerrado e não cancelado; exige inscrição e check-in no evento. |
+| `GET` | `/api/events/activities/{activityId}/certificate` | `EventCertificateIssuanceController#buildCertificateFromActivity` | Protegida (JWT) | Exige inscrição ativa na atividade, check-in no evento e presença na atividade; não exige evento encerrado. |
+| `GET` | `/api/events/{eventId}/instructors/{instructorId}/certificate` | `EventCertificateIssuanceController#buildCertificateFromInstructor` | Protegida (JWT) | Ministrante com vínculo confirmado e conta associada, ou equipe com permissão de edição; exige evento encerrado. |
+| `GET` | `/api/events/{eventId}/activities/{activityId}/guests/{activityGuestId}/instructor-certificate` | `EventCertificateIssuanceController#buildCertificateFromActivityGuest` | Protegida (JWT) | O próprio convidado apresentador com conta vinculada ou equipe com permissão de edição; exige vínculo PRESENTER confirmado e evento encerrado. |
+| `POST` | `/api/events/{eventId}/instructor-certificate/manual` | `EventCertificateManualController#buildManualInstructorCertificate` | Protegida (JWT) | Owner/editor ativo/MODERATOR/ADMIN; emite para vínculo de ministrante confirmado ou convidado PRESENTER confirmado; convidado sem conta é aceito. Não inclui código de validação. |
+| `GET` | `/api/events/{eventId}/team-certificate` | `EventCertificateIssuanceController#buildCertificateForEditor` | Protegida (JWT) | Owner ou editor ativo; exige evento encerrado e carga horária da equipe configurada. |
+| `POST` | `/api/events/{eventId}/team-certificate/manual/{recipientId}` | `EventCertificateManualController#buildManualTeamCertificate` | Protegida (JWT) | Owner/editor ativo/MODERATOR/ADMIN emite para owner ou editor ativo; exige evento encerrado e carga horária da equipe configurada. |
 | `GET` | `/api/events/{eventId}/certificate-box-template` | `EventCertificateManagementController#getBoxTemplate` | Protegida (JWT) | Consulta as caixas/variáveis do certificado do evento (retorna o padrão se não salvo); exige canView no evento. |
 | `GET` | `/api/events/{eventId}/activity-certificate-box-template` | `EventCertificateManagementController#getActivityBoxTemplate` | Protegida (JWT) | Consulta as caixas/variáveis do template único das atividades (retorna o padrão se não salvo); exige canView no evento. |
 | `GET` | `/api/events/{eventId}/certificate-cover-template` | `EventCertificateManagementController#getCoverTemplate` | Protegida (JWT) | Consulta os bytes do fundo em uso (retorna o padrão se não salvo); exige canView no evento. |

@@ -1,8 +1,6 @@
 package com.ccomp.br.domain.events.certificate.web;
 
-import com.ccomp.br.domain.events.certificate.application.CertificateServices;
-import com.ccomp.br.domain.events.certificate.application.CertificateValidatorService;
-import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
+import com.ccomp.br.domain.events.certificate.application.issuance.AutomaticCertificateServices;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -22,16 +20,13 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/events")
-@Tag(name = "events/certificate/consultation (Consulta de certificados)",
-        description = "Emissão de certificados para participantes, ministrantes e equipe, além da validação pública")
-public class EventCertificateConsultationController {
-    private final CertificateServices certificateServices;
-    private final CertificateValidatorService certificateValidatorService;
+@Tag(name = "events/certificate/issuance (Emissão de certificados)",
+        description = "Emissão de certificados para participantes, ministrantes e equipe do evento")
+public class EventCertificateIssuanceController {
+    private final AutomaticCertificateServices automaticCertificateServices;
 
-    public EventCertificateConsultationController(CertificateServices certificateServices,
-                                                  CertificateValidatorService certificateValidatorService) {
-        this.certificateServices = certificateServices;
-        this.certificateValidatorService = certificateValidatorService;
+    public EventCertificateIssuanceController(AutomaticCertificateServices automaticCertificateServices) {
+        this.automaticCertificateServices = automaticCertificateServices;
     }
 
     @Operation(summary = "Consultar certificado do evento",
@@ -45,7 +40,7 @@ public class EventCertificateConsultationController {
     @GetMapping(value = "/{eventId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateFromEvent(@PathVariable Long eventId,
                                                                @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromEvent(eventId, extractUserId(jwt));
+        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromEvent(eventId, extractUserId(jwt));
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(certificate.contentType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"certificado-evento-%d.png\"".formatted(eventId))
@@ -63,7 +58,7 @@ public class EventCertificateConsultationController {
     @GetMapping(value = "/activities/{activityId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateFromActivity(@PathVariable Long activityId,
                                                                   @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromActivity(activityId, extractUserId(jwt));
+        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromActivity(activityId, extractUserId(jwt));
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(certificate.contentType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"certificado-atividade-%d.png\"".formatted(activityId))
@@ -82,9 +77,44 @@ public class EventCertificateConsultationController {
     public ResponseEntity<Resource> buildCertificateFromInstructor(@PathVariable Long eventId,
                                                                     @PathVariable Long instructorId,
                                                                     @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = certificateServices.buildCertificateFromInstructor(
+        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromInstructor(
                 eventId, instructorId, extractUserId(jwt));
         return certificateResponse(certificate, "certificado-ministrante-%d.png".formatted(instructorId));
+    }
+
+    @Operation(summary = "Gerar certificado de convidado apresentador",
+            description = "Gera o certificado individual para um convidado vinculado à atividade com papel PRESENTER. O próprio convidado pode emitir se tiver conta associada; a equipe do evento também pode solicitá-lo. Exige convidado confirmado, evento encerrado e não cancelado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
+            @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado ou cancelado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Convidado sem conta vinculada, papel incorreto ou solicitante sem permissão", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento, atividade ou vínculo de convidado não encontrado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
+    @GetMapping(value = "/{eventId}/activities/{activityId}/guests/{activityGuestId}/instructor-certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> buildCertificateFromActivityGuest(@PathVariable Long eventId,
+            @PathVariable Long activityId, @PathVariable Long activityGuestId,
+            @AuthenticationPrincipal Jwt jwt) {
+        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromActivityGuest(
+                eventId, activityId, activityGuestId, extractUserId(jwt));
+        return certificateResponse(certificate, "certificado-ministrante-convidado-%d.png".formatted(activityGuestId));
+    }
+
+    @GetMapping(value = "/{eventId}/activities/{activityId}/instructors/{instructorId}/activity-certificate",
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> buildActivityCertificateFromInstructor(@PathVariable Long eventId,
+            @PathVariable Long activityId, @PathVariable Long instructorId, @AuthenticationPrincipal Jwt jwt) {
+        var certificate = automaticCertificateServices.buildActivityCertificateFromInstructor(
+                eventId, activityId, instructorId, extractUserId(jwt));
+        return certificateResponse(certificate, "certificado-ministrante-atividade-%d.png".formatted(instructorId));
+    }
+
+    @GetMapping(value = "/{eventId}/activities/{activityId}/guests/{activityGuestId}/activity-certificate",
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> buildActivityCertificateFromGuest(@PathVariable Long eventId,
+            @PathVariable Long activityId, @PathVariable Long activityGuestId, @AuthenticationPrincipal Jwt jwt) {
+        var certificate = automaticCertificateServices.buildActivityCertificateFromGuest(
+                eventId, activityId, activityGuestId, extractUserId(jwt));
+        return certificateResponse(certificate, "certificado-convidado-atividade-%d.png".formatted(activityGuestId));
     }
 
     @Operation(summary = "Gerar certificado da equipe do evento",
@@ -98,21 +128,9 @@ public class EventCertificateConsultationController {
     @GetMapping(value = "/{eventId}/team-certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateForEditor(@PathVariable Long eventId,
                                                                @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = certificateServices.buildCertificateForEditor(
+        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateForEditor(
                 eventId, extractUserId(jwt));
         return certificateResponse(certificate, "certificado-equipe-%d.png".formatted(eventId));
-    }
-
-    @Operation(summary = "Validar certificado pelo código",
-            description = "Rota pública. Retorna os dados associados ao código impresso no certificado ou 404 se ele não existir.",
-            security = {})
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Certificado válido", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = CertificateValidationResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Código de validação não encontrado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
-    })
-    @GetMapping(value = "/certificates/validate/{code}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<CertificateValidationResponse> validateCertificate(@PathVariable String code) {
-        return ResponseEntity.ok(certificateValidatorService.validate(code));
     }
 
     private UUID extractUserId(Jwt jwt) {

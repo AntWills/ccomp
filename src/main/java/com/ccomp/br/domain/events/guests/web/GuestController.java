@@ -1,7 +1,9 @@
 package com.ccomp.br.domain.events.guests.web;
 
+import java.util.List;
 import java.util.UUID;
 
+import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.guests.application.GuestService;
 import com.ccomp.br.domain.events.guests.application.GuestImageService;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
@@ -182,6 +184,30 @@ public class GuestController {
         return ResponseEntity.ok(
                 guestService.searchEventGuests(eventId, extractUserId(jwt), cursor, pageSize)
         );
+    }
+
+    @GetMapping("/{eventId}/guests/{guestId}/activities")
+    @Operation(
+            summary = "Lista as atividades de um convidado",
+            description = "Retorna as atividades vinculadas ao convidado no evento, como List<ActivityDTO>. " +
+                    "Convidados privados ou cancelados não aparecem para quem não gerencia o evento. " +
+                    "Exige que o solicitante possa visualizar o evento."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Atividades do convidado retornadas",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ActivityDTO.class))),
+            @ApiResponse(responseCode = "403", description = "Solicitante não pode visualizar o evento",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento ou convidado não encontrado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<List<ActivityDTO>> findGuestActivities(
+            @Parameter(hidden = true) @AuthenticationPrincipal @Nullable Jwt jwt,
+            @Parameter(description = "ID do evento", example = "12") @PathVariable Long eventId,
+            @Parameter(description = "ID do convidado no evento", example = "35") @PathVariable Long guestId
+    ) {
+        return ResponseEntity.ok(guestService.findActivitiesByGuest(
+                eventId, guestId, extractUserId(jwt)));
     }
 
     @GetMapping("/activities/{activityId}/guests")

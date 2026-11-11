@@ -31,6 +31,12 @@ public record CreateEventDTO(
         @DecimalMin(value = "0.0", inclusive = true)
         @Schema(description = "Opcional na criação; precisa estar configurada para emitir certificados do owner e dos editores ativos.", example = "8")
         BigDecimal teamCertificateWorkloadHours,
+        @DecimalMin(value = "0.0", inclusive = true)
+        @Schema(description = "Carga geral somada aos certificados gerais de ministrante; não é usada em certificados de atividade.", example = "2")
+        BigDecimal instructorCertificateWorkloadHours,
+        @DecimalMin(value = "0.0", inclusive = true)
+        @Schema(description = "Carga geral somada aos certificados gerais de convidado apresentador; não é usada em certificados de atividade.", example = "1")
+        BigDecimal guestCertificateWorkloadHours,
         @Size(max = 255, message = "A organização deve ter no máximo 255 caracteres.")
         @Schema(description = "Organização responsável pelo evento. Opcional.", example = "Instituto Federal do Maranhão")
         String organization,
@@ -40,7 +46,7 @@ public record CreateEventDTO(
 ) {
     public CreateEventDTO(String title, EnumEventCategory category, EnumEventFormat format,
                           LocalDateTime startDate, LocalDateTime endDate) {
-        this(title, category, format, startDate, endDate, null, null, null, null);
+        this(title, category, format, startDate, endDate, null, null, null, null, null, null);
     }
 
     public Optional<LocalDateTime> optionalStartDate() {

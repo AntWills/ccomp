@@ -127,6 +127,12 @@ public class Event {
     @Column(name = "team_certificate_workload_hours")
     private BigDecimal teamCertificateWorkloadHours;
 
+    @Column(name = "instructor_certificate_workload_hours")
+    private BigDecimal instructorCertificateWorkloadHours;
+
+    @Column(name = "guest_certificate_workload_hours")
+    private BigDecimal guestCertificateWorkloadHours;
+
     @Column(name = "organization", length = 255)
     private String organization;
 
