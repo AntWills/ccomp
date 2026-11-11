@@ -7,17 +7,17 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record RegisterUserDTO(
-    @NotNull(message = "Name is required.")
-    @Size(min = 4, max = 255, message = "Name must between 4 and 255 characters.")
+    @NotNull(message = "O nome é obrigatório.")
+    @Size(min = 4, max = 255, message = "O nome deve ter entre 4 e 255 caracteres.")
     String name,
 
-    @NotNull(message = "Email is required.")
+    @NotNull(message = "O e-mail é obrigatório.")
     @Valid
     EmailAddress email,
 
-    @NotNull(message = "Password is required.")
-    @NotBlank(message = "Password is required.")
-    @Size(min = 8, max = 255, message = "Password is short.")
+    @NotNull(message = "A senha é obrigatória.")
+    @NotBlank(message = "A senha é obrigatória.")
+    @Size(min = 6, max = 255, message = "A senha deve ter entre 6 e 255 caracteres.")
     String password
 ) {
 }

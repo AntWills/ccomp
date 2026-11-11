@@ -13,8 +13,8 @@ import java.util.Objects;
 
 @Embeddable
 public class EmailAddress {
-    @NotBlank(message = "Email is required")
-    @Email(message = "Invalid email address")
+    @NotBlank(message = "O e-mail é obrigatório.")
+    @Email(message = "O e-mail informado é inválido.")
     private String value;
 
     protected EmailAddress() {
