@@ -20,6 +20,7 @@ import com.ccomp.br.shared.exceptions.UserBlockedException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -40,6 +41,7 @@ public class AuthApplication {
     private final PasswordResetService passwordResetService;
     private final RabbitTemplate rabbitTemplate;
     private final RolesServices rolesServices;
+    private final LoginAttemptLimiter loginAttemptLimiter;
 
     @Autowired
     public AuthApplication(
@@ -48,13 +50,15 @@ public class AuthApplication {
             AuthenticationManager authenticationManager,
             PasswordResetService passwordResetService,
             RabbitTemplate rabbitTemplate,
-            RolesServices rolesServices) {
+            RolesServices rolesServices,
+            LoginAttemptLimiter loginAttemptLimiter) {
         this.userManagement = userManagement;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
         this.passwordResetService = passwordResetService;
         this.rabbitTemplate = rabbitTemplate;
         this.rolesServices = rolesServices;
+        this.loginAttemptLimiter = loginAttemptLimiter;
     }
 
     @Transactional
@@ -63,11 +67,21 @@ public class AuthApplication {
     }
 
     public TokenPair signIn(LoginRequestDTO dto, ClientMetadataDTO metaDTO) {
+        String email = dto.email().getValue();
+        loginAttemptLimiter.ensureAllowed(email);
+
         var authToken = new UsernamePasswordAuthenticationToken(
-                dto.email().getValue(), dto.password()
+                email, dto.password()
         );
 
-        Authentication authentication = authenticationManager.authenticate(authToken);
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(authToken);
+        } catch (BadCredentialsException exception) {
+            loginAttemptLimiter.recordFailure(email);
+            throw exception;
+        }
+        loginAttemptLimiter.clear(email);
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
