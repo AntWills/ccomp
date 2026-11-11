@@ -6,10 +6,12 @@ import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentListItem;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentsCursor;
+import com.ccomp.br.domain.events.enrollments.dto.EnrollmentSearchResult;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.module.email.EmailAddress;
+import com.ccomp.br.shared.utils.TextSearchSession;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import({QueryDslConfig.class, EnrollmentDslRepository.class})
+@Import({QueryDslConfig.class, EnrollmentDslRepository.class, TextSearchSession.class})
 class EnrollmentDslRepositoryTest {
     @Autowired
     private EntityManager entityManager;
@@ -131,5 +133,69 @@ class EnrollmentDslRepositoryTest {
         // Asserções Página 2: Espera a inscrição mais antiga restante (enrollment1 "Alice")
         assertThat(page2).hasSize(1);
         assertThat(page2.getFirst().user().name()).isEqualTo("Alice Inscrita");
+    }
+
+    @Test
+    @DisplayName("Busca por nome com status e continua a paginação usando relevância no cursor")
+    void shouldSearchByNameCombineStatusAndPaginateByRelevance() {
+        LocalDateTime now = LocalDateTime.now();
+        Event event = Event.builder()
+                .title("Busca de inscritos")
+                .slug("busca-inscritos-" + UUID.randomUUID())
+                .category(EnumEventCategory.ACADEMIC_EDUCATIONAL)
+                .format(EnumEventFormat.IN_PERSON)
+                .ownerId(UUID.randomUUID())
+                .createdAt(now)
+                .build();
+        entityManager.persist(event);
+
+        UserModel exact = user("Ana Silva", "ana.silva." + UUID.randomUUID() + "@teste.com", now);
+        UserModel close = user("Ana Silv", "ana.silv." + UUID.randomUUID() + "@teste.com", now);
+        UserModel checkedInUser = user("Ana Silva", "ana.silva.checked." + UUID.randomUUID() + "@teste.com", now);
+        entityManager.persist(exact);
+        entityManager.persist(close);
+        entityManager.persist(checkedInUser);
+        entityManager.flush();
+
+        Enrollment confirmedExact = enrollment(event, exact, EnumEnrollmentState.CONFIRMED, now.minusHours(1));
+        Enrollment confirmedClose = enrollment(event, close, EnumEnrollmentState.CONFIRMED, now.minusHours(2));
+        Enrollment checkedInClose = enrollment(event, checkedInUser, EnumEnrollmentState.CHECKED_IN, now);
+        entityManager.persist(confirmedExact);
+        entityManager.persist(confirmedClose);
+        entityManager.persist(checkedInClose);
+        entityManager.flush();
+        entityManager.clear();
+
+        List<EnrollmentSearchResult> firstPage = enrollmentDslRepository.searchWithCursor(
+                event.getId(), EnumEnrollmentState.CONFIRMED, "Ana Silva", null, 1);
+
+        assertThat(firstPage).hasSize(1);
+        assertThat(firstPage.getFirst().enrollment().user().name()).isEqualTo("Ana Silva");
+        assertThat(firstPage.getFirst().relevance()).isNotNull();
+
+        var last = firstPage.getFirst();
+        var cursor = new EnrollmentsCursor(last.relevance(), last.enrollment().createdAt(), last.enrollment().id());
+        List<EnrollmentSearchResult> secondPage = enrollmentDslRepository.searchWithCursor(
+                event.getId(), EnumEnrollmentState.CONFIRMED, "Ana Silva", cursor, 2);
+
+        assertThat(secondPage).hasSize(1);
+        assertThat(secondPage.getFirst().enrollment().user().name()).isEqualTo("Ana Silv");
+        assertThat(secondPage).allSatisfy(result ->
+                assertThat(result.enrollment().status()).isEqualTo(EnumEnrollmentState.CONFIRMED));
+    }
+
+    private UserModel user(String name, String email, LocalDateTime now) {
+        return UserModel.builder()
+                .name(name)
+                .emailAddress(new EmailAddress(email))
+                .password("hash123")
+                .statusAccount(EnumUserStatusAccount.ACTIVE)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+    }
+
+    private Enrollment enrollment(Event event, UserModel user, EnumEnrollmentState status, LocalDateTime createdAt) {
+        return Enrollment.builder().event(event).userId(user.getId()).status(status).createdAt(createdAt).build();
     }
 }

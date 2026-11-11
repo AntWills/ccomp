@@ -4,6 +4,7 @@ import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentListItem;
+import com.ccomp.br.domain.events.enrollments.dto.EnrollmentSearchResult;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentCapacityDTO;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentsCursor;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
@@ -72,9 +73,15 @@ public class EnrollmentsServices {
         return enrollmentCapacityCache.getActivityEnrollmentCapacity(activityId);
     }
 
+
+//    public CursorPage<EnrollmentListItem> searchEnrollments(Long eventId, UUID userId, String cursor, int pageSize,
+//                                                             EnumEnrollmentState status) {
+//        return searchEnrollments(eventId, userId, cursor, pageSize, status, null);
+//    }
+
     @Transactional(readOnly = true)
     public CursorPage<EnrollmentListItem> searchEnrollments(Long eventId, UUID userId, String cursor, int pageSize,
-                                                             EnumEnrollmentState status) {
+                                                             EnumEnrollmentState status, String searchTerm) {
         int finalPageSize = Math.min(pageSize, 50);
 
         EventDTO event = eventCache.findById(eventId)
@@ -84,13 +91,21 @@ public class EnrollmentsServices {
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         EnrollmentsCursor cursorDecoded = CursorUtils.decode(cursor, EnrollmentsCursor.class);
-        List<EnrollmentListItem> results = enrollmentDslRepository
-                .findAllWithCursor(eventId, status, cursorDecoded, finalPageSize + 1);
+        String normalizedTerm = searchTerm == null ? null : searchTerm.trim();
+
+        if (normalizedTerm != null && normalizedTerm.isBlank()) normalizedTerm = null;
+        if (normalizedTerm != null && cursorDecoded != null && cursorDecoded.id() != null
+                && cursorDecoded.relevance() == null)
+            throw new IllegalArgumentException("O cursor não corresponde a uma busca por texto.");
+
+        List<EnrollmentSearchResult> results = enrollmentDslRepository
+                .searchWithCursor(eventId, status, normalizedTerm, cursorDecoded, finalPageSize + 1);
 
         return CursorUtils.buildPage(
                 results,
                 finalPageSize,
-                i -> new EnrollmentsCursor(i.createdAt(), i.id())
+                EnrollmentSearchResult::enrollment,
+                i -> new EnrollmentsCursor(i.relevance(), i.enrollment().createdAt(), i.enrollment().id())
         );
     }
 
