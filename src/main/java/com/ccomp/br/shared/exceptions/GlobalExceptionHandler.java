@@ -65,6 +65,17 @@ public class GlobalExceptionHandler {
                 .body(ex.toErrorResponse(path(request)));
     }
 
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimitExceeded(
+            RateLimitExceededException ex,
+            WebRequest request) {
+        return ResponseEntity
+                .status(ex.getStatus())
+                .header("Retry-After", Long.toString(ex.getRetryAfterSeconds()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(ex.toErrorResponse(path(request)));
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex, WebRequest request) {
         ErrorResponse error = new ErrorResponse(
