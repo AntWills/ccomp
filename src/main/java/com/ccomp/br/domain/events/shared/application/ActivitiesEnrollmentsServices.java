@@ -106,6 +106,37 @@ public class ActivitiesEnrollmentsServices {
         return new MessageResponse("Inscrição na atividade realizada com sucesso.");
     }
 
+    @Transactional
+    public MessageResponse enrollParticipant(UUID managerId, Long activityId, Long enrollmentId) {
+        EventActivity snapshot = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        Event event = snapshot.getEvent();
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event, LocalDateTime.now(clock)), managerId))
+            throw new AccessDeniedException("Você não possui permissão para gerenciar esta atividade.");
+
+        EventActivity activity = activityRepository.findByIdForUpdate(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        Enrollment enrollment = enrollmentRepository.findByIdAndEventId(enrollmentId, event.getId())
+                .filter(Enrollment::isActive)
+                .orElseThrow(() -> new ConflictException("A inscrição ativa não pertence a este evento."));
+        if (enrollmentActivityRepository.findByEnrollmentIdAndActivityId(enrollmentId, activityId).isPresent())
+            throw new ConflictException("A pessoa já está inscrita na atividade.");
+
+        if (event.isSchedulerPrevent()) {
+            List<ActivityDTO> conflicts = eventActivityDslRepository
+                    .findAllConflictingActivities(enrollment.getUserId(), activity);
+            if (!conflicts.isEmpty()) throw new SchedulingConflictException(conflicts);
+        }
+        if (activity.getMaxCapacity() != null
+                && activity.getActiveEnrollmentCount() >= activity.getMaxCapacity())
+            throw new ConflictException("As vagas para esta atividade estão esgotadas.");
+
+        enrollmentActivityRepository.save(EnrollmentActivity.builder()
+                .activity(activity).enrollment(enrollment).build());
+        activity.registerActiveEnrollment();
+        return new MessageResponse("Pessoa inscrita na atividade com sucesso.");
+    }
+
     @Transactional(readOnly = true)
     public CursorPage<ActivityDTO> listSubscriptionsByCursor(
             UUID userId, Long eventId, String cursor, int pageLimit
