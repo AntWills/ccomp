@@ -49,6 +49,17 @@ class CheckInControllerTest {
         verify(checkInService).checkIn(31L, userId, code);
     }
 
+    @Test
+    void manualAttendanceDelegatesEnrollmentAndManager() {
+        UUID managerId = UUID.randomUUID();
+
+        var response = controller.markAttendanceManually(31L, 72L, jwt(managerId));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().response()).isEqualTo("Presença registrada com sucesso.");
+        verify(checkInService).markAttendanceManually(31L, 72L, managerId);
+    }
+
     private static Jwt jwt(UUID userId) {
         return Jwt.withTokenValue("token")
                 .header("alg", "none")
