@@ -112,6 +112,7 @@ class CheckInServiceTest {
             try (MockedStatic<QRCode> mockedQrCode = mockStatic(QRCode.class)) {
                 BufferedImage dummyImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
                 mockedQrCode.when(() -> QRCode.generateQRCodeImage(anyString())).thenReturn(dummyImage);
+                mockedQrCode.when(() -> QRCode.generateQRCodeImage(anyString(), anyString())).thenReturn(dummyImage);
 
                 byte[] response = checkInService.generateCode(activityId, userId);
 
@@ -141,6 +142,7 @@ class CheckInServiceTest {
             try (MockedStatic<QRCode> mockedQrCode = mockStatic(QRCode.class)) {
                 BufferedImage dummyImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
                 mockedQrCode.when(() -> QRCode.generateQRCodeImage(anyString())).thenReturn(dummyImage);
+                mockedQrCode.when(() -> QRCode.generateQRCodeImage(anyString(), anyString())).thenReturn(dummyImage);
 
                 byte[] response = checkInService.generateCode(activityId, userId);
 
