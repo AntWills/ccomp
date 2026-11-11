@@ -11,6 +11,9 @@ import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivity;
+import com.ccomp.br.domain.events.enrollments.dto.EnrollmentActivityCursor;
+import com.ccomp.br.domain.events.enrollments.dto.EnrollmentsCursor;
+import com.ccomp.br.domain.events.enrollments.dto.UserActivitySummaryDTO;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityDslRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityRepository;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
@@ -18,6 +21,7 @@ import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.SchedulingConflictException;
+import com.ccomp.br.shared.utils.CursorUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -302,5 +306,27 @@ class ActivitiesEnrollmentsServicesTest {
         assertThatThrownBy(() -> service.findAllUsersFromActivity(userId, 9L, null, 10))
                 .isInstanceOf(AccessDeniedException.class);
         verifyNoInteractions(enrollmentActivityDslRepository);
+    }
+
+    @Test
+    void findAllUsersFromActivityEmitsCursorCompatibleWithItsDecoder() {
+        Event event = mock(Event.class);
+        EventDTO eventDTO = mock(EventDTO.class);
+        var firstDate = java.time.LocalDateTime.parse("2026-11-08T10:00:00");
+        var secondDate = firstDate.minusMinutes(10);
+        when(eventActivityDslRepository.findEventByActivityId(9L)).thenReturn(Optional.of(event));
+        when(eventMapper.eventToEventDTO(any(), any())).thenReturn(eventDTO);
+        when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
+        when(enrollmentActivityDslRepository.findAllUsersByActivityId(9L, null, 2)).thenReturn(List.of(
+                new UserActivitySummaryDTO(null, false, 52L, firstDate),
+                new UserActivitySummaryDTO(null, false, 51L, secondDate)));
+
+        var page = service.findAllUsersFromActivity(userId, 9L, null, 1);
+
+        assertThat(CursorUtils.decode(page.nextCursor(), EnrollmentActivityCursor.class))
+                .isEqualTo(new EnrollmentActivityCursor(52L, firstDate));
+        String legacyCursor = CursorUtils.encode(new EnrollmentsCursor(null, firstDate, 52L));
+        assertThat(CursorUtils.decode(legacyCursor, EnrollmentActivityCursor.class))
+                .isEqualTo(new EnrollmentActivityCursor(52L, firstDate));
     }
 }

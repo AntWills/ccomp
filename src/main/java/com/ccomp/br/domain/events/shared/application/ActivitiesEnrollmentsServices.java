@@ -5,7 +5,6 @@ import com.ccomp.br.domain.events.activities.dto.EventActivityCursor;
 import com.ccomp.br.domain.events.activities.dto.ActivityDTO;
 import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
-import com.ccomp.br.domain.events.enrollments.dto.EnrollmentsCursor;
 import com.ccomp.br.domain.events.enrollments.dto.UserActivitySummaryDTO;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentActivityCursor;
 import com.ccomp.br.domain.events.core.persistence.Event;
@@ -216,6 +215,6 @@ public class ActivitiesEnrollmentsServices {
         return CursorUtils.buildPage(
                 result,
                 pageSize,
-                ua -> new EnrollmentsCursor(ua.createdAt(), ua.id()));
+                ua -> new EnrollmentActivityCursor(ua.id(), ua.createdAt()));
     }
 }
