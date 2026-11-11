@@ -5,7 +5,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
 public record ForgotPasswordRequestDTO(
-        @NotNull(message = "Email is required.")
+        @NotNull(message = "O e-mail é obrigatório.")
         @Valid
         EmailAddress email
 ) {

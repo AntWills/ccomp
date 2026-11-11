@@ -5,6 +5,7 @@ import com.ccomp.br.domain.auth.core.dto.*;
 import com.ccomp.br.shared.dto.RegisterUserDTO;
 import com.ccomp.br.shared.exceptions.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -78,7 +79,16 @@ public class AuthController {
     }
 
     @Operation(
-            summary = "Retorna o access token junto com o tempo de expiração do mesmo.",
+            summary = "Autentica com e-mail e senha e retorna os tokens de acesso.",
+            description = "Cada falha de autenticação por credenciais inválidas é contabilizada por e-mail, " +
+                    "após normalização do endereço. O limite é de 10 falhas em uma janela de 60 segundos, " +
+                    "compartilhada entre as instâncias da aplicação. O contador é armazenado no Redis usando " +
+                    "um hash do e-mail, expira ao fim da janela e é removido após um login bem-sucedido. " +
+                    "As primeiras 10 falhas retornam 401; tentativas seguintes para o mesmo e-mail, enquanto " +
+                    "o contador estiver no limite, retornam 429 sem executar a autenticação por senha. " +
+                    "O 401 usa uma mensagem genérica para credenciais inválidas. No 429, respeite o cabeçalho " +
+                    "Retry-After (segundos) e aguarde antes de permitir nova tentativa. " +
+                    "Esse limite é por e-mail: outras contas não são bloqueadas.",
             responses = {
                     @ApiResponse(
                             responseCode = "200",
@@ -89,8 +99,29 @@ public class AuthController {
                             )
                     ),
                     @ApiResponse(
+                            responseCode = "400",
+                            description = "E-mail, senha ou corpo da requisição inválido.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
                             responseCode = "401",
-                            description = "Credenciais inválidas.",
+                            description = "E-mail ou senha inválidos. A resposta é genérica e não informa se a conta existe.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "429",
+                            description = "Limite de falhas atingido para este e-mail. Aguarde o tempo indicado antes de tentar novamente.",
+                            headers = @Header(
+                                    name = "Retry-After",
+                                    description = "Tempo restante para liberar novas tentativas, em segundos.",
+                                    schema = @Schema(type = "integer", example = "60")
+                            ),
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = ErrorResponse.class)
