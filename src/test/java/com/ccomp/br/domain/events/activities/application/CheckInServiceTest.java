@@ -84,6 +84,7 @@ class CheckInServiceTest {
 
         activityMock = mock(EventActivity.class);
         lenient().when(activityMock.getEvent()).thenReturn(Event.builder().timeZone("America/Sao_Paulo").build());
+        lenient().when(activityMock.getTitle()).thenReturn("Atividade de teste");
         eventDTOMock = mock(EventDTO.class);
         checkInDTOMock = mock(CheckInDTO.class);
 
