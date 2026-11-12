@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.activities.web;
 import com.ccomp.br.domain.events.activities.application.CheckInService;
 import com.ccomp.br.domain.events.activities.dto.CheckInRequest;
 import com.ccomp.br.shared.dto.MessageResponse;
+import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -17,6 +18,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.UUID;
 
 @Tag(name = "events/activity/check-in (CheckIn)")
@@ -115,6 +117,9 @@ public class CheckInController {
     }
 
     private UUID extractUserId(Jwt jwt) {
-        return UUID.fromString(jwt.getSubject());
+        return Optional.ofNullable(jwt)
+                .map(Jwt::getSubject)
+                .map(UUID::fromString)
+                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
     }
 }
