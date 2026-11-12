@@ -41,12 +41,7 @@ public class ActivitiesEnrollmentsController {
             @PathVariable Long activityId,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        UUID userId = Optional.ofNullable(jwt)
-                .map(Jwt::getSubject)
-                .map(UUID::fromString)
-                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
-
-        return ResponseEntity.ok(activitiesEnrollmentsServices.inscribe(userId, activityId));
+        return ResponseEntity.ok(activitiesEnrollmentsServices.inscribe(extractUserId(jwt), activityId));
     }
 
     @Operation(summary = "Inscreve uma pessoa do evento em uma atividade",
@@ -73,12 +68,7 @@ public class ActivitiesEnrollmentsController {
             @PathVariable Long activityId,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        UUID userId = Optional.ofNullable(jwt)
-                .map(Jwt::getSubject)
-                .map(UUID::fromString)
-                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
-
-        return ResponseEntity.ok(activitiesEnrollmentsServices.unsubscribe(userId, activityId));
+        return ResponseEntity.ok(activitiesEnrollmentsServices.unsubscribe(extractUserId(jwt), activityId));
     }
 
     @Operation(
@@ -98,13 +88,9 @@ public class ActivitiesEnrollmentsController {
             @RequestParam(defaultValue = "10") int pageSize,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        UUID userId = Optional.ofNullable(jwt)
-                .map(Jwt::getSubject)
-                .map(UUID::fromString)
-                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
-
         return ResponseEntity.ok(
-                activitiesEnrollmentsServices.findAllUsersFromActivity(userId, activityId, cursor, pageSize)
+                activitiesEnrollmentsServices.findAllUsersFromActivity(
+                        extractUserId(jwt), activityId, cursor, pageSize)
         );
     }
 
@@ -139,13 +125,9 @@ public class ActivitiesEnrollmentsController {
 
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
     ) {
-        UUID userId = Optional.ofNullable(jwt)
-                .map(Jwt::getSubject)
-                .map(UUID::fromString)
-                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
-
         return ResponseEntity.ok(
-                activitiesEnrollmentsServices.listSubscriptionsByCursor(userId, eventId, cursor, pageSize)
+                activitiesEnrollmentsServices.listSubscriptionsByCursor(
+                        extractUserId(jwt), eventId, cursor, pageSize)
         );
     }
 
@@ -165,13 +147,16 @@ public class ActivitiesEnrollmentsController {
             @RequestParam(defaultValue = "10") int pageSize,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        UUID userId = Optional.ofNullable(jwt)
+        return ResponseEntity.ok(
+                activitiesEnrollmentsServices.listConflictingActivities(extractUserId(jwt),
+                        activityId, cursor, pageSize)
+        );
+    }
+
+    private UUID extractUserId(Jwt jwt) {
+        return Optional.ofNullable(jwt)
                 .map(Jwt::getSubject)
                 .map(UUID::fromString)
                 .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
-
-        return ResponseEntity.ok(
-                activitiesEnrollmentsServices.listConflictingActivities(userId, activityId, cursor, pageSize)
-        );
     }
 }

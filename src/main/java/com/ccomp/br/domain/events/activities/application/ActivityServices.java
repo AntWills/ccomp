@@ -27,6 +27,7 @@ import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.utils.CursorPage;
 import com.ccomp.br.shared.utils.CursorUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -86,7 +87,7 @@ public class ActivityServices {
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<EventActivityDTO> searchByCursor(Long eventId, String cursor, UUID userId) {
+    public CursorPage<EventActivityDTO> searchByCursor(Long eventId, String cursor, @Nullable UUID userId) {
         int pageSize = 50;
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));

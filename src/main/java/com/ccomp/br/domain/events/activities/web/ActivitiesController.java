@@ -56,12 +56,9 @@ public class ActivitiesController {
     public ResponseEntity<ActivityDTO> createActivity(
             @PathVariable Long eventId,
             @Valid @RequestBody CreateActivityDTO request, @AuthenticationPrincipal Jwt jwt){
-        UUID userId = Optional.ofNullable(jwt)
-                .map(Jwt::getSubject)
-                .map(UUID::fromString)
-                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(activityServices.createActivity(userId, eventId, request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                activityServices.createActivity(extractUserId(jwt), eventId, request)
+        );
     }
 
     @Operation(summary = "Deleta uma atividade", description = "Remove uma atividade existente usando o seu ID. Requer autenticação do usuário.")
@@ -75,12 +72,7 @@ public class ActivitiesController {
             @PathVariable Long id,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        UUID userId = Optional.ofNullable(jwt)
-                .map(Jwt::getSubject)
-                .map(UUID::fromString)
-                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
-
-        activityServices.deleteActivity(userId, id);
+        activityServices.deleteActivity(extractUserId(jwt), id);
         return ResponseEntity.ok(new MessageResponse("Atividade removida com sucesso."));
     }
 
@@ -97,11 +89,13 @@ public class ActivitiesController {
             @Valid @RequestBody UpdateActivityDTO request,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        UUID userId = Optional.ofNullable(jwt)
+        return ResponseEntity.ok(activityServices.updateActivity(extractUserId(jwt), id, request));
+    }
+
+    private UUID extractUserId(Jwt jwt) {
+        return Optional.ofNullable(jwt)
                 .map(Jwt::getSubject)
                 .map(UUID::fromString)
                 .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
-
-        return ResponseEntity.ok(activityServices.updateActivity(userId, id, request));
     }
 }
