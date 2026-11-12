@@ -254,6 +254,7 @@ public class EventActivityDslRepository {
 
         whereClause.and(eventActivity.event.id.eq(eventId));
         whereClause.and(enrollmentActivity.enrollment.userId.eq(userId));
+        whereClause.and(enrollmentActivity.canceled.isFalse());
         whereClause.and(enrollmentActivity.attendedAt.isNotNull());
 
         return queryFactory
@@ -299,6 +300,7 @@ public class EventActivityDslRepository {
                 .where(
                         enrollment.userId.eq(userId),
                         eventActivity.event.id.eq(eventId),
+                        enrollmentActivity.canceled.isFalse(),
                         enrollmentActivity.attendedAt.isNotNull()
                 )
                 .fetchOne();

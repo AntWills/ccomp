@@ -79,7 +79,9 @@ class EnrollmentActivityCancellationPersistenceTest {
                 .get().extracting(EnrollmentActivity::isCanceled).isEqualTo(true);
         assertThat(persistedEventEnrollment.getStatus()).isEqualTo(EnumEnrollmentState.CHECKED_IN);
         assertThat(eventActivityDslRepository.findAllCheckedInByUserAndEvent(userId, fixture.event().getId()))
-                .extracting(activityDto -> activityDto.id()).contains(fixture.activity().getId());
+                .extracting(activityDto -> activityDto.id()).doesNotContain(fixture.activity().getId());
+        assertThat(eventActivityDslRepository.sumWorkloadHoursByCheckIn(userId, fixture.event().getId()))
+                .isZero();
 
         persisted.restore();
         persistedActivity.registerActiveEnrollment();
