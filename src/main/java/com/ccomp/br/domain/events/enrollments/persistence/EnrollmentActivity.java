@@ -6,6 +6,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(
@@ -63,6 +64,13 @@ public class EnrollmentActivity {
     @Column(name = "attended_at")
     private LocalDateTime attendedAt;
 
+    @Column(name = "canceled", nullable = false)
+    @Builder.Default
+    private boolean canceled = false;
+
+    @Column(name = "canceled_by")
+    private UUID canceledBy;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -78,5 +86,19 @@ public class EnrollmentActivity {
 
     public boolean haveCheckIn() {
         return attendedAt != null;
+    }
+
+    public void cancel(UUID managerId) {
+        canceled = true;
+        canceledBy = managerId;
+    }
+
+    public void restore() {
+        canceled = false;
+        canceledBy = null;
+    }
+
+    public boolean isCanceled() {
+        return canceled;
     }
 }

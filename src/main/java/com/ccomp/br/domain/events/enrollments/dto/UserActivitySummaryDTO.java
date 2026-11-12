@@ -7,7 +7,11 @@ import java.time.LocalDateTime;
 public record UserActivitySummaryDTO(
         UserSummaryDTO user,
         boolean haveCheckIn,
+        boolean canceled,
         Long id,
         LocalDateTime createdAt
 ) {
+    public UserActivitySummaryDTO(UserSummaryDTO user, boolean haveCheckIn, Long id, LocalDateTime createdAt) {
+        this(user, haveCheckIn, false, id, createdAt);
+    }
 }

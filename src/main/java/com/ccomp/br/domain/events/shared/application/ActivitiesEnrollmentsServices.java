@@ -82,7 +82,9 @@ public class ActivitiesEnrollmentsServices {
         Optional<EnrollmentActivity> enrollmentOpt = enrollmentActivityDslRepository
                 .findByUserIdAndActivityId(userId, activityId);
 
-        if(enrollmentOpt.isPresent())
+        if (enrollmentOpt.filter(EnrollmentActivity::isCanceled).isPresent())
+            throw new ConflictException("Sua inscrição nesta atividade foi cancelada pela equipe; solicite a reativação a um gerente.");
+        if (enrollmentOpt.isPresent())
             throw new ConflictException("Você já está inscrito na atividade.");
 
         if (event.isSchedulerPrevent()) {
@@ -103,6 +105,33 @@ public class ActivitiesEnrollmentsServices {
         activity.registerActiveEnrollment();
 
         return new MessageResponse("Inscrição na atividade realizada com sucesso.");
+    }
+
+    @Transactional
+    public MessageResponse unsubscribe(UUID userId, Long activityId) {
+        EnrollmentActivity enrollmentActivity = enrollmentActivityDslRepository
+                .findByUserIdAndActivityId(userId, activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Você não está incrito neste evento."));
+        if (enrollmentActivity.isCanceled())
+            throw new ConflictException("A inscrição foi cancelada pela equipe e só pode ser reativada por um gerente.");
+
+        EventActivity activitySnapshot = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        Event event = activitySnapshot.getEvent();
+        enrollmentRepository.findByIdAndEventId(
+                        enrollmentActivity.getEnrollmentId(), event.getId())
+                .filter(Enrollment::isActive)
+                .orElseThrow(() -> new ResourceNotFoundException("Você não está incrito nesta atividade."));
+        EventActivity activity = activityRepository.findByIdForUpdate(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        EnrollmentActivity activityEnrollment = enrollmentActivityDslRepository
+                .findByUserIdAndActivityId(userId, activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Você não está incrito nesta atividade."));
+
+        enrollmentActivityRepository.delete(activityEnrollment);
+        activity.releaseActiveEnrollment();
+
+        return new MessageResponse("Inscrição removida com sucesso.");
     }
 
     @Transactional
@@ -175,28 +204,63 @@ public class ActivitiesEnrollmentsServices {
     }
 
     @Transactional
-    public MessageResponse unsubscribe(UUID userId, Long activityId) {
-        EnrollmentActivity enrollmentActivity = enrollmentActivityDslRepository
-                .findByUserIdAndActivityId(userId, activityId)
-                .orElseThrow(() -> new ResourceNotFoundException("Você não está incrito neste evento."));
-
-        EventActivity activitySnapshot = activityRepository.findById(activityId)
+    public MessageResponse cancelEnrollment(UUID managerId, Long activityId, Long enrollmentId) {
+        EventActivity snapshot = activityRepository.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
-        Event event = activitySnapshot.getEvent();
-        enrollmentRepository.findByIdAndEventId(
-                        enrollmentActivity.getEnrollmentId(), event.getId())
-                .filter(Enrollment::isActive)
-                .orElseThrow(() -> new ResourceNotFoundException("Você não está incrito nesta atividade."));
+        Event event = snapshot.getEvent();
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event, LocalDateTime.now(clock)), managerId))
+            throw new AccessDeniedException("Você não possui permissão para gerenciar esta atividade.");
+
         EventActivity activity = activityRepository.findByIdForUpdate(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
-        EnrollmentActivity activityEnrollment = enrollmentActivityDslRepository
-                .findByUserIdAndActivityId(userId, activityId)
-                .orElseThrow(() -> new ResourceNotFoundException("Você não está incrito nesta atividade."));
+        EnrollmentActivity enrollmentActivity = enrollmentActivityRepository
+                .findByEnrollmentIdAndActivityId(enrollmentId, activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("A pessoa não está inscrita nesta atividade."));
+        if (enrollmentActivity.isCanceled())
+            throw new ConflictException("A inscrição nesta atividade já foi cancelada.");
+        if (!enrollmentActivity.getEnrollment().isActive())
+            throw new ConflictException("A inscrição no evento não está ativa.");
 
-        enrollmentActivityRepository.delete(activityEnrollment);
+        enrollmentActivity.cancel(managerId);
+        enrollmentActivityRepository.save(enrollmentActivity);
         activity.releaseActiveEnrollment();
+        return new MessageResponse("Inscrição na atividade cancelada pela equipe.");
+    }
 
-        return new MessageResponse("Inscrição removida com sucesso.");
+    @Transactional
+    public MessageResponse restoreEnrollment(UUID managerId, Long activityId, Long enrollmentId) {
+        EventActivity snapshot = activityRepository.findById(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        Event event = snapshot.getEvent();
+        if (!eventAccessPolicy.canEdit(eventMapper.eventToEventDTO(event, LocalDateTime.now(clock)), managerId))
+            throw new AccessDeniedException("Você não possui permissão para gerenciar esta atividade.");
+
+        EventActivity activity = activityRepository.findByIdForUpdate(activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
+        EnrollmentActivity enrollmentActivity = enrollmentActivityRepository
+                .findByEnrollmentIdAndActivityId(enrollmentId, activityId)
+                .orElseThrow(() -> new ResourceNotFoundException("A pessoa não está inscrita nesta atividade."));
+        if (!enrollmentActivity.isCanceled())
+            throw new ConflictException("A inscrição nesta atividade não está cancelada.");
+        if (managerId.equals(enrollmentActivity.getCanceledBy()))
+            throw new ConflictException("A inscrição deve ser reativada por um gerente diferente daquele que a cancelou.");
+
+        Enrollment enrollment = enrollmentActivity.getEnrollment();
+        if (!enrollment.isActive())
+            throw new ConflictException("A inscrição no evento não está ativa.");
+        if (activity.getMaxCapacity() != null
+                && activity.getActiveEnrollmentCount() >= activity.getMaxCapacity())
+            throw new ConflictException("As vagas para esta atividade estão esgotadas.");
+        if (event.isSchedulerPrevent()) {
+            List<ActivityDTO> conflicts = eventActivityDslRepository
+                    .findAllConflictingActivities(enrollment.getUserId(), activity);
+            if (!conflicts.isEmpty()) throw new SchedulingConflictException(conflicts);
+        }
+
+        enrollmentActivity.restore();
+        enrollmentActivityRepository.save(enrollmentActivity);
+        activity.registerActiveEnrollment();
+        return new MessageResponse("Inscrição na atividade reativada pela equipe.");
     }
 
     public CursorPage<UserActivitySummaryDTO> findAllUsersFromActivity(UUID userId, Long activityId, String cursor, int pageSize) {

@@ -20,6 +20,7 @@ import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityDslR
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityRepository;
 import com.ccomp.br.module.qrcode.QRCode;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
+import com.ccomp.br.shared.exceptions.ConflictException;
 import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -247,6 +248,31 @@ class CheckInServiceTest {
             ArgumentCaptor<CheckInMessageDTO> messageCaptor = ArgumentCaptor.forClass(CheckInMessageDTO.class);
             verify(rabbitTemplate).convertAndSend(anyString(), anyString(), messageCaptor.capture());
             assertThat(messageCaptor.getValue().activityId()).isEqualTo(activityId);
+        }
+
+        @Test
+        void checkInRejectsEnrollmentCanceledByManager() {
+            Enrollment enrollment = Enrollment.builder()
+                    .userId(userId)
+                    .status(com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState.CONFIRMED)
+                    .build();
+            EnrollmentActivity canceledEnrollment = EnrollmentActivity.builder()
+                    .enrollment(enrollment)
+                    .canceled(true)
+                    .build();
+
+            when(checkInCache.findByActivityId(activityId)).thenReturn(Optional.of(checkInDTOMock));
+            when(checkInDTOMock.checkCode(presenceCode)).thenReturn(true);
+            when(activityRepository.findById(activityId)).thenReturn(Optional.of(activityMock));
+            when(activityMock.isInProgress(any(LocalDateTime.class))).thenReturn(true);
+            when(enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, activityId))
+                    .thenReturn(Optional.of(canceledEnrollment));
+
+            assertThatThrownBy(() -> checkInService.checkIn(activityId, userId, presenceCode))
+                    .isInstanceOf(ConflictException.class)
+                    .hasMessageContaining("cancelada pela equipe");
+            verify(enrollmentActivityRepository, never()).save(any());
+            verifyNoInteractions(rabbitTemplate);
         }
 
         @Test

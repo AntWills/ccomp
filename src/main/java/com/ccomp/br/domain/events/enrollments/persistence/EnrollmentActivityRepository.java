@@ -12,6 +12,6 @@ public interface EnrollmentActivityRepository extends JpaRepository<EnrollmentAc
 
 
     @Query("select activity.id from EnrollmentActivity ea join ea.activity activity " +
-            "where ea.enrollment.id = :enrollmentId order by activity.id")
+            "where ea.enrollment.id = :enrollmentId and ea.canceled = false order by activity.id")
     List<Long> findActivityIdsByEnrollmentId(@Param("enrollmentId") Long enrollmentId);
 }

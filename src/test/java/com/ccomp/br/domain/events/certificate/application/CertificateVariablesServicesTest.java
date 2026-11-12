@@ -376,6 +376,37 @@ class CertificateVariablesServicesTest {
                 .hasMessage("O inscrito não participou desta atividade.");
     }
 
+    @Test
+    void loadActivityVariablesRejectsEnrollmentCanceledByManagerEvenIfAttendanceExists() {
+        EventActivity activity = EventActivity.builder()
+                .title("Workshop de IA")
+                .type(EnumActivityType.WORKSHOP)
+                .displayOrder(1L)
+                .registrationPolicy(EnumActivityRegistrationPolicy.PUBLIC)
+                .build();
+        activity.setId(77L);
+        activity.setEvent(event());
+        activity.setEventId(10L);
+
+        Enrollment enrollment = Enrollment.builder()
+                .userId(USER_ID)
+                .event(event())
+                .status(EnumEnrollmentState.CHECKED_IN)
+                .build();
+        EnrollmentActivity enrollmentActivity = EnrollmentActivity.builder()
+                .enrollment(enrollment)
+                .activity(activity)
+                .attendedAt(LocalDateTime.now())
+                .canceled(true)
+                .build();
+        when(enrollmentActivityDslRepository.findByUserIdAndActivityId(USER_ID, 77L))
+                .thenReturn(Optional.of(enrollmentActivity));
+
+        assertThatThrownBy(() -> createService().loadActivityVariablesValues(List.of(), 77L, USER_ID))
+                .isInstanceOf(DomainException.class)
+                .hasMessage("A inscrição nesta atividade foi cancelada pela equipe.");
+    }
+
     private Event stubEvent() {
         Event event = event();
         when(eventCache.findById(10L)).thenReturn(Optional.of(toDto(event)));

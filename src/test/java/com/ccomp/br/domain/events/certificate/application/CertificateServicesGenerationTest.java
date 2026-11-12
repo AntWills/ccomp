@@ -98,6 +98,24 @@ class CertificateServicesGenerationTest {
                 .hasMessage("O usuário não tem acesso a este recurso.");
     }
 
+    @Test
+    void buildCertificateFromEventRemainsAvailableWhenActivityEnrollmentWasCanceled() throws Exception {
+        EventDTO event = event();
+        when(eventCache.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(accessPolicy.canView(event, USER_ID)).thenReturn(true);
+        when(certificateFetcher.fetchCoverTemplate(EVENT_ID)).thenReturn(createCover());
+        when(certificateFetcher.fetchBoxTemplate(EVENT_ID)).thenReturn(EventBoxTemplate.builder()
+                .eventId(EVENT_ID)
+                .variables(List.of())
+                .boxes(List.of())
+                .build());
+        when(variablesServices.loadEventVariablesValues(List.of(), EVENT_ID, USER_ID)).thenReturn(Map.of());
+
+        StorageExternal.StoredFile generated = createService().buildCertificateFromEvent(EVENT_ID, USER_ID);
+
+        assertThat(generated.contentType()).isEqualTo("image/png");
+    }
+
     private AutomaticCertificateServices createService() {
         return new AutomaticCertificateServices(eventCache, accessPolicy, certificateFetcher,
                 variablesServices, null, null);
@@ -117,5 +135,12 @@ class CertificateServicesGenerationTest {
             }
         }
         return count;
+    }
+
+    private StorageExternal.StoredFile createCover() throws Exception {
+        BufferedImage image = new BufferedImage(320, 160, BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", bytes);
+        return new StorageExternal.StoredFile(new ByteArrayResource(bytes.toByteArray()), "image/png");
     }
 }

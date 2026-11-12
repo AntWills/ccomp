@@ -396,6 +396,9 @@ public class CertificateVariablesServices {
         var enrollmentActivity = enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("O usuário não é inscrito nesta atividade."));
 
+        if (enrollmentActivity.isCanceled())
+            throw new DomainException("A inscrição nesta atividade foi cancelada pela equipe.");
+
         if (!enrollmentActivity.getEnrollment().haveCheckIn()) {
             throw new DomainException("O participante não fez check-in no evento.");
         }

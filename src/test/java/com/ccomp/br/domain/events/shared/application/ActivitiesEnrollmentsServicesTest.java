@@ -137,6 +137,95 @@ class ActivitiesEnrollmentsServicesTest {
     }
 
     @Test
+    void managerCanCancelActivityEnrollmentAndKeepExistingAttendance() {
+        EventActivity activity = mock(EventActivity.class);
+        Event event = mock(Event.class);
+        EventDTO eventDTO = mock(EventDTO.class);
+        Enrollment enrollment = Enrollment.builder().userId(userId).status(
+                com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState.CONFIRMED).build();
+        var attendedAt = java.time.LocalDateTime.parse("2026-11-08T12:00:00");
+        EnrollmentActivity activityEnrollment = EnrollmentActivity.builder()
+                .enrollment(enrollment).activity(activity).attendedAt(attendedAt).build();
+        when(activityRepository.findById(9L)).thenReturn(Optional.of(activity));
+        when(activityRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(activity));
+        when(activity.getEvent()).thenReturn(event);
+        when(eventMapper.eventToEventDTO(eq(event), any())).thenReturn(eventDTO);
+        when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
+        when(enrollmentActivityRepository.findByEnrollmentIdAndActivityId(12L, 9L))
+                .thenReturn(Optional.of(activityEnrollment));
+
+        var response = service.cancelEnrollment(userId, 9L, 12L);
+
+        assertThat(response.response()).contains("cancelada");
+        assertThat(activityEnrollment.isCanceled()).isTrue();
+        assertThat(activityEnrollment.getAttendedAt()).isEqualTo(attendedAt);
+        verify(enrollmentActivityRepository).save(activityEnrollment);
+        verify(activity).releaseActiveEnrollment();
+    }
+
+    @Test
+    void managerCanRestoreCanceledActivityEnrollment() {
+        EventActivity activity = mock(EventActivity.class);
+        Event event = mock(Event.class);
+        EventDTO eventDTO = mock(EventDTO.class);
+        Enrollment enrollment = Enrollment.builder().userId(userId).status(
+                com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState.CONFIRMED).build();
+        EnrollmentActivity activityEnrollment = EnrollmentActivity.builder()
+                .enrollment(enrollment).activity(activity).canceled(true).build();
+        when(activityRepository.findById(9L)).thenReturn(Optional.of(activity));
+        when(activityRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(activity));
+        when(activity.getEvent()).thenReturn(event);
+        when(eventMapper.eventToEventDTO(eq(event), any())).thenReturn(eventDTO);
+        when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
+        when(enrollmentActivityRepository.findByEnrollmentIdAndActivityId(12L, 9L))
+                .thenReturn(Optional.of(activityEnrollment));
+        when(event.isSchedulerPrevent()).thenReturn(false);
+        when(activity.getMaxCapacity()).thenReturn(null);
+
+        var response = service.restoreEnrollment(userId, 9L, 12L);
+
+        assertThat(response.response()).contains("reativada");
+        assertThat(activityEnrollment.isCanceled()).isFalse();
+        verify(enrollmentActivityRepository).save(activityEnrollment);
+        verify(activity).registerActiveEnrollment();
+    }
+
+    @Test
+    void restoreRejectsWhenActivityCapacityHasBeenFilled() {
+        EventActivity activity = mock(EventActivity.class);
+        Event event = mock(Event.class);
+        EventDTO eventDTO = mock(EventDTO.class);
+        Enrollment enrollment = Enrollment.builder().userId(userId).status(
+                com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState.CONFIRMED).build();
+        EnrollmentActivity activityEnrollment = EnrollmentActivity.builder()
+                .enrollment(enrollment).activity(activity).canceled(true).build();
+        when(activityRepository.findById(9L)).thenReturn(Optional.of(activity));
+        when(activityRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(activity));
+        when(activity.getEvent()).thenReturn(event);
+        when(eventMapper.eventToEventDTO(eq(event), any())).thenReturn(eventDTO);
+        when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
+        when(enrollmentActivityRepository.findByEnrollmentIdAndActivityId(12L, 9L))
+                .thenReturn(Optional.of(activityEnrollment));
+        when(activity.getMaxCapacity()).thenReturn(5);
+        when(activity.getActiveEnrollmentCount()).thenReturn(5);
+
+        assertThatThrownBy(() -> service.restoreEnrollment(userId, 9L, 12L))
+                .isInstanceOf(ConflictException.class);
+        verify(enrollmentActivityRepository, never()).save(any());
+        verify(activity, never()).registerActiveEnrollment();
+    }
+
+    @Test
+    void participantCannotUndoManagerCancellationByUnsubscribing() {
+        EnrollmentActivity activityEnrollment = EnrollmentActivity.builder().canceled(true).build();
+        when(enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, 9L))
+                .thenReturn(Optional.of(activityEnrollment));
+
+        assertThatThrownBy(() -> service.unsubscribe(userId, 9L)).isInstanceOf(ConflictException.class);
+        verifyNoInteractions(enrollmentActivityRepository);
+    }
+
+    @Test
     void inscribeAllowsEventRegistrantWithNoExistingActivityEnrollment() {
         EventActivity activity = mock(EventActivity.class);
         Event event = mock(Event.class);
@@ -186,6 +275,24 @@ class ActivitiesEnrollmentsServicesTest {
         assertThatThrownBy(() -> service.inscribe(userId, 9L))
                 .isInstanceOf(ResourceNotFoundException.class);
         verifyNoInteractions(enrollmentActivityRepository);
+    }
+
+    @Test
+    void inscribeRejectsEnrollmentCanceledByManager() {
+        EventActivity activity = mock(EventActivity.class);
+        Event event = mock(Event.class);
+        Enrollment enrollment = mock(Enrollment.class);
+        EnrollmentActivity canceledEnrollment = EnrollmentActivity.builder()
+                .enrollment(enrollment).activity(activity).canceled(true).build();
+        stubActivityEnrollment(activity, event, enrollment);
+        when(enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, 9L))
+                .thenReturn(Optional.of(canceledEnrollment));
+
+        assertThatThrownBy(() -> service.inscribe(userId, 9L))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("cancelada pela equipe");
+        verify(enrollmentActivityRepository, never()).save(any(EnrollmentActivity.class));
+        verify(activity, never()).registerActiveEnrollment();
     }
 
     @Test
