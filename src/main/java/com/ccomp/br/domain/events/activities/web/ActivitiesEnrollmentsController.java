@@ -57,6 +57,32 @@ public class ActivitiesEnrollmentsController {
         return ResponseEntity.ok(activitiesEnrollmentsServices.enrollParticipant(managerId, activityId, enrollmentId));
     }
 
+    @Operation(summary = "Cancela a inscrição de uma pessoa em uma atividade",
+            description = "Operação de gerência. Preserva o vínculo e eventual presença registrada, mas retira a inscrição da contagem ativa e impede novos check-ins e certificados da atividade até que um gerente a reative.")
+    @DeleteMapping("/activities/{activityId}/enrollments/{enrollmentId}")
+    public ResponseEntity<MessageResponse> cancelParticipantEnrollment(
+            @PathVariable Long activityId,
+            @PathVariable Long enrollmentId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID managerId = Optional.ofNullable(jwt).map(Jwt::getSubject).map(UUID::fromString)
+                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
+        return ResponseEntity.ok(activitiesEnrollmentsServices.cancelEnrollment(managerId, activityId, enrollmentId));
+    }
+
+    @Operation(summary = "Reativa uma inscrição cancelada em uma atividade",
+            description = "Operação de gerência. Reativa o vínculo existente, sujeito à capacidade e às regras de conflito de horário da atividade.")
+    @PostMapping("/activities/{activityId}/enrollments/{enrollmentId}/restore")
+    public ResponseEntity<MessageResponse> restoreParticipantEnrollment(
+            @PathVariable Long activityId,
+            @PathVariable Long enrollmentId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID managerId = Optional.ofNullable(jwt).map(Jwt::getSubject).map(UUID::fromString)
+                .orElseThrow(() -> new UserNotFoundException("O usuário precisa estar autenticado."));
+        return ResponseEntity.ok(activitiesEnrollmentsServices.restoreEnrollment(managerId, activityId, enrollmentId));
+    }
+
     @Operation(summary = "Cancela inscrição em uma atividade", description = "Remove a inscrição do usuário autenticado em uma atividade específica.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Inscrição removida com sucesso"),
@@ -73,7 +99,7 @@ public class ActivitiesEnrollmentsController {
 
     @Operation(
             summary = "Lista os inscritos de uma atividade",
-            description = "Retorna uma lista paginada (por cursor) dos usuários inscritos em uma atividade específica. O acesso é restrito a administradores do sistema, ao dono do evento ou aos editores autorizados."
+            description = "Retorna uma lista paginada (por cursor) dos usuários com vínculo na atividade, inclusive vínculos cancelados. Cada item informa `canceled` para o cancelamento específico da atividade e `eventEnrollmentStatus` (CONFIRMED, CHECKED_IN, CANCELED ou BANNED) para o estado da inscrição no evento. O acesso é restrito a administradores do sistema, ao dono do evento ou aos editores autorizados."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Página de inscritos retornada com sucesso"),

@@ -33,6 +33,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -297,6 +298,40 @@ public class EnrollmentActivityDslRepositoryTest {
     }
 
     @Test
+    void managerListingReportsActivityCancellationAndEventEnrollmentStatus() {
+        UserModel activityCanceledUser = persistUser("Activity Canceled", "activity-canceled@example.com");
+        UserModel eventCanceledUser = persistUser("Event Canceled", "event-canceled@example.com");
+        UserModel bannedUser = persistUser("Banned", "banned@example.com");
+
+        Enrollment activeEnrollment = persistEnrollment(activityCanceledUser, EnumEnrollmentState.CONFIRMED);
+        Enrollment canceledEnrollment = persistEnrollment(eventCanceledUser, EnumEnrollmentState.CANCELED);
+        Enrollment bannedEnrollment = persistEnrollment(bannedUser, EnumEnrollmentState.BANNED);
+
+        EnrollmentActivity canceledActivityLink = new EnrollmentActivity(activeEnrollment, activity);
+        canceledActivityLink.cancel(UUID.randomUUID());
+        entityManager.persist(canceledActivityLink);
+        entityManager.persist(new EnrollmentActivity(canceledEnrollment, activity));
+        entityManager.persist(new EnrollmentActivity(bannedEnrollment, activity));
+        entityManager.flush();
+        entityManager.clear();
+
+        var results = dslRepository.findAllUsersByActivityId(activity.getId(), null, null, 10);
+        var byEmail = results.stream().collect(Collectors.toMap(
+                item -> item.enrollment().user().emailAddress().getValue(),
+                ActivityEnrollmentSearchResult::enrollment));
+
+        assertThat(byEmail).hasSize(3);
+        assertThat(byEmail.get("activity-canceled@example.com").canceled()).isTrue();
+        assertThat(byEmail.get("activity-canceled@example.com").eventEnrollmentStatus())
+                .isEqualTo(EnumEnrollmentState.CONFIRMED);
+        assertThat(byEmail.get("event-canceled@example.com").canceled()).isFalse();
+        assertThat(byEmail.get("event-canceled@example.com").eventEnrollmentStatus())
+                .isEqualTo(EnumEnrollmentState.CANCELED);
+        assertThat(byEmail.get("banned@example.com").eventEnrollmentStatus())
+                .isEqualTo(EnumEnrollmentState.BANNED);
+    }
+
+    @Test
     void searchByNameAndEmailUsesRelevanceCursorAcrossPages() {
         UserModel matchingByName = persistUser("Ana Silva", "ana.silva@example.com");
         UserModel matchingByEmail = persistUser("Pessoa Um", "ana.contato@example.com");
@@ -335,5 +370,11 @@ public class EnrollmentActivityDslRepositoryTest {
         entityManager.persist(enrollment);
         entityManager.persist(EnrollmentActivity.builder().enrollment(enrollment).activity(activity)
                 .createdAt(createdAt).build());
+    }
+
+    private Enrollment persistEnrollment(UserModel user, EnumEnrollmentState status) {
+        Enrollment enrollment = Enrollment.builder().event(event).userId(user.getId()).status(status).build();
+        entityManager.persist(enrollment);
+        return enrollment;
     }
 }

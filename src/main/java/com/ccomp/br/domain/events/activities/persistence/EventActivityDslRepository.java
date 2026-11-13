@@ -102,6 +102,7 @@ public class EventActivityDslRepository {
                 )
         );
         whereClause.and(enrollmentActivity.enrollment.userId.eq(userId));
+        whereClause.and(enrollmentActivity.canceled.isFalse());
 
         if (cursor != null && cursor.displayOrder() != null && cursor.id() != null) {
             BooleanExpression greaterDisplayOrder = eventActivity.displayOrder.gt(cursor.displayOrder());
@@ -149,6 +150,7 @@ public class EventActivityDslRepository {
         BooleanBuilder whereClause = new BooleanBuilder();
 
         whereClause.and(enrollmentActivity.enrollment.userId.eq(userId));
+        whereClause.and(enrollmentActivity.canceled.isFalse());
         whereClause.and(
                 enrollmentActivity.enrollment.status.in(
                         EnumEnrollmentState.CONFIRMED,
@@ -183,6 +185,7 @@ public class EventActivityDslRepository {
         BooleanBuilder whereClause = new BooleanBuilder();
 
         whereClause.and(enrollmentActivity.enrollment.userId.eq(userId));
+        whereClause.and(enrollmentActivity.canceled.isFalse());
         whereClause.and(
                 enrollmentActivity.enrollment.status.in(
                         EnumEnrollmentState.CONFIRMED,
@@ -251,6 +254,7 @@ public class EventActivityDslRepository {
 
         whereClause.and(eventActivity.event.id.eq(eventId));
         whereClause.and(enrollmentActivity.enrollment.userId.eq(userId));
+        whereClause.and(enrollmentActivity.canceled.isFalse());
         whereClause.and(enrollmentActivity.attendedAt.isNotNull());
 
         return queryFactory
@@ -296,6 +300,7 @@ public class EventActivityDslRepository {
                 .where(
                         enrollment.userId.eq(userId),
                         eventActivity.event.id.eq(eventId),
+                        enrollmentActivity.canceled.isFalse(),
                         enrollmentActivity.attendedAt.isNotNull()
                 )
                 .fetchOne();

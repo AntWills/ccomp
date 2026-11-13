@@ -99,18 +99,25 @@ public class EnrollmentsServiceTest {
         @DisplayName("Reativa a inscrição de quem já foi inscrito um evento exista")
         void subscribe_returnSuccess_whenAlreadyBeenSubscriber() {
             UUID userId = UUID.randomUUID();
+            EventActivity activity = mock(EventActivity.class);
 
             when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
             when(existingEvent.getEnrollmentStatus(any(java.time.LocalDateTime.class))).thenReturn(EnumEnrollmentStatus.OPEN);
             when(enrollmentRepository.findForActivityRegistrationByUserIdAndEventId(userId, eventId)).thenReturn(Optional.of(existingEnrollment));
             when(existingEnrollment.isActive()).thenReturn(false);
+            when(existingEnrollment.getId()).thenReturn(20L);
             when(enrollmentRepository.save(existingEnrollment)).thenReturn(existingEnrollment);
+            when(enrollmentActivityRepository.findNonCanceledActivityIdsByEnrollmentId(20L))
+                    .thenReturn(java.util.List.of(7L));
+            when(activityRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(activity));
 
             var enrollment = enrollmentsServices.subscribe(userId, eventId);
 
             assertThat(enrollment).isNotNull();
 
             verify(enrollmentRepository).save(any(Enrollment.class));
+            verify(activity).registerActiveEnrollment();
+            verify(existingEvent).registerActiveEnrollment();
         }
 
         @Test
@@ -143,13 +150,82 @@ public class EnrollmentsServiceTest {
         when(existingEnrollment.getEventId()).thenReturn(eventId);
         when(existingEnrollment.getId()).thenReturn(20L);
         when(existingEnrollment.isActive()).thenReturn(true, false);
-        when(enrollmentActivityRepository.findActivityIdsByEnrollmentId(20L)).thenReturn(java.util.List.of(7L));
+        when(enrollmentActivityRepository.findNonCanceledActivityIdsByEnrollmentId(20L)).thenReturn(java.util.List.of(7L));
         when(activityRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(activity));
 
         enrollmentsServices.updateEnrollmentStatus(eventId, 20L, EnumEnrollmentState.CANCELED, actorId);
 
         verify(activity).releaseActiveEnrollment();
         verify(existingEvent).releaseActiveEnrollment();
+    }
+
+    @Test
+    void banningEventEnrollmentReleasesEventAndNonCanceledActivityCounts() {
+        UUID actorId = UUID.randomUUID();
+        EventDTO eventDTO = mock(EventDTO.class);
+        EventActivity activity = mock(EventActivity.class);
+        when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
+        when(eventAccessPolicy.canEdit(eventDTO, actorId)).thenReturn(true);
+        when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
+        when(enrollmentRepository.findByIdAndEventId(20L, eventId)).thenReturn(Optional.of(existingEnrollment));
+        when(existingEnrollment.getEventId()).thenReturn(eventId);
+        when(existingEnrollment.getId()).thenReturn(20L);
+        when(existingEnrollment.isActive()).thenReturn(true, false);
+        when(enrollmentActivityRepository.findNonCanceledActivityIdsByEnrollmentId(20L))
+                .thenReturn(java.util.List.of(7L));
+        when(activityRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(activity));
+
+        enrollmentsServices.updateEnrollmentStatus(eventId, 20L, EnumEnrollmentState.BANNED, actorId);
+
+        verify(activity).releaseActiveEnrollment();
+        verify(existingEvent).releaseActiveEnrollment();
+    }
+
+    @Test
+    void reactivatingAsConfirmedRestoresEventAndNonCanceledActivityCounts() {
+        UUID actorId = UUID.randomUUID();
+        EventDTO eventDTO = mock(EventDTO.class);
+        EventActivity activity = mock(EventActivity.class);
+        when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
+        when(eventAccessPolicy.canEdit(eventDTO, actorId)).thenReturn(true);
+        when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
+        when(enrollmentRepository.findByIdAndEventId(20L, eventId)).thenReturn(Optional.of(existingEnrollment));
+        when(existingEnrollment.getEventId()).thenReturn(eventId);
+        when(existingEnrollment.getId()).thenReturn(20L);
+        when(existingEnrollment.isActive()).thenReturn(false, true);
+        when(enrollmentActivityRepository.findNonCanceledActivityIdsByEnrollmentId(20L))
+                .thenReturn(java.util.List.of(7L));
+        when(activityRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(activity));
+
+        enrollmentsServices.updateEnrollmentStatus(eventId, 20L, EnumEnrollmentState.CONFIRMED, actorId);
+
+        verify(activity).registerActiveEnrollment();
+        verify(existingEvent).registerActiveEnrollment();
+    }
+
+    @Test
+    void reactivatingDirectlyAsCheckedInRestoresCountsOnce() {
+        UUID actorId = UUID.randomUUID();
+        EventDTO eventDTO = mock(EventDTO.class);
+        EventActivity activity = mock(EventActivity.class);
+        when(eventCache.findById(eventId)).thenReturn(Optional.of(eventDTO));
+        when(eventAccessPolicy.canEdit(eventDTO, actorId)).thenReturn(true);
+        when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
+        when(enrollmentRepository.findByIdAndEventId(20L, eventId)).thenReturn(Optional.of(existingEnrollment));
+        when(existingEnrollment.getEventId()).thenReturn(eventId);
+        when(existingEnrollment.getId()).thenReturn(20L);
+        when(existingEnrollment.isActive()).thenReturn(false, false, true);
+        when(enrollmentActivityRepository.findNonCanceledActivityIdsByEnrollmentId(20L))
+                .thenReturn(java.util.List.of(7L));
+        when(activityRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(activity));
+
+        enrollmentsServices.updateEnrollmentStatus(eventId, 20L, EnumEnrollmentState.CHECKED_IN, actorId);
+
+        org.mockito.InOrder order = inOrder(existingEnrollment);
+        order.verify(existingEnrollment).confirm();
+        order.verify(existingEnrollment).checkIn(any(java.time.LocalDateTime.class));
+        verify(activity).registerActiveEnrollment();
+        verify(existingEvent).registerActiveEnrollment();
     }
 
     @Nested
@@ -159,6 +235,7 @@ public class EnrollmentsServiceTest {
         @DisplayName("Desativa a inscrição de um usuário")
         void unsubscribe_returnMessage_whenIsSubscriber() {
             UUID userId = UUID.randomUUID();
+            EventActivity activity = mock(EventActivity.class);
 
             var enrollment = Enrollment.builder()
                     .id(eventId)
@@ -169,6 +246,9 @@ public class EnrollmentsServiceTest {
 
             when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(existingEvent));
             when(enrollmentRepository.findForActivityRegistrationByUserIdAndEventId(userId, eventId)).thenReturn(Optional.of(enrollment));
+            when(enrollmentActivityRepository.findNonCanceledActivityIdsByEnrollmentId(eventId))
+                    .thenReturn(java.util.List.of(7L));
+            when(activityRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(activity));
 
             MessageResponse response = enrollmentsServices.unsubscribe(userId, eventId);
 
@@ -177,6 +257,8 @@ public class EnrollmentsServiceTest {
             assertThat(enrollment.getStatus()).isEqualTo(EnumEnrollmentState.CANCELED);
 
             verify(enrollmentRepository).save(enrollment);
+            verify(activity).releaseActiveEnrollment();
+            verify(existingEvent).releaseActiveEnrollment();
         }
 
         @Test

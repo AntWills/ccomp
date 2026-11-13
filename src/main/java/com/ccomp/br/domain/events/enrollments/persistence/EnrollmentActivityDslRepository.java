@@ -8,9 +8,9 @@ import com.ccomp.br.shared.dto.UserSummaryDTO;
 import com.ccomp.br.shared.utils.TextSearchDSL;
 import com.ccomp.br.shared.utils.TextSearchSession;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
-import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +55,7 @@ public class EnrollmentActivityDslRepository {
                 .from(enrollmentActivity)
                 .innerJoin(enrollmentActivity.enrollment, enrollment)
                 .where(enrollmentActivity.activity.id.eq(activityId),
+                        enrollmentActivity.canceled.isFalse(),
                         enrollment.status.in(EnumEnrollmentState.CONFIRMED, EnumEnrollmentState.CHECKED_IN))
                 .fetchOne();
         return count == null ? 0 : count;
@@ -78,8 +79,8 @@ public class EnrollmentActivityDslRepository {
         if (cursor != null && cursor.id() != null && cursor.createdAt() != null) {
             if (relevance != null && cursor.relevance() != null) {
                 whereClause.and(Expressions.booleanTemplate(
-                        "({0}, {1}, {2}) < ({3}, {4}, {5})",
-                        relevance, enrollmentActivity.createdAt, enrollmentActivity.id,
+                        "({0}, {1}, {2}) < ({3}, {4}, {5})", relevance,
+                        enrollmentActivity.createdAt, enrollmentActivity.id,
                         Expressions.constant(cursor.relevance()), Expressions.constant(cursor.createdAt()),
                         Expressions.constant(cursor.id())));
             } else {
@@ -93,22 +94,17 @@ public class EnrollmentActivityDslRepository {
         var query = queryFactory
                 .select(Projections.constructor(
                         ActivityEnrollmentSearchResult.class,
-                        Projections.constructor(
-                                UserActivitySummaryDTO.class,
-                                Projections.constructor(UserSummaryDTO.class, userModel.id, userModel.name,
-                                        userModel.emailAddress),
-                                enrollmentActivity.attendedAt.isNotNull(), enrollmentActivity.id,
-                                enrollmentActivity.createdAt),
-                        relevance == null ? Expressions.nullExpression(Double.class) : relevance
+                                Projections.constructor(UserActivitySummaryDTO.class,
+                                        Projections.constructor(UserSummaryDTO.class, userModel.id, userModel.name,
+                                                userModel.emailAddress),
+                                        enrollmentActivity.attendedAt.isNotNull(), enrollmentActivity.canceled,
+                                        enrollment.status, enrollmentActivity.id, enrollmentActivity.createdAt),
+                                relevance == null ? Expressions.nullExpression(Double.class) : relevance
                 ))
                 .from(enrollmentActivity)
                 .innerJoin(enrollmentActivity.enrollment, enrollment)
                 .innerJoin(userModel).on(userModel.id.eq(enrollment.userId))
-                .where(
-                        enrollmentActivity.activity.id.eq(activityId),
-                        whereClause
-                )
-                ;
+                .where(enrollmentActivity.activity.id.eq(activityId), whereClause);
         if (relevance == null) {
             query.orderBy(enrollmentActivity.createdAt.desc(), enrollmentActivity.id.desc());
         } else {

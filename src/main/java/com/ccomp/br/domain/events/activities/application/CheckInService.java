@@ -120,6 +120,8 @@ public class CheckInService {
         var enrollment = enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("O usuário não está inscrito na atividade."));
 
+        if (enrollment.isCanceled())
+            throw new ConflictException("A inscrição nesta atividade foi cancelada pela equipe.");
         if(enrollment.haveCheckIn())
             return;
 
@@ -144,6 +146,8 @@ public class CheckInService {
                 .orElseThrow(() -> new ResourceNotFoundException("A pessoa não está inscrita nesta atividade."));
         if (!activityEnrollment.getEnrollment().isActive())
             throw new ConflictException("A inscrição no evento não está ativa.");
+        if (activityEnrollment.isCanceled())
+            throw new ConflictException("A inscrição nesta atividade foi cancelada pela equipe.");
         if (activityEnrollment.haveCheckIn()) return;
 
         activityEnrollment.makeAttendance(LocalDateTime.now(clock));
