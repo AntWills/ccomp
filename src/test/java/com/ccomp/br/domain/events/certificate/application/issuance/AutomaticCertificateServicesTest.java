@@ -75,7 +75,7 @@ class AutomaticCertificateServicesTest {
         when(activityCache.findById(ACTIVITY_ID)).thenReturn(Optional.of(activity));
         when(certificateFetcher.resolveActivityTemplate(EVENT_ID, ACTIVITY_ID,
                 EnumActivityCertificateTemplateType.PARTICIPANT)).thenReturn(template);
-        when(variablesServices.loadActivityVariablesValues(List.of(), ACTIVITY_ID, RECIPIENT)).thenReturn(Map.of());
+        when(variablesServices.loadActivityVariablesValues(List.of(), ACTIVITY_ID, RECIPIENT, null)).thenReturn(Map.of());
 
         assertThat(services.buildCertificateFromActivity(ACTIVITY_ID, RECIPIENT).contentType()).isEqualTo("image/png");
     }

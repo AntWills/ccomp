@@ -29,6 +29,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class CertificateServicesGenerationTest {
@@ -64,11 +65,13 @@ class CertificateServicesGenerationTest {
                 .boxes(List.of(new BoxElementDTO("__{participante.nome}__", 0.1, 0.2, 0.8,
                         36f, "#000000", null)))
                 .build());
-        when(variablesServices.loadEventVariablesValues(List.of("{participante.nome}"), EVENT_ID, USER_ID))
-                .thenReturn(Map.of("{participante.nome}", "Ana Souza"));
+        when(variablesServices.loadEventVariablesValues(
+                List.of("{participante.nome}"), EVENT_ID, USER_ID, "Nome Personalizado"))
+                .thenReturn(Map.of("{participante.nome}", "Nome Personalizado"));
 
         StorageExternal.StoredFile generated = new AutomaticCertificateServices(eventCache, accessPolicy,
-                certificateFetcher, variablesServices, null, null).buildCertificateFromEvent(EVENT_ID, USER_ID);
+                certificateFetcher, variablesServices, null, null)
+                .buildCertificateFromEvent(EVENT_ID, USER_ID, "Nome Personalizado");
 
         BufferedImage output = ImageIO.read(generated.resource().getInputStream());
         assertThat(generated.contentType()).isEqualTo("image/png");
@@ -76,6 +79,8 @@ class CertificateServicesGenerationTest {
         assertThat(output.getWidth()).isEqualTo(500);
         assertThat(output.getHeight()).isEqualTo(180);
         assertThat(countNonWhitePixels(output)).isGreaterThan(0);
+        verify(variablesServices).loadEventVariablesValues(
+                List.of("{participante.nome}"), EVENT_ID, USER_ID, "Nome Personalizado");
     }
 
     @Test

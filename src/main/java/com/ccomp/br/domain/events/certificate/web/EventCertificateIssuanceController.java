@@ -15,10 +15,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+import jakarta.validation.constraints.Size;
 
 import java.util.UUID;
 
 @RestController
+@Validated
 @RequestMapping("/api/events")
 @Tag(name = "events/certificate/issuance (Emissão de certificados)",
         description = "Emissão de certificados para participantes, ministrantes e equipe do evento")
@@ -30,7 +33,7 @@ public class EventCertificateIssuanceController {
     }
 
     @Operation(summary = "Consultar certificado do evento",
-            description = "Gera o certificado do evento para o usuário autenticado somente após o encerramento do evento. Exige inscrição e status `CHECKED_IN` no evento. Eventos cancelados não emitem certificado. Credenciamento operacional não é requisito; a carga horária considera as atividades em que a pessoa participou.")
+            description = "Gera o certificado do evento para o usuário autenticado somente após o encerramento do evento. Exige inscrição e status `CHECKED_IN` no evento. Eventos cancelados não emitem certificado. Credenciamento operacional não é requisito; a carga horária considera as atividades em que a pessoa participou. O parâmetro opcional `name` personaliza o nome impresso sem alterar a conta.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
             @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado, evento cancelado ou participante sem check-in no evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
@@ -39,8 +42,10 @@ public class EventCertificateIssuanceController {
     })
     @GetMapping(value = "/{eventId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateFromEvent(@PathVariable Long eventId,
+                                                               @RequestParam(required = false) @Size(max = 255) String name,
                                                                @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromEvent(eventId, extractUserId(jwt));
+        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromEvent(
+                eventId, extractUserId(jwt), name);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(certificate.contentType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"certificado-evento-%d.png\"".formatted(eventId))
@@ -48,7 +53,7 @@ public class EventCertificateIssuanceController {
     }
 
     @Operation(summary = "Consultar certificado de atividade",
-            description = "Gera o certificado de atividade para o usuário autenticado. Exige inscrição ativa, status `CHECKED_IN` no evento e presença registrada especificamente nesta atividade. Após confirmar a presença pelo QR Code, a plataforma atualiza o check-in do evento e envia um e-mail avisando que o certificado está disponível. Credenciamento operacional é independente e não substitui os registros de presença.")
+            description = "Gera o certificado de atividade para o usuário autenticado. Exige inscrição ativa, status `CHECKED_IN` no evento e presença registrada especificamente nesta atividade. Após confirmar a presença pelo QR Code, a plataforma atualiza o check-in do evento e envia um e-mail avisando que o certificado está disponível. Credenciamento operacional é independente e não substitui os registros de presença. O parâmetro opcional `name` personaliza o nome impresso sem alterar a conta.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
             @ApiResponse(responseCode = "400", description = "Check-in do evento ou participação na atividade não registrados", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
@@ -57,8 +62,10 @@ public class EventCertificateIssuanceController {
     })
     @GetMapping(value = "/activities/{activityId}/certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateFromActivity(@PathVariable Long activityId,
+                                                                  @RequestParam(required = false) @Size(max = 255) String name,
                                                                   @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromActivity(activityId, extractUserId(jwt));
+        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromActivity(
+                activityId, extractUserId(jwt), name);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(certificate.contentType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"certificado-atividade-%d.png\"".formatted(activityId))

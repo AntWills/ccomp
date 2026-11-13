@@ -46,6 +46,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -320,21 +321,22 @@ class EventCertificateControllerTest {
 
     @Test
     void buildCertificateFromActivity_validRequest_returnsPngWithDisposition() throws Exception {
-        when(automaticCertificateServices.buildCertificateFromActivity(eq(77L), any()))
+        when(automaticCertificateServices.buildCertificateFromActivity(eq(77L), any(), eq("Ana Atividade")))
                 .thenReturn(new StorageExternal.StoredFile(
                         new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
                         MediaType.IMAGE_PNG_VALUE));
 
-        mockMvc.perform(get(ACTIVITY_CERTIFICATE_URL))
+        mockMvc.perform(get(ACTIVITY_CERTIFICATE_URL).param("name", "Ana Atividade"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"certificado-atividade-77.png\""));
+        verify(automaticCertificateServices).buildCertificateFromActivity(eq(77L), any(), eq("Ana Atividade"));
     }
 
     @Test
     void buildCertificateFromEvent_validRequest_returnsPngWithDisposition() throws Exception {
-        when(automaticCertificateServices.buildCertificateFromEvent(eq(50L), any()))
+        when(automaticCertificateServices.buildCertificateFromEvent(eq(50L), any(), isNull()))
                 .thenReturn(new StorageExternal.StoredFile(
                         new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
                         MediaType.IMAGE_PNG_VALUE));
@@ -344,6 +346,19 @@ class EventCertificateControllerTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"certificado-evento-50.png\""));
+    }
+
+    @Test
+    void buildCertificateFromEvent_forwardsOptionalParticipantName() throws Exception {
+        when(automaticCertificateServices.buildCertificateFromEvent(eq(50L), any(), eq("Ana Souza")))
+                .thenReturn(new StorageExternal.StoredFile(
+                        new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
+                        MediaType.IMAGE_PNG_VALUE));
+
+        mockMvc.perform(get(EVENT_CERTIFICATE_URL).param("name", "Ana Souza"))
+                .andExpect(status().isOk());
+
+        verify(automaticCertificateServices).buildCertificateFromEvent(eq(50L), any(), eq("Ana Souza"));
     }
 
     @Test
@@ -397,7 +412,7 @@ class EventCertificateControllerTest {
 
     @Test
     void buildCertificateFromActivity_notSubscribed_returns404Json() throws Exception {
-        when(automaticCertificateServices.buildCertificateFromActivity(eq(77L), any()))
+        when(automaticCertificateServices.buildCertificateFromActivity(eq(77L), any(), isNull()))
                 .thenThrow(new ResourceNotFoundException("O usuário não é inscrito nesta atividade."));
 
         mockMvc.perform(get(ACTIVITY_CERTIFICATE_URL))
@@ -408,7 +423,7 @@ class EventCertificateControllerTest {
 
     @Test
     void buildCertificateFromActivity_checkInNotDone_returns400Json() throws Exception {
-        when(automaticCertificateServices.buildCertificateFromActivity(eq(77L), any()))
+        when(automaticCertificateServices.buildCertificateFromActivity(eq(77L), any(), isNull()))
                 .thenThrow(new DomainException("O inscrito não participou desta atividade."));
 
         mockMvc.perform(get(ACTIVITY_CERTIFICATE_URL))

@@ -7,6 +7,7 @@ import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.redis.RedisConnectionFailureException;
+import org.springframework.data.redis.serializer.SerializationException;
 
 @Slf4j
 @Configuration
@@ -17,6 +18,10 @@ public class CacheResilienceConfig implements CachingConfigurer {
         return new CacheErrorHandler() {
             @Override
             public void handleCacheGetError(RuntimeException e, Cache cache, Object key) {
+                if (e instanceof SerializationException) {
+                    evictCorruptedEntry(cache, key, e);
+                    return;
+                }
                 report("ler", cache, e);
             }
 
@@ -41,6 +46,17 @@ public class CacheResilienceConfig implements CachingConfigurer {
                 report("limpar", cache, e);
             }
         };
+    }
+
+    private void evictCorruptedEntry(Cache cache, Object key, RuntimeException cause) {
+        try {
+            cache.evict(key);
+            log.warn("Entrada inválida removida do cache '{}' após falha de desserialização ({})",
+                    cache.getName(), cause.getClass().getSimpleName());
+        } catch (RuntimeException evictionError) {
+            log.warn("Falha ao remover entrada inválida do cache '{}'; seguindo sem cache",
+                    cache.getName(), evictionError);
+        }
     }
 
     private void report(String operation, Cache cache, RuntimeException e) {
