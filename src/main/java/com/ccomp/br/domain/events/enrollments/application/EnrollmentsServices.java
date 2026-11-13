@@ -203,7 +203,10 @@ public class EnrollmentsServices {
         boolean wasActive = enrollment.isActive();
         switch (newStatus) {
             case CONFIRMED -> enrollment.confirm();
-            case CHECKED_IN -> enrollment.checkIn(LocalDateTime.now(clock));
+            case CHECKED_IN -> {
+                if (!enrollment.isActive()) enrollment.confirm();
+                enrollment.checkIn(LocalDateTime.now(clock));
+            }
             case CANCELED -> enrollment.cancel();
             case BANNED -> enrollment.ban();
         }
@@ -221,7 +224,7 @@ public class EnrollmentsServices {
     }
 
     private void updateLinkedActivityCounters(Long enrollmentId, boolean active) {
-        for (Long activityId : enrollmentActivityRepository.findActivityIdsByEnrollmentId(enrollmentId)) {
+        for (Long activityId : enrollmentActivityRepository.findNonCanceledActivityIdsByEnrollmentId(enrollmentId)) {
             EventActivity activity = activityRepository.findByIdForUpdate(activityId)
                     .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
             if (active) activity.registerActiveEnrollment();

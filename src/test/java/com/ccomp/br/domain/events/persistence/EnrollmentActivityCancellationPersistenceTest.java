@@ -77,6 +77,8 @@ class EnrollmentActivityCancellationPersistenceTest {
         assertThat(persisted.getActivity().getId()).isEqualTo(fixture.activity().getId());
         assertThat(persistedActivity.getActiveEnrollmentCount()).isZero();
         assertThat(enrollmentActivityDslRepository.countActiveByActivityId(fixture.activity().getId())).isZero();
+        assertThat(enrollmentActivityRepository.findNonCanceledActivityIdsByEnrollmentId(fixture.enrollment().getId()))
+                .doesNotContain(fixture.activity().getId());
         assertThat(enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, fixture.activity().getId()))
                 .get().extracting(EnrollmentActivity::isCanceled).isEqualTo(true);
         assertThat(persistedEventEnrollment.getStatus()).isEqualTo(EnumEnrollmentState.CHECKED_IN);
