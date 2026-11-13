@@ -97,8 +97,8 @@ public class EnrollmentActivityDslRepository {
                                 Projections.constructor(UserActivitySummaryDTO.class,
                                         Projections.constructor(UserSummaryDTO.class, userModel.id, userModel.name,
                                                 userModel.emailAddress),
-                                        enrollmentActivity.attendedAt.isNotNull(), enrollmentActivity.id,
-                                        enrollmentActivity.createdAt),
+                                        enrollmentActivity.attendedAt.isNotNull(), enrollmentActivity.canceled,
+                                        enrollment.status, enrollmentActivity.id, enrollmentActivity.createdAt),
                                 relevance == null ? Expressions.nullExpression(Double.class) : relevance
                 ))
                 .from(enrollmentActivity)

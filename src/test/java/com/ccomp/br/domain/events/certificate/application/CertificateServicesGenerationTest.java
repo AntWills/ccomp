@@ -114,7 +114,7 @@ class CertificateServicesGenerationTest {
                 .variables(List.of())
                 .boxes(List.of())
                 .build());
-        when(variablesServices.loadEventVariablesValues(List.of(), EVENT_ID, USER_ID)).thenReturn(Map.of());
+        when(variablesServices.loadEventVariablesValues(List.of(), EVENT_ID, USER_ID, null)).thenReturn(Map.of());
 
         StorageExternal.StoredFile generated = createService().buildCertificateFromEvent(EVENT_ID, USER_ID);
 

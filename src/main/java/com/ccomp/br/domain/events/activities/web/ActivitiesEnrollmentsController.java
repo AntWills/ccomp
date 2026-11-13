@@ -99,7 +99,7 @@ public class ActivitiesEnrollmentsController {
 
     @Operation(
             summary = "Lista os inscritos de uma atividade",
-            description = "Retorna uma lista paginada (por cursor) dos usuários inscritos em uma atividade específica. O acesso é restrito a administradores do sistema, ao dono do evento ou aos editores autorizados."
+            description = "Retorna uma lista paginada (por cursor) dos usuários com vínculo na atividade, inclusive vínculos cancelados. Cada item informa `canceled` para o cancelamento específico da atividade e `eventEnrollmentStatus` (CONFIRMED, CHECKED_IN, CANCELED ou BANNED) para o estado da inscrição no evento. O acesso é restrito a administradores do sistema, ao dono do evento ou aos editores autorizados."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Página de inscritos retornada com sucesso"),
