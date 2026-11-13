@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.persistence;
 
 import com.ccomp.br.config.QueryDslConfig;
+import com.ccomp.br.shared.utils.TextSearchSession;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
 import com.ccomp.br.domain.events.activities.persistence.EventActivity;
@@ -34,7 +35,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import({QueryDslConfig.class, EnrollmentActivityDslRepository.class, EventActivityDslRepository.class})
+@Import({QueryDslConfig.class, EnrollmentActivityDslRepository.class, EventActivityDslRepository.class,
+        TextSearchSession.class})
 class EnrollmentActivityCancellationPersistenceTest {
     @Autowired private EventRepository eventRepository;
     @Autowired private EventActivityRepository activityRepository;
