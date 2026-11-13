@@ -86,11 +86,12 @@ public class ActivitiesEnrollmentsController {
             @PathVariable Long activityId,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) String searchTerm,
             @AuthenticationPrincipal Jwt jwt
     ) {
         return ResponseEntity.ok(
                 activitiesEnrollmentsServices.findAllUsersFromActivity(
-                        extractUserId(jwt), activityId, cursor, pageSize)
+                        extractUserId(jwt), activityId, cursor, pageSize, searchTerm)
         );
     }
 

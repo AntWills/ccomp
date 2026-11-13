@@ -7,6 +7,7 @@ import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.domain.events.enrollments.dto.UserActivitySummaryDTO;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentActivityCursor;
+import com.ccomp.br.domain.events.enrollments.dto.ActivityEnrollmentSearchResult;
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivity;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
@@ -199,7 +200,8 @@ public class ActivitiesEnrollmentsServices {
         return new MessageResponse("Inscrição removida com sucesso.");
     }
 
-    public CursorPage<UserActivitySummaryDTO> findAllUsersFromActivity(UUID userId, Long activityId, String cursor, int pageSize) {
+    public CursorPage<UserActivitySummaryDTO> findAllUsersFromActivity(UUID userId, Long activityId, String cursor,
+                                                                       int pageSize, String searchTerm) {
         pageSize = Math.min(pageSize, 50);
 
         Event event = eventActivityDslRepository.findEventByActivityId(activityId)
@@ -209,12 +211,19 @@ public class ActivitiesEnrollmentsServices {
             throw new AccessDeniedException("Você não possui permissão para visualizar os incritos.");
 
         EnrollmentActivityCursor cursorDecoded = CursorUtils.decode(cursor, EnrollmentActivityCursor.class);
-        List<UserActivitySummaryDTO> result = enrollmentActivityDslRepository
-                .findAllUsersByActivityId(activityId, cursorDecoded, pageSize + 1);
+        String normalizedTerm = searchTerm == null ? null : searchTerm.trim();
+        if (normalizedTerm != null && normalizedTerm.isBlank()) normalizedTerm = null;
+        if (normalizedTerm != null && cursorDecoded != null && cursorDecoded.id() != null
+                && cursorDecoded.relevance() == null) {
+            throw new IllegalArgumentException("O cursor não corresponde a uma busca por texto.");
+        }
+        List<ActivityEnrollmentSearchResult> result = enrollmentActivityDslRepository
+                .findAllUsersByActivityId(activityId, normalizedTerm, cursorDecoded, pageSize + 1);
 
         return CursorUtils.buildPage(
                 result,
                 pageSize,
-                ua -> new EnrollmentActivityCursor(ua.id(), ua.createdAt()));
+                ActivityEnrollmentSearchResult::enrollment,
+                ua -> new EnrollmentActivityCursor(ua.relevance(), ua.enrollment().id(), ua.enrollment().createdAt()));
     }
 }

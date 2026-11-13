@@ -6,6 +6,7 @@ import com.ccomp.br.domain.events.activities.persistence.EventActivityRepository
 import com.ccomp.br.domain.events.core.persistence.Event;
 import com.ccomp.br.domain.events.core.persistence.EventRepository;
 import com.ccomp.br.domain.events.enrollments.dto.UserActivitySummaryDTO;
+import com.ccomp.br.domain.events.enrollments.dto.ActivityEnrollmentSearchResult;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.events.core.enums.EnumEventCategory;
 import com.ccomp.br.domain.events.core.enums.EnumEventFormat;
@@ -14,6 +15,7 @@ import com.ccomp.br.domain.events.enrollments.dto.EnrollmentActivityCursor;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityRegistrationPolicy;
 import com.ccomp.br.domain.events.activities.enums.EnumActivityType;
 import com.ccomp.br.domain.events.enrollments.persistence.*;
+import com.ccomp.br.shared.utils.TextSearchSession;
 import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.domain.users.persistence.UserModel;
 import com.ccomp.br.module.email.EmailAddress;
@@ -37,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import({QueryDslConfig.class, EnrollmentActivityDslRepository.class})
+@Import({QueryDslConfig.class, EnrollmentActivityDslRepository.class, TextSearchSession.class})
 public class EnrollmentActivityDslRepositoryTest {
 
     @Autowired
@@ -272,25 +274,66 @@ public class EnrollmentActivityDslRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        List<UserActivitySummaryDTO> result1 = dslRepository.findAllUsersByActivityId(targetActivity.getId(), null, 2);
+        List<ActivityEnrollmentSearchResult> result1 = dslRepository.findAllUsersByActivityId(targetActivity.getId(), null, null, 2);
 
         assertThat(result1).isNotNull();
         assertThat(result1).hasSize(2);
 
         assertThat(result1)
-                .extracting(dto -> dto.user().emailAddress().getValue())
+                .extracting(dto -> dto.enrollment().user().emailAddress().getValue())
                 .containsExactlyInAnyOrder("charlie@teste.com", "bob@teste.com");
 
-        EnrollmentActivityCursor cursor = new EnrollmentActivityCursor(result1.getLast().id(),
-                result1.getLast().createdAt());
+        EnrollmentActivityCursor cursor = new EnrollmentActivityCursor(null, result1.getLast().enrollment().id(),
+                result1.getLast().enrollment().createdAt());
 
-        List<UserActivitySummaryDTO> result2 = dslRepository.findAllUsersByActivityId(targetActivity.getId(), cursor, 10);
+        List<ActivityEnrollmentSearchResult> result2 = dslRepository.findAllUsersByActivityId(targetActivity.getId(), null, cursor, 10);
 
         assertThat(result2).isNotNull();
         assertThat(result2).hasSize(1);
 
         assertThat(result2)
-                .extracting(dto -> dto.user().emailAddress().getValue())
+                .extracting(dto -> dto.enrollment().user().emailAddress().getValue())
                 .containsExactlyInAnyOrder("alice@teste.com");
+    }
+
+    @Test
+    void searchByNameAndEmailUsesRelevanceCursorAcrossPages() {
+        UserModel matchingByName = persistUser("Ana Silva", "ana.silva@example.com");
+        UserModel matchingByEmail = persistUser("Pessoa Um", "ana.contato@example.com");
+        UserModel unrelated = persistUser("Bruno Souza", "bruno@example.com");
+        persistActivityEnrollment(matchingByName, LocalDateTime.now().minusHours(3));
+        persistActivityEnrollment(matchingByEmail, LocalDateTime.now().minusHours(2));
+        persistActivityEnrollment(unrelated, LocalDateTime.now().minusHours(1));
+        entityManager.flush();
+        entityManager.clear();
+
+        var firstPage = dslRepository.findAllUsersByActivityId(activity.getId(), "ana", null, 1);
+
+        assertThat(firstPage).hasSize(1);
+        assertThat(firstPage.getFirst().relevance()).isNotNull();
+        assertThat(firstPage.getFirst().enrollment().user().name()).isEqualTo("Ana Silva");
+        var cursor = new EnrollmentActivityCursor(firstPage.getFirst().relevance(),
+                firstPage.getFirst().enrollment().id(), firstPage.getFirst().enrollment().createdAt());
+        var secondPage = dslRepository.findAllUsersByActivityId(activity.getId(), "ana", cursor, 10);
+
+        assertThat(secondPage).hasSize(1);
+        assertThat(secondPage.getFirst().enrollment().user().emailAddress().getValue())
+                .isEqualTo("ana.contato@example.com");
+    }
+
+    private UserModel persistUser(String name, String email) {
+        UserModel user = UserModel.builder().name(name).emailAddress(new EmailAddress(email)).password("hash123")
+                .statusAccount(EnumUserStatusAccount.ACTIVE).createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now()).build();
+        entityManager.persist(user);
+        return user;
+    }
+
+    private void persistActivityEnrollment(UserModel user, LocalDateTime createdAt) {
+        Enrollment enrollment = Enrollment.builder().event(event).userId(user.getId())
+                .status(EnumEnrollmentState.CONFIRMED).build();
+        entityManager.persist(enrollment);
+        entityManager.persist(EnrollmentActivity.builder().enrollment(enrollment).activity(activity)
+                .createdAt(createdAt).build());
     }
 }

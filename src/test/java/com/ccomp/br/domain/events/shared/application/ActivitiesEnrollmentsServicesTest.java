@@ -12,6 +12,7 @@ import com.ccomp.br.domain.events.core.utils.EventMapper;
 import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivity;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentActivityCursor;
+import com.ccomp.br.domain.events.enrollments.dto.ActivityEnrollmentSearchResult;
 import com.ccomp.br.domain.events.enrollments.dto.EnrollmentsCursor;
 import com.ccomp.br.domain.events.enrollments.dto.UserActivitySummaryDTO;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityDslRepository;
@@ -287,12 +288,12 @@ class ActivitiesEnrollmentsServicesTest {
         when(eventActivityDslRepository.findEventByActivityId(9L)).thenReturn(Optional.of(event));
         when(eventMapper.eventToEventDTO(any(), any())).thenReturn(eventDTO);
         when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
-        when(enrollmentActivityDslRepository.findAllUsersByActivityId(9L, null, 11)).thenReturn(List.of());
+        when(enrollmentActivityDslRepository.findAllUsersByActivityId(9L, null, null, 11)).thenReturn(List.of());
 
-        var page = service.findAllUsersFromActivity(userId, 9L, null, 10);
+        var page = service.findAllUsersFromActivity(userId, 9L, null, 10, null);
 
         assertThat(page.content()).isEmpty();
-        verify(enrollmentActivityDslRepository).findAllUsersByActivityId(9L, null, 11);
+        verify(enrollmentActivityDslRepository).findAllUsersByActivityId(9L, null, null, 11);
     }
 
     @Test
@@ -303,7 +304,7 @@ class ActivitiesEnrollmentsServicesTest {
         when(eventMapper.eventToEventDTO(any(), any())).thenReturn(eventDTO);
         when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.findAllUsersFromActivity(userId, 9L, null, 10))
+        assertThatThrownBy(() -> service.findAllUsersFromActivity(userId, 9L, null, 10, null))
                 .isInstanceOf(AccessDeniedException.class);
         verifyNoInteractions(enrollmentActivityDslRepository);
     }
@@ -317,16 +318,52 @@ class ActivitiesEnrollmentsServicesTest {
         when(eventActivityDslRepository.findEventByActivityId(9L)).thenReturn(Optional.of(event));
         when(eventMapper.eventToEventDTO(any(), any())).thenReturn(eventDTO);
         when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
-        when(enrollmentActivityDslRepository.findAllUsersByActivityId(9L, null, 2)).thenReturn(List.of(
-                new UserActivitySummaryDTO(null, false, 52L, firstDate),
-                new UserActivitySummaryDTO(null, false, 51L, secondDate)));
+        when(enrollmentActivityDslRepository.findAllUsersByActivityId(9L, null, null, 2)).thenReturn(List.of(
+                new ActivityEnrollmentSearchResult(new UserActivitySummaryDTO(null, false, 52L, firstDate), null),
+                new ActivityEnrollmentSearchResult(new UserActivitySummaryDTO(null, false, 51L, secondDate), null)));
 
-        var page = service.findAllUsersFromActivity(userId, 9L, null, 1);
+        var page = service.findAllUsersFromActivity(userId, 9L, null, 1, null);
 
         assertThat(CursorUtils.decode(page.nextCursor(), EnrollmentActivityCursor.class))
-                .isEqualTo(new EnrollmentActivityCursor(52L, firstDate));
+                .isEqualTo(new EnrollmentActivityCursor(null, 52L, firstDate));
         String legacyCursor = CursorUtils.encode(new EnrollmentsCursor(null, firstDate, 52L));
         assertThat(CursorUtils.decode(legacyCursor, EnrollmentActivityCursor.class))
-                .isEqualTo(new EnrollmentActivityCursor(52L, firstDate));
+                .isEqualTo(new EnrollmentActivityCursor(null, 52L, firstDate));
+    }
+
+    @Test
+    void findActivityEnrollmentsPassesSearchTermAndCarriesRelevanceInCursor() {
+        Event event = mock(Event.class);
+        EventDTO eventDTO = mock(EventDTO.class);
+        var date = java.time.LocalDateTime.parse("2026-11-08T10:00:00");
+        when(eventActivityDslRepository.findEventByActivityId(9L)).thenReturn(Optional.of(event));
+        when(eventMapper.eventToEventDTO(any(), any())).thenReturn(eventDTO);
+        when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
+        when(enrollmentActivityDslRepository.findAllUsersByActivityId(eq(9L), eq("ana"), isNull(), eq(2)))
+                .thenReturn(List.of(
+                        new ActivityEnrollmentSearchResult(new UserActivitySummaryDTO(null, false, 52L, date), 1.25),
+                        new ActivityEnrollmentSearchResult(new UserActivitySummaryDTO(null, false, 51L, date.minusMinutes(1)), 1.1)));
+
+        var page = service.findAllUsersFromActivity(userId, 9L, null, 1, " ana ");
+
+        assertThat(page.content()).hasSize(1);
+        assertThat(CursorUtils.decode(page.nextCursor(), EnrollmentActivityCursor.class))
+                .isEqualTo(new EnrollmentActivityCursor(1.25, 52L, date));
+    }
+
+    @Test
+    void findActivityEnrollmentsRejectsCursorWithoutRelevanceWhenSearchTermIsPresent() {
+        Event event = mock(Event.class);
+        EventDTO eventDTO = mock(EventDTO.class);
+        when(eventActivityDslRepository.findEventByActivityId(9L)).thenReturn(Optional.of(event));
+        when(eventMapper.eventToEventDTO(any(), any())).thenReturn(eventDTO);
+        when(eventAccessPolicy.canEdit(eventDTO, userId)).thenReturn(true);
+        String cursor = CursorUtils.encode(new EnrollmentActivityCursor(null, 52L,
+                java.time.LocalDateTime.parse("2026-11-08T10:00:00")));
+
+        assertThatThrownBy(() -> service.findAllUsersFromActivity(userId, 9L, cursor, 10, "ana"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("cursor não corresponde");
+        verifyNoInteractions(enrollmentActivityDslRepository);
     }
 }
