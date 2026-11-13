@@ -169,6 +169,11 @@ public class CertificateVariablesServices {
      * horária das atividades em que ele realmente participou.
      */
     public Map<String, String> loadEventVariablesValues(List<String> variables, Long eventId, UUID userId) {
+        return loadEventVariablesValues(variables, eventId, userId, null);
+    }
+
+    public Map<String, String> loadEventVariablesValues(List<String> variables, Long eventId, UUID userId,
+                                                        @Nullable String participantName) {
         EventDTO event = findCertificateEligibleEventDto(eventId);
 
         Enrollment enrollment = enrollmentRepository.findByUserIdAndEventId(userId, eventId)
@@ -204,7 +209,7 @@ public class CertificateVariablesServices {
 
             Map<String, String> values = new HashMap<>();
 
-            extractValuesFromUser(values, userFuture.join());
+            extractValuesFromUser(values, userFuture.join(), participantName);
             extractValuesFromEvent(values, event, workloadFuture.join());
             extractValuesFromValidator(values, validationCodeFuture.join());
 
@@ -392,6 +397,11 @@ public class CertificateVariablesServices {
     }
 
     public Map<String, String> loadActivityVariablesValues(@NonNull List<String> variables, Long activityId, UUID userId) {
+        return loadActivityVariablesValues(variables, activityId, userId, null);
+    }
+
+    public Map<String, String> loadActivityVariablesValues(@NonNull List<String> variables, Long activityId,
+                                                           UUID userId, @Nullable String participantName) {
         // 1. Validação prévia de Inscrição e Check-in (Síncrona - Interrompe antes de abrir threads)
         var enrollmentActivity = enrollmentActivityDslRepository.findByUserIdAndActivityId(userId, activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("O usuário não é inscrito nesta atividade."));
@@ -450,7 +460,7 @@ public class CertificateVariablesServices {
 
             Map<String, String> values = new HashMap<>();
 
-            extractValuesFromUser(values, userFuture.join());
+            extractValuesFromUser(values, userFuture.join(), participantName);
             extractValuesFromActivity(values, activityFuture.join());
             extractValuesFromEvent(values, eventFuture.join(), eventWorkloadFuture.join());
             extractValuesFromValidator(values, validationCodeFuture.join());
@@ -492,9 +502,12 @@ public class CertificateVariablesServices {
         return values;
     }
 
-    private void extractValuesFromUser(Map<String, String> values, @Nullable UserDTO user) {
+    private void extractValuesFromUser(Map<String, String> values, @Nullable UserDTO user,
+                                       @Nullable String participantName) {
         if (user != null) {
-            values.put("{participante.nome}", user.name());
+            String normalizedName = participantName == null ? null : participantName.trim();
+            values.put("{participante.nome}", normalizedName == null || normalizedName.isBlank()
+                    ? user.name() : normalizedName);
         }
     }
 

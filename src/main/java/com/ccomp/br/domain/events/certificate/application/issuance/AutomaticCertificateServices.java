@@ -51,6 +51,10 @@ public class AutomaticCertificateServices {
     }
 
     public StorageExternal.StoredFile buildCertificateFromEvent(Long eventId, UUID userId) {
+        return buildCertificateFromEvent(eventId, userId, null);
+    }
+
+    public StorageExternal.StoredFile buildCertificateFromEvent(Long eventId, UUID userId, String participantName) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -66,7 +70,8 @@ public class AutomaticCertificateServices {
                     CompletableFuture.supplyAsync(() -> certificateFetcher.fetchBoxTemplate(eventId), executor);
 
             CompletableFuture<Map<String, String>> variablesFuture = eventBoxFuture.thenApplyAsync(
-                    eventBox -> variablesServices.loadEventVariablesValues(eventBox.getVariables(), eventId, userId),
+                    eventBox -> variablesServices.loadEventVariablesValues(
+                            eventBox.getVariables(), eventId, userId, participantName),
                     executor
             );
 
@@ -88,6 +93,11 @@ public class AutomaticCertificateServices {
     }
 
     public StorageExternal.StoredFile buildCertificateFromActivity(Long activityId, UUID userId) {
+        return buildCertificateFromActivity(activityId, userId, null);
+    }
+
+    public StorageExternal.StoredFile buildCertificateFromActivity(Long activityId, UUID userId,
+                                                                    String participantName) {
         var activity = activityCache.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
 
@@ -99,7 +109,8 @@ public class AutomaticCertificateServices {
                             eventId, activityId, EnumActivityCertificateTemplateType.PARTICIPANT), executor);
 
             CompletableFuture<Map<String, String>> variablesFuture = activityTemplateFuture.thenApplyAsync(
-                    activityTemplate -> variablesServices.loadActivityVariablesValues(activityTemplate.variables(), activityId, userId),
+                    activityTemplate -> variablesServices.loadActivityVariablesValues(
+                            activityTemplate.variables(), activityId, userId, participantName),
                     executor
             );
 

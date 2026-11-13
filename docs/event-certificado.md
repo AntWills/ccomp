@@ -169,6 +169,8 @@ As rotas automáticas exigem JWT. Elas retornam a imagem PNG para download. A el
 
 Emite para a própria pessoa autenticada. Ela precisa estar inscrita e com check-in no evento. O evento deve estar encerrado (`FINISHED`) e não cancelado. O credenciamento operacional não substitui o check-in exigido aqui.
 
+O parâmetro opcional `name` substitui `{participante.nome}` somente nesta geração. Ele é aparado nas extremidades e limitado a 255 caracteres; ausente ou em branco, usa o nome da conta. Não altera o perfil.
+
 A carga horária exibida é a carga horária configurada para o evento somada às cargas das atividades em que a pessoa registrou presença. O código de validação identifica o par evento, destinatário e tipo de certificado; chamadas posteriores reutilizam o código existente.
 
 ### Certificado de atividade
@@ -176,6 +178,8 @@ A carga horária exibida é a carga horária configurada para o evento somada à
 `GET /api/events/activities/{activityId}/certificate`
 
 Emite para a própria pessoa autenticada. Exige inscrição ativa na atividade, check-in no evento e presença registrada especificamente naquela atividade. Não exige que o evento esteja encerrado. Usa o template resolvido para participante: atividade, fallback de atividade do evento ou padrão. A carga horária da atividade exibida é a carga horária configurada para ela; quando o template usa variáveis do evento, a carga do evento segue o cálculo do certificado de evento.
+
+Também aceita o parâmetro opcional `name` com a mesma regra do certificado do evento: personaliza `{participante.nome}` somente na geração e não altera o perfil.
 
 O código de validação identifica atividade e destinatário. A confirmação de presença por QR Code pode atualizar o check-in do evento e disparar o aviso por e-mail de que o certificado está disponível; credenciamento operacional continua sendo um fluxo separado.
 

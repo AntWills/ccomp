@@ -231,10 +231,10 @@ class CertificateVariablesServicesTest {
                 "{evento.carga_horaria}",
                 "{validacao.codigo}",
                 "{validacao.url}"
-        ), 10L, USER_ID);
+        ), 10L, USER_ID, "  Nome Personalizado  ");
 
         assertThat(values)
-                .containsEntry("{participante.nome}", "Ana Souza")
+                .containsEntry("{participante.nome}", "Nome Personalizado")
                 .containsEntry("{evento.title}", "Semanas de Tecnologia")
                 .containsEntry("{evento.data_inicio}", "06/11/2026")
                 .containsEntry("{evento.data_fim}", "07/11/2026")
@@ -313,10 +313,10 @@ class CertificateVariablesServicesTest {
                 "{atividade.carga_horaria}",
                 "{validacao.codigo}",
                 "{validacao.url}"
-        ), 77L, USER_ID);
+        ), 77L, USER_ID, "Nome Profissional");
 
         assertThat(values)
-                .containsEntry("{participante.nome}", "Ana Souza")
+                .containsEntry("{participante.nome}", "Nome Profissional")
                 .containsEntry("{atividade.nome}", "Workshop de IA")
                 .containsEntry("{atividade.carga_horaria}", "4")
                 .containsEntry("{validacao.codigo}", "ABC12345")
