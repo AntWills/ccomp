@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record EnrollmentActivityCursor(
+    Double relevance,
     Long id,
     LocalDateTime createdAt
 ) {

@@ -48,7 +48,6 @@ public class EnrollmentActivityDslRepository {
                 .from(enrollmentActivity)
                 .innerJoin(enrollmentActivity.enrollment, enrollment)
                 .where(enrollmentActivity.activity.id.eq(activityId),
-                        enrollmentActivity.canceled.isFalse(),
                         enrollment.status.in(EnumEnrollmentState.CONFIRMED, EnumEnrollmentState.CHECKED_IN))
                 .fetchOne();
         return count == null ? 0 : count;
@@ -80,7 +79,6 @@ public class EnrollmentActivityDslRepository {
                                 userModel.emailAddress
                         ),
                         enrollmentActivity.attendedAt.isNotNull(),
-                        enrollmentActivity.canceled,
                         enrollmentActivity.id,
                         enrollmentActivity.createdAt
                 ))

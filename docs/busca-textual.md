@@ -36,6 +36,8 @@ Para o PostgreSQL poder usar os índices GIN de `tb_users.name` e `tb_users.emai
 
 `GET /api/events/{eventId}/enrollments` aceita `searchTerm` opcional para pesquisar nome e e-mail dos inscritos, além dos filtros existentes `status`, `pageSize` e `nextCursor`. O termo usa o mesmo limiar de similaridade de 40% e a pontuação por melhor correspondência de nome/e-mail da busca de credenciamento. Quando há termo, a ordenação é por relevância decrescente, `createdAt` e ID decrescentes; o cursor inclui a relevância para continuar essa ordenação. Sem termo, a ordenação e o cursor continuam usando `createdAt` e ID. Ao avançar páginas, o cliente deve manter os mesmos filtros e o mesmo `searchTerm`.
 
+`GET /api/events/activities/{activityId}/enrollments` também aceita `searchTerm` opcional e pesquisa nome e e-mail com a mesma regra de similaridade (40%) e pontuação por melhor correspondência. Com termo, ordena por relevância decrescente e depois por `createdAt` e ID decrescentes; sem termo mantém a ordenação por `createdAt` e ID. Ao avançar páginas, mantenha o mesmo `searchTerm` e use o cursor retornado.
+
 ## Índices e planos de consulta
 
 O PostgreSQL permite criar índices GIN trigramáticos usando `gin_trgm_ops` para os campos pesquisáveis. No exemplo de usuários, a migração `V22__add_user_text_search.sql` habilita `pg_trgm` e cria índices para `tb_users.name` e `tb_users.email_address`.
