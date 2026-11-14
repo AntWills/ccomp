@@ -12,6 +12,7 @@ import java.util.UUID;
 public interface ClubMemberRepository extends JpaRepository<ClubMember, Long>, JpaSpecificationExecutor<ClubMember> {
     List<ClubMember> findByUserId(UUID userId);
     Optional<ClubMember> findByUserIdAndClubId(UUID userId, Long clubId);
+    Optional<ClubMember> findByClub_IdAndUserId(Long clubId, UUID userId);
     boolean existsByUserIdAndClubIdAndRoleAndStatus(UUID userId, Long clubId, EnumClubMemberRole role, EnumClubMemberStatus status);
     boolean existsByUserIdAndClubIdAndStatus(UUID userId, Long clubId, EnumClubMemberStatus status);
 }
