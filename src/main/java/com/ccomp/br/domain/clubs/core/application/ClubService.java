@@ -76,7 +76,7 @@ public class ClubService {
         return clubRepository.findById(clubId)
                 .filter(club -> switch (club.getStatus()) {
                     case OPEN -> true;
-                    case MEMBERS_ONLY -> clubAccessPolicy.isActiveMember(clubId, userId)
+                    case MEMBERS_ONLY -> clubAccessPolicy.isMember(clubId, userId)
                             || clubAccessPolicy.isManager(clubId, userId);
                     case DRAFT -> clubAccessPolicy.isManager(clubId, userId);
                 })

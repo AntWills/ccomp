@@ -78,11 +78,11 @@ public class ClubCertificateService {
         }
 
         var member = memberRepository.findByClub_IdAndUserId(clubId, recipientId)
-                .filter(link -> link.getStatus() == EnumClubMemberStatus.ACTIVE)
+                .filter(link -> link.getStatus() == EnumClubMemberStatus.COMPLETED)
                 .filter(link -> type == EnumClubCertificateType.INSTRUCTOR
                         ? link.getRole() == EnumClubMemberRole.INSTRUCTOR
                         : link.getRole() == EnumClubMemberRole.MEMBER)
-                .orElseThrow(() -> new AccessDeniedException("A pessoa não possui vínculo ativo com esse papel no clube."));
+                .orElseThrow(() -> new AccessDeniedException("A pessoa precisa estar com status COMPLETED no papel correspondente para emitir o certificado."));
 
         UserDTO user = userManagement.findById(recipientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
@@ -119,8 +119,8 @@ public class ClubCertificateService {
     @Transactional
     public StorageExternal.StoredFile issueForCurrentMember(Long clubId, UUID userId) {
         var member = memberRepository.findByClub_IdAndUserId(clubId, userId)
-                .filter(link -> link.getStatus() == EnumClubMemberStatus.ACTIVE)
-                .orElseThrow(() -> new AccessDeniedException("É necessário ter vínculo ativo com o clube."));
+                .filter(link -> link.getStatus() == EnumClubMemberStatus.COMPLETED)
+                .orElseThrow(() -> new AccessDeniedException("É necessário ter status COMPLETED no clube para emitir o certificado."));
         EnumClubCertificateType type = member.getRole() == EnumClubMemberRole.INSTRUCTOR
                 ? EnumClubCertificateType.INSTRUCTOR : EnumClubCertificateType.MEMBER;
         return issue(clubId, userId, type, userId);

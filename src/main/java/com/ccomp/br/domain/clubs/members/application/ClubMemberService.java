@@ -182,6 +182,8 @@ public class ClubMemberService {
             member.activate();
         } else if (newStatus == EnumClubMemberStatus.CANCELLED) {
             member.unsubscribe();
+        } else if (newStatus == EnumClubMemberStatus.COMPLETED) {
+            member.complete();
         }
         clubMemberRepository.save(member);
     }

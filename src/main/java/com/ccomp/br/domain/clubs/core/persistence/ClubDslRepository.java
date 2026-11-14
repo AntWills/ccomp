@@ -114,7 +114,7 @@ public class ClubDslRepository {
         whereClause.and(clubMember.role.in(EnumClubMemberRole.MEMBER, EnumClubMemberRole.INSTRUCTOR));
         whereClause.and(club.status.eq(EnumClubStatus.OPEN)
                 .or(club.status.eq(EnumClubStatus.MEMBERS_ONLY)
-                        .and(clubMember.status.eq(EnumClubMemberStatus.ACTIVE)))
+                        .and(clubMember.status.in(EnumClubMemberStatus.ACTIVE, EnumClubMemberStatus.COMPLETED)))
                 .or(club.status.eq(EnumClubStatus.DRAFT)
                         .and(clubMember.role.eq(EnumClubMemberRole.INSTRUCTOR))
                         .and(clubMember.status.eq(EnumClubMemberStatus.ACTIVE))));

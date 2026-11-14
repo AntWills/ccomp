@@ -72,6 +72,11 @@ public class ClubMember {
         this.leftAt = LocalDateTime.now();
     }
 
+    public void complete() {
+        this.status = EnumClubMemberStatus.COMPLETED;
+        this.leftAt = LocalDateTime.now();
+    }
+
     public boolean isInstructor(Long clubId) {
         return this.role == EnumClubMemberRole.INSTRUCTOR && clubId.equals(this.club.getId());
     }

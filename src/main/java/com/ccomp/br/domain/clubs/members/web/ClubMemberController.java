@@ -132,7 +132,7 @@ public class ClubMemberController {
     @PatchMapping("/{clubId}/members/{memberId}/status")
     @Operation(
             summary = "Altera o status de um membro no clube",
-            description = "Atualiza o status do vínculo (ACTIVE, INACTIVE ou CANCELLED). Permitido ao instrutor do clube ou a usuários MODERATOR/ADMIN. O próprio membro não pode alterar o status, exceto MODERATOR/ADMIN."
+            description = "Atualiza o status do vínculo (ACTIVE, COMPLETED, INACTIVE ou CANCELLED). COMPLETED habilita emissão de certificado. Permitido ao instrutor do clube ou a usuários MODERATOR/ADMIN. O próprio membro não pode alterar o status, exceto MODERATOR/ADMIN."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Status alterado com sucesso"),
@@ -149,7 +149,7 @@ public class ClubMemberController {
             @Parameter(description = "ID da matrícula do membro", required = true)
             @PathVariable Long memberId,
 
-            @Parameter(description = "Novo status (ACTIVE, INACTIVE ou CANCELLED)", required = true)
+            @Parameter(description = "Novo status (ACTIVE, COMPLETED, INACTIVE ou CANCELLED)", required = true)
             @RequestParam EnumClubMemberStatus status,
 
             @AuthenticationPrincipal Jwt jwt

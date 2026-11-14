@@ -34,14 +34,16 @@ public class ClubCertificateController {
         this.workloadService = workloadService;
     }
 
-    @Operation(summary = "Emitir o próprio certificado do clube")
+    @Operation(summary = "Emitir o próprio certificado do clube",
+            description = "Exige vínculo no papel de MEMBER ou INSTRUCTOR com status COMPLETED.")
     @GetMapping(value = "/{clubId}/certificates/me", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> issueForMe(@PathVariable Long clubId, @AuthenticationPrincipal Jwt jwt) {
         UUID userId = requireUser(jwt);
         return certificateResponse(certificateService.issueForCurrentMember(clubId, userId));
     }
 
-    @Operation(summary = "Emitir certificado de um membro")
+    @Operation(summary = "Emitir certificado de um membro",
+            description = "A própria pessoa ou um gerente do clube pode emitir; o vínculo precisa estar COMPLETED com papel MEMBER.")
     @GetMapping(value = "/{clubId}/certificates/members/{recipientId}", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> issueForMember(@PathVariable Long clubId, @PathVariable UUID recipientId,
                                                     @AuthenticationPrincipal Jwt jwt) {
@@ -50,7 +52,8 @@ public class ClubCertificateController {
                 requireUser(jwt)));
     }
 
-    @Operation(summary = "Emitir certificado de um instrutor")
+    @Operation(summary = "Emitir certificado de um instrutor",
+            description = "O próprio instrutor ou um gerente do clube pode emitir; o vínculo precisa estar COMPLETED com papel INSTRUCTOR.")
     @GetMapping(value = "/{clubId}/certificates/instructors/{recipientId}", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> issueForInstructor(@PathVariable Long clubId, @PathVariable UUID recipientId,
                                                         @AuthenticationPrincipal Jwt jwt) {

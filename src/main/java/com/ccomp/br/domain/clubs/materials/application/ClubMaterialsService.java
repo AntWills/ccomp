@@ -192,7 +192,7 @@ public class ClubMaterialsService {
     }
 
     private void assertCanView(Club club, @Nullable UUID userId) {
-        boolean canView = accessPolicy.isActiveMember(club.getId(), userId)
+        boolean canView = accessPolicy.isMember(club.getId(), userId)
                 || accessPolicy.isManager(club.getId(), userId);
         if (!canView) {
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");

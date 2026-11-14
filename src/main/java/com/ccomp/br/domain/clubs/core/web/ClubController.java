@@ -119,7 +119,7 @@ public class ClubController {
     @PatchMapping("/{clubId}")
     @Operation(
             summary = "Atualiza dados de um clube",
-            description = "Atualiza as informações do clube. Permitido ao instrutor ativo do clube ou a usuários com perfil MODERATOR ou ADMIN."
+            description = "Atualiza as informações do clube, incluindo o status. Permitido ao instrutor ativo do clube ou a usuários com perfil MODERATOR ou ADMIN."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Clube atualizado com sucesso"),

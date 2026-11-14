@@ -7,6 +7,7 @@ import com.ccomp.br.domain.clubs.members.persistence.ClubMemberRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
+import java.util.List;
 
 @Component
 public class ClubAccessPolicy {
@@ -22,9 +23,9 @@ public class ClubAccessPolicy {
                 EnumClubMemberStatus.ACTIVE);
     }
 
-    public boolean isActiveMember(Long clubId, UUID userId) {
-        return userId != null && clubMemberRepository.existsByUserIdAndClubIdAndStatus(
-                userId, clubId, EnumClubMemberStatus.ACTIVE);
+    public boolean isMember(Long clubId, UUID userId) {
+        return userId != null && clubMemberRepository.existsByUserIdAndClubIdAndStatusIn(
+                userId, clubId, List.of(EnumClubMemberStatus.ACTIVE, EnumClubMemberStatus.COMPLETED));
     }
 
     public boolean isManager(Long clubId, UUID userId) {
