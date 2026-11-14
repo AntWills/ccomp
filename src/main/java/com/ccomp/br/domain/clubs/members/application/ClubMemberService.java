@@ -101,6 +101,9 @@ public class ClubMemberService {
 
         if (existingMemberOpt.isPresent()) {
             ClubMember existing = existingMemberOpt.get();
+            if (existing.getStatus() == EnumClubMemberStatus.BANNED) {
+                throw new ConflictException("O usuário está banido deste clube. Um gerente precisa reativar o vínculo.");
+            }
             if (existing.getStatus() == EnumClubMemberStatus.ACTIVE)
                 return existing;
 
@@ -158,6 +161,9 @@ public class ClubMemberService {
 
         if (existingMemberOpt.isPresent()) {
             ClubMember existing = existingMemberOpt.get();
+            if (existing.getStatus() == EnumClubMemberStatus.BANNED) {
+                throw new ConflictException("O usuário está banido deste clube. Altere o status para ACTIVE antes de adicioná-lo novamente.");
+            }
             if (existing.getStatus() == EnumClubMemberStatus.ACTIVE && existing.getRole() == role)
                 throw new ConflictException("Usuário já faz parte da equipe deste clube.");
 
@@ -201,6 +207,8 @@ public class ClubMemberService {
             member.unsubscribe();
         } else if (newStatus == EnumClubMemberStatus.COMPLETED) {
             member.complete();
+        } else if (newStatus == EnumClubMemberStatus.BANNED) {
+            member.ban();
         }
         clubMemberRepository.save(member);
     }

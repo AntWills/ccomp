@@ -77,9 +77,17 @@ public class ClubMember {
         this.leftAt = LocalDateTime.now();
     }
 
+    public void ban() {
+        this.status = EnumClubMemberStatus.BANNED;
+        this.leftAt = LocalDateTime.now();
+    }
+
     public boolean isInstructor(Long clubId) {
         return this.role == EnumClubMemberRole.INSTRUCTOR && clubId.equals(this.club.getId());
     }
 
-    public boolean isStillLinked() { return this.status != EnumClubMemberStatus.CANCELLED; }
+    public boolean isStillLinked() {
+        return this.status != EnumClubMemberStatus.CANCELLED
+                && this.status != EnumClubMemberStatus.BANNED;
+    }
 }

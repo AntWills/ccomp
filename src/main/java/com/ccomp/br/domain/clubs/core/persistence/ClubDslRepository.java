@@ -135,6 +135,7 @@ public class ClubDslRepository {
         BooleanBuilder whereClause = new BooleanBuilder();
 
         whereClause.and(clubMember.userId.eq(userId));
+        whereClause.and(clubMember.status.ne(EnumClubMemberStatus.BANNED));
         whereClause.and(clubMember.role.in(EnumClubMemberRole.MEMBER, EnumClubMemberRole.INSTRUCTOR));
         whereClause.and(club.status.eq(EnumClubStatus.OPEN)
                 .or(club.status.eq(EnumClubStatus.MEMBERS_ONLY)
