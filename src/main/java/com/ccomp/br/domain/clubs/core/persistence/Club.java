@@ -1,5 +1,6 @@
 package com.ccomp.br.domain.clubs.core.persistence;
 
+import com.ccomp.br.domain.clubs.core.enums.EnumClubStatus;
 import com.ccomp.br.domain.clubs.members.persistence.ClubMember;
 import jakarta.persistence.*;
 import lombok.*;
@@ -13,7 +14,8 @@ import java.util.List;
 @Entity
 @Table(name = "tb_clubs", indexes = {
         @Index(name = "idx_clubs_published_at_id", columnList = "published_at DESC, id DESC"),
-        @Index(name = "idx_clubs_created_at_id", columnList = "created_at DESC, id DESC")
+        @Index(name = "idx_clubs_created_at_id", columnList = "created_at DESC, id DESC"),
+        @Index(name = "idx_clubs_status_created_at_id", columnList = "status, created_at DESC, id DESC")
 })
 @Getter
 @Setter
@@ -47,6 +49,11 @@ public class Club {
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private EnumClubStatus status = EnumClubStatus.DRAFT;
+
     @Column(columnDefinition = "text")
     private String content;
 
@@ -58,8 +65,7 @@ public class Club {
 //    }
 
     public boolean isPublic() {
-        if(publishedAt ==  null) return false;
-        return publishedAt.isBefore(LocalDateTime.now());
+        return status == EnumClubStatus.OPEN;
     }
 
     @OneToMany(mappedBy = "club", cascade = CascadeType.ALL, orphanRemoval = true)

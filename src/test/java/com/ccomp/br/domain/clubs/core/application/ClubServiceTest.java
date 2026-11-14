@@ -87,7 +87,7 @@ class ClubServiceTest {
         when(accessPolicy.isInstructor(9L, id)).thenReturn(false);
 
         assertThrows(AccessDeniedException.class,
-                () -> service.update(9L, new UpdateClubRequestDTO(null, null, null, null, null), id));
+                () -> service.update(9L, new UpdateClubRequestDTO(null, null, null, null, null, null), id));
         verify(clubRepository, never()).save(any());
     }
 

@@ -6,6 +6,7 @@ import com.ccomp.br.domain.clubs.members.dto.ClubMemberListItem;
 import com.ccomp.br.domain.clubs.members.enums.EnumClubMemberStatus;
 import com.ccomp.br.domain.clubs.members.enums.EnumClubMemberRole;
 import com.ccomp.br.domain.clubs.core.persistence.ClubRepository;
+import com.ccomp.br.domain.clubs.core.enums.EnumClubStatus;
 import com.ccomp.br.domain.clubs.members.persistence.ClubMember;
 import com.ccomp.br.domain.clubs.members.persistence.ClubMemberDslRepository;
 import com.ccomp.br.domain.clubs.members.persistence.ClubMemberRepository;
@@ -73,8 +74,11 @@ public class ClubMemberService {
 
     @Transactional
     public ClubMember enrollMember(Long clubId, UUID userId) {
-        if(!clubRepository.existsById(clubId))
-            throw new ResourceNotFoundException("Clube não encontrado com o id:" + clubId);
+        var club = clubRepository.findById(clubId)
+                .orElseThrow(() -> new ResourceNotFoundException("Clube não encontrado com o id:" + clubId));
+        if (club.getStatus() != EnumClubStatus.OPEN) {
+            throw new ConflictException("As inscrições estão abertas apenas para clubes com status OPEN.");
+        }
 
         Optional<ClubMember> existingMemberOpt = clubMemberRepository.findByUserIdAndClubId(userId, clubId);
 
@@ -89,7 +93,7 @@ public class ClubMemberService {
         }
 
         ClubMember member = ClubMember.builder()
-                .club(clubRepository.getReferenceById(clubId))
+                .club(club)
                 .userId(userId)
                 .role(EnumClubMemberRole.MEMBER)
                 .status(EnumClubMemberStatus.ACTIVE)

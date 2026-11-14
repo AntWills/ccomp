@@ -45,14 +45,14 @@ public class ClubService {
     public CursorPage<ClubResponseDTO> search(String cursor, int pageSize) {
         int finalPageSize = Math.min(pageSize, 50);
 
-        ClubPublishedCursor cursorDecoded = CursorUtils.decode(cursor, ClubPublishedCursor.class);
+        ClubCreatedCursor cursorDecoded = CursorUtils.decode(cursor, ClubCreatedCursor.class);
         List<ClubResponseDTO> results = clubDslRepository
-                .findAllPublishedWithCursor(cursorDecoded, finalPageSize + 1);
+                .findAllOpenWithCursor(cursorDecoded, finalPageSize + 1);
 
         return CursorUtils.buildPage(
                 results,
                 finalPageSize,
-                cr -> new ClubPublishedCursor(cr.id(), cr.publishedAt())
+                cr -> new ClubCreatedCursor(cr.id(), cr.createdAt())
         );
     }
 
@@ -74,7 +74,12 @@ public class ClubService {
     @Transactional(readOnly = true)
     public Optional<ClubResponseDTO> findById(Long clubId, UUID userId) {
         return clubRepository.findById(clubId)
-                .filter(club -> club.isPublic() || clubAccessPolicy.isInstructor(clubId, userId))
+                .filter(club -> switch (club.getStatus()) {
+                    case OPEN -> true;
+                    case MEMBERS_ONLY -> clubAccessPolicy.isActiveMember(clubId, userId)
+                            || clubAccessPolicy.isManager(clubId, userId);
+                    case DRAFT -> clubAccessPolicy.isManager(clubId, userId);
+                })
                 .map(clubMapper::toDTO);
     }
 

@@ -3,7 +3,9 @@ package com.ccomp.br.domain.clubs.core.persistence;
 import com.ccomp.br.domain.clubs.core.dto.ClubCreatedCursor;
 import com.ccomp.br.domain.clubs.core.dto.ClubPublishedCursor;
 import com.ccomp.br.domain.clubs.core.dto.ClubResponseDTO;
+import com.ccomp.br.domain.clubs.core.enums.EnumClubStatus;
 import com.ccomp.br.domain.clubs.members.enums.EnumClubMemberRole;
+import com.ccomp.br.domain.clubs.members.enums.EnumClubMemberStatus;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -33,8 +35,9 @@ public class ClubDslRepository {
     public List<ClubResponseDTO> findAllPublishedWithCursor(@Nullable ClubPublishedCursor cursor, int limit) {
         BooleanBuilder whereClause = new BooleanBuilder();
 
-        // Apenas clubes já publicados
-        whereClause.and(club.publishedAt.isNotNull())
+        // Compatibilidade com consultas antigas: apenas clubes abertos
+        whereClause.and(club.status.eq(EnumClubStatus.OPEN))
+                .and(club.publishedAt.isNotNull())
                 .and(club.publishedAt.loe(LocalDateTime.now()));
 
         if (cursor != null && cursor.id() != null && cursor.publishedAt() != null) {
@@ -54,6 +57,7 @@ public class ClubDslRepository {
                                 club.id,
                                 club.name,
                                 club.summary,
+                                club.status,
                                 club.coverImageUrl,
                                 club.content,
                                 club.createdAt,
@@ -71,6 +75,33 @@ public class ClubDslRepository {
                 .fetch();
     }
 
+    public List<ClubResponseDTO> findAllOpenWithCursor(@Nullable ClubCreatedCursor cursor, int limit) {
+        BooleanBuilder whereClause = new BooleanBuilder().and(club.status.eq(EnumClubStatus.OPEN));
+
+        if (cursor != null && cursor.id() != null && cursor.createdAt() != null) {
+            whereClause.and(Expressions.booleanTemplate(
+                    "( {0}, {1} ) < ( {2}, {3} )",
+                    club.createdAt, club.id, cursor.createdAt(), cursor.id()));
+        }
+
+        return queryFactory.select(Projections.constructor(
+                        ClubResponseDTO.class,
+                        club.id,
+                        club.name,
+                        club.summary,
+                        club.status,
+                        club.coverImageUrl,
+                        club.content,
+                        club.createdAt,
+                        club.publishedAt,
+                        club.updatedAt))
+                .from(club)
+                .where(whereClause)
+                .orderBy(club.createdAt.desc(), club.id.desc())
+                .limit(limit)
+                .fetch();
+    }
+
     /**
      * Busca clubes onde o usuário está envolvido como membro/instrutor, usando cursor baseado em (createdAt, id) decrescentes.
      */
@@ -81,6 +112,12 @@ public class ClubDslRepository {
 
         whereClause.and(clubMember.userId.eq(userId));
         whereClause.and(clubMember.role.in(EnumClubMemberRole.MEMBER, EnumClubMemberRole.INSTRUCTOR));
+        whereClause.and(club.status.eq(EnumClubStatus.OPEN)
+                .or(club.status.eq(EnumClubStatus.MEMBERS_ONLY)
+                        .and(clubMember.status.eq(EnumClubMemberStatus.ACTIVE)))
+                .or(club.status.eq(EnumClubStatus.DRAFT)
+                        .and(clubMember.role.eq(EnumClubMemberRole.INSTRUCTOR))
+                        .and(clubMember.status.eq(EnumClubMemberStatus.ACTIVE))));
 
 
         if (cursor != null && cursor.id() != null && cursor.createdAt() != null) {
@@ -100,6 +137,7 @@ public class ClubDslRepository {
                                 club.id,
                                 club.name,
                                 club.summary,
+                                club.status,
                                 club.coverImageUrl,
                                 club.content,
                                 club.createdAt,

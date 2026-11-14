@@ -34,8 +34,8 @@ public class ClubController {
 
     @GetMapping("/search")
     @Operation(
-            summary = "Lista todos os clubes públicos",
-            description = "Retorna uma lista paginada por cursor com os clubes publicados. Não exige autenticação."
+            summary = "Lista clubes OPEN",
+            description = "Retorna clubes com status OPEN em páginas por cursor. Não exige autenticação."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
@@ -77,7 +77,7 @@ public class ClubController {
     @GetMapping("/{clubId}")
     @Operation(
             summary = "Busca um clube pelo ID",
-            description = "Retorna os detalhes de clubes publicados. Clubes não publicados só são visíveis ao instrutor ativo; para os demais, a resposta é 404."
+            description = "OPEN é visível publicamente; MEMBERS_ONLY exige vínculo ativo; DRAFT só pode ser visto por instrutores ativos e MODERATOR/ADMIN."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Clube encontrado com sucesso"),
