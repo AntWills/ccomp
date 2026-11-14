@@ -216,10 +216,10 @@ public class EventsController {
             description = """
         Atualiza somente os campos enviados em `UpdateEventDTO`: `title`, `summary`, `content`, `category`, `format`,
         `schedule_conflict_policy`, datas de realização e de inscrição, `enrollment_paused`, `workload_hours`,
-        `team_certificate_workload_hours` e `organization`. Campos omitidos ou enviados como `null` ficam inalterados.
+        `team_certificate_workload_hours`, `organization` e `address`. Campos omitidos ou enviados como `null` ficam inalterados.
         As datas são horários locais no fuso global `app.clock.zone`; `time_zone` não pode ser alterado por evento e permanece
         na resposta por compatibilidade.
-        As cargas horárias não podem ser negativas; `organization` aceita até 255 caracteres. Alterar título também
+        As cargas horárias não podem ser negativas; `organization` e `address` aceitam até 255 caracteres. Alterar título também
         regenera o slug. Capa e status têm endpoints próprios. A resposta `EventDTO` inclui os campos atualizados.
 
         Requer JWT do proprietário, de um editor ativo, `MODERATOR` ou `ADMIN`.

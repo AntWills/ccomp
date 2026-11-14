@@ -47,7 +47,11 @@ public record UpdateEventDTO(
         BigDecimal guestCertificateWorkloadHours,
         @Size(max = 255, message = "A organização deve ter no máximo 255 caracteres.")
         @Schema(description = "Organização responsável pelo evento. Opcional.", example = "Instituto Federal do Maranhão")
-        String organization
+        String organization,
+
+        @Size(max = 255, message = "O endereço deve ter no máximo 255 caracteres.")
+        @Schema(description = "Endereço ou local do evento, usado também pela variável {evento.local} nos certificados.", example = "Auditório Central, Campus São Luís")
+        String address
 ) {
     public Optional<String> titleOpt() { return Optional.ofNullable(title); }
 }
