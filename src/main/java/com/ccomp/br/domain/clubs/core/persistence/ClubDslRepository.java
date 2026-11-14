@@ -6,11 +6,14 @@ import com.ccomp.br.domain.clubs.core.dto.ClubResponseDTO;
 import com.ccomp.br.domain.clubs.core.enums.EnumClubStatus;
 import com.ccomp.br.domain.clubs.members.enums.EnumClubMemberRole;
 import com.ccomp.br.domain.clubs.members.enums.EnumClubMemberStatus;
+import com.ccomp.br.shared.utils.TextSearchDSL;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Repository;
 
@@ -23,7 +26,11 @@ import static com.ccomp.br.domain.clubs.members.persistence.QClubMember.clubMemb
 
 @Repository
 public class ClubDslRepository {
+    private static final double MIN_SIMILARITY = 0.4;
     private final JPAQueryFactory queryFactory;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public ClubDslRepository(JPAQueryFactory queryFactory) {
         this.queryFactory = queryFactory;
@@ -76,7 +83,18 @@ public class ClubDslRepository {
     }
 
     public List<ClubResponseDTO> findAllOpenWithCursor(@Nullable ClubCreatedCursor cursor, int limit) {
+        return findAllOpenWithCursor(cursor, limit, null);
+    }
+
+    public List<ClubResponseDTO> findAllOpenWithCursor(@Nullable ClubCreatedCursor cursor, int limit,
+                                                        @Nullable String searchTerm) {
         BooleanBuilder whereClause = new BooleanBuilder().and(club.status.eq(EnumClubStatus.OPEN));
+
+        if (searchTerm != null) {
+            useTextSearchThreshold();
+            whereClause.and(TextSearchDSL.matchAny(searchTerm, MIN_SIMILARITY,
+                    club.name, club.summary, club.content));
+        }
 
         if (cursor != null && cursor.id() != null && cursor.createdAt() != null) {
             whereClause.and(Expressions.booleanTemplate(
@@ -100,6 +118,12 @@ public class ClubDslRepository {
                 .orderBy(club.createdAt.desc(), club.id.desc())
                 .limit(limit)
                 .fetch();
+    }
+
+    private void useTextSearchThreshold() {
+        entityManager.createNativeQuery(
+                        "select set_config('pg_trgm.word_similarity_threshold', '0.399999', true)")
+                .getSingleResult();
     }
 
     /**

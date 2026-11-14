@@ -17,6 +17,7 @@ import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ConflictException;
+import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorUtils;
@@ -48,6 +49,13 @@ public class ClubMemberService {
     @Transactional(readOnly = true)
     public CursorPage<ClubMemberListItem> searchMembers(UUID userId, Long clubId,
                                                         ClubMemberFilter filter, String cursor, int pageSize) {
+        return searchMembers(userId, clubId, filter, null, cursor, pageSize);
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPage<ClubMemberListItem> searchMembers(UUID userId, Long clubId,
+                                                        ClubMemberFilter filter, String searchTerm,
+                                                        String cursor, int pageSize) {
         boolean canAccess =  SecurityUtils.isModeratorOrAdmin()
                 || clubAccessPolicy.isInstructor(clubId, userId);
 
@@ -55,16 +63,25 @@ public class ClubMemberService {
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
 
         if (pageSize > 50) pageSize = 50;
+        String normalizedTerm = normalizeSearchTerm(searchTerm);
 
         ClubMemberCursor cursorDecoded = CursorUtils.decode(cursor, ClubMemberCursor.class);
         List<ClubMemberListItem> results = clubMemberDslRepository
-                .findAllWithCursor(clubId, filter, cursorDecoded, pageSize + 1);
+                .findAllWithCursor(clubId, filter, normalizedTerm, cursorDecoded, pageSize + 1);
 
         return CursorUtils.buildPage(
                 results,
                 pageSize,
                 cm -> new ClubMemberCursor(cm.id(), cm.joinedAt())
         );
+    }
+
+    private String normalizeSearchTerm(String searchTerm) {
+        if (searchTerm == null || searchTerm.isBlank()) return null;
+        String normalized = searchTerm.trim();
+        if (normalized.length() < 2) throw new DomainException("Informe pelo menos dois caracteres para buscar.");
+        if (normalized.length() > 100) throw new DomainException("O termo de busca deve ter no máximo 100 caracteres.");
+        return normalized;
     }
 
 //    @Transactional(readOnly = true)

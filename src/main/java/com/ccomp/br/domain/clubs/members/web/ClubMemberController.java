@@ -35,7 +35,7 @@ public class ClubMemberController {
     @PostMapping("/{clubId}/members/search")
     @Operation(
             summary = "Busca membros de um clube",
-            description = "Consulta os membros do clube com filtros de papel e status enviados no corpo. Retorna uma página por cursor. Requer usuário autenticado que seja instrutor ativo do clube ou MODERATOR/ADMIN."
+            description = "Consulta os membros do clube com filtros de papel e status enviados no corpo e termo opcional para buscar por nome ou e-mail (similaridade mínima 0,4). Mantenha os filtros, o termo e o cursor ao continuar uma busca. Requer usuário autenticado que seja instrutor ativo do clube ou MODERATOR/ADMIN."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Busca realizada com sucesso"),
@@ -55,9 +55,15 @@ public class ClubMemberController {
             @Parameter(description = "Quantidade de itens por página (máximo 50)")
             @RequestParam(defaultValue = "10") int size,
 
+            @Parameter(description = "Termo para buscar por nome ou e-mail (2 a 100 caracteres)")
+            @RequestParam(required = false) String searchTerm,
+
             @AuthenticationPrincipal Jwt jwt
     ) {
-        return ResponseEntity.ok(clubMemberService.searchMembers(extractUserId(jwt), clubId, filter, cursor, size));
+        UUID userId = extractUserId(jwt);
+        return ResponseEntity.ok(searchTerm == null
+                ? clubMemberService.searchMembers(userId, clubId, filter, cursor, size)
+                : clubMemberService.searchMembers(userId, clubId, filter, searchTerm, cursor, size));
     }
 
     @PostMapping("/{clubId}/members/enroll")

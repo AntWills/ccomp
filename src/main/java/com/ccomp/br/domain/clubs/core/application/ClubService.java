@@ -11,6 +11,7 @@ import com.ccomp.br.domain.clubs.core.utils.ClubMapper;
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.dto.UserDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
+import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.exceptions.UserNotFoundException;
 import com.ccomp.br.shared.utils.CursorUtils;
@@ -43,17 +44,31 @@ public class ClubService {
 
     @Transactional(readOnly = true)
     public CursorPage<ClubResponseDTO> search(String cursor, int pageSize) {
+        return search(cursor, pageSize, null);
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPage<ClubResponseDTO> search(String cursor, int pageSize, String searchTerm) {
         int finalPageSize = Math.min(pageSize, 50);
+        String normalizedTerm = normalizeSearchTerm(searchTerm);
 
         ClubCreatedCursor cursorDecoded = CursorUtils.decode(cursor, ClubCreatedCursor.class);
         List<ClubResponseDTO> results = clubDslRepository
-                .findAllOpenWithCursor(cursorDecoded, finalPageSize + 1);
+                .findAllOpenWithCursor(cursorDecoded, finalPageSize + 1, normalizedTerm);
 
         return CursorUtils.buildPage(
                 results,
                 finalPageSize,
                 cr -> new ClubCreatedCursor(cr.id(), cr.createdAt())
         );
+    }
+
+    private String normalizeSearchTerm(String searchTerm) {
+        if (searchTerm == null || searchTerm.isBlank()) return null;
+        String normalized = searchTerm.trim();
+        if (normalized.length() < 2) throw new DomainException("Informe pelo menos dois caracteres para buscar.");
+        if (normalized.length() > 100) throw new DomainException("O termo de busca deve ter no máximo 100 caracteres.");
+        return normalized;
     }
 
     @Transactional(readOnly = true)

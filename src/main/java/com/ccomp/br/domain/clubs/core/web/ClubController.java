@@ -35,7 +35,7 @@ public class ClubController {
     @GetMapping("/search")
     @Operation(
             summary = "Lista clubes OPEN",
-            description = "Retorna clubes com status OPEN em páginas por cursor. Não exige autenticação."
+            description = "Retorna clubes com status OPEN em páginas por cursor. `searchTerm` procura por nome, resumo e conteúdo (similaridade mínima 0,4); mantenha o mesmo termo ao continuar pelo cursor. Não exige autenticação."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
@@ -47,9 +47,14 @@ public class ClubController {
             @RequestParam(required = false) String nextCursor,
 
             @Parameter(description = "Quantidade de itens por página (máximo 50)")
-            @RequestParam(defaultValue = "10") int pageSize
+            @RequestParam(defaultValue = "10") int pageSize,
+
+            @Parameter(description = "Termo para buscar em nome, resumo e conteúdo (2 a 100 caracteres)")
+            @RequestParam(required = false) String searchTerm
     ) {
-        return ResponseEntity.ok(clubService.search(nextCursor, pageSize));
+        return ResponseEntity.ok(searchTerm == null
+                ? clubService.search(nextCursor, pageSize)
+                : clubService.search(nextCursor, pageSize, searchTerm));
     }
 
     @GetMapping("/me")
