@@ -36,3 +36,4 @@ build/
 *.key
 .env
 .env.dev
+/ccomp_backup.sql.gz
