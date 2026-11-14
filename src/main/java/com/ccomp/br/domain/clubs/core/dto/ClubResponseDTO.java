@@ -1,12 +1,10 @@
 package com.ccomp.br.domain.clubs.core.dto;
 
-import com.ccomp.br.domain.clubs.core.persistence.Club;
 import com.ccomp.br.domain.clubs.core.enums.EnumClubStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Schema(description = "Dados de retorno de um clube")
 public record ClubResponseDTO(
@@ -16,7 +14,7 @@ public record ClubResponseDTO(
         EnumClubStatus status,
         String coverImageUrl,
         String content,
-//        Long participantLimit,
+        Long maxMembers,
         LocalDateTime createdAt,
         LocalDateTime publishedAt,
         LocalDateTime updatedAt

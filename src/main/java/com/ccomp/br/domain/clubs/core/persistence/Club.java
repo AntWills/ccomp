@@ -49,6 +49,9 @@ public class Club {
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 
+    @Column(name = "max_members")
+    private Long maxMembers;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default

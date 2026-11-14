@@ -69,12 +69,13 @@ public class ClubMemberController {
     @PostMapping("/{clubId}/members/enroll")
     @Operation(
             summary = "Inscreve o usuário autenticado em um clube",
-            description = "Vincula o usuário autenticado ao clube com papel MEMBER. Uma inscrição ativa existente é retornada sem alteração; vínculos anteriores são reativados."
+            description = "Vincula o usuário autenticado ao clube com papel MEMBER. Uma inscrição ativa existente é retornada sem alteração; vínculos anteriores são reativados. O limite de membros conta somente vínculos MEMBER com status ACTIVE."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Inscrição realizada ou reativada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
-            @ApiResponse(responseCode = "404", description = "Clube não encontrado")
+            @ApiResponse(responseCode = "404", description = "Clube não encontrado"),
+            @ApiResponse(responseCode = "409", description = "Clube sem vagas ou usuário banido")
     })
     public ResponseEntity<ClubMember> enroll(
             @Parameter(description = "ID do clube", required = true)
@@ -118,7 +119,7 @@ public class ClubMemberController {
             @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
             @ApiResponse(responseCode = "403", description = "Usuário não é instrutor ativo do clube nem MODERATOR/ADMIN"),
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado"),
-            @ApiResponse(responseCode = "409", description = "Usuário já tem vínculo ativo com o mesmo papel")
+            @ApiResponse(responseCode = "409", description = "Usuário já tem vínculo, está banido ou o limite de membros foi atingido")
     })
     public ResponseEntity<ClubMember> addMember(
             @Parameter(description = "ID do clube", required = true)

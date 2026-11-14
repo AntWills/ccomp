@@ -67,6 +67,7 @@ public class ClubDslRepository {
                                 club.status,
                                 club.coverImageUrl,
                                 club.content,
+                                club.maxMembers,
                                 club.createdAt,
                                 club.publishedAt,
                                 club.updatedAt
@@ -110,6 +111,7 @@ public class ClubDslRepository {
                         club.status,
                         club.coverImageUrl,
                         club.content,
+                        club.maxMembers,
                         club.createdAt,
                         club.publishedAt,
                         club.updatedAt))
@@ -165,6 +167,7 @@ public class ClubDslRepository {
                                 club.status,
                                 club.coverImageUrl,
                                 club.content,
+                                club.maxMembers,
                                 club.createdAt,
                                 club.publishedAt,
                                 club.updatedAt

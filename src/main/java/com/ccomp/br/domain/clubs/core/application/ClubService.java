@@ -111,6 +111,7 @@ public class ClubService {
         Club club = Club.builder()
                 .name(dto.name())
                 .summary(dto.summary())
+                .maxMembers(dto.maxMembers())
 //                .instructor(instructorId)
                 .build();
         Club saved = clubRepository.save(club);
@@ -134,6 +135,9 @@ public class ClubService {
 
         if (!canEdit)
             throw new AccessDeniedException("O usuário não tem acesso a este recurso.");
+
+        club = clubRepository.findByIdForUpdate(clubId)
+                .orElseThrow(() -> new ResourceNotFoundException("Clube não encontrado com o id:" + clubId));
 
         clubMapper.updateEntityFromDto(dto, club);
 

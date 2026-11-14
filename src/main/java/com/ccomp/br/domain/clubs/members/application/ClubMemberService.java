@@ -91,7 +91,7 @@ public class ClubMemberService {
 
     @Transactional
     public ClubMember enrollMember(Long clubId, UUID userId) {
-        var club = clubRepository.findById(clubId)
+        var club = clubRepository.findByIdForUpdate(clubId)
                 .orElseThrow(() -> new ResourceNotFoundException("Clube não encontrado com o id:" + clubId));
         if (club.getStatus() != EnumClubStatus.OPEN) {
             throw new ConflictException("As inscrições estão abertas apenas para clubes com status OPEN.");
@@ -107,6 +107,7 @@ public class ClubMemberService {
             if (existing.getStatus() == EnumClubMemberStatus.ACTIVE)
                 return existing;
 
+            ensureMemberCapacity(club);
             existing.activate();
             existing.setRole(EnumClubMemberRole.MEMBER);
             return clubMemberRepository.save(existing);
@@ -119,6 +120,8 @@ public class ClubMemberService {
                 .status(EnumClubMemberStatus.ACTIVE)
                 .joinedAt(LocalDateTime.now())
                 .build();
+
+        ensureMemberCapacity(club);
 
         return clubMemberRepository.save(member);
     }
@@ -157,6 +160,10 @@ public class ClubMemberService {
 
     @Transactional
     public ClubMember addMember(Long clubId, UUID userId, EnumClubMemberRole role) {
+        var club = role == EnumClubMemberRole.MEMBER
+                ? clubRepository.findByIdForUpdate(clubId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Clube não encontrado com o id:" + clubId))
+                : null;
         Optional<ClubMember> existingMemberOpt = clubMemberRepository.findByUserIdAndClubId(userId, clubId);
 
         if (existingMemberOpt.isPresent()) {
@@ -167,13 +174,16 @@ public class ClubMemberService {
             if (existing.getStatus() == EnumClubMemberStatus.ACTIVE && existing.getRole() == role)
                 throw new ConflictException("Usuário já faz parte da equipe deste clube.");
 
+            if (role == EnumClubMemberRole.MEMBER) ensureMemberCapacity(club);
             existing.activate();
             existing.setRole(role);
             return clubMemberRepository.save(existing);
         }
 
+        if (role == EnumClubMemberRole.MEMBER) ensureMemberCapacity(club);
+
         ClubMember member = ClubMember.builder()
-                .club(clubRepository.getReferenceById(clubId))
+                .club(club == null ? clubRepository.getReferenceById(clubId) : club)
                 .userId(userId)
                 .role(role)
                 .status(EnumClubMemberStatus.ACTIVE)
@@ -202,6 +212,12 @@ public class ClubMemberService {
         if (newStatus == EnumClubMemberStatus.INACTIVE) {
             member.deactivate();
         } else if (newStatus == EnumClubMemberStatus.ACTIVE) {
+            if (member.getRole() == EnumClubMemberRole.MEMBER
+                    && member.getStatus() != EnumClubMemberStatus.ACTIVE) {
+                var lockedClub = clubRepository.findByIdForUpdate(clubId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Clube não encontrado com o id:" + clubId));
+                ensureMemberCapacity(lockedClub);
+            }
             member.activate();
         } else if (newStatus == EnumClubMemberStatus.CANCELLED) {
             member.unsubscribe();
@@ -211,5 +227,16 @@ public class ClubMemberService {
             member.ban();
         }
         clubMemberRepository.save(member);
+    }
+
+    private void ensureMemberCapacity(com.ccomp.br.domain.clubs.core.persistence.Club club) {
+        Long maxMembers = club.getMaxMembers();
+        if (maxMembers == null) return;
+
+        long activeMembers = clubMemberRepository.countByClub_IdAndRoleAndStatus(
+                club.getId(), EnumClubMemberRole.MEMBER, EnumClubMemberStatus.ACTIVE);
+        if (activeMembers >= maxMembers) {
+            throw new ConflictException("O clube atingiu o limite de membros ativos.");
+        }
     }
 }

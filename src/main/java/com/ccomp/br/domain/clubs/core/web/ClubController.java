@@ -103,7 +103,7 @@ public class ClubController {
     @PostMapping
     @Operation(
             summary = "Cria um novo clube",
-            description = "Cria um clube vinculado ao usuário autenticado, tornando-o o instrutor do clube."
+            description = "Cria um clube vinculado ao usuário autenticado, tornando-o o instrutor do clube. `maxMembers` é opcional; ausente significa sem limite. Quando informado, limita somente membros comuns com status ACTIVE. Instrutores não são contabilizados."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Clube criado com sucesso"),
@@ -124,7 +124,7 @@ public class ClubController {
     @PatchMapping("/{clubId}")
     @Operation(
             summary = "Atualiza dados de um clube",
-            description = "Atualiza as informações do clube, incluindo o status. Permitido ao instrutor ativo do clube ou a usuários com perfil MODERATOR ou ADMIN."
+            description = "Atualiza as informações do clube, incluindo status e `maxMembers`. Um valor nulo/omitido mantém o limite atual; o limite conta apenas membros comuns com status ACTIVE, sem contar instrutores. Permitido ao instrutor ativo do clube ou a usuários com perfil MODERATOR ou ADMIN."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Clube atualizado com sucesso"),
