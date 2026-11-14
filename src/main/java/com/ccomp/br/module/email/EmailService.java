@@ -1,6 +1,7 @@
 package com.ccomp.br.module.email;
 
 import com.ccomp.br.shared.dto.SendMailDTO;
+import org.springframework.core.io.ByteArrayResource;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,10 @@ public class EmailService {
             helper.setSubject(dto.subject());
 
             helper.setText(dto.text(), dto.isHtml());
+            for (var attachment : dto.attachments()) {
+                helper.addAttachment(attachment.filename(),
+                        new ByteArrayResource(attachment.content()), attachment.contentType());
+            }
 
             mailSender.send(message);
             log.info("E-mail enviado com sucesso para {}", dto.to().getValue());

@@ -5,6 +5,7 @@ import com.ccomp.br.domain.events.certificate.application.boxes.CertificateBoxSe
 import com.ccomp.br.domain.events.certificate.application.CertificateCoverService;
 import com.ccomp.br.domain.events.certificate.application.issuance.AutomaticCertificateServices;
 import com.ccomp.br.domain.events.certificate.application.issuance.ManualCertificateServices;
+import com.ccomp.br.domain.events.certificate.application.issuance.ManualParticipantCertificateServices;
 import com.ccomp.br.domain.events.certificate.application.CertificateValidatorService;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.dto.CertificateValidationResponse;
@@ -102,6 +103,9 @@ class EventCertificateControllerTest {
     private ManualCertificateServices manualCertificateServices;
 
     @Mock
+    private ManualParticipantCertificateServices manualParticipantCertificateServices;
+
+    @Mock
     private ActivityCertificateBoxServices activityCertificateBoxServices;
 
     @Mock
@@ -123,7 +127,8 @@ class EventCertificateControllerTest {
                 certificateBoxServices,
                 activityCertificateBoxServices);
         var issuanceController = new EventCertificateIssuanceController(automaticCertificateServices);
-        var manualController = new EventCertificateManualController(manualCertificateServices);
+        var manualController = new EventCertificateManualController(manualCertificateServices,
+                manualParticipantCertificateServices);
         var validationController = new EventCertificateValidationController(certificateValidatorService);
         mockMvc = MockMvcBuilders.standaloneSetup(
                         managementController, issuanceController, manualController, validationController)
@@ -397,6 +402,37 @@ class EventCertificateControllerTest {
 
         verify(manualCertificateServices).issueCustomCertificate(
                 eq(50L), eq(PARTICIPANT_ID), any(ManualCertificateContentRequest.class));
+    }
+
+    @Test
+    void issueManualParticipantEventCertificate_returnsPngAttachment() throws Exception {
+        when(manualParticipantCertificateServices.buildEventCertificate(50L, 80L, PARTICIPANT_ID))
+                .thenReturn(new StorageExternal.StoredFile(
+                        new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
+                        MediaType.IMAGE_PNG_VALUE));
+
+        mockMvc.perform(post("/api/events/50/enrollments/80/certificate/manual"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"certificado-evento-50-inscricao-80.png\""));
+        verify(manualParticipantCertificateServices).buildEventCertificate(50L, 80L, PARTICIPANT_ID);
+    }
+
+    @Test
+    void issueManualParticipantActivityCertificate_returnsPngAttachment() throws Exception {
+        when(manualParticipantCertificateServices.buildActivityCertificate(50L, 77L, 80L, PARTICIPANT_ID))
+                .thenReturn(new StorageExternal.StoredFile(
+                        new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
+                        MediaType.IMAGE_PNG_VALUE));
+
+        mockMvc.perform(post("/api/events/50/activities/77/enrollments/80/certificate/manual"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"certificado-atividade-77-inscricao-80.png\""));
+        verify(manualParticipantCertificateServices)
+                .buildActivityCertificate(50L, 77L, 80L, PARTICIPANT_ID);
     }
 
     @Test

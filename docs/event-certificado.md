@@ -209,6 +209,13 @@ Emite para o próprio proprietário ou editor ativo autenticado. O evento deve e
 
 As rotas manuais exigem autenticação e permissão de edição do evento. Conforme a regra de acesso da aplicação, isso inclui proprietário/editor autorizado e, para as rotas de emissão manual, moderador ou administrador.
 
+### Participante inscrito
+
+- `POST /api/events/{eventId}/enrollments/{enrollmentId}/certificate/manual`: emite o certificado padrão do evento para a inscrição informada. A inscrição precisa pertencer ao evento; seguem valendo o encerramento, check-in e demais requisitos do certificado de participante.
+- `POST /api/events/{eventId}/activities/{activityId}/enrollments/{enrollmentId}/certificate/manual`: emite o certificado padrão da atividade. A atividade e a inscrição precisam pertencer ao evento, e o inscrito precisa ter check-in no evento e presença registrada na atividade.
+
+Ambas retornam PNG e usam os templates configurados para participante. A rota de atividade também usa o template específico da atividade quando configurado, com fallback para o template do evento.
+
 ### Ministrante ou convidado apresentador
 
 `POST /api/events/{eventId}/instructor-certificate/manual`

@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.certificate.web;
 
 import com.ccomp.br.domain.events.certificate.application.issuance.ManualCertificateServices;
+import com.ccomp.br.domain.events.certificate.application.issuance.ManualParticipantCertificateServices;
 import com.ccomp.br.domain.events.certificate.dto.ManualCertificateContentRequest;
 import com.ccomp.br.domain.events.certificate.dto.ManualInstructorCertificateRequest;
 import com.ccomp.br.domain.storage.external.StorageExternal;
@@ -31,9 +32,32 @@ import java.util.UUID;
         description = "Emissão manual de certificados individuais para ministrantes e integrantes da equipe")
 public class EventCertificateManualController {
     private final ManualCertificateServices manualCertificateServices;
+    private final ManualParticipantCertificateServices participantCertificateServices;
 
-    public EventCertificateManualController(ManualCertificateServices manualCertificateServices) {
+    public EventCertificateManualController(ManualCertificateServices manualCertificateServices,
+            ManualParticipantCertificateServices participantCertificateServices) {
         this.manualCertificateServices = manualCertificateServices;
+        this.participantCertificateServices = participantCertificateServices;
+    }
+
+    @Operation(summary = "Emitir certificado manual de participante do evento")
+    @PostMapping(value = "/{eventId}/enrollments/{enrollmentId}/certificate/manual",
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> buildManualEventParticipantCertificate(@PathVariable Long eventId,
+            @PathVariable Long enrollmentId, @AuthenticationPrincipal Jwt jwt) {
+        var certificate = participantCertificateServices.buildEventCertificate(eventId, enrollmentId, extractUserId(jwt));
+        return certificateResponse(certificate, "certificado-evento-%d-inscricao-%d.png".formatted(eventId, enrollmentId));
+    }
+
+    @Operation(summary = "Emitir certificado manual de participante da atividade")
+    @PostMapping(value = "/{eventId}/activities/{activityId}/enrollments/{enrollmentId}/certificate/manual",
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<Resource> buildManualActivityParticipantCertificate(@PathVariable Long eventId,
+            @PathVariable Long activityId, @PathVariable Long enrollmentId, @AuthenticationPrincipal Jwt jwt) {
+        var certificate = participantCertificateServices.buildActivityCertificate(
+                eventId, activityId, enrollmentId, extractUserId(jwt));
+        return certificateResponse(certificate,
+                "certificado-atividade-%d-inscricao-%d.png".formatted(activityId, enrollmentId));
     }
 
     @Operation(summary = "Emitir manualmente certificado de ministrante",
