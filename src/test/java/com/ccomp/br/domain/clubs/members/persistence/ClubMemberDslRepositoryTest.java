@@ -133,4 +133,30 @@ class ClubMemberDslRepositoryTest {
         assertThat(page2).hasSize(1);
         assertThat(page2.getFirst().user().name()).isEqualTo("Alice Membro");
     }
+
+    @Test
+    @DisplayName("Busca membros por nome/email e respeita filtros de papel e status")
+    void shouldSearchMembersByTextAndFilters() {
+        LocalDateTime now = LocalDateTime.now();
+        UserModel target = UserModel.builder().name("Beatriz Querydsl").emailAddress(new EmailAddress("bia.query@teste.com"))
+                .password("hash123").statusAccount(EnumUserStatusAccount.ACTIVE).createdAt(now).updatedAt(now).build();
+        UserModel other = UserModel.builder().name("Bruno Outro").emailAddress(new EmailAddress("bruno@teste.com"))
+                .password("hash123").statusAccount(EnumUserStatusAccount.ACTIVE).createdAt(now).updatedAt(now).build();
+        entityManager.persist(target);
+        entityManager.persist(other);
+        Club club = Club.builder().name("Clube busca").createdAt(now).build();
+        entityManager.persist(club);
+        entityManager.persist(ClubMember.builder().club(club).userId(target.getId()).role(EnumClubMemberRole.MEMBER)
+                .status(EnumClubMemberStatus.ACTIVE).joinedAt(now).build());
+        entityManager.persist(ClubMember.builder().club(club).userId(other.getId()).role(EnumClubMemberRole.INSTRUCTOR)
+                .status(EnumClubMemberStatus.ACTIVE).joinedAt(now.minusMinutes(1)).build());
+        entityManager.flush();
+        entityManager.clear();
+
+        var results = clubMemberDslRepository.findAllWithCursor(club.getId(),
+                new ClubMemberFilter(EnumClubMemberRole.MEMBER, EnumClubMemberStatus.ACTIVE), "bia.query", null, 10);
+
+        assertThat(results).hasSize(1);
+        assertThat(results.getFirst().user().name()).isEqualTo("Beatriz Querydsl");
+    }
 }

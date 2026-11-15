@@ -72,8 +72,9 @@ class ClubServiceTest {
     @Test
     void findByIdHidesUnpublishedClubFromNonInstructor() {
         UUID id = UUID.randomUUID();
-        when(clubRepository.findById(9L)).thenReturn(Optional.of(Club.builder().id(9L).build()));
-        when(accessPolicy.isInstructor(9L, id)).thenReturn(false);
+        when(clubRepository.findById(9L)).thenReturn(Optional.of(Club.builder().id(9L)
+                .status(com.ccomp.br.domain.clubs.core.enums.EnumClubStatus.DRAFT).build()));
+        when(accessPolicy.isManager(9L, id)).thenReturn(false);
 
         assertThat(service.findById(9L, id)).isEmpty();
         verifyNoInteractions(mapper);

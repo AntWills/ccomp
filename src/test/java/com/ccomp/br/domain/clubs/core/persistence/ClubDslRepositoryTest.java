@@ -3,6 +3,7 @@ package com.ccomp.br.domain.clubs.core.persistence;
 import com.ccomp.br.config.QueryDslConfig;
 import com.ccomp.br.domain.clubs.core.dto.ClubCreatedCursor;
 import com.ccomp.br.domain.clubs.core.dto.ClubPublishedCursor;
+import com.ccomp.br.domain.clubs.core.enums.EnumClubStatus;
 import com.ccomp.br.domain.clubs.core.dto.ClubResponseDTO;
 import com.ccomp.br.domain.clubs.members.enums.EnumClubMemberRole;
 import com.ccomp.br.domain.clubs.members.enums.EnumClubMemberStatus;
@@ -45,6 +46,7 @@ class ClubDslRepositoryTest {
                 .content("Conteúdo 1")
                 .createdAt(now.minusDays(5))
                 .publishedAt(now.minusHours(3)) // Publicado há 3 horas (Mais antigo)
+                .status(EnumClubStatus.OPEN)
                 .build();
 
         Club club2 = Club.builder()
@@ -53,6 +55,7 @@ class ClubDslRepositoryTest {
                 .content("Conteúdo 2")
                 .createdAt(now.minusDays(4))
                 .publishedAt(now.minusHours(2)) // Publicado há 2 horas
+                .status(EnumClubStatus.OPEN)
                 .build();
 
         Club club3 = Club.builder()
@@ -61,6 +64,7 @@ class ClubDslRepositoryTest {
                 .content("Conteúdo 3")
                 .createdAt(now.minusDays(3))
                 .publishedAt(now.minusHours(1)) // Publicado há 1 hora (Mais recente)
+                .status(EnumClubStatus.OPEN)
                 .build();
 
         Club unpublishedClub = Club.builder()
@@ -100,6 +104,24 @@ class ClubDslRepositoryTest {
     }
 
     @Test
+    @DisplayName("Busca pública filtra por termo e exclui clubes que não estão OPEN")
+    void publicSearchFiltersByTextAndStatus() {
+        LocalDateTime now = LocalDateTime.now();
+        entityManager.persist(Club.builder().name("Grupo Java avançado").summary("programação JVM")
+                .content("encontros semanais").createdAt(now).status(EnumClubStatus.OPEN).build());
+        entityManager.persist(Club.builder().name("Grupo culinária").summary("receitas")
+                .content("cozinha").createdAt(now.minusMinutes(1)).status(EnumClubStatus.OPEN).build());
+        entityManager.persist(Club.builder().name("Java em rascunho").summary("programação")
+                .createdAt(now.plusMinutes(1)).status(EnumClubStatus.DRAFT).build());
+        entityManager.flush();
+        entityManager.clear();
+
+        List<ClubResponseDTO> results = clubDslRepository.findAllOpenWithCursor(null, 10, "Java");
+
+        assertThat(results).extracting(ClubResponseDTO::name).containsExactly("Grupo Java avançado");
+    }
+
+    @Test
     @DisplayName("Deve realizar a paginação de clubes envolvidos pelo usuário via cursor ordenada por createdAt e id decrescentes")
     void shouldPaginateUserInvolvedClubsUsingCursorInDescendingOrder() {
         // Arranjo
@@ -111,6 +133,7 @@ class ClubDslRepositoryTest {
                 .summary("Resumo Alfa")
                 .content("Conteúdo Alfa")
                 .createdAt(now.minusHours(3)) // Criado há 3 horas (Mais antigo)
+                .status(EnumClubStatus.OPEN)
                 .build();
 
         Club club2 = Club.builder()
@@ -118,6 +141,7 @@ class ClubDslRepositoryTest {
                 .summary("Resumo Beta")
                 .content("Conteúdo Beta")
                 .createdAt(now.minusHours(2)) // Criado há 2 horas
+                .status(EnumClubStatus.OPEN)
                 .build();
 
         Club club3 = Club.builder()
@@ -125,6 +149,7 @@ class ClubDslRepositoryTest {
                 .summary("Resumo Gama")
                 .content("Conteúdo Gama")
                 .createdAt(now.minusHours(1)) // Criado há 1 hora (Mais recente)
+                .status(EnumClubStatus.OPEN)
                 .build();
 
         entityManager.persist(club1);

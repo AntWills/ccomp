@@ -8,6 +8,7 @@ import com.ccomp.br.domain.clubs.core.dto.ClubResponseDTO;
 import com.ccomp.br.domain.clubs.members.enums.EnumClubMemberRole;
 import com.ccomp.br.domain.clubs.members.enums.EnumClubMemberStatus;
 import com.ccomp.br.domain.clubs.members.persistence.ClubMember;
+import com.ccomp.br.domain.clubs.members.web.ClubMemberController;
 import com.ccomp.br.shared.utils.CursorPage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,6 +58,13 @@ class ClubControllersTest {
     }
 
     @Test
+    void publicSearchForwardsSearchTerm() throws Exception {
+        when(clubService.search(null, 10, "java")).thenReturn(new CursorPage<>(List.<ClubResponseDTO>of(), null, null));
+        mvc.perform(get("/api/clubs/search?searchTerm=java")).andExpect(status().isOk());
+        verify(clubService).search(null, 10, "java");
+    }
+
+    @Test
     void memberSearchMapsFilterAndPaginationParameters() throws Exception {
         when(memberService.searchMembers(eq(USER_ID), eq(4L), any(ClubMemberFilter.class), eq("cursor"), eq(7)))
                 .thenReturn(new CursorPage<>(List.<ClubMemberListItem>of(), null, null));
@@ -65,6 +73,17 @@ class ClubControllersTest {
                 .andExpect(status().isOk());
         verify(memberService).searchMembers(eq(USER_ID), eq(4L),
                 eq(new ClubMemberFilter(EnumClubMemberRole.MEMBER, EnumClubMemberStatus.ACTIVE)), eq("cursor"), eq(7));
+    }
+
+    @Test
+    void memberSearchForwardsSearchTerm() throws Exception {
+        when(memberService.searchMembers(eq(USER_ID), eq(4L), any(ClubMemberFilter.class), eq("alice"), eq("cursor"), eq(7)))
+                .thenReturn(new CursorPage<>(List.<ClubMemberListItem>of(), null, null));
+        mvc.perform(post("/api/clubs/4/members/search?cursor=cursor&size=7&searchTerm=alice")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isOk());
+        verify(memberService).searchMembers(eq(USER_ID), eq(4L), any(ClubMemberFilter.class),
+                eq("alice"), eq("cursor"), eq(7));
     }
 
     @Test
