@@ -5,6 +5,7 @@ import com.ccomp.br.domain.events.certificate.application.issuance.ManualPartici
 import com.ccomp.br.domain.events.certificate.dto.ManualCertificateContentRequest;
 import com.ccomp.br.domain.events.certificate.dto.ManualInstructorCertificateRequest;
 import com.ccomp.br.domain.storage.external.StorageExternal;
+import com.ccomp.br.shared.dto.MessageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -58,6 +59,23 @@ public class EventCertificateManualController {
                 eventId, activityId, enrollmentId, extractUserId(jwt));
         return certificateResponse(certificate,
                 "certificado-atividade-%d-inscricao-%d.png".formatted(activityId, enrollmentId));
+    }
+
+    @Operation(summary = "Enviar por e-mail certificado manual de participante do evento")
+    @PostMapping(value = "/{eventId}/enrollments/{enrollmentId}/certificate/manual/email")
+    public ResponseEntity<MessageResponse> emailManualEventParticipantCertificate(@PathVariable Long eventId,
+            @PathVariable Long enrollmentId, @AuthenticationPrincipal Jwt jwt) {
+        participantCertificateServices.sendEventCertificateByEmail(eventId, enrollmentId, extractUserId(jwt));
+        return ResponseEntity.ok(new MessageResponse("Certificado enviado por e-mail."));
+    }
+
+    @Operation(summary = "Enviar por e-mail certificado manual de participante da atividade")
+    @PostMapping(value = "/{eventId}/activities/{activityId}/enrollments/{enrollmentId}/certificate/manual/email")
+    public ResponseEntity<MessageResponse> emailManualActivityParticipantCertificate(@PathVariable Long eventId,
+            @PathVariable Long activityId, @PathVariable Long enrollmentId, @AuthenticationPrincipal Jwt jwt) {
+        participantCertificateServices.sendActivityCertificateByEmail(
+                eventId, activityId, enrollmentId, extractUserId(jwt));
+        return ResponseEntity.ok(new MessageResponse("Certificado enviado por e-mail."));
     }
 
     @Operation(summary = "Emitir manualmente certificado de ministrante",

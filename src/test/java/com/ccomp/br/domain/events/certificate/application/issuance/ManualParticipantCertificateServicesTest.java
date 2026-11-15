@@ -16,6 +16,11 @@ import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityRepo
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
 import com.ccomp.br.domain.events.enrollments.enums.EnumEnrollmentState;
 import com.ccomp.br.domain.storage.external.StorageExternal;
+import com.ccomp.br.domain.users.external.UserManagement;
+import com.ccomp.br.module.email.EmailService;
+import com.ccomp.br.module.email.EmailAddress;
+import com.ccomp.br.shared.dto.UserDTO;
+import com.ccomp.br.shared.dto.SendMailDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +42,8 @@ import java.time.LocalDateTime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -54,6 +61,8 @@ class ManualParticipantCertificateServicesTest {
     @Mock ActivityCache activityCache;
     @Mock EnrollmentRepository enrollmentRepository;
     @Mock EnrollmentActivityRepository enrollmentActivityRepository;
+    @Mock UserManagement userManagement;
+    @Mock EmailService emailService;
 
     private ManualParticipantCertificateServices services;
     private EventDTO event;
@@ -62,7 +71,8 @@ class ManualParticipantCertificateServicesTest {
     @BeforeEach
     void setUp() throws Exception {
         services = new ManualParticipantCertificateServices(eventCache, accessPolicy, certificateFetcher,
-                variablesServices, activityCache, enrollmentRepository, enrollmentActivityRepository);
+                variablesServices, activityCache, enrollmentRepository, enrollmentActivityRepository,
+                userManagement, emailService);
         event = mock(EventDTO.class);
         var image = new BufferedImage(2, 2, BufferedImage.TYPE_INT_RGB);
         var bytes = new ByteArrayOutputStream();
@@ -143,6 +153,29 @@ class ManualParticipantCertificateServicesTest {
 
         assertThatThrownBy(() -> services.buildActivityCertificate(EVENT_ID, ACTIVITY_ID, ENROLLMENT_ID, MANAGER_ID))
                 .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void sendsGeneratedEventCertificateAsEmailAttachment() {
+        var enrollment = enrollment();
+        when(eventCache.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(accessPolicy.canEdit(event, MANAGER_ID)).thenReturn(true);
+        when(enrollmentRepository.findById(ENROLLMENT_ID)).thenReturn(Optional.of(enrollment));
+        when(certificateFetcher.fetchCoverTemplate(EVENT_ID)).thenReturn(cover);
+        when(certificateFetcher.fetchBoxTemplate(EVENT_ID)).thenReturn(boxTemplate());
+        when(variablesServices.loadEventVariablesValues(List.of(), EVENT_ID, RECIPIENT_ID)).thenReturn(Map.of());
+        when(event.title()).thenReturn("Evento de teste");
+        var recipient = mock(UserDTO.class);
+        when(recipient.emailAddress()).thenReturn(new EmailAddress("person@example.org"));
+        when(userManagement.findById(RECIPIENT_ID)).thenReturn(Optional.of(recipient));
+
+        services.sendEventCertificateByEmail(EVENT_ID, ENROLLMENT_ID, MANAGER_ID);
+
+        verify(emailService).send(argThat((SendMailDTO dto) -> dto.to().equals(new EmailAddress("person@example.org"))
+                && dto.attachments().size() == 1
+                && dto.attachments().getFirst().filename().equals("certificado-evento-50.png")
+                && dto.attachments().getFirst().contentType().equals("image/png")
+                && dto.attachments().getFirst().content().length > 0));
     }
 
     private Enrollment enrollment() {

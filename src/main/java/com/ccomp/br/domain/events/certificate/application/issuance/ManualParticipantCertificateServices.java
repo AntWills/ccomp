@@ -11,9 +11,14 @@ import com.ccomp.br.domain.events.core.application.EventAccessPolicy;
 import com.ccomp.br.domain.events.core.dto.EventDTO;
 import com.ccomp.br.domain.events.core.persistence.EventCache;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentActivityRepository;
+import com.ccomp.br.domain.events.enrollments.persistence.Enrollment;
 import com.ccomp.br.domain.events.enrollments.persistence.EnrollmentRepository;
 import com.ccomp.br.domain.storage.external.StorageExternal;
+import com.ccomp.br.domain.users.external.UserManagement;
+import com.ccomp.br.module.email.EmailService;
 import com.ccomp.br.module.certificate.Certificate;
+import com.ccomp.br.shared.dto.MailAttachment;
+import com.ccomp.br.shared.dto.SendMailDTO;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
@@ -34,11 +39,14 @@ public class ManualParticipantCertificateServices {
     private final ActivityCache activityCache;
     private final EnrollmentRepository enrollmentRepository;
     private final EnrollmentActivityRepository enrollmentActivityRepository;
+    private final UserManagement userManagement;
+    private final EmailService emailService;
 
     public ManualParticipantCertificateServices(EventCache eventCache, EventAccessPolicy accessPolicy,
             CertificateFetcher certificateFetcher, CertificateVariablesServices variablesServices,
             ActivityCache activityCache, EnrollmentRepository enrollmentRepository,
-            EnrollmentActivityRepository enrollmentActivityRepository) {
+            EnrollmentActivityRepository enrollmentActivityRepository, UserManagement userManagement,
+            EmailService emailService) {
         this.eventCache = eventCache;
         this.accessPolicy = accessPolicy;
         this.certificateFetcher = certificateFetcher;
@@ -46,6 +54,32 @@ public class ManualParticipantCertificateServices {
         this.activityCache = activityCache;
         this.enrollmentRepository = enrollmentRepository;
         this.enrollmentActivityRepository = enrollmentActivityRepository;
+        this.userManagement = userManagement;
+        this.emailService = emailService;
+    }
+
+    public void sendEventCertificateByEmail(Long eventId, Long enrollmentId, UUID requesterId) {
+        var certificate = buildEventCertificate(eventId, enrollmentId, requesterId);
+        var enrollment = findEnrollment(eventId, enrollmentId);
+        var event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        sendCertificate(enrollment.getUserId(), "Certificado do evento: " + event.title(),
+                "Olá! Segue em anexo seu certificado do evento <strong>%s</strong>.".formatted(escapeHtml(event.title())),
+                "certificado-evento-%d.png".formatted(eventId), certificate);
+    }
+
+    public void sendActivityCertificateByEmail(Long eventId, Long activityId, Long enrollmentId, UUID requesterId) {
+        var certificate = buildActivityCertificate(eventId, activityId, enrollmentId, requesterId);
+        var enrollment = findEnrollment(eventId, enrollmentId);
+        var event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        var activity = activityCache.findById(activityId)
+                .filter(item -> eventId.equals(item.eventId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada neste evento."));
+        sendCertificate(enrollment.getUserId(), "Certificado da atividade: " + activity.title(),
+                "Olá! Segue em anexo seu certificado da atividade <strong>%s</strong>, do evento <strong>%s</strong>."
+                        .formatted(escapeHtml(activity.title()), escapeHtml(event.title())),
+                "certificado-atividade-%d.png".formatted(activityId), certificate);
     }
 
     public StorageExternal.StoredFile buildEventCertificate(Long eventId, Long enrollmentId, UUID requesterId) {
@@ -98,6 +132,31 @@ public class ManualParticipantCertificateServices {
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         if (!accessPolicy.canEdit(event, requesterId))
             throw new AccessDeniedException("Somente a equipe do evento pode emitir certificados manualmente.");
+    }
+
+    private Enrollment findEnrollment(Long eventId, Long enrollmentId) {
+        return enrollmentRepository.findById(enrollmentId)
+                .filter(item -> eventId.equals(item.getEventId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada neste evento."));
+    }
+
+    private void sendCertificate(UUID recipientId, String subject, String htmlBody, String filename,
+                                 StorageExternal.StoredFile certificate) {
+        var user = userManagement.findById(recipientId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário da inscrição não encontrado."));
+        try (var input = certificate.resource().getInputStream()) {
+            byte[] content = input.readAllBytes();
+            emailService.send(new SendMailDTO(user.emailAddress(), subject, htmlBody, true,
+                    List.of(new MailAttachment(filename, content, certificate.contentType()))));
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException("Não foi possível ler o certificado para anexá-lo ao e-mail.", exception);
+        }
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) return "";
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
     }
 
     private StorageExternal.StoredFile render(StorageExternal.StoredFile cover, EventBoxTemplate template,
