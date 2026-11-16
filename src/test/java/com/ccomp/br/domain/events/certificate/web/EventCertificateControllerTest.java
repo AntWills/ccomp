@@ -436,6 +436,23 @@ class EventCertificateControllerTest {
     }
 
     @Test
+    void emailManualParticipantEventCertificate_returnsSuccess() throws Exception {
+        mockMvc.perform(post("/api/events/50/enrollments/80/certificate/manual/email"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response").value("Certificado enviado por e-mail."));
+        verify(manualParticipantCertificateServices).sendEventCertificateByEmail(50L, 80L, PARTICIPANT_ID);
+    }
+
+    @Test
+    void emailManualParticipantActivityCertificate_returnsSuccess() throws Exception {
+        mockMvc.perform(post("/api/events/50/activities/77/enrollments/80/certificate/manual/email"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response").value("Certificado enviado por e-mail."));
+        verify(manualParticipantCertificateServices)
+                .sendActivityCertificateByEmail(50L, 77L, 80L, PARTICIPANT_ID);
+    }
+
+    @Test
     void uploadCoverTemplate_validFile_returnsSuccess() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "cover.png", "image/png", new byte[]{1, 2, 3});
 
