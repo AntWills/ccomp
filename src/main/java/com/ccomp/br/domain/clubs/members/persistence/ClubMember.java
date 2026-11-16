@@ -1,0 +1,93 @@
+package com.ccomp.br.domain.clubs.members.persistence;
+
+import com.ccomp.br.domain.clubs.members.enums.EnumClubMemberStatus;
+import com.ccomp.br.domain.clubs.members.enums.EnumClubMemberRole;
+import com.ccomp.br.domain.clubs.core.persistence.Club;
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Entity
+@Table(name = "tb_club_members",
+        indexes = {
+            @Index(name = "idx_club_members_user_id", columnList = "user_id"),
+            @Index(name = "idx_club_members_club_id", columnList = "club_id"),
+            @Index(name = "idx_club_members_joined_at_id", columnList = "joined_at DESC, id DESC")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_club_members_club_user",
+                        columnNames = {"club_id", "user_id"}
+                )
+        }
+)
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ClubMember {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "club_id", nullable = false)
+    private Club club;
+
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "varchar(25)")
+    private EnumClubMemberRole role;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "varchar(25)")
+    private EnumClubMemberStatus status;
+
+//    @Column(name = "edition")
+//    private String edition;
+
+    @Column(name = "joined_at", nullable = false)
+    private LocalDateTime joinedAt;
+
+    @Column(name = "left_at")
+    private LocalDateTime leftAt;
+
+    public void activate() {
+        this.status = EnumClubMemberStatus.ACTIVE;
+        this.leftAt = null;
+    }
+
+    public void deactivate() {
+        this.status = EnumClubMemberStatus.INACTIVE;
+        this.leftAt = LocalDateTime.now();
+    }
+
+    public void unsubscribe() {
+        this.status = EnumClubMemberStatus.CANCELLED;
+        this.leftAt = LocalDateTime.now();
+    }
+
+    public void complete() {
+        this.status = EnumClubMemberStatus.COMPLETED;
+        this.leftAt = LocalDateTime.now();
+    }
+
+    public void ban() {
+        this.status = EnumClubMemberStatus.BANNED;
+        this.leftAt = LocalDateTime.now();
+    }
+
+    public boolean isInstructor(Long clubId) {
+        return this.role == EnumClubMemberRole.INSTRUCTOR && clubId.equals(this.club.getId());
+    }
+
+    public boolean isStillLinked() {
+        return this.status != EnumClubMemberStatus.CANCELLED
+                && this.status != EnumClubMemberStatus.BANNED;
+    }
+}

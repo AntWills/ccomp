@@ -1,6 +1,6 @@
 package com.ccomp.br.domain.highlights.dto;
 
-import com.ccomp.br.domain.clubs.dto.ClubResponseDTO;
+import com.ccomp.br.domain.clubs.core.dto.ClubResponseDTO;
 import com.ccomp.br.domain.events.core.dto.EventListItemDTO;
 import com.ccomp.br.domain.news.dto.NewsItem;
 

@@ -71,7 +71,8 @@ public class SecurityConfig {
     };
 
     private static final String[] PUBLIC_CERTIFICATE_ROUTES = {
-            "/api/events/certificates/validate/{code}"
+            "/api/events/certificates/validate/{code}",
+            "/api/clubs/certificates/validation/{code}"
     };
 
     private static final String[] PUBLIC_FILES_ROUTES = {

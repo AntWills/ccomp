@@ -1,7 +1,7 @@
 package com.ccomp.br.domain.highlights.application;
 
-import com.ccomp.br.domain.clubs.application.ClubService;
-import com.ccomp.br.domain.clubs.dto.ClubResponseDTO;
+import com.ccomp.br.domain.clubs.core.application.ClubService;
+import com.ccomp.br.domain.clubs.core.dto.ClubResponseDTO;
 import com.ccomp.br.domain.events.core.application.EventsServices;
 import com.ccomp.br.domain.events.core.dto.EventListItemDTO;
 import com.ccomp.br.domain.events.core.dto.EventsFilterRequest;
