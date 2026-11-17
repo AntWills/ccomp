@@ -85,6 +85,8 @@ class NewsImageServiceTest {
 
     @Test
     void getImageReturnsEmptyWhenNoKeyAndCachedBytesWhenPresent() throws Exception {
+        when(accessPolicy.canView(news, null)).thenReturn(true);
+        when(accessPolicy.canView(news, USER_ID)).thenReturn(true);
         assertThat(service.getCoverImage(NEWS_ID, null)).isEmpty();
         verifyNoInteractions(imageCache, storageExternal);
         news.setCoverImageKey("news/18/cover/cover.webp");
@@ -96,6 +98,7 @@ class NewsImageServiceTest {
 
     @Test
     void getImageFallsBackToStorageWhenCacheFails() {
+        when(accessPolicy.canView(news, USER_ID)).thenReturn(true);
         news.setCoverImageKey("news/18/cover/cover.jpg");
         when(imageCache.get(news.getCoverImageKey())).thenThrow(new IllegalStateException("cache unavailable"));
         var stored = new StorageExternal.StoredFile(new org.springframework.core.io.ByteArrayResource(new byte[]{8}), "image/jpeg");
