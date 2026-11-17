@@ -10,6 +10,7 @@ import org.mapstruct.*;
         collectionMappingStrategy = CollectionMappingStrategy.SETTER_PREFERRED
 )
 public interface NewsMapper {
+    @Mapping(target = "coverImageUrl", expression = "java(news.getCoverImageKey() == null ? null : \"/api/news/\" + news.getId() + \"/images/cover\")")
     NewsResponse newsToNewsResponse(News news);
 
     @Mapping(target = "id", ignore = true)

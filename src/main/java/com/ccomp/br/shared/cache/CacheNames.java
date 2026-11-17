@@ -51,6 +51,7 @@ public final class CacheNames {
 
     // domain/news
     public static final String NEWS_BY_SLUG = "news:by-slug";
+    public static final String NEWS_COVER_IMAGE = "news:cover:image";
 
     public static final Map<String, CacheTier> TIERS = Map.ofEntries(
             Map.entry(USERS_BY_ID, SHORT),

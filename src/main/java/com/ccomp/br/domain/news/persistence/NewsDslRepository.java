@@ -49,7 +49,7 @@ public class NewsDslRepository {
                                 news.title,
                                 news.summary,
                                 news.slug,
-                                news.coverImageUrl,
+                                Expressions.stringTemplate("case when {0} is null then null else concat('/api/news/', {1}, '/images/cover') end", news.coverImageKey, news.id),
                                 news.publishedAt,
                                 news.featured
                         )

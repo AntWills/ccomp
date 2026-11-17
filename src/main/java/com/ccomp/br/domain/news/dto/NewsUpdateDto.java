@@ -10,7 +10,6 @@ public record NewsUpdateDto(
         @Size(min = 5, message = "O título deve ter entre 5 e 255 caracteres.")
         String title,
         String summary,
-        String coverImageUrl,
         Boolean featured,
         String content
 //        List<ContentBlock> blocks
