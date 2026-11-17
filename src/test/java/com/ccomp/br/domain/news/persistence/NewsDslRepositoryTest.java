@@ -41,7 +41,7 @@ public class NewsDslRepositoryTest {
                 .title("Notícia 1")
                 .slug("noticia-1")
                 .summary("Resumo da notícia 1")
-                .coverImageUrl("https://example.com/image1.jpg")
+                .coverImageKey("news/1/cover/image1.jpg")
                 .featured(false)
                 .authorId(java.util.UUID.randomUUID())
                 .publishedAt(now.minusHours(3))
@@ -51,7 +51,7 @@ public class NewsDslRepositoryTest {
                 .title("Notícia 2")
                 .slug("noticia-2")
                 .summary("Resumo da notícia 2")
-                .coverImageUrl("https://example.com/image2.jpg")
+                .coverImageKey("news/2/cover/image2.jpg")
                 .featured(true)
                 .authorId(java.util.UUID.randomUUID())
                 .publishedAt(now.minusHours(2))
@@ -61,7 +61,7 @@ public class NewsDslRepositoryTest {
                 .title("Notícia 3")
                 .slug("noticia-3")
                 .summary("Resumo da notícia 3")
-                .coverImageUrl("https://example.com/image3.jpg")
+                .coverImageKey("news/3/cover/image3.jpg")
                 .featured(false)
                 .authorId(java.util.UUID.randomUUID())
                 .publishedAt(now.minusHours(1))
@@ -83,6 +83,7 @@ public class NewsDslRepositoryTest {
         assertThat(page1).hasSize(2);
         assertThat(page1.get(0).title()).isEqualTo("Notícia 3");
         assertThat(page1.get(1).title()).isEqualTo("Notícia 2");
+        assertThat(page1.get(0).coverImageUrl()).isEqualTo("/api/news/" + page1.get(0).id() + "/images/cover");
 
         // Cursor baseado no último item da primeira página
         NewsItem lastItem = page1.getLast();

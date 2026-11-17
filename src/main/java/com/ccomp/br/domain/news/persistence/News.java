@@ -33,7 +33,8 @@ public class News {
     private String slug;
 
     private String summary;
-    private String coverImageUrl;
+    @Column(name = "cover_image_key")
+    private String coverImageKey;
 
     /**
      * Indica se a notícia é uma manchete ou destaque principal.

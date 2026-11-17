@@ -114,6 +114,9 @@ Para o funcionamento completo, os vínculos entre destinatários, elegibilidade,
 | `DELETE` | `/api/news/{newsId}/editors/{email}` | `NewsEditorController#removeEditor` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
 | `POST` | `/api/news/{newsId}/editors/{email}` | `NewsEditorController#addEditor` | Protegida (JWT) | Requer autenticação; regras de propriedade/participação são verificadas no serviço quando aplicável. |
 | `GET` | `/api/news/{slug}` | `NewsController#getBySlug` | Pública | Pública; o serviço filtra conteúdo não publicado quando aplicável. |
+| `POST` | `/api/news/{newsId}/images/cover` | `NewsImageController#uploadCoverImage` | Protegida (JWT) | Autor, editor associado, MODERATOR ou ADMIN; aceita PNG, JPEG e WebP. |
+| `GET` | `/api/news/{newsId}/images/cover` | `NewsImageController#getCoverImage` | Pública para notícia publicada | Notícia não publicada exige autor, editor associado, MODERATOR ou ADMIN; retorna 204 sem capa disponível. |
+| `DELETE` | `/api/news/{newsId}/images/cover` | `NewsImageController#removeCoverImage` | Protegida (JWT) | Autor, editor associado, MODERATOR ou ADMIN; retorna 204 ao remover e 404 se não houver capa. |
 | `POST` | `/api/storage/upload` | `StorageController#uploadFile` | Restrita por role | Roles: ADMIN, MODERATOR, STAFF. Políticas de propriedade também se aplicam. |
 | `DELETE` | `/api/storage/{fileName}` | `StorageController#deleteFile` | Restrita por role | Roles: ADMIN, MODERATOR, STAFF. Políticas de propriedade também se aplicam. |
 | `GET` | `/api/storage/{fileName}` | `StorageController#getImage` | Restrita por role | Roles: ADMIN, MODERATOR, STAFF. Políticas de propriedade também se aplicam. |
