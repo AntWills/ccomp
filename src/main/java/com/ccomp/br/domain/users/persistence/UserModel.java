@@ -3,6 +3,8 @@ package com.ccomp.br.domain.users.persistence;
 import com.ccomp.br.domain.users.enums.EnumUserStatusAccount;
 import com.ccomp.br.domain.users.persistence.roles.Roles;
 import com.ccomp.br.module.email.EmailAddress;
+import com.querydsl.core.annotations.PropertyType;
+import com.querydsl.core.annotations.QueryType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -49,6 +51,7 @@ public class UserModel {
     private LocalDateTime updatedAt;
 
     @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+    @QueryType(PropertyType.NONE)
     private Roles role;
 
     public UserModel(String name, String password, EmailAddress email){

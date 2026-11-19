@@ -39,7 +39,7 @@ public class UserDslRepository {
         );
 
         filter.roleOpt().ifPresent(role ->
-                whereClause.and(userModel.role.role.eq(role))
+                whereClause.and(roles.role.eq(role))
         );
 
         searchTerm.ifPresent(term -> {
@@ -101,7 +101,7 @@ public class UserDslRepository {
                         )
                 )
                 .from(userModel)
-                .innerJoin(userModel.role, roles)
+                .innerJoin(roles).on(roles.user.id.eq(userModel.id))
                 .where(whereClause);
 
         if (searchTerm.isPresent()) {
