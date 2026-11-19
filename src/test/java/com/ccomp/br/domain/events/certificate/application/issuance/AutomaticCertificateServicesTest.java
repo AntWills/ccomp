@@ -118,7 +118,7 @@ class AutomaticCertificateServicesTest {
         EventGuest guest = mock(EventGuest.class);
         ActivityGuest link = mock(ActivityGuest.class);
         when(activityCache.findById(ACTIVITY_ID)).thenReturn(Optional.of(activity));
-        when(activityGuestRepository.findByActivityIdAndId(ACTIVITY_ID, GUEST_ID)).thenReturn(Optional.of(link));
+        when(activityGuestRepository.findByActivityIdAndEventGuestId(ACTIVITY_ID, GUEST_ID)).thenReturn(Optional.of(link));
         when(link.getRole()).thenReturn(EnumActivityGuestRole.PRESENTER);
         when(link.getEventGuest()).thenReturn(guest);
         when(guest.isConfirmed()).thenReturn(true);
@@ -169,7 +169,7 @@ class AutomaticCertificateServicesTest {
         ActivityGuest link = mock(ActivityGuest.class);
         EventGuest guest = mock(EventGuest.class);
         when(activityCache.findById(ACTIVITY_ID)).thenReturn(Optional.of(activity));
-        when(activityGuestRepository.findByActivityIdAndId(ACTIVITY_ID, GUEST_ID)).thenReturn(Optional.of(link));
+        when(activityGuestRepository.findByActivityIdAndEventGuestId(ACTIVITY_ID, GUEST_ID)).thenReturn(Optional.of(link));
         when(link.getEventGuest()).thenReturn(guest);
         when(link.getRole()).thenReturn(EnumActivityGuestRole.PRESENTER);
         when(guest.isConfirmed()).thenReturn(true);
@@ -189,7 +189,7 @@ class AutomaticCertificateServicesTest {
         ActivityGuest link = mock(ActivityGuest.class);
         EventGuest guest = mock(EventGuest.class);
         when(activityCache.findById(ACTIVITY_ID)).thenReturn(Optional.of(activity));
-        when(activityGuestRepository.findByActivityIdAndId(ACTIVITY_ID, GUEST_ID)).thenReturn(Optional.of(link));
+        when(activityGuestRepository.findByActivityIdAndEventGuestId(ACTIVITY_ID, GUEST_ID)).thenReturn(Optional.of(link));
         when(link.getEventGuest()).thenReturn(guest);
         when(link.getRole()).thenReturn(EnumActivityGuestRole.PRESENTER);
         when(guest.isConfirmed()).thenReturn(false);

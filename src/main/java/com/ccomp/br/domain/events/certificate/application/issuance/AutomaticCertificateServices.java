@@ -160,12 +160,12 @@ public class AutomaticCertificateServices {
     }
 
     public StorageExternal.StoredFile buildCertificateFromActivityGuest(Long eventId, Long activityId,
-            Long activityGuestId, UUID requesterId) {
+            Long eventGuestId, UUID requesterId) {
         var activity = activityCache.findById(activityId)
                 .filter(item -> item.eventId().equals(eventId))
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada neste evento."));
 
-        var activityGuest = activityGuestRepository.findByActivityIdAndId(activityId, activityGuestId)
+        var activityGuest = activityGuestRepository.findByActivityIdAndEventGuestId(activityId, eventGuestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Convidado não está vinculado a esta atividade."));
         var guest = activityGuest.getEventGuest();
         if (activityGuest.getRole() != EnumActivityGuestRole.PRESENTER || !guest.isConfirmed())
@@ -202,10 +202,10 @@ public class AutomaticCertificateServices {
     }
 
     public StorageExternal.StoredFile buildActivityCertificateFromGuest(Long eventId, Long activityId,
-            Long activityGuestId, UUID requesterId) {
+            Long eventGuestId, UUID requesterId) {
         activityCache.findById(activityId).filter(item -> item.eventId().equals(eventId))
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada neste evento."));
-        var link = activityGuestRepository.findByActivityIdAndId(activityId, activityGuestId)
+        var link = activityGuestRepository.findByActivityIdAndEventGuestId(activityId, eventGuestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Convidado não está vinculado a esta atividade."));
         var guest = link.getEventGuest();
         if (link.getRole() != EnumActivityGuestRole.PRESENTER || !guest.isConfirmed() || guest.getUserId() == null)

@@ -91,7 +91,7 @@ public class ManualCertificateServices {
                     .filter(item -> item.eventId().equals(eventId))
                     .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada neste evento."));
             var activityGuest = activityGuestRepository
-                    .findByActivityIdAndId(request.activityId(), request.activityGuestId())
+                    .findByActivityIdAndEventGuestId(request.activityId(), request.eventGuestId())
                     .orElseThrow(() -> new ResourceNotFoundException("Convidado não está vinculado a esta atividade."));
             if (activityGuest.getRole() != EnumActivityGuestRole.PRESENTER
                     || !activityGuest.getEventGuest().isConfirmed())

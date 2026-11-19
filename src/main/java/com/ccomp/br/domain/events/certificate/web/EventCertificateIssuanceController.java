@@ -97,13 +97,13 @@ public class EventCertificateIssuanceController {
             @ApiResponse(responseCode = "403", description = "Convidado sem conta vinculada, papel incorreto ou solicitante sem permissão", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Evento, atividade ou vínculo de convidado não encontrado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
     })
-    @GetMapping(value = "/{eventId}/activities/{activityId}/guests/{activityGuestId}/instructor-certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    @GetMapping(value = "/{eventId}/activities/{activityId}/guests/{eventGuestId}/instructor-certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateFromActivityGuest(@PathVariable Long eventId,
-            @PathVariable Long activityId, @PathVariable Long activityGuestId,
+            @PathVariable Long activityId, @PathVariable Long eventGuestId,
             @AuthenticationPrincipal Jwt jwt) {
         StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromActivityGuest(
-                eventId, activityId, activityGuestId, extractUserId(jwt));
-        return certificateResponse(certificate, "certificado-ministrante-convidado-%d.png".formatted(activityGuestId));
+                eventId, activityId, eventGuestId, extractUserId(jwt));
+        return certificateResponse(certificate, "certificado-ministrante-convidado-%d.png".formatted(eventGuestId));
     }
 
     @Operation(summary = "Gerar certificado de ministrante da atividade",
@@ -129,13 +129,13 @@ public class EventCertificateIssuanceController {
             @ApiResponse(responseCode = "403", description = "Convidado não é apresentador confirmado com conta vinculada, ou solicitante sem permissão", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Evento, atividade ou vínculo de convidado não encontrado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
     })
-    @GetMapping(value = "/{eventId}/activities/{activityId}/guests/{activityGuestId}/activity-certificate",
+    @GetMapping(value = "/{eventId}/activities/{activityId}/guests/{eventGuestId}/activity-certificate",
             produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildActivityCertificateFromGuest(@PathVariable Long eventId,
-            @PathVariable Long activityId, @PathVariable Long activityGuestId, @AuthenticationPrincipal Jwt jwt) {
+            @PathVariable Long activityId, @PathVariable Long eventGuestId, @AuthenticationPrincipal Jwt jwt) {
         var certificate = automaticCertificateServices.buildActivityCertificateFromGuest(
-                eventId, activityId, activityGuestId, extractUserId(jwt));
-        return certificateResponse(certificate, "certificado-convidado-atividade-%d.png".formatted(activityGuestId));
+                eventId, activityId, eventGuestId, extractUserId(jwt));
+        return certificateResponse(certificate, "certificado-convidado-atividade-%d.png".formatted(eventGuestId));
     }
 
     @Operation(summary = "Gerar certificado da equipe do evento",
