@@ -355,6 +355,14 @@ public class EventCertificateManagementController {
         return ResponseEntity.ok(new MessageResponse("Template de caixas do certificado de atividade salvo com sucesso."));
     }
 
+    @Operation(summary = "Consultar template de certificado da atividade",
+            description = "Retorna as caixas de texto e variáveis do template resolvido para a atividade e contexto informados. Se não houver template específico, usa o template padrão de atividade.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Template retornado com sucesso",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BoxTemplateResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de visualização do evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento ou atividade não encontrado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
     @GetMapping(value = "/{eventId}/activities/{activityId}/certificate-box-template",
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<BoxTemplateResponse> getSpecificActivityBoxTemplate(
@@ -366,6 +374,14 @@ public class EventCertificateManagementController {
         return ResponseEntity.ok(new BoxTemplateResponse(template.boxes(), template.variables()));
     }
 
+    @Operation(summary = "Salvar template específico de certificado da atividade",
+            description = "Cria ou atualiza as caixas de texto do template específico da atividade para o contexto informado. A lista deve conter de 1 a 30 caixas; as variáveis são extraídas das caixas.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Template salvo com sucesso", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MessageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Lista de caixas vazia ou dados inválidos", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de edição do evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento ou atividade não encontrado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
     @PostMapping(value = "/{eventId}/activities/{activityId}/certificate-box-template",
             consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<MessageResponse> saveSpecificActivityBoxTemplate(
@@ -378,6 +394,13 @@ public class EventCertificateManagementController {
         return ResponseEntity.ok(new MessageResponse("Template específico da atividade salvo com sucesso."));
     }
 
+    @Operation(summary = "Remover template específico de certificado da atividade",
+            description = "Remove o template específico de caixas do contexto informado. Se não existir, retorna 404. A atividade volta a usar o template padrão de atividade.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Template removido", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de edição do evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento ou atividade não encontrado, ou não há template específico para este contexto", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MessageResponse.class)))
+    })
     @DeleteMapping(value = "/{eventId}/activities/{activityId}/certificate-box-template")
     public ResponseEntity<?> deleteSpecificActivityBoxTemplate(
             @PathVariable Long eventId, @PathVariable Long activityId,
@@ -390,6 +413,17 @@ public class EventCertificateManagementController {
                 .body(new MessageResponse("A atividade não possui template específico para este contexto."));
     }
 
+    @Operation(summary = "Consultar fundo do certificado da atividade",
+            description = "Retorna a imagem de fundo resolvida para a atividade e contexto informados, usando o fundo específico da atividade quando configurado e o fallback aplicável nos demais casos.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Imagem PNG, JPEG ou WebP retornada", content = {
+                    @Content(mediaType = MediaType.IMAGE_PNG_VALUE),
+                    @Content(mediaType = MediaType.IMAGE_JPEG_VALUE),
+                    @Content(mediaType = "image/webp")
+            }),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de visualização do evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento, atividade ou imagem de fundo não encontrado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
     @GetMapping(value = "/{eventId}/activities/{activityId}/certificate-cover-template",
             produces = {MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_JPEG_VALUE, "image/webp"})
     public ResponseEntity<Resource> getSpecificActivityCoverTemplate(
@@ -402,6 +436,14 @@ public class EventCertificateManagementController {
                 .body(resolved.cover().resource());
     }
 
+    @Operation(summary = "Enviar fundo específico do certificado da atividade",
+            description = "Envia ou substitui o fundo do certificado para a atividade e contexto informados. O arquivo deve ser uma imagem PNG, JPEG ou WebP válida e respeitar os limites de tamanho e resolução definidos pela aplicação.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Fundo atualizado com sucesso", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MessageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Arquivo ausente, inválido, formato não suportado ou resolução acima do limite", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de edição do evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento ou atividade não encontrado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
     @PostMapping(value = "/{eventId}/activities/{activityId}/certificate-cover-template",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MessageResponse> uploadSpecificActivityCoverTemplate(
@@ -412,6 +454,13 @@ public class EventCertificateManagementController {
         return ResponseEntity.ok(new MessageResponse("Fundo específico da atividade atualizado com sucesso."));
     }
 
+    @Operation(summary = "Remover fundo específico do certificado da atividade",
+            description = "Remove o fundo específico da atividade para o contexto informado. Se não houver fundo próprio, retorna 404; a resolução do certificado passa a usar o fundo de fallback.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Fundo removido", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão de edição do evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento ou atividade não encontrado, ou não há fundo específico para este contexto", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MessageResponse.class)))
+    })
     @DeleteMapping(value = "/{eventId}/activities/{activityId}/certificate-cover-template")
     public ResponseEntity<?> deleteSpecificActivityCoverTemplate(
             @PathVariable Long eventId, @PathVariable Long activityId,
