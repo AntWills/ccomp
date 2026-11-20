@@ -27,7 +27,7 @@ public final class CertificateFileName {
         int appended = 0;
         for (String word : words) {
             if (word.isEmpty()) continue;
-            filename.append(word);
+            filename.append('-').append(word);
             if (++appended == 2) break;
         }
     }
