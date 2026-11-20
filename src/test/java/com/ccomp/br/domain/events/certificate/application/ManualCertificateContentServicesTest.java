@@ -72,10 +72,10 @@ class ManualCertificateContentServicesTest {
         allowEdit(finishedEvent);
         when(certificateFetcher.fetchCoverTemplate(EVENT_ID)).thenReturn(cover);
 
-        StorageExternal.StoredFile result = services.previewCustomCertificate(EVENT_ID, MANAGER_ID, request);
+        var result = services.previewCustomCertificate(EVENT_ID, MANAGER_ID, request);
 
-        BufferedImage image = ImageIO.read(result.resource().getInputStream());
-        assertThat(result.contentType()).isEqualTo("image/png");
+        BufferedImage image = ImageIO.read(result.file().resource().getInputStream());
+        assertThat(result.file().contentType()).isEqualTo("image/png");
         assertThat(image).isNotNull();
         assertThat(image.getWidth()).isEqualTo(500);
         assertThat(image.getHeight()).isEqualTo(200);
@@ -88,9 +88,9 @@ class ManualCertificateContentServicesTest {
         allowEdit(finishedEvent);
         when(certificateFetcher.fetchCoverTemplate(EVENT_ID)).thenReturn(cover);
 
-        StorageExternal.StoredFile result = services.issueCustomCertificate(EVENT_ID, MANAGER_ID, request);
+        var result = services.issueCustomCertificate(EVENT_ID, MANAGER_ID, request);
 
-        assertThat(result.contentType()).isEqualTo("image/png");
+        assertThat(result.file().contentType()).isEqualTo("image/png");
         verify(certificateFetcher).fetchCoverTemplate(EVENT_ID);
     }
 

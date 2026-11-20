@@ -182,7 +182,8 @@ public class CertificateVariablesServices {
         if (!enrollment.haveCheckIn())
             throw new DomainException("O participante não fez check-in no evento.");
 
-        boolean needsUser = variables == null || variables.contains("{participante.nome}");
+        // The participant name is also used for the generated filename.
+        boolean needsUser = true;
         boolean needsWorkload = variables == null || variables.contains("{evento.carga_horaria}");
         boolean needsCode = variables == null || variables.contains("{validacao.codigo}")
                 || variables.contains("{validacao.url}");
@@ -418,7 +419,8 @@ public class CertificateVariablesServices {
         }
 
         // 2. Identifica quais dados realmente precisam ser buscados (Evita I/O desnecessário)
-        boolean needsUser = variables.contains("{participante.nome}");
+        // The participant name is also used for the generated filename.
+        boolean needsUser = true;
         boolean needsActivity =  variables.stream().anyMatch(v -> v.startsWith("{atividade."));
         boolean needsEvent = variables.stream().anyMatch(v -> v.startsWith("{evento."));
         boolean needsCode = variables.contains("{validacao.codigo}")

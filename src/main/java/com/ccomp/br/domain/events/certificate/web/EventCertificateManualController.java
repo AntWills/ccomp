@@ -2,6 +2,7 @@ package com.ccomp.br.domain.events.certificate.web;
 
 import com.ccomp.br.domain.events.certificate.application.issuance.ManualCertificateServices;
 import com.ccomp.br.domain.events.certificate.application.issuance.ManualParticipantCertificateServices;
+import com.ccomp.br.domain.events.certificate.application.GeneratedCertificate;
 import com.ccomp.br.domain.events.certificate.dto.ManualCertificateContentRequest;
 import com.ccomp.br.domain.events.certificate.dto.ManualInstructorCertificateRequest;
 import com.ccomp.br.domain.storage.external.StorageExternal;
@@ -48,7 +49,7 @@ public class EventCertificateManualController {
     public ResponseEntity<Resource> buildManualEventParticipantCertificate(@PathVariable Long eventId,
             @PathVariable Long enrollmentId, @AuthenticationPrincipal Jwt jwt) {
         var certificate = participantCertificateServices.buildEventCertificate(eventId, enrollmentId, extractUserId(jwt));
-        return certificateResponse(certificate, "certificado-evento-%d-inscricao-%d.png".formatted(eventId, enrollmentId));
+        return certificateResponse(certificate);
     }
 
     @Operation(summary = "Emitir certificado manual de participante da atividade")
@@ -58,8 +59,7 @@ public class EventCertificateManualController {
             @PathVariable Long activityId, @PathVariable Long enrollmentId, @AuthenticationPrincipal Jwt jwt) {
         var certificate = participantCertificateServices.buildActivityCertificate(
                 eventId, activityId, enrollmentId, extractUserId(jwt));
-        return certificateResponse(certificate,
-                "certificado-atividade-%d-inscricao-%d.png".formatted(activityId, enrollmentId));
+        return certificateResponse(certificate);
     }
 
     @Operation(summary = "Enviar por e-mail certificado manual de participante do evento")
@@ -109,9 +109,9 @@ public class EventCertificateManualController {
                             }))
             @Valid @RequestBody ManualInstructorCertificateRequest request,
             @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = manualCertificateServices.buildInstructorCertificate(
+        GeneratedCertificate certificate = manualCertificateServices.buildInstructorCertificate(
                 eventId, request, extractUserId(jwt));
-        return certificateResponse(certificate, "certificado-ministrante-manual.png");
+        return certificateResponse(certificate);
     }
 
     @Operation(summary = "Emitir manualmente certificado de integrante da equipe",
@@ -135,9 +135,9 @@ public class EventCertificateManualController {
             @PathVariable Long eventId,
             @PathVariable UUID recipientId,
             @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = manualCertificateServices.buildTeamCertificate(
+        GeneratedCertificate certificate = manualCertificateServices.buildTeamCertificate(
                 eventId, recipientId, extractUserId(jwt));
-        return certificateResponse(certificate, "certificado-equipe-%s.png".formatted(recipientId));
+        return certificateResponse(certificate);
     }
 
     @Operation(summary = "Pré-visualizar certificado manual personalizado",
@@ -162,13 +162,13 @@ public class EventCertificateManualController {
             @PathVariable Long eventId,
             @Valid @RequestBody ManualCertificateContentRequest request,
             @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile preview = manualCertificateServices.previewCustomCertificate(
+        GeneratedCertificate preview = manualCertificateServices.previewCustomCertificate(
                 eventId, extractUserId(jwt), request);
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(preview.contentType()))
+                .contentType(MediaType.parseMediaType(preview.file().contentType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "inline; filename=\"certificado-previa-manual-%d.png\"".formatted(eventId))
-                .body(preview.resource());
+                        "inline; filename=\"%s\"".formatted(preview.fileName()))
+                .body(preview.file().resource());
     }
 
     @Operation(summary = "Emitir certificado manual personalizado",
@@ -193,19 +193,19 @@ public class EventCertificateManualController {
             @PathVariable Long eventId,
             @Valid @RequestBody ManualCertificateContentRequest request,
             @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = manualCertificateServices.issueCustomCertificate(
+        GeneratedCertificate certificate = manualCertificateServices.issueCustomCertificate(
                 eventId, extractUserId(jwt), request);
-        return certificateResponse(certificate, "certificado-manual-%d.png".formatted(eventId));
+        return certificateResponse(certificate);
     }
 
     private UUID extractUserId(Jwt jwt) {
         return UUID.fromString(jwt.getSubject());
     }
 
-    private ResponseEntity<Resource> certificateResponse(StorageExternal.StoredFile certificate, String fileName) {
+    private ResponseEntity<Resource> certificateResponse(GeneratedCertificate certificate) {
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(certificate.contentType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(fileName))
-                .body(certificate.resource());
+                .contentType(MediaType.parseMediaType(certificate.file().contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(certificate.fileName()))
+                .body(certificate.file().resource());
     }
 }

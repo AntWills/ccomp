@@ -1,6 +1,7 @@
 package com.ccomp.br.domain.events.certificate.web;
 
 import com.ccomp.br.domain.events.certificate.application.issuance.AutomaticCertificateServices;
+import com.ccomp.br.domain.events.certificate.application.GeneratedCertificate;
 import com.ccomp.br.domain.storage.external.StorageExternal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -44,12 +45,12 @@ public class EventCertificateIssuanceController {
     public ResponseEntity<Resource> buildCertificateFromEvent(@PathVariable Long eventId,
                                                                @RequestParam(required = false) @Size(max = 255) String name,
                                                                @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromEvent(
+        GeneratedCertificate certificate = automaticCertificateServices.buildCertificateFromEvent(
                 eventId, extractUserId(jwt), name);
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(certificate.contentType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"certificado-evento-%d.png\"".formatted(eventId))
-                .body(certificate.resource());
+                .contentType(MediaType.parseMediaType(certificate.file().contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(certificate.fileName()))
+                .body(certificate.file().resource());
     }
 
     @Operation(summary = "Consultar certificado de atividade",
@@ -64,12 +65,12 @@ public class EventCertificateIssuanceController {
     public ResponseEntity<Resource> buildCertificateFromActivity(@PathVariable Long activityId,
                                                                   @RequestParam(required = false) @Size(max = 255) String name,
                                                                   @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromActivity(
+        GeneratedCertificate certificate = automaticCertificateServices.buildCertificateFromActivity(
                 activityId, extractUserId(jwt), name);
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(certificate.contentType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"certificado-atividade-%d.png\"".formatted(activityId))
-                .body(certificate.resource());
+                .contentType(MediaType.parseMediaType(certificate.file().contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(certificate.fileName()))
+                .body(certificate.file().resource());
     }
 
     @Operation(summary = "Gerar certificado de ministrante",
@@ -84,9 +85,9 @@ public class EventCertificateIssuanceController {
     public ResponseEntity<Resource> buildCertificateFromInstructor(@PathVariable Long eventId,
                                                                     @PathVariable Long instructorId,
                                                                     @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromInstructor(
+        GeneratedCertificate certificate = automaticCertificateServices.buildCertificateFromInstructor(
                 eventId, instructorId, extractUserId(jwt));
-        return certificateResponse(certificate, "certificado-ministrante-%d.png".formatted(instructorId));
+        return certificateResponse(certificate);
     }
 
     @Operation(summary = "Gerar certificado de convidado apresentador",
@@ -101,9 +102,9 @@ public class EventCertificateIssuanceController {
     public ResponseEntity<Resource> buildCertificateFromActivityGuest(@PathVariable Long eventId,
             @PathVariable Long activityId, @PathVariable Long eventGuestId,
             @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateFromActivityGuest(
+        GeneratedCertificate certificate = automaticCertificateServices.buildCertificateFromActivityGuest(
                 eventId, activityId, eventGuestId, extractUserId(jwt));
-        return certificateResponse(certificate, "certificado-ministrante-convidado-%d.png".formatted(eventGuestId));
+        return certificateResponse(certificate);
     }
 
     @Operation(summary = "Gerar certificado de ministrante da atividade",
@@ -117,9 +118,9 @@ public class EventCertificateIssuanceController {
             produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildActivityCertificateFromInstructor(@PathVariable Long eventId,
             @PathVariable Long activityId, @PathVariable Long instructorId, @AuthenticationPrincipal Jwt jwt) {
-        var certificate = automaticCertificateServices.buildActivityCertificateFromInstructor(
+        GeneratedCertificate certificate = automaticCertificateServices.buildActivityCertificateFromInstructor(
                 eventId, activityId, instructorId, extractUserId(jwt));
-        return certificateResponse(certificate, "certificado-ministrante-atividade-%d.png".formatted(instructorId));
+        return certificateResponse(certificate);
     }
 
     @Operation(summary = "Gerar certificado de convidado da atividade",
@@ -133,9 +134,9 @@ public class EventCertificateIssuanceController {
             produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildActivityCertificateFromGuest(@PathVariable Long eventId,
             @PathVariable Long activityId, @PathVariable Long eventGuestId, @AuthenticationPrincipal Jwt jwt) {
-        var certificate = automaticCertificateServices.buildActivityCertificateFromGuest(
+        GeneratedCertificate certificate = automaticCertificateServices.buildActivityCertificateFromGuest(
                 eventId, activityId, eventGuestId, extractUserId(jwt));
-        return certificateResponse(certificate, "certificado-convidado-atividade-%d.png".formatted(eventGuestId));
+        return certificateResponse(certificate);
     }
 
     @Operation(summary = "Gerar certificado da equipe do evento",
@@ -149,19 +150,19 @@ public class EventCertificateIssuanceController {
     @GetMapping(value = "/{eventId}/team-certificate", produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildCertificateForEditor(@PathVariable Long eventId,
                                                                @AuthenticationPrincipal Jwt jwt) {
-        StorageExternal.StoredFile certificate = automaticCertificateServices.buildCertificateForEditor(
+        GeneratedCertificate certificate = automaticCertificateServices.buildCertificateForEditor(
                 eventId, extractUserId(jwt));
-        return certificateResponse(certificate, "certificado-equipe-%d.png".formatted(eventId));
+        return certificateResponse(certificate);
     }
 
     private UUID extractUserId(Jwt jwt) {
         return UUID.fromString(jwt.getSubject());
     }
 
-    private ResponseEntity<Resource> certificateResponse(StorageExternal.StoredFile certificate, String fileName) {
+    private ResponseEntity<Resource> certificateResponse(GeneratedCertificate certificate) {
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(certificate.contentType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(fileName))
-                .body(certificate.resource());
+                .contentType(MediaType.parseMediaType(certificate.file().contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(certificate.fileName()))
+                .body(certificate.file().resource());
     }
 }

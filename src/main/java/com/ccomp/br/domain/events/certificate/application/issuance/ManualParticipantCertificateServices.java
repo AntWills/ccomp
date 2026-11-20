@@ -2,6 +2,8 @@ package com.ccomp.br.domain.events.certificate.application.issuance;
 
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.certificate.application.CertificateFetcher;
+import com.ccomp.br.domain.events.certificate.application.CertificateFileName;
+import com.ccomp.br.domain.events.certificate.application.GeneratedCertificate;
 import com.ccomp.br.domain.events.certificate.application.ResolvedActivityCertificateTemplate;
 import com.ccomp.br.domain.events.certificate.application.variables.CertificateVariablesServices;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
@@ -65,7 +67,7 @@ public class ManualParticipantCertificateServices {
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         sendCertificate(enrollment.getUserId(), "Certificado do evento: " + event.title(),
                 "Olá! Segue em anexo seu certificado do evento <strong>%s</strong>.".formatted(escapeHtml(event.title())),
-                "certificado-evento-%d.png".formatted(eventId), certificate);
+                certificate.fileName(), certificate.file());
     }
 
     public void sendActivityCertificateByEmail(Long eventId, Long activityId, Long enrollmentId, UUID requesterId) {
@@ -79,11 +81,11 @@ public class ManualParticipantCertificateServices {
         sendCertificate(enrollment.getUserId(), "Certificado da atividade: " + activity.title(),
                 "Olá! Segue em anexo seu certificado da atividade <strong>%s</strong>, do evento <strong>%s</strong>."
                         .formatted(escapeHtml(activity.title()), escapeHtml(event.title())),
-                "certificado-atividade-%d.png".formatted(activityId), certificate);
+                certificate.fileName(), certificate.file());
     }
 
-    public StorageExternal.StoredFile buildEventCertificate(Long eventId, Long enrollmentId, UUID requesterId) {
-        authorize(eventId, requesterId);
+    public GeneratedCertificate buildEventCertificate(Long eventId, Long enrollmentId, UUID requesterId) {
+        EventDTO event = authorize(eventId, requesterId);
         var enrollment = enrollmentRepository.findById(enrollmentId)
                 .filter(item -> eventId.equals(item.getEventId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada neste evento."));
@@ -93,13 +95,16 @@ public class ManualParticipantCertificateServices {
             var values = box.thenApplyAsync(template -> variablesServices.loadEventVariablesValues(
                     template.getVariables(), eventId, enrollment.getUserId()), executor);
             CompletableFuture.allOf(cover, box, values).join();
-            return render(cover.join(), box.join(), values.join());
+            String participantName = userManagement.findById(enrollment.getUserId())
+                    .map(user -> user.name()).orElse(null);
+            return new GeneratedCertificate(render(cover.join(), box.join(), values.join()),
+                    CertificateFileName.create(event.title(), participantName));
         } catch (CompletionException e) {
             throw unwrap(e);
         }
     }
 
-    public StorageExternal.StoredFile buildActivityCertificate(Long eventId, Long activityId, Long enrollmentId,
+    public GeneratedCertificate buildActivityCertificate(Long eventId, Long activityId, Long enrollmentId,
                                                                  UUID requesterId) {
         authorize(eventId, requesterId);
         var activity = activityCache.findById(activityId)
@@ -121,17 +126,21 @@ public class ManualParticipantCertificateServices {
                     resolved.variables(), activityId, enrollment.getUserId()), executor);
             CompletableFuture.allOf(template, values).join();
             ResolvedActivityCertificateTemplate resolved = template.join();
-            return render(resolved.cover(), resolved.boxes(), values.join());
+            String participantName = userManagement.findById(enrollment.getUserId())
+                    .map(user -> user.name()).orElse(null);
+            return new GeneratedCertificate(render(resolved.cover(), resolved.boxes(), values.join()),
+                    CertificateFileName.create(activity.title(), participantName));
         } catch (CompletionException e) {
             throw unwrap(e);
         }
     }
 
-    private void authorize(Long eventId, UUID requesterId) {
+    private EventDTO authorize(Long eventId, UUID requesterId) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         if (!accessPolicy.canEdit(event, requesterId))
             throw new AccessDeniedException("Somente a equipe do evento pode emitir certificados manualmente.");
+        return event;
     }
 
     private Enrollment findEnrollment(Long eventId, Long enrollmentId) {

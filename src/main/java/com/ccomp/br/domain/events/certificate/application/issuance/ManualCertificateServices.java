@@ -2,6 +2,8 @@ package com.ccomp.br.domain.events.certificate.application.issuance;
 
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.certificate.application.CertificateFetcher;
+import com.ccomp.br.domain.events.certificate.application.CertificateFileName;
+import com.ccomp.br.domain.events.certificate.application.GeneratedCertificate;
 import com.ccomp.br.domain.events.certificate.application.variables.CertificateVariablesServices;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
 import com.ccomp.br.domain.events.certificate.dto.ManualInstructorCertificateRequest;
@@ -59,7 +61,7 @@ public class ManualCertificateServices {
         this.activityGuestRepository = activityGuestRepository;
     }
 
-    public StorageExternal.StoredFile buildInstructorCertificate(
+    public GeneratedCertificate buildInstructorCertificate(
             Long eventId, ManualInstructorCertificateRequest request, UUID requesterId) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
@@ -67,6 +69,7 @@ public class ManualCertificateServices {
             throw new AccessDeniedException("Somente a equipe do evento pode emitir certificados manualmente.");
 
         String instructorName;
+        String activityName = null;
         BigDecimal workload;
         boolean guestCertificate = request.instructorId() == null;
         if (request.instructorId() != null) {
@@ -78,6 +81,7 @@ public class ManualCertificateServices {
             var activity = activityCache.findById(targetActivityId)
                     .filter(item -> item.eventId().equals(eventId))
                     .orElseThrow(() -> new ResourceNotFoundException("Ministrante não pertence a este evento."));
+            activityName = activity.title();
             if (instructor.getStatus() != EnumInstructorStatus.CONFIRMED)
                 throw new AccessDeniedException("O vínculo do ministrante não está confirmado.");
             instructorName = instructor.getName();
@@ -90,6 +94,7 @@ public class ManualCertificateServices {
             var activity = activityCache.findById(request.activityId())
                     .filter(item -> item.eventId().equals(eventId))
                     .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada neste evento."));
+            activityName = activity.title();
             var activityGuest = activityGuestRepository
                     .findByActivityIdAndEventGuestId(request.activityId(), request.eventGuestId())
                     .orElseThrow(() -> new ResourceNotFoundException("Convidado não está vinculado a esta atividade."));
@@ -109,7 +114,8 @@ public class ManualCertificateServices {
             var resolved = certificateFetcher.resolveActivityTemplate(eventId, request.activityId(), context);
             Map<String, String> values = variablesServices.loadManualActivityRoleVariables(
                     request.activityId(), instructorName, guestCertificate);
-            return render(resolved.cover(), resolved.boxes(), values);
+            return new GeneratedCertificate(render(resolved.cover(), resolved.boxes(), values),
+                    CertificateFileName.create(activityName, instructorName));
         }
 
         StorageExternal.StoredFile cover = certificateFetcher.fetchCoverTemplate(eventId);
@@ -118,10 +124,11 @@ public class ManualCertificateServices {
         Map<String, String> values = guestCertificate
                 ? variablesServices.loadManualGuestVariablesValues(eventId, instructorName, workload)
                 : variablesServices.loadManualInstructorVariablesValues(eventId, instructorName, workload);
-        return render(cover, template.getBoxes(), values);
+        return new GeneratedCertificate(render(cover, template.getBoxes(), values),
+                CertificateFileName.create(event.title(), instructorName));
     }
 
-    public StorageExternal.StoredFile buildTeamCertificate(Long eventId, UUID recipientId, UUID requesterId) {
+    public GeneratedCertificate buildTeamCertificate(Long eventId, UUID recipientId, UUID requesterId) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -139,24 +146,26 @@ public class ManualCertificateServices {
                     variablesServices.loadEditorVariablesValues(box.getVariables(), eventId, recipientId), executor);
 
             CompletableFuture.allOf(coverFuture, boxFuture, variablesFuture).join();
-            return render(coverFuture.join(), boxFuture.join().getBoxes(), variablesFuture.join());
+            Map<String, String> variables = variablesFuture.join();
+            return new GeneratedCertificate(render(coverFuture.join(), boxFuture.join().getBoxes(), variables),
+                    CertificateFileName.create(event.title(), variables.get("{equipe.nome}")));
         } catch (CompletionException e) {
             if (e.getCause() instanceof RuntimeException runtimeException) throw runtimeException;
             throw new IllegalStateException("Falha ao gerar certificado.", e.getCause());
         }
     }
 
-    public StorageExternal.StoredFile previewCustomCertificate(
+    public GeneratedCertificate previewCustomCertificate(
             Long eventId, UUID requesterId, ManualCertificateContentRequest request) {
         return generateCustomCertificate(eventId, requesterId, request, false);
     }
 
-    public StorageExternal.StoredFile issueCustomCertificate(
+    public GeneratedCertificate issueCustomCertificate(
             Long eventId, UUID requesterId, ManualCertificateContentRequest request) {
         return generateCustomCertificate(eventId, requesterId, request, true);
     }
 
-    private StorageExternal.StoredFile generateCustomCertificate(
+    private GeneratedCertificate generateCustomCertificate(
             Long eventId, UUID requesterId, ManualCertificateContentRequest request, boolean definitive) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
@@ -167,7 +176,8 @@ public class ManualCertificateServices {
             throw new DomainException("O certificado definitivo só pode ser emitido após o encerramento do evento.");
 
         StorageExternal.StoredFile cover = certificateFetcher.fetchCoverTemplate(eventId);
-        return render(cover, request.boxes(), request.variables());
+        return new GeneratedCertificate(render(cover, request.boxes(), request.variables()),
+                CertificateFileName.create(event.title(), request.variables().get("{participante.nome}")));
     }
 
     private StorageExternal.StoredFile render(StorageExternal.StoredFile cover, List<BoxElementDTO> boxes,
