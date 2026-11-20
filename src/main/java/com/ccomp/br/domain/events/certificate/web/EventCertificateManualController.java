@@ -79,7 +79,7 @@ public class EventCertificateManualController {
     }
 
     @Operation(summary = "Emitir manualmente certificado de ministrante",
-            description = "A equipe emite um certificado individual para um ministrante cadastrado ou para um convidado confirmado com papel PRESENTER. Não exige conta para o convidado. Emissão manual não gera código de validação; carga horária usa a atividade indicada ou a soma das atividades do ministrante vinculado.")
+            description = "A equipe emite um certificado individual para um ministrante cadastrado ou para um convidado confirmado com papel PRESENTER. Para convidado, informe activityId e eventGuestId; não é necessária conta vinculada. Emissão manual não gera código de validação; carga horária usa a atividade indicada ou a soma das atividades do ministrante vinculado.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado",
                     content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
