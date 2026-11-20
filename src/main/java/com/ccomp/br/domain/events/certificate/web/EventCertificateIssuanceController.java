@@ -25,7 +25,7 @@ import java.util.UUID;
 @Validated
 @RequestMapping("/api/events")
 @Tag(name = "events/certificate/issuance (Emissão de certificados)",
-        description = "Emissão de certificados para participantes, ministrantes e equipe do evento")
+        description = "Geração e download de certificados para participantes, ministrantes, convidados e equipe. As respostas bem-sucedidas são arquivos PNG.")
 public class EventCertificateIssuanceController {
     private final AutomaticCertificateServices automaticCertificateServices;
 
@@ -33,8 +33,8 @@ public class EventCertificateIssuanceController {
         this.automaticCertificateServices = automaticCertificateServices;
     }
 
-    @Operation(summary = "Consultar certificado do evento",
-            description = "Gera o certificado do evento para o usuário autenticado somente após o encerramento do evento. Exige inscrição e status `CHECKED_IN` no evento. Eventos cancelados não emitem certificado. Credenciamento operacional não é requisito; a carga horária considera as atividades em que a pessoa participou. O parâmetro opcional `name` personaliza o nome impresso sem alterar a conta.")
+    @Operation(summary = "Gerar certificado de participante do evento",
+            description = "Para que serve: gera e baixa o certificado geral do evento para a própria pessoa autenticada.\n\nComo usar: informe `eventId` no caminho. Opcionalmente, envie `name` (até 255 caracteres) para personalizar o nome impresso; isso não altera o nome da conta. O arquivo PNG é baixado. Exige que o evento tenha terminado, não esteja cancelado e que a pessoa inscrita tenha feito check-in no evento. A carga horária considera a carga geral do evento e as atividades em que houve participação, conforme configuração. Credenciamento operacional não substitui esses registros.\n\nQuem pode usar: participante autenticado com acesso ao evento e inscrição elegível.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
             @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado, evento cancelado ou participante sem check-in no evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
@@ -53,8 +53,8 @@ public class EventCertificateIssuanceController {
                 .body(certificate.file().resource());
     }
 
-    @Operation(summary = "Consultar certificado de atividade",
-            description = "Gera o certificado de atividade para o usuário autenticado. Exige inscrição ativa, status `CHECKED_IN` no evento e presença registrada especificamente nesta atividade. Após confirmar a presença pelo QR Code, a plataforma atualiza o check-in do evento e envia um e-mail avisando que o certificado está disponível. Credenciamento operacional é independente e não substitui os registros de presença. O parâmetro opcional `name` personaliza o nome impresso sem alterar a conta.")
+    @Operation(summary = "Gerar certificado de participante da atividade",
+            description = "Para que serve: gera e baixa o certificado da atividade indicada para a própria pessoa autenticada.\n\nComo usar: informe `activityId` no caminho. Opcionalmente, envie `name` (até 255 caracteres) para personalizar o nome impresso, sem alterar a conta. O arquivo PNG é baixado. Exige inscrição não cancelada, check-in no evento e presença registrada especificamente na atividade. Esta rota apenas consulta esses registros e gera o certificado; não registra presença nem envia e-mail. Credenciamento operacional não substitui os registros de presença.\n\nQuem pode usar: participante autenticado que satisfaça os requisitos de inscrição e presença.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
             @ApiResponse(responseCode = "400", description = "Check-in do evento ou participação na atividade não registrados", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
@@ -74,7 +74,7 @@ public class EventCertificateIssuanceController {
     }
 
     @Operation(summary = "Gerar certificado de ministrante",
-            description = "Gera o certificado do ministrante vinculado e com conta associada. O próprio ministrante ou owner, editor ativo, moderator ou admin pode solicitá-lo. Exige evento encerrado e não cancelado; usa template de ministrante e o fundo compartilhado do evento.")
+            description = "Para que serve: gera e baixa o certificado geral de um ministrante vinculado ao evento.\n\nComo usar: informe `eventId` e `instructorId`. O vínculo deve estar confirmado e associado a uma conta. O certificado usa o template de ministrante do evento e o fundo compartilhado; a carga horária segue as regras do vínculo e do evento.\n\nQuem pode usar: o próprio ministrante ou uma pessoa com permissão de edição do evento (owner, editor ativo, moderator ou admin). O evento precisa estar encerrado e não cancelado.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
             @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado ou cancelado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
@@ -90,8 +90,8 @@ public class EventCertificateIssuanceController {
         return certificateResponse(certificate);
     }
 
-    @Operation(summary = "Gerar certificado de convidado apresentador",
-            description = "Gera o certificado individual para um convidado vinculado à atividade com papel PRESENTER. O próprio convidado pode emitir se tiver conta associada; a equipe do evento também pode solicitá-lo. Exige convidado confirmado, evento encerrado e não cancelado.")
+    @Operation(summary = "Gerar certificado geral de convidado apresentador",
+            description = "Para que serve: gera e baixa o certificado geral do evento para um convidado apresentador associado a uma atividade.\n\nComo usar: informe `eventId`, `activityId` e `eventGuestId` (ID do perfil do convidado no evento, não do vínculo ActivityGuest). O convidado precisa estar confirmado e ter papel `PRESENTER` na atividade, além de conta vinculada. Usa o template geral de convidado do evento.\n\nQuem pode usar: o próprio convidado vinculado ou a equipe com permissão de edição do evento. O evento precisa estar encerrado e não cancelado.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
             @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado ou cancelado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
@@ -108,7 +108,7 @@ public class EventCertificateIssuanceController {
     }
 
     @Operation(summary = "Gerar certificado de ministrante da atividade",
-            description = "Gera o certificado do ministrante para a atividade informada. O próprio ministrante ou a equipe do evento pode solicitá-lo. Usa o template específico da atividade quando disponível, com fallback para o template padrão de atividade; a carga horária considera somente a atividade.")
+            description = "Para que serve: gera e baixa o certificado de um ministrante para uma atividade específica.\n\nComo usar: informe `eventId`, `activityId` e `instructorId`. O vínculo do ministrante deve pertencer à atividade e estar confirmado. Usa o template específico da atividade quando disponível, com fallback para o template padrão; a carga horária considera somente essa atividade.\n\nQuem pode usar: o próprio ministrante associado ou a equipe com permissão de edição do evento. A elegibilidade do certificado também exige que o evento não esteja cancelado e tenha terminado.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
             @ApiResponse(responseCode = "403", description = "Solicitante não é o ministrante nem membro autorizado da equipe", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
@@ -124,7 +124,7 @@ public class EventCertificateIssuanceController {
     }
 
     @Operation(summary = "Gerar certificado de convidado da atividade",
-            description = "Gera o certificado do convidado apresentador para a atividade informada. O próprio convidado com conta vinculada ou a equipe do evento pode solicitá-lo. Exige vínculo confirmado com papel PRESENTER; usa o template específico da atividade quando disponível, com fallback para o template padrão de atividade, e considera somente a carga horária da atividade.")
+            description = "Para que serve: gera e baixa o certificado de um convidado apresentador para uma atividade específica.\n\nComo usar: informe `eventId`, `activityId` e `eventGuestId` (ID do perfil do convidado no evento, não do vínculo ActivityGuest). O perfil deve estar confirmado, ter conta vinculada e estar associado à atividade com papel `PRESENTER`. Usa o template específico da atividade quando disponível, com fallback para o template padrão; a carga horária considera somente essa atividade.\n\nQuem pode usar: o próprio convidado vinculado ou a equipe com permissão de edição do evento. A elegibilidade também exige evento encerrado e não cancelado.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
             @ApiResponse(responseCode = "403", description = "Convidado não é apresentador confirmado com conta vinculada, ou solicitante sem permissão", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
@@ -140,7 +140,7 @@ public class EventCertificateIssuanceController {
     }
 
     @Operation(summary = "Gerar certificado da equipe do evento",
-            description = "Gera o certificado do owner ou editor ativo autenticado após o encerramento do evento. Eventos cancelados não emitem certificado. Usa template próprio de equipe, fundo compartilhado e a carga horária da equipe configurada no evento.")
+            description = "Para que serve: gera e baixa o certificado de equipe da própria pessoa autenticada.\n\nComo usar: informe `eventId`. Usa o template de equipe, o fundo compartilhado e a carga horária de equipe configurada no evento. O evento precisa ter terminado e não pode estar cancelado.\n\nQuem pode usar: owner ou editor ativo do evento.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
             @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado, cancelado ou carga horária da equipe não configurada", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),

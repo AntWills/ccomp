@@ -32,7 +32,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/events")
 @Tag(name = "events/certificate/manual (Emissão manual de certificados)",
-        description = "Emissão manual de certificados individuais para ministrantes e integrantes da equipe")
+        description = "Emissão manual e envio de certificados para participantes, ministrantes, convidados e equipe, além de pré-visualização e emissão de certificados personalizados")
 public class EventCertificateManualController {
     private final ManualCertificateServices manualCertificateServices;
     private final ManualParticipantCertificateServices participantCertificateServices;
@@ -43,7 +43,14 @@ public class EventCertificateManualController {
         this.participantCertificateServices = participantCertificateServices;
     }
 
-    @Operation(summary = "Emitir certificado manual de participante do evento")
+    @Operation(summary = "Emitir manualmente certificado de participante do evento",
+            description = "Para que serve: permite à equipe emitir e baixar o certificado geral de uma inscrição do evento.\n\nComo usar: informe `eventId` e `enrollmentId`. Usa o template geral do evento. O evento deve ter terminado, não estar cancelado, e a inscrição precisa ter check-in.\n\nQuem pode usar: owner, editor ativo ou outra pessoa autorizada a editar o evento. O certificado é emitido para a pessoa dona da inscrição.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
+            @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado, cancelado ou inscrição sem check-in", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Solicitante sem permissão para editar o evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento ou inscrição não encontrada neste evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
     @PostMapping(value = "/{eventId}/enrollments/{enrollmentId}/certificate/manual",
             produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildManualEventParticipantCertificate(@PathVariable Long eventId,
@@ -52,7 +59,14 @@ public class EventCertificateManualController {
         return certificateResponse(certificate);
     }
 
-    @Operation(summary = "Emitir certificado manual de participante da atividade")
+    @Operation(summary = "Emitir manualmente certificado de participante da atividade",
+            description = "Para que serve: permite à equipe emitir e baixar o certificado de uma inscrição para uma atividade específica.\n\nComo usar: informe `eventId`, `activityId` e `enrollmentId`. Usa o template da atividade, com fallback para o template padrão. A inscrição não pode estar cancelada e precisa ter check-in no evento e presença registrada na atividade; o evento deve ter terminado e não estar cancelado.\n\nQuem pode usar: owner, editor ativo ou outra pessoa autorizada a editar o evento. O certificado é emitido para a pessoa dona da inscrição.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Certificado PNG gerado", content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
+            @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado, cancelado ou conteúdo inelegível", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Solicitante sem permissão ou participante sem presença exigida", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento, atividade ou inscrição não encontrada", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
     @PostMapping(value = "/{eventId}/activities/{activityId}/enrollments/{enrollmentId}/certificate/manual",
             produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildManualActivityParticipantCertificate(@PathVariable Long eventId,
@@ -62,7 +76,14 @@ public class EventCertificateManualController {
         return certificateResponse(certificate);
     }
 
-    @Operation(summary = "Enviar por e-mail certificado manual de participante do evento")
+    @Operation(summary = "Enviar por e-mail certificado manual de participante do evento",
+            description = "Para que serve: gera o certificado geral da inscrição e envia o PNG como anexo para o e-mail da conta da pessoa inscrita.\n\nComo usar: informe `eventId` e `enrollmentId`; não há corpo na requisição. O evento deve ter terminado, não estar cancelado, e a inscrição precisa ter check-in.\n\nQuem pode usar: owner, editor ativo ou outra pessoa autorizada a editar o evento.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Certificado enviado por e-mail", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MessageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado, cancelado ou inscrição sem check-in", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Solicitante sem permissão para editar o evento", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento, inscrição ou conta do participante não encontrada", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
     @PostMapping(value = "/{eventId}/enrollments/{enrollmentId}/certificate/manual/email")
     public ResponseEntity<MessageResponse> emailManualEventParticipantCertificate(@PathVariable Long eventId,
             @PathVariable Long enrollmentId, @AuthenticationPrincipal Jwt jwt) {
@@ -70,7 +91,14 @@ public class EventCertificateManualController {
         return ResponseEntity.ok(new MessageResponse("Certificado enviado por e-mail."));
     }
 
-    @Operation(summary = "Enviar por e-mail certificado manual de participante da atividade")
+    @Operation(summary = "Enviar por e-mail certificado manual de participante da atividade",
+            description = "Para que serve: gera o certificado da atividade e envia o PNG como anexo para o e-mail da conta da pessoa inscrita.\n\nComo usar: informe `eventId`, `activityId` e `enrollmentId`; não há corpo na requisição. A inscrição não pode estar cancelada e precisa ter check-in no evento e presença registrada na atividade; o evento deve ter terminado e não estar cancelado.\n\nQuem pode usar: owner, editor ativo ou outra pessoa autorizada a editar o evento.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Certificado enviado por e-mail", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MessageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Evento ainda não encerrado, cancelado ou conteúdo inelegível", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Solicitante sem permissão ou participante sem presença exigida", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Evento, atividade, inscrição ou conta do participante não encontrada", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = com.ccomp.br.shared.exceptions.ErrorResponse.class)))
+    })
     @PostMapping(value = "/{eventId}/activities/{activityId}/enrollments/{enrollmentId}/certificate/manual/email")
     public ResponseEntity<MessageResponse> emailManualActivityParticipantCertificate(@PathVariable Long eventId,
             @PathVariable Long activityId, @PathVariable Long enrollmentId, @AuthenticationPrincipal Jwt jwt) {
@@ -79,8 +107,8 @@ public class EventCertificateManualController {
         return ResponseEntity.ok(new MessageResponse("Certificado enviado por e-mail."));
     }
 
-    @Operation(summary = "Emitir manualmente certificado de ministrante",
-            description = "Envie exatamente uma opção: instructor_id sozinho emite certificado geral do ministrante; instructor_id com activity_id emite o certificado desse ministrante para a atividade vinculada; activity_id com event_guest_id emite certificado do convidado PRESENTER confirmado para essa atividade. Não combine instructor_id e event_guest_id. Convidado não precisa de conta vinculada. Emissão manual não cria código público: os marcadores ficam como 'Emissão manual' e URL vazia. A emissão específica usa somente a carga da atividade; a geral do ministrante com conta soma a carga geral configurada no evento às cargas das atividades com vínculo confirmado dessa conta.")
+    @Operation(summary = "Emitir manualmente certificado de ministrante ou convidado",
+            description = "Para que serve: emite e baixa manualmente um certificado de ministrante ou de convidado apresentador.\n\nComo usar: envie um JSON com exatamente uma destas opções: `instructor_id` para certificado geral do ministrante; `instructor_id` e `activity_id` para o certificado desse vínculo na atividade; ou `activity_id` e `event_guest_id` para o convidado `PRESENTER` confirmado nessa atividade. Não combine `instructor_id` com `event_guest_id`. Use o ID `EventGuest` em `event_guest_id`, não o ID do vínculo `ActivityGuest`. O convidado não precisa ter conta associada. A emissão usa os templates configurados. Para ministrante geral com conta, a carga soma a configuração geral do evento às atividades em que a conta tem vínculo confirmado; sem conta, usa a carga geral configurada mais a atividade vinculada. Na emissão específica, considera somente a carga da atividade. Emissões manuais de ministrante/convidado não criam código público de validação.\n\nQuem pode usar: pessoas autenticadas com permissão de edição do evento. O evento deve estar encerrado e não cancelado.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado",
                     content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
@@ -115,7 +143,7 @@ public class EventCertificateManualController {
     }
 
     @Operation(summary = "Emitir manualmente certificado de integrante da equipe",
-            description = "Owner, editor ativo, moderator ou admin emite um certificado individual para o owner ou um editor ativo. Usa o template EDITOR, carga horária configurada para a equipe e código de validação associado ao destinatário.")
+            description = "Para que serve: permite à equipe emitir e baixar um certificado para um integrante da equipe do evento.\n\nComo usar: informe `eventId` e `recipientId` (UUID da conta destinatária). O destinatário precisa ser owner ou editor ativo. Usa o template `EDITOR` e a carga horária configurada para a equipe; os marcadores de validação seguem as variáveis configuradas nesse template.\n\nQuem pode usar: pessoa autenticada com permissão de edição do evento. O evento deve estar encerrado e não cancelado.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado",
                     content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
@@ -140,8 +168,8 @@ public class EventCertificateManualController {
         return certificateResponse(certificate);
     }
 
-    @Operation(summary = "Pré-visualizar certificado manual personalizado",
-            description = "Renderiza o fundo configurado para o evento com caixas e variáveis fornecidas pelo cliente. Não grava nem emite um certificado definitivo.")
+    @Operation(summary = "Pré-visualizar certificado personalizado",
+            description = "Para que serve: mostra uma prévia do certificado usando o fundo atual do evento, sem emitir um certificado definitivo.\n\nComo usar: informe `eventId` e envie no corpo JSON as caixas e o mapa de variáveis a renderizar. A resposta é um PNG inline e não grava os dados enviados.\n\nQuem pode usar: pessoa autenticada com permissão de edição do evento. Não exige que o evento tenha terminado.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Prévia PNG gerada",
                     content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
@@ -171,8 +199,8 @@ public class EventCertificateManualController {
                 .body(preview.file().resource());
     }
 
-    @Operation(summary = "Emitir certificado manual personalizado",
-            description = "Gera o PNG definitivo usando as caixas e variáveis fornecidas pelo cliente. Exige permissão de edição e evento encerrado. Não cria código de validação nem salva os dados recebidos.")
+    @Operation(summary = "Emitir manualmente certificado personalizado",
+            description = "Para que serve: gera e baixa um certificado definitivo com o conteúdo montado pelo cliente.\n\nComo usar: informe `eventId` e envie no corpo JSON as caixas e o mapa de variáveis. A rota usa o fundo configurado para o evento, não cria código de validação automaticamente e não salva os dados recebidos. O evento deve estar encerrado e não cancelado.\n\nQuem pode usar: pessoa autenticada com permissão de edição do evento.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado",
                     content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
