@@ -174,7 +174,7 @@ class ManualParticipantCertificateServicesTest {
 
         verify(emailService).send(argThat((SendMailDTO dto) -> dto.to().equals(new EmailAddress("person@example.org"))
                 && dto.attachments().size() == 1
-                && dto.attachments().getFirst().filename().equals("certificadoeventodeanasouza.png")
+                && dto.attachments().getFirst().filename().equals("certificado-evento-de-ana-souza.png")
                 && dto.attachments().getFirst().contentType().equals("image/png")
                 && dto.attachments().getFirst().content().length > 0));
     }
