@@ -111,9 +111,9 @@ A regra de resolução esperada é: **template específico da atividade e do con
 
 - `GET /api/events/{eventId}/instructors/{instructorId}/certificate`: certificado geral de ministrante.
 - `GET /api/events/{eventId}/activities/{activityId}/instructors/{instructorId}/activity-certificate`: certificado de ministrante da atividade.
-- `GET /api/events/{eventId}/activities/{activityId}/guests/{activityGuestId}/instructor-certificate`: certificado geral de convidado apresentador associado à atividade.
-- `GET /api/events/{eventId}/activities/{activityId}/guests/{activityGuestId}/activity-certificate`: certificado do convidado para aquela atividade.
-- `POST /api/events/{eventId}/instructor-certificate/manual`: emissão manual geral por perfil de ministrante ou convidado; com `instructorId` e `activityId`, ou com `activityId` e `activityGuestId`, emite o certificado contextual da atividade. Emissão manual não cria código público de validação.
+- `GET /api/events/{eventId}/activities/{activityId}/guests/{eventGuestId}/instructor-certificate`: certificado geral de convidado apresentador associado à atividade.
+- `GET /api/events/{eventId}/activities/{activityId}/guests/{eventGuestId}/activity-certificate`: certificado do convidado para aquela atividade.
+- `POST /api/events/{eventId}/instructor-certificate/manual`: `instructorId` sozinho emite o certificado geral do ministrante; `instructorId` com `activityId` emite o certificado contextual da atividade; `activityId` com `eventGuestId` emite o certificado do convidado para aquela atividade. Não há emissão manual geral de convidado. A emissão manual não cria código público de validação.
 
 ### Organização interna planejada
 
@@ -193,7 +193,7 @@ A carga horária é somada entre as atividades do evento em que a conta tem vín
 
 ### Certificado de convidado apresentador
 
-`GET /api/events/{eventId}/activities/{activityId}/guests/{activityGuestId}/instructor-certificate`
+`GET /api/events/{eventId}/activities/{activityId}/guests/{eventGuestId}/instructor-certificate`
 
 O vínculo precisa pertencer à atividade indicada, ter papel `PRESENTER` e apontar para um perfil de convidado confirmado. Para autoemissão, esse perfil precisa estar associado à conta autenticada. A equipe com permissão para editar o evento também pode solicitar a emissão. O evento deve estar encerrado e não cancelado.
 
@@ -224,12 +224,34 @@ Ambas retornam PNG e usam os templates configurados para participante. A rota de
 
 O corpo deve indicar **uma** destas opções:
 
-- `instructorId`: um registro de ministrante confirmado que pertença ao evento; ou
-- `activityId` e `activityGuestId`: um vínculo de convidado à atividade do evento, com papel `PRESENTER` e perfil confirmado.
+- `instructorId`: ID do vínculo confirmado de ministrante. Sem `activityId`, emite o certificado geral. Com `activityId`, emite o certificado daquela atividade, que deve ser a atividade do vínculo.
+- `activityId` e `eventGuestId`: ID da atividade e ID do perfil do convidado no evento (`EventGuest`). O perfil precisa estar confirmado e o vínculo com a atividade deve ter papel `PRESENTER`. Essa opção sempre emite o certificado da atividade; não existe emissão manual geral para convidado.
 
-No caso de ministrante com conta, a carga horária é a soma das atividades do evento em que essa conta tem vínculos confirmados. Sem conta, usa-se a carga da atividade daquele registro. Para convidado apresentador, usa-se a carga da atividade indicada. A emissão aceita convidado sem conta.
+Exemplos válidos do corpo JSON:
 
-Esta emissão manual não cria código de validação. No template, os marcadores de validação recebem o texto `Emissão manual` e uma URL vazia.
+Certificado geral de ministrante:
+
+```json
+{"instructor_id": 4}
+```
+
+Certificado de ministrante para uma atividade:
+
+```json
+{"instructor_id": 4, "activity_id": 27}
+```
+
+Certificado de convidado para uma atividade:
+
+```json
+{"activity_id": 27, "event_guest_id": 20}
+```
+
+Não envie `instructorId` e `eventGuestId` juntos; o corpo com os três campos preenchidos é inválido. O convidado pode não ter conta vinculada, pois essa emissão é feita pela equipe.
+
+Na emissão geral de ministrante com conta, a carga exibida é a carga geral de ministrante configurada no evento somada às cargas das atividades do mesmo evento em que essa conta tem vínculo confirmado como ministrante. Sem conta vinculada, usa-se a carga geral configurada no evento somada à carga da atividade associada ao registro. Quando `activityId` é informado, o certificado é contextual àquela atividade e exibe somente a carga dela. Para convidado, como `activityId` é obrigatório, também é exibida somente a carga daquela atividade. Atividades sem carga configurada contribuem com zero.
+
+Nenhuma dessas emissões manuais cria código público de validação. No template, `{validacao.codigo}` recebe `Emissão manual` e `{validacao.url}` fica vazia. O PNG não pode ser consultado na rota pública de validação.
 
 ### Integrante da equipe
 
@@ -314,7 +336,7 @@ O upload aceita imagem PNG, JPEG ou WebP. As dimensões da caixa são proporcion
 | `GET /api/events/{eventId}/certificate` | Participante autenticado do evento |
 | `GET /api/events/activities/{activityId}/certificate` | Participante autenticado da atividade |
 | `GET /api/events/{eventId}/instructors/{instructorId}/certificate` | Ministrante com conta vinculada |
-| `GET /api/events/{eventId}/activities/{activityId}/guests/{activityGuestId}/instructor-certificate` | Convidado apresentador com conta vinculada |
+| `GET /api/events/{eventId}/activities/{activityId}/guests/{eventGuestId}/instructor-certificate` | Convidado apresentador com conta vinculada |
 | `GET /api/events/{eventId}/team-certificate` | Proprietário/editor ativo autenticado |
 | `POST /api/events/{eventId}/instructor-certificate/manual` | Ministrante ou convidado apresentador indicado pela equipe |
 | `POST /api/events/{eventId}/team-certificate/manual/{recipientId}` | Proprietário/editor ativo indicado pela equipe |

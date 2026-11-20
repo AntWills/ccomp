@@ -8,6 +8,7 @@ import com.ccomp.br.domain.storage.external.StorageExternal;
 import com.ccomp.br.shared.dto.MessageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -79,7 +80,7 @@ public class EventCertificateManualController {
     }
 
     @Operation(summary = "Emitir manualmente certificado de ministrante",
-            description = "A equipe emite um certificado individual para um ministrante cadastrado ou para um convidado confirmado com papel PRESENTER. Para convidado, informe activityId e eventGuestId; não é necessária conta vinculada. Emissão manual não gera código de validação; carga horária usa a atividade indicada ou a soma das atividades do ministrante vinculado.")
+            description = "Envie exatamente uma opção: instructor_id sozinho emite certificado geral do ministrante; instructor_id com activity_id emite o certificado desse ministrante para a atividade vinculada; activity_id com event_guest_id emite certificado do convidado PRESENTER confirmado para essa atividade. Não combine instructor_id e event_guest_id. Convidado não precisa de conta vinculada. Emissão manual não cria código público: os marcadores ficam como 'Emissão manual' e URL vazia. A emissão específica usa somente a carga da atividade; a geral do ministrante com conta soma a carga geral configurada no evento às cargas das atividades com vínculo confirmado dessa conta.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Certificado PNG gerado",
                     content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)),
@@ -97,6 +98,15 @@ public class EventCertificateManualController {
             produces = {MediaType.IMAGE_PNG_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Resource> buildManualInstructorCertificate(
             @PathVariable Long eventId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Use exatamente um dos exemplos: ministrante geral, ministrante por atividade ou convidado por atividade.",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ManualInstructorCertificateRequest.class),
+                            examples = {
+                                    @ExampleObject(name = "Certificado geral de ministrante", value = "{\"instructor_id\":4}"),
+                                    @ExampleObject(name = "Certificado de ministrante por atividade", value = "{\"instructor_id\":4,\"activity_id\":27}"),
+                                    @ExampleObject(name = "Certificado de convidado por atividade", value = "{\"activity_id\":27,\"event_guest_id\":20}")
+                            }))
             @Valid @RequestBody ManualInstructorCertificateRequest request,
             @AuthenticationPrincipal Jwt jwt) {
         StorageExternal.StoredFile certificate = manualCertificateServices.buildInstructorCertificate(
