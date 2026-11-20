@@ -55,7 +55,7 @@ public class InstructorController {
 
     @Operation(
             summary = "Lista ministrantes de um evento",
-            description = "Retorna uma página cursorada com os vínculos de ministrantes confirmados nas atividades do evento. Requer autenticação; a autorização para visualizar depende das regras de visibilidade do evento."
+            description = "Retorna uma página cursorada com os vínculos de ministrantes confirmados nas atividades do evento. `searchTerm` pesquisa somente o nome por similaridade (limiar mínimo de 0,4) e ordena os resultados por relevância. Ao continuar uma busca, mantenha o mesmo termo e use o cursor retornado. Requer autenticação; a autorização para visualizar depende das regras de visibilidade do evento."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Página de ministrantes retornada"),
@@ -66,6 +66,8 @@ public class InstructorController {
     public ResponseEntity<CursorPage<EventInstructorDTO>> searchByEvent(
             @Parameter(description = "ID do evento", example = "1")
             @PathVariable Long eventId,
+            @Parameter(description = "Termo opcional para buscar pelo nome por similaridade (mínimo 2 caracteres)")
+            @RequestParam(required = false) String searchTerm,
             @Parameter(description = "Cursor retornado pela página anterior")
             @RequestParam(required = false) String cursor,
             @Parameter(description = "Itens por página (máximo 50)", example = "20")
@@ -73,7 +75,7 @@ public class InstructorController {
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt
     ) {
         return ResponseEntity.ok(
-                instructorService.searchByEvent(eventId, extractUserId(jwt), cursor, pageSize)
+                instructorService.searchByEvent(eventId, extractUserId(jwt), searchTerm, cursor, pageSize)
         );
     }
 

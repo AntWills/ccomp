@@ -75,7 +75,7 @@ class InstructorServiceUncoveredMethodsTest {
         EventDTO event = mock(EventDTO.class);
         when(events.findById(2L)).thenReturn(Optional.of(event));
         when(policy.canView(event, requester)).thenReturn(true);
-        when(instructorDsl.findByEvent(eq(2L), any(), eq(3))).thenReturn(List.of());
+        when(instructorDsl.searchByEvent(eq(2L), any(), any(), eq(3))).thenReturn(List.of());
 
         assertThat(service().searchByEvent(2L,requester,null,2).content()).isEmpty();
     }
