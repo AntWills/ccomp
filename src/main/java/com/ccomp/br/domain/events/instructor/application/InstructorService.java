@@ -24,6 +24,7 @@ import com.ccomp.br.domain.events.guests.persistence.dsl.ActivityGuestDslReposit
 import com.ccomp.br.domain.users.external.UserManagement;
 import com.ccomp.br.shared.exceptions.AccessDeniedException;
 import com.ccomp.br.shared.exceptions.DomainException;
+import com.ccomp.br.shared.exceptions.DomainException;
 import com.ccomp.br.shared.exceptions.ResourceNotFoundException;
 import com.ccomp.br.shared.dto.MessageResponse;
 import com.ccomp.br.shared.utils.CursorPage;
@@ -107,6 +108,17 @@ public class InstructorService {
             String cursor,
             int pageSize
     ) {
+        return searchByEvent(eventId, requesterId, null, cursor, pageSize);
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPage<EventInstructorDTO> searchByEvent(
+            Long eventId,
+            UUID requesterId,
+            String searchTerm,
+            String cursor,
+            int pageSize
+    ) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -117,16 +129,26 @@ public class InstructorService {
         }
 
         int limit = Math.min(pageSize, 50);
+        String normalizedTerm = normalizeSearchTerm(searchTerm);
         InstructorCursor decodedCursor = CursorUtils.decode(cursor, InstructorCursor.class);
-        List<EventInstructorDTO> instructors = instructorDslRepository
-                .findByEvent(eventId, decodedCursor, limit + 1);
+        var instructors = instructorDslRepository.searchByEvent(eventId, normalizedTerm, decodedCursor, limit + 1);
 
         CursorPage<EventInstructorDTO> page = CursorUtils.buildPage(
                 instructors,
                 limit,
-                instructor -> new InstructorCursor(instructor.id(), instructor.createdAt())
+                result -> result.instructor(),
+                result -> new InstructorCursor(result.relevance(), result.instructor().id(),
+                        result.instructor().createdAt())
         );
         return page;
+    }
+
+    private String normalizeSearchTerm(String searchTerm) {
+        if (searchTerm == null || searchTerm.isBlank()) return null;
+        String normalized = searchTerm.trim();
+        if (normalized.length() < 2) throw new DomainException("Informe pelo menos dois caracteres para buscar.");
+        if (normalized.length() > 100) throw new DomainException("O termo de busca deve ter no máximo 100 caracteres.");
+        return normalized;
     }
 
     @Transactional(readOnly = true)

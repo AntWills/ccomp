@@ -2,6 +2,7 @@ package com.ccomp.br.domain.events.guests.persistence;
 
 import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
+import com.ccomp.br.domain.events.guests.dto.EventGuestSearchResult;
 import com.ccomp.br.domain.events.guests.persistence.dsl.EventGuestDslRepository;
 import com.ccomp.br.shared.cache.CacheNames;
 import org.jspecify.annotations.Nullable;
@@ -35,6 +36,19 @@ public class EventGuestCache {
     public List<EventGuestDTO> findGuestsWithCursor(
             Long eventId, boolean isManager, @Nullable GuestCursor cursor, int limit) {
         return eventGuestDslRepository.findGuestsWithCursor(eventId, isManager, cursor, limit);
+    }
+
+    @Transactional(readOnly = true)
+    @Cacheable(
+            cacheNames = CacheNames.EVENT_GUESTS,
+            key = "#eventId + ':' + #isManager + ':' + " +
+                    "(#cursor == null || #cursor.id() == null || #cursor.createdAt() == null " +
+                    "? 'first' : #cursor.createdAt() + '-' + #cursor.id()) + ':' + #limit + ':' + " +
+                    "(#searchTerm == null ? 'all' : #searchTerm)")
+    public List<EventGuestSearchResult> searchGuestsWithCursor(
+            Long eventId, boolean isManager, @Nullable String searchTerm,
+            @Nullable GuestCursor cursor, int limit) {
+        return eventGuestDslRepository.searchGuestsWithCursor(eventId, isManager, searchTerm, cursor, limit);
     }
 
     @Transactional(readOnly = true)

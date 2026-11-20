@@ -178,7 +178,7 @@ class GuestControllerTest {
                 EnumGuestVisibility.PUBLIC,
                 null
         );
-        when(guestService.searchEventGuests(EVENT_ID, null, null, 20))
+        when(guestService.searchEventGuests(EVENT_ID, null, null, null, 20))
                 .thenReturn(new CursorPage<>(List.of(guest), null, null));
 
         mockMvc.perform(get("/api/events/{eventId}/guests", EVENT_ID))

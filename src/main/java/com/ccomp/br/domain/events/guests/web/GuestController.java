@@ -159,6 +159,7 @@ public class GuestController {
             summary = "Lista os convidados de um evento",
             description = "Retorna `CursorPage<EventGuestDTO>` com `content`, `next_cursor` e `previous_cursor`. " +
                     "Cada item contém `id`, `event_id`, `name`, `description`, `image_key`, `status`, `visibility` e `created_at`; " +
+                    "`searchTerm` opcional pesquisa somente o nome por similaridade (limiar mínimo de 0,4) e ordena por relevância; mantenha o mesmo termo ao continuar pelo cursor. " +
                     "A lista pública contém apenas convidados confirmados e públicos; proprietário, editor ativo, " +
                     "MODERATOR ou ADMIN também podem consultar perfis privados e cancelados. `pageSize` usa padrão 20 " +
                     "e máximo 50; `cursor` é opaco e deve ser reutilizado com o mesmo evento. Acesso anônimo é permitido " +
@@ -177,12 +178,14 @@ public class GuestController {
     public ResponseEntity<CursorPage<EventGuestDTO>> searchEventGuests(
             @Parameter(hidden = true) @AuthenticationPrincipal @Nullable Jwt jwt,
             @Parameter(description = "ID do evento", example = "12") @PathVariable Long eventId,
+            @Parameter(description = "Termo opcional para buscar pelo nome por similaridade (mínimo 2 caracteres)")
+            @RequestParam(required = false) String searchTerm,
             @Parameter(description = "Cursor opaco da página anterior") @RequestParam(required = false) String cursor,
             @Parameter(description = "Quantidade de itens; padrão 20, máximo 50", example = "20")
             @RequestParam(defaultValue = "20") int pageSize
     ) {
         return ResponseEntity.ok(
-                guestService.searchEventGuests(eventId, extractUserId(jwt), cursor, pageSize)
+                guestService.searchEventGuests(eventId, extractUserId(jwt), searchTerm, cursor, pageSize)
         );
     }
 

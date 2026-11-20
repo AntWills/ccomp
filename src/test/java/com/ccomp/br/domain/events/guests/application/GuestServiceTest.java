@@ -19,6 +19,7 @@ import com.ccomp.br.domain.events.guests.dto.CreateGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestProfileDTO;
 import com.ccomp.br.domain.events.guests.dto.ActivityGuestDTO;
 import com.ccomp.br.domain.events.guests.dto.EventGuestDTO;
+import com.ccomp.br.domain.events.guests.dto.EventGuestSearchResult;
 import com.ccomp.br.domain.events.guests.dto.GuestCursor;
 import com.ccomp.br.domain.events.guests.dto.UpdateGuestDTO;
 import com.ccomp.br.domain.events.guests.enums.EnumActivityGuestRole;
@@ -98,12 +99,13 @@ class GuestServiceTest {
                 CursorPage<EventGuestDTO> expected = mock(CursorPage.class);
                 when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(false);
                 when(eventAccessPolicy.canView(event, requesterId)).thenReturn(true);
-                when(eventGuestCache.findGuestsWithCursor(eventId, false, cursor, 20)).thenReturn(List.of(guest));
+                when(eventGuestCache.searchGuestsWithCursor(eventId, false, null, cursor, 21))
+                        .thenReturn(List.of(new EventGuestSearchResult(guest, null)));
                 cursorUtils.when(() -> CursorUtils.decode("raw", GuestCursor.class)).thenReturn(cursor);
-                cursorUtils.when(() -> CursorUtils.buildPage(anyList(), eq(20), any())).thenReturn(expected);
+                cursorUtils.when(() -> CursorUtils.buildPage(anyList(), eq(20), any(), any())).thenReturn(expected);
 
                 assertThat(guestService.searchEventGuests(eventId, requesterId, "raw", 20)).isSameAs(expected);
-                verify(eventGuestCache).findGuestsWithCursor(eventId, false, cursor, 20);
+                verify(eventGuestCache).searchGuestsWithCursor(eventId, false, null, cursor, 21);
             }
         }
 
@@ -115,12 +117,12 @@ class GuestServiceTest {
                 GuestCursor cursor = mock(GuestCursor.class);
                 when(eventAccessPolicy.canEdit(event, requesterId)).thenReturn(true);
                 when(eventAccessPolicy.canView(event, requesterId)).thenReturn(true);
-                when(eventGuestCache.findGuestsWithCursor(eventId, true, cursor, 50)).thenReturn(List.of());
+                when(eventGuestCache.searchGuestsWithCursor(eventId, true, null, cursor, 51)).thenReturn(List.of());
                 cursorUtils.when(() -> CursorUtils.decode(null, GuestCursor.class)).thenReturn(cursor);
-                cursorUtils.when(() -> CursorUtils.buildPage(anyList(), eq(50), any())).thenReturn(mock(CursorPage.class));
+                cursorUtils.when(() -> CursorUtils.buildPage(anyList(), eq(50), any(), any())).thenReturn(mock(CursorPage.class));
 
                 guestService.searchEventGuests(eventId, requesterId, null, 100);
-                verify(eventGuestCache).findGuestsWithCursor(eventId, true, cursor, 50);
+                verify(eventGuestCache).searchGuestsWithCursor(eventId, true, null, cursor, 51);
             }
         }
 
