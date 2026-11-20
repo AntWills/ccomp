@@ -75,9 +75,10 @@ class AutomaticCertificateServicesTest {
         when(activityCache.findById(ACTIVITY_ID)).thenReturn(Optional.of(activity));
         when(certificateFetcher.resolveActivityTemplate(EVENT_ID, ACTIVITY_ID,
                 EnumActivityCertificateTemplateType.PARTICIPANT)).thenReturn(template);
-        when(variablesServices.loadActivityVariablesValues(List.of(), ACTIVITY_ID, RECIPIENT, null)).thenReturn(Map.of());
+        when(variablesServices.loadActivityVariablesValues(
+                List.of("{participante.nome}"), ACTIVITY_ID, RECIPIENT, null)).thenReturn(Map.of());
 
-        assertThat(services.buildCertificateFromActivity(ACTIVITY_ID, RECIPIENT).contentType()).isEqualTo("image/png");
+        assertThat(services.buildCertificateFromActivity(ACTIVITY_ID, RECIPIENT).file().contentType()).isEqualTo("image/png");
     }
 
     @Test
@@ -98,7 +99,7 @@ class AutomaticCertificateServicesTest {
         when(variablesServices.loadInstructorVariablesValues(List.of(), EVENT_ID, RECIPIENT_ID, RECIPIENT))
                 .thenReturn(Map.of());
 
-        assertThat(services.buildCertificateFromInstructor(EVENT_ID, RECIPIENT_ID, RECIPIENT).contentType())
+        assertThat(services.buildCertificateFromInstructor(EVENT_ID, RECIPIENT_ID, RECIPIENT).file().contentType())
                 .isEqualTo("image/png");
     }
 
@@ -123,11 +124,12 @@ class AutomaticCertificateServicesTest {
         when(link.getEventGuest()).thenReturn(guest);
         when(guest.isConfirmed()).thenReturn(true);
         when(guest.getUserId()).thenReturn(RECIPIENT);
+        when(eventCache.findById(EVENT_ID)).thenReturn(Optional.of(event));
         when(certificateFetcher.fetchCoverTemplate(EVENT_ID)).thenReturn(cover);
         when(certificateFetcher.fetchBoxTemplate(EVENT_ID, EnumEventCertificateTemplateType.GUEST)).thenReturn(boxTemplate());
         when(variablesServices.loadGuestInstructorVariablesValues(EVENT_ID, RECIPIENT)).thenReturn(Map.of());
 
-        assertThat(services.buildCertificateFromActivityGuest(EVENT_ID, ACTIVITY_ID, GUEST_ID, RECIPIENT).contentType())
+        assertThat(services.buildCertificateFromActivityGuest(EVENT_ID, ACTIVITY_ID, GUEST_ID, RECIPIENT).file().contentType())
                 .isEqualTo("image/png");
     }
 
@@ -152,7 +154,7 @@ class AutomaticCertificateServicesTest {
                 .thenReturn(Map.of());
 
         assertThat(services.buildActivityCertificateFromInstructor(EVENT_ID, ACTIVITY_ID, RECIPIENT_ID, RECIPIENT)
-                .contentType()).isEqualTo("image/png");
+                .file().contentType()).isEqualTo("image/png");
     }
 
     @Test
@@ -180,7 +182,7 @@ class AutomaticCertificateServicesTest {
                 .thenReturn(Map.of());
 
         assertThat(services.buildActivityCertificateFromGuest(EVENT_ID, ACTIVITY_ID, GUEST_ID, RECIPIENT)
-                .contentType()).isEqualTo("image/png");
+                .file().contentType()).isEqualTo("image/png");
     }
 
     @Test
@@ -206,7 +208,7 @@ class AutomaticCertificateServicesTest {
         when(certificateFetcher.fetchBoxTemplate(EVENT_ID, EnumEventCertificateTemplateType.EDITOR)).thenReturn(boxTemplate());
         when(variablesServices.loadEditorVariablesValues(List.of(), EVENT_ID, RECIPIENT)).thenReturn(Map.of());
 
-        assertThat(services.buildCertificateForEditor(EVENT_ID, RECIPIENT).contentType()).isEqualTo("image/png");
+        assertThat(services.buildCertificateForEditor(EVENT_ID, RECIPIENT).file().contentType()).isEqualTo("image/png");
     }
 
     @Test

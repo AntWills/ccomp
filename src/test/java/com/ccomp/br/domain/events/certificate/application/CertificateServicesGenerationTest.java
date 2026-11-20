@@ -69,12 +69,12 @@ class CertificateServicesGenerationTest {
                 List.of("{participante.nome}"), EVENT_ID, USER_ID, "Nome Personalizado"))
                 .thenReturn(Map.of("{participante.nome}", "Nome Personalizado"));
 
-        StorageExternal.StoredFile generated = new AutomaticCertificateServices(eventCache, accessPolicy,
+        var generated = new AutomaticCertificateServices(eventCache, accessPolicy,
                 certificateFetcher, variablesServices, null, null)
                 .buildCertificateFromEvent(EVENT_ID, USER_ID, "Nome Personalizado");
 
-        BufferedImage output = ImageIO.read(generated.resource().getInputStream());
-        assertThat(generated.contentType()).isEqualTo("image/png");
+        BufferedImage output = ImageIO.read(generated.file().resource().getInputStream());
+        assertThat(generated.file().contentType()).isEqualTo("image/png");
         assertThat(output).isNotNull();
         assertThat(output.getWidth()).isEqualTo(500);
         assertThat(output.getHeight()).isEqualTo(180);
@@ -114,11 +114,12 @@ class CertificateServicesGenerationTest {
                 .variables(List.of())
                 .boxes(List.of())
                 .build());
-        when(variablesServices.loadEventVariablesValues(List.of(), EVENT_ID, USER_ID, null)).thenReturn(Map.of());
+        when(variablesServices.loadEventVariablesValues(List.of("{participante.nome}"), EVENT_ID, USER_ID, null))
+                .thenReturn(Map.of());
 
-        StorageExternal.StoredFile generated = createService().buildCertificateFromEvent(EVENT_ID, USER_ID);
+        var generated = createService().buildCertificateFromEvent(EVENT_ID, USER_ID);
 
-        assertThat(generated.contentType()).isEqualTo("image/png");
+        assertThat(generated.file().contentType()).isEqualTo("image/png");
     }
 
     private AutomaticCertificateServices createService() {

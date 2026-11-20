@@ -2,6 +2,8 @@ package com.ccomp.br.domain.events.certificate.application.issuance;
 
 import com.ccomp.br.domain.events.activities.persistence.ActivityCache;
 import com.ccomp.br.domain.events.certificate.application.CertificateFetcher;
+import com.ccomp.br.domain.events.certificate.application.CertificateFileName;
+import com.ccomp.br.domain.events.certificate.application.GeneratedCertificate;
 import com.ccomp.br.domain.events.certificate.application.ResolvedActivityCertificateTemplate;
 import com.ccomp.br.domain.events.certificate.application.variables.CertificateVariablesServices;
 import com.ccomp.br.domain.events.certificate.dto.BoxElementDTO;
@@ -50,11 +52,11 @@ public class AutomaticCertificateServices {
         this.activityGuestRepository = activityGuestRepository;
     }
 
-    public StorageExternal.StoredFile buildCertificateFromEvent(Long eventId, UUID userId) {
+    public GeneratedCertificate buildCertificateFromEvent(Long eventId, UUID userId) {
         return buildCertificateFromEvent(eventId, userId, null);
     }
 
-    public StorageExternal.StoredFile buildCertificateFromEvent(Long eventId, UUID userId, String participantName) {
+    public GeneratedCertificate buildCertificateFromEvent(Long eventId, UUID userId, String participantName) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -71,7 +73,7 @@ public class AutomaticCertificateServices {
 
             CompletableFuture<Map<String, String>> variablesFuture = eventBoxFuture.thenApplyAsync(
                     eventBox -> variablesServices.loadEventVariablesValues(
-                            eventBox.getVariables(), eventId, userId, participantName),
+                            withParticipantName(eventBox.getVariables()), eventId, userId, participantName),
                     executor
             );
 
@@ -81,7 +83,8 @@ public class AutomaticCertificateServices {
             var eventBox = eventBoxFuture.join();
             Map<String, String> variables = variablesFuture.join();
 
-            return render(template, eventBox.getBoxes(), variables);
+            return new GeneratedCertificate(render(template, eventBox.getBoxes(), variables),
+                    CertificateFileName.create(event.title(), variables.get("{participante.nome}")));
 
         } catch (CompletionException e) {
             // Captura o wrapper do CompletableFuture e relança a causa real da falha
@@ -92,11 +95,11 @@ public class AutomaticCertificateServices {
         }
     }
 
-    public StorageExternal.StoredFile buildCertificateFromActivity(Long activityId, UUID userId) {
+    public GeneratedCertificate buildCertificateFromActivity(Long activityId, UUID userId) {
         return buildCertificateFromActivity(activityId, userId, null);
     }
 
-    public StorageExternal.StoredFile buildCertificateFromActivity(Long activityId, UUID userId,
+    public GeneratedCertificate buildCertificateFromActivity(Long activityId, UUID userId,
                                                                     String participantName) {
         var activity = activityCache.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada."));
@@ -110,7 +113,7 @@ public class AutomaticCertificateServices {
 
             CompletableFuture<Map<String, String>> variablesFuture = activityTemplateFuture.thenApplyAsync(
                     activityTemplate -> variablesServices.loadActivityVariablesValues(
-                            activityTemplate.variables(), activityId, userId, participantName),
+                            withParticipantName(activityTemplate.variables()), activityId, userId, participantName),
                     executor
             );
 
@@ -119,7 +122,8 @@ public class AutomaticCertificateServices {
             var activityTemplate = activityTemplateFuture.join();
             Map<String, String> variables = variablesFuture.join();
 
-            return render(activityTemplate.cover(), activityTemplate.boxes(), variables);
+            return new GeneratedCertificate(render(activityTemplate.cover(), activityTemplate.boxes(), variables),
+                    CertificateFileName.create(activity.title(), variables.get("{participante.nome}")));
 
         } catch (CompletionException e) {
             if (e.getCause() instanceof RuntimeException runtimeException) {
@@ -129,7 +133,7 @@ public class AutomaticCertificateServices {
         }
     }
 
-    public StorageExternal.StoredFile buildCertificateFromInstructor(Long eventId, Long instructorId,
+    public GeneratedCertificate buildCertificateFromInstructor(Long eventId, Long instructorId,
                                                                        UUID requesterId) {
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             CompletableFuture<UUID> recipientFuture = CompletableFuture.supplyAsync(
@@ -153,13 +157,15 @@ public class AutomaticCertificateServices {
                             box.getVariables(), eventId, instructorId, recipientId), executor);
 
             CompletableFuture.allOf(coverFuture, boxFuture, variablesFuture).join();
-            return render(coverFuture.join(), boxFuture.join().getBoxes(), variablesFuture.join());
+            Map<String, String> variables = variablesFuture.join();
+            return new GeneratedCertificate(render(coverFuture.join(), boxFuture.join().getBoxes(), variables),
+                    CertificateFileName.create(event.title(), variables.get("{ministrante.nome}")));
         } catch (CompletionException e) {
             throw unwrapCompletionException(e);
         }
     }
 
-    public StorageExternal.StoredFile buildCertificateFromActivityGuest(Long eventId, Long activityId,
+    public GeneratedCertificate buildCertificateFromActivityGuest(Long eventId, Long activityId,
             Long eventGuestId, UUID requesterId) {
         var activity = activityCache.findById(activityId)
                 .filter(item -> item.eventId().equals(eventId))
@@ -172,9 +178,9 @@ public class AutomaticCertificateServices {
             throw new AccessDeniedException("Somente apresentadores confirmados podem emitir este certificado.");
         if (guest.getUserId() == null)
             throw new AccessDeniedException("O convidado precisa vincular uma conta para emitir o próprio certificado.");
+        EventDTO event = eventCache.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
         if (!guest.getUserId().equals(requesterId)) {
-            EventDTO event = eventCache.findById(eventId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
             if (!accessPolicy.canEdit(event, requesterId))
                 throw new AccessDeniedException("Somente o apresentador ou a equipe do evento pode emitir este certificado.");
         }
@@ -183,10 +189,11 @@ public class AutomaticCertificateServices {
         EventBoxTemplate template = certificateFetcher.fetchBoxTemplate(eventId,
                 EnumEventCertificateTemplateType.GUEST);
         Map<String, String> values = variablesServices.loadGuestInstructorVariablesValues(eventId, guest.getUserId());
-        return render(cover, template.getBoxes(), values);
+        return new GeneratedCertificate(render(cover, template.getBoxes(), values),
+                CertificateFileName.create(event.title(), values.get("{convidado.nome}")));
     }
 
-    public StorageExternal.StoredFile buildActivityCertificateFromInstructor(Long eventId, Long activityId,
+    public GeneratedCertificate buildActivityCertificateFromInstructor(Long eventId, Long activityId,
             Long instructorId, UUID requesterId) {
         var activity = activityCache.findById(activityId)
                 .filter(item -> item.eventId().equals(eventId))
@@ -198,12 +205,13 @@ public class AutomaticCertificateServices {
                 EnumActivityCertificateTemplateType.INSTRUCTOR);
         var values = variablesServices.loadActivityRoleVariables(template.variables(), activityId, recipient,
                 com.ccomp.br.domain.events.certificate.enums.EnumCertificateType.INSTRUCTOR);
-        return render(template.cover(), template.boxes(), values);
+        return new GeneratedCertificate(render(template.cover(), template.boxes(), values),
+                CertificateFileName.create(activity.title(), values.get("{ministrante.nome}")));
     }
 
-    public StorageExternal.StoredFile buildActivityCertificateFromGuest(Long eventId, Long activityId,
+    public GeneratedCertificate buildActivityCertificateFromGuest(Long eventId, Long activityId,
             Long eventGuestId, UUID requesterId) {
-        activityCache.findById(activityId).filter(item -> item.eventId().equals(eventId))
+        var activity = activityCache.findById(activityId).filter(item -> item.eventId().equals(eventId))
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada neste evento."));
         var link = activityGuestRepository.findByActivityIdAndEventGuestId(activityId, eventGuestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Convidado não está vinculado a esta atividade."));
@@ -216,7 +224,8 @@ public class AutomaticCertificateServices {
                 EnumActivityCertificateTemplateType.GUEST);
         var values = variablesServices.loadActivityRoleVariables(template.variables(), activityId, guest.getUserId(),
                 com.ccomp.br.domain.events.certificate.enums.EnumCertificateType.GUEST);
-        return render(template.cover(), template.boxes(), values);
+        return new GeneratedCertificate(render(template.cover(), template.boxes(), values),
+                CertificateFileName.create(activity.title(), values.get("{convidado.nome}")));
     }
 
     private void authorizeRecipientOrEditor(Long eventId, UUID requesterId, UUID recipientId, String message) {
@@ -227,7 +236,7 @@ public class AutomaticCertificateServices {
         }
     }
 
-    public StorageExternal.StoredFile buildCertificateForEditor(Long eventId, UUID userId) {
+    public GeneratedCertificate buildCertificateForEditor(Long eventId, UUID userId) {
         EventDTO event = eventCache.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
 
@@ -243,7 +252,9 @@ public class AutomaticCertificateServices {
                     variablesServices.loadEditorVariablesValues(box.getVariables(), eventId, userId), executor);
 
             CompletableFuture.allOf(coverFuture, boxFuture, variablesFuture).join();
-            return render(coverFuture.join(), boxFuture.join().getBoxes(), variablesFuture.join());
+            Map<String, String> variables = variablesFuture.join();
+            return new GeneratedCertificate(render(coverFuture.join(), boxFuture.join().getBoxes(), variables),
+                    CertificateFileName.create(event.title(), variables.get("{equipe.nome}")));
         } catch (CompletionException e) {
             throw unwrapCompletionException(e);
         }
@@ -262,5 +273,13 @@ public class AutomaticCertificateServices {
                 .toReplace(variables)
                 .build()
                 .generate();
+    }
+
+    private List<String> withParticipantName(List<String> variables) {
+        if (variables == null || variables.isEmpty()) return List.of("{participante.nome}");
+        if (variables.contains("{participante.nome}")) return variables;
+        var variablesWithName = new java.util.ArrayList<>(variables);
+        variablesWithName.add("{participante.nome}");
+        return variablesWithName;
     }
 }

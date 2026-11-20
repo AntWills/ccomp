@@ -88,7 +88,7 @@ class ManualCertificateServicesIssuanceTest {
         var result = services.buildInstructorCertificate(EVENT_ID,
                 new ManualInstructorCertificateRequest(INSTRUCTOR_ID, null, null), MANAGER_ID);
 
-        assertThat(result.contentType()).isEqualTo("image/png");
+        assertThat(result.file().contentType()).isEqualTo("image/png");
     }
 
     @Test
@@ -112,7 +112,7 @@ class ManualCertificateServicesIssuanceTest {
                 .thenReturn(boxTemplate());
         when(variablesServices.loadEditorVariablesValues(List.of(), EVENT_ID, RECIPIENT_ID)).thenReturn(Map.of());
 
-        assertThat(services.buildTeamCertificate(EVENT_ID, RECIPIENT_ID, MANAGER_ID).contentType())
+        assertThat(services.buildTeamCertificate(EVENT_ID, RECIPIENT_ID, MANAGER_ID).file().contentType())
                 .isEqualTo("image/png");
     }
 

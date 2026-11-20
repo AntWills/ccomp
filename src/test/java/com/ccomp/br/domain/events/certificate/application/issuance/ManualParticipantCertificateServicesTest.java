@@ -90,7 +90,7 @@ class ManualParticipantCertificateServicesTest {
         when(certificateFetcher.fetchBoxTemplate(EVENT_ID)).thenReturn(boxTemplate());
         when(variablesServices.loadEventVariablesValues(List.of(), EVENT_ID, RECIPIENT_ID)).thenReturn(Map.of());
 
-        assertThat(services.buildEventCertificate(EVENT_ID, ENROLLMENT_ID, MANAGER_ID).contentType())
+        assertThat(services.buildEventCertificate(EVENT_ID, ENROLLMENT_ID, MANAGER_ID).file().contentType())
                 .isEqualTo("image/png");
     }
 
@@ -136,7 +136,7 @@ class ManualParticipantCertificateServicesTest {
         when(resolved.variables()).thenReturn(List.of());
         when(variablesServices.loadActivityVariablesValues(List.of(), ACTIVITY_ID, RECIPIENT_ID)).thenReturn(Map.of());
 
-        assertThat(services.buildActivityCertificate(EVENT_ID, ACTIVITY_ID, ENROLLMENT_ID, MANAGER_ID).contentType())
+        assertThat(services.buildActivityCertificate(EVENT_ID, ACTIVITY_ID, ENROLLMENT_ID, MANAGER_ID).file().contentType())
                 .isEqualTo("image/png");
     }
 
@@ -167,13 +167,14 @@ class ManualParticipantCertificateServicesTest {
         when(event.title()).thenReturn("Evento de teste");
         var recipient = mock(UserDTO.class);
         when(recipient.emailAddress()).thenReturn(new EmailAddress("person@example.org"));
+        when(recipient.name()).thenReturn("Ana Souza");
         when(userManagement.findById(RECIPIENT_ID)).thenReturn(Optional.of(recipient));
 
         services.sendEventCertificateByEmail(EVENT_ID, ENROLLMENT_ID, MANAGER_ID);
 
         verify(emailService).send(argThat((SendMailDTO dto) -> dto.to().equals(new EmailAddress("person@example.org"))
                 && dto.attachments().size() == 1
-                && dto.attachments().getFirst().filename().equals("certificado-evento-50.png")
+                && dto.attachments().getFirst().filename().equals("certificadoeventodeanasouza.png")
                 && dto.attachments().getFirst().contentType().equals("image/png")
                 && dto.attachments().getFirst().content().length > 0));
     }

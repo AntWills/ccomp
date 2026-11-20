@@ -3,6 +3,7 @@ package com.ccomp.br.domain.events.certificate.web;
 import com.ccomp.br.domain.events.certificate.application.boxes.ActivityCertificateBoxServices;
 import com.ccomp.br.domain.events.certificate.application.boxes.CertificateBoxServices;
 import com.ccomp.br.domain.events.certificate.application.CertificateCoverService;
+import com.ccomp.br.domain.events.certificate.application.GeneratedCertificate;
 import com.ccomp.br.domain.events.certificate.application.issuance.AutomaticCertificateServices;
 import com.ccomp.br.domain.events.certificate.application.issuance.ManualCertificateServices;
 import com.ccomp.br.domain.events.certificate.application.issuance.ManualParticipantCertificateServices;
@@ -327,38 +328,32 @@ class EventCertificateControllerTest {
     @Test
     void buildCertificateFromActivity_validRequest_returnsPngWithDisposition() throws Exception {
         when(automaticCertificateServices.buildCertificateFromActivity(eq(77L), any(), eq("Ana Atividade")))
-                .thenReturn(new StorageExternal.StoredFile(
-                        new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
-                        MediaType.IMAGE_PNG_VALUE));
+                .thenReturn(generatedCertificate("certificadoatividadeanaatividade.png"));
 
         mockMvc.perform(get(ACTIVITY_CERTIFICATE_URL).param("name", "Ana Atividade"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"certificado-atividade-77.png\""));
+                        "attachment; filename=\"certificadoatividadeanaatividade.png\""));
         verify(automaticCertificateServices).buildCertificateFromActivity(eq(77L), any(), eq("Ana Atividade"));
     }
 
     @Test
     void buildCertificateFromEvent_validRequest_returnsPngWithDisposition() throws Exception {
         when(automaticCertificateServices.buildCertificateFromEvent(eq(50L), any(), isNull()))
-                .thenReturn(new StorageExternal.StoredFile(
-                        new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
-                        MediaType.IMAGE_PNG_VALUE));
+                .thenReturn(generatedCertificate("certificadoeventoanasouza.png"));
 
         mockMvc.perform(get(EVENT_CERTIFICATE_URL))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"certificado-evento-50.png\""));
+                        "attachment; filename=\"certificadoeventoanasouza.png\""));
     }
 
     @Test
     void buildCertificateFromEvent_forwardsOptionalParticipantName() throws Exception {
         when(automaticCertificateServices.buildCertificateFromEvent(eq(50L), any(), eq("Ana Souza")))
-                .thenReturn(new StorageExternal.StoredFile(
-                        new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
-                        MediaType.IMAGE_PNG_VALUE));
+                .thenReturn(generatedCertificate("certificadoeventoanasouza.png"));
 
         mockMvc.perform(get(EVENT_CERTIFICATE_URL).param("name", "Ana Souza"))
                 .andExpect(status().isOk());
@@ -369,9 +364,7 @@ class EventCertificateControllerTest {
     @Test
     void previewCustomManualCertificate_returnsInlinePngAndUsesFrontendContent() throws Exception {
         when(manualCertificateServices.previewCustomCertificate(eq(50L), any(), any()))
-                .thenReturn(new StorageExternal.StoredFile(
-                        new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
-                        MediaType.IMAGE_PNG_VALUE));
+                .thenReturn(generatedCertificate("certificadoeventoanasouza.png"));
 
         mockMvc.perform(post(CUSTOM_MANUAL_PREVIEW_URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -379,7 +372,7 @@ class EventCertificateControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
-                        "inline; filename=\"certificado-previa-manual-50.png\""));
+                        "inline; filename=\"certificadoeventoanasouza.png\""));
 
         verify(manualCertificateServices).previewCustomCertificate(
                 eq(50L), eq(PARTICIPANT_ID), any(ManualCertificateContentRequest.class));
@@ -388,9 +381,7 @@ class EventCertificateControllerTest {
     @Test
     void issueCustomManualCertificate_returnsPngAttachmentAndUsesFrontendContent() throws Exception {
         when(manualCertificateServices.issueCustomCertificate(eq(50L), any(), any()))
-                .thenReturn(new StorageExternal.StoredFile(
-                        new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
-                        MediaType.IMAGE_PNG_VALUE));
+                .thenReturn(generatedCertificate("certificadoeventoanasouza.png"));
 
         mockMvc.perform(post(CUSTOM_MANUAL_CERTIFICATE_URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -398,7 +389,7 @@ class EventCertificateControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"certificado-manual-50.png\""));
+                        "attachment; filename=\"certificadoeventoanasouza.png\""));
 
         verify(manualCertificateServices).issueCustomCertificate(
                 eq(50L), eq(PARTICIPANT_ID), any(ManualCertificateContentRequest.class));
@@ -407,30 +398,26 @@ class EventCertificateControllerTest {
     @Test
     void issueManualParticipantEventCertificate_returnsPngAttachment() throws Exception {
         when(manualParticipantCertificateServices.buildEventCertificate(50L, 80L, PARTICIPANT_ID))
-                .thenReturn(new StorageExternal.StoredFile(
-                        new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
-                        MediaType.IMAGE_PNG_VALUE));
+                .thenReturn(generatedCertificate("certificadoeventoanasouza.png"));
 
         mockMvc.perform(post("/api/events/50/enrollments/80/certificate/manual"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"certificado-evento-50-inscricao-80.png\""));
+                        "attachment; filename=\"certificadoeventoanasouza.png\""));
         verify(manualParticipantCertificateServices).buildEventCertificate(50L, 80L, PARTICIPANT_ID);
     }
 
     @Test
     void issueManualParticipantActivityCertificate_returnsPngAttachment() throws Exception {
         when(manualParticipantCertificateServices.buildActivityCertificate(50L, 77L, 80L, PARTICIPANT_ID))
-                .thenReturn(new StorageExternal.StoredFile(
-                        new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
-                        MediaType.IMAGE_PNG_VALUE));
+                .thenReturn(generatedCertificate("certificadoatividadeanasouza.png"));
 
         mockMvc.perform(post("/api/events/50/activities/77/enrollments/80/certificate/manual"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"certificado-atividade-77-inscricao-80.png\""));
+                        "attachment; filename=\"certificadoatividadeanasouza.png\""));
         verify(manualParticipantCertificateServices)
                 .buildActivityCertificate(50L, 77L, 80L, PARTICIPANT_ID);
     }
@@ -650,6 +637,12 @@ class EventCertificateControllerTest {
                 .boxes(List.of(new BoxElementDTO("Atividade {atividade.nome}", 0.1, 0.1, 0.8, 24f, "#000000", null)))
                 .variables(List.of("{atividade.nome}"))
                 .build();
+    }
+
+    private GeneratedCertificate generatedCertificate(String fileName) {
+        return new GeneratedCertificate(new StorageExternal.StoredFile(
+                new org.springframework.core.io.ByteArrayResource(new byte[]{1, 2, 3}),
+                MediaType.IMAGE_PNG_VALUE), fileName);
     }
 
     private StorageExternal.StoredFile testCover() throws Exception {
