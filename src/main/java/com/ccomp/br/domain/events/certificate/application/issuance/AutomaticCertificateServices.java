@@ -73,7 +73,7 @@ public class AutomaticCertificateServices {
 
             CompletableFuture<Map<String, String>> variablesFuture = eventBoxFuture.thenApplyAsync(
                     eventBox -> variablesServices.loadEventVariablesValues(
-                            eventBox.getVariables(), eventId, userId, participantName),
+                            withParticipantName(eventBox.getVariables()), eventId, userId, participantName),
                     executor
             );
 
@@ -113,7 +113,7 @@ public class AutomaticCertificateServices {
 
             CompletableFuture<Map<String, String>> variablesFuture = activityTemplateFuture.thenApplyAsync(
                     activityTemplate -> variablesServices.loadActivityVariablesValues(
-                            activityTemplate.variables(), activityId, userId, participantName),
+                            withParticipantName(activityTemplate.variables()), activityId, userId, participantName),
                     executor
             );
 
@@ -273,5 +273,13 @@ public class AutomaticCertificateServices {
                 .toReplace(variables)
                 .build()
                 .generate();
+    }
+
+    private List<String> withParticipantName(List<String> variables) {
+        if (variables == null || variables.isEmpty()) return List.of("{participante.nome}");
+        if (variables.contains("{participante.nome}")) return variables;
+        var variablesWithName = new java.util.ArrayList<>(variables);
+        variablesWithName.add("{participante.nome}");
+        return variablesWithName;
     }
 }

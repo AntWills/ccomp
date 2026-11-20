@@ -114,7 +114,8 @@ class CertificateServicesGenerationTest {
                 .variables(List.of())
                 .boxes(List.of())
                 .build());
-        when(variablesServices.loadEventVariablesValues(List.of(), EVENT_ID, USER_ID, null)).thenReturn(Map.of());
+        when(variablesServices.loadEventVariablesValues(List.of("{participante.nome}"), EVENT_ID, USER_ID, null))
+                .thenReturn(Map.of());
 
         var generated = createService().buildCertificateFromEvent(EVENT_ID, USER_ID);
 
